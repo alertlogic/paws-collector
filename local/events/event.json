@@ -1,5 +1,4 @@
 {
-    "awslogs" : { 
-        "data" : "H4sIAAAAAAAAAKWRQU8bQQyF/8poztmVPfZ4bG4RDRxQ1UrJrUJVIFu00iYb7W5AFeK/14AoQQIO7WE1M37W8/vW93HbjOP6pln93jfxJH6Zr+Y/vy6Wy/n5Is5if7drBi9TTklJjQHUy11/cz70h70r06Yf+8Om7arb/XX1q+vvKlfH56blNDTrrXc1u7YiIha44mrddS6Ph6vxemj3U9vvztpuaoYxnvyIb10un2wWt81uelTvY7t5TMPAppgzohlJIo9G2ZSLgoqXBbiwAipZToRZcxYpyadOrfNO661Hx5xEWbK7Acxe/oPbp3CMG46zByypJqwRauQU0FKN6E9mP11N9PyVQMEtwuuMl2vxtvnp6eL7Kny7iA+zt0hiPpaTghgjKVjJmAEweX4Wy05ralhUxItS6F0kAfhnJJM6OY0faB/y+IC/POUzHmVEML+acPGaZkmgyTT7vtBA1RdHAOIw5Cvi93nkP1aUU+1LIqpzPuZ5UsLrgA94Lh/+AE/QzKAiAwAA"
-    }
+    "RequestType": "ScheduledEvent",
+    "Type": "PollRequest"
 }
