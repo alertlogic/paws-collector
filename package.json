@@ -1,0 +1,29 @@
+{
+  "name": "paws-collector",
+  "version": "0.0.1",
+  "description": "Alert Logic AWS based API Poll Log Collector",
+  "repository": {},
+  "private": true,
+  "scripts": {
+    "lint": "jshint --exclude \"./node_modules/*\" **/*.js",
+    "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=cobertura mocha --colors --reporter mocha-jenkins-reporter"
+  },
+  "devDependencies": {
+    "aws-sdk": "*",
+    "aws-sdk-mock": "*",
+    "clone": "*",
+    "jshint": "^2.9.5",
+    "mocha": "^6.2.2",
+    "mocha-jenkins-reporter": "^0.4.2",
+    "nyc": "^14.1.1",
+    "rewire": "^4.0.1",
+    "sinon": "^7.5.0"
+  },
+  "dependencies": {
+    "async": "*",
+    "moment": "^2.24.0",
+    "debug": "*",
+    "al-aws-collector-js": "alertlogic/al-aws-collector-js#log"
+  },
+  "author": "Alert Logic Inc."
+}

@@ -1,0 +1,7 @@
+{
+    "RequestType": "ScheduledEvent",
+    "Type": "Checkin",
+    "StackName": "username-vpc-flow-test",
+    "AwsAccountId": "352283894008",
+    "Region" : "us-east-1"
+}

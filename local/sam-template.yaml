@@ -1,0 +1,22 @@
+AWSTemplateFormatVersion : '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: Run it locally
+Resources:
+  LocalLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      KmsKeyArn: <kms-key-arn>
+      Environment:
+        Variables:
+          aims_secret_key:
+          aims_access_key_id:
+          al_api:
+          stack_name:
+          azollect_api:
+          ingest_api:
+          DEBUG:
+      Runtime: nodejs8.10
+      Handler: index.handler
+      Timeout: 300 
+      MemorySize: 1024
