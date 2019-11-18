@@ -84,6 +84,17 @@ class TestCollector extends PawsCollector {
     extensionGetRegisterParameters(event) {
         return {};
     }
+    
+    extensionFormatLog(msg) {
+        let formattedMsg = {
+            messageTs: 12345678,
+            priority: 11,
+            progName: 'OktaCollector',
+            message: JSON.stringify({test: 'message'}),
+            messageType: 'json/aws.test'
+        };
+        return formattedMsg;
+    }
 }
 
 describe('Unit Tests', function() {

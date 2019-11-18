@@ -8,6 +8,7 @@ process.env.log_group = 'logGroupName';
 process.env.paws_extension = 'okta';
 process.env.okta_endpoint = 'https://test.alertlogic.com/';
 process.env.okta_token = 'okta-token';
+process.env.collector_id = 'collector-id';
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',

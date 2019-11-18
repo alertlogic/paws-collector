@@ -23,7 +23,7 @@ class PawsCollector extends AlAwsCollector {
               null, [], []);
         console.info('PAWS000001 Loading extension', extensionName);
         this._extensionName = extensionName;
-    }
+    };
     
     register(event) {
         let collector = this;
@@ -34,11 +34,7 @@ class PawsCollector extends AlAwsCollector {
         let custom = collector.extensionGetRegisterParameters(event);
         registerProps = Object.assign(stack, custom);
         return super.register(event, registerProps);
-    }
-    
-    processLogs(messages, formatFun, hostmetaElems, callback) {
-        super.processLogs(messages, formatFun, hostmetaElems, callback);
-    }
+    };
     
     deregister(event) {
         let collector = this;
@@ -49,7 +45,7 @@ class PawsCollector extends AlAwsCollector {
         let custom = collector.extensionGetRegisterParameters(event);
         registerProps = Object.assign(stack, custom);
         return super.deregister(event, registerProps);
-    }
+    };
     
     handleEvent(event) {
         let collector = this;
@@ -66,30 +62,30 @@ class PawsCollector extends AlAwsCollector {
                 break;
         }
         return super.handleEvent(event);
-    }
+    };
     
     handlePollRequest(event) {
         let collector = this;
         const logs = collector.extensionGetLogs(event, "", function(err, logs, newState){
             console.log('!!!Received logs', logs.length);
-            collector.processLogs(logs, collector.extensionFormatLog, null, function(error){
+            collector.processLog(logs, collector.extensionFormatLog, null, function(error){
                 console.log('!!!Logs processed', error);
                 collector.done(error);
             });
         });
-    }
+    };
     
     extensionGetLogs(event, state, callback) {
         throw Error("not implemented extensionGetLogs()");
-    }
+    };
     
     extensionGetRegisterParameters(event) {
         throw Error("not implemented extensionGetRegisterParameters()");
-    }
+    };
     
     extensionFormatLog() {
         throw Error("not implemented extensionFormatLog()");
-    }
+    };
 }
 
 module.exports = {
