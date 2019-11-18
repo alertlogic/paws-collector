@@ -68,7 +68,7 @@ class PawsCollector extends AlAwsCollector {
         let collector = this;
         const logs = collector.extensionGetLogs(event, "", function(err, logs, newState){
             console.log('!!!Received logs', logs.length);
-            super.processLogs(logs, collector.extensionFormatLog, null, function(error){
+            collector.processLogs(logs, collector.extensionFormatLog, null, function(error){
                 console.log('!!!Logs processed', error);
                 collector.done(error);
             });
