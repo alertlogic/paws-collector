@@ -73,6 +73,19 @@ function mockSetEnvStub() {
     });
 }
 
+class TestCollector extends PawsCollector {
+    constructor(ctx, creds) {
+        super(ctx, creds, 'test-collector');
+    }
+    extensionGetLogs(event, state, callback) {
+        return callback(null, ["log"]);
+    }
+    
+    extensionGetRegisterParameters(event) {
+        return {};
+    }
+}
+
 describe('Unit Tests', function() {
 
     beforeEach(function(){
@@ -116,7 +129,7 @@ describe('Unit Tests', function() {
             };
             
             AlAwsCollector.load().then(function(creds) {
-                var collector = new PawsCollector(ctx, creds);
+                var collector = new TestCollector(ctx, creds, 'test');
                 collector.handleEvent(testEvent);
             });
         });

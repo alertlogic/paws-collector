@@ -9,46 +9,51 @@
  * -----------------------------------------------------------------------------
  */
 
-const debug = require('debug') ('index');
+const debug = require('debug')('index');
 
 const AlAwsCollector = require('al-aws-collector-js').AlAwsCollector;
 const m_packageJson = require('./package.json');
 
-var formatMessagesFun = function formatMessages(event, context, callback) {
-    return callback(null, '');
-}
-
 class PawsCollector extends AlAwsCollector {
-    constructor(context, creds) {
+    constructor(context, creds, extensionName) {
         super(context, 'paws',
               AlAwsCollector.IngestTypes.LOGMSGS,
               m_packageJson.version,
               creds,
-              formatMessagesFun, [], []);
+              null, [], []);
+        console.info('PAWS000001 Loading extension', extensionName);
+        this._extensionName = extensionName;
     }
     
     register(event) {
-        let custom = {
-                stackName : event.ResourceProperties.StackName
+        let collector = this;
+        let stack = {
+            stackName : event.ResourceProperties.StackName,
+            extensionName : collector._extensionName
         };
-        super.register(event, custom);
+        let custom = collector.extensionGetRegisterParameters(event);
+        registerProps = Object.assign(stack, custom);
+        return super.register(event, registerProps);
     }
     
     deregister(event) {
-        let custom = {
-                stackName : event.ResourceProperties.StackName
+        let collector = this;
+        let stack = {
+            stackName : event.ResourceProperties.StackName,
+            extensionName : collector._extensionName
         };
-        super.deregister(event, custom);
+        let custom = collector.extensionGetRegisterParameters(event);
+        registerProps = Object.assign(stack, custom);
+        return super.deregister(event, registerProps);
     }
     
     handleEvent(event) {
+        let collector = this;
         switch (event.RequestType) {
         case 'ScheduledEvent':
             switch (event.Type) {
                 case 'PollRequest':
-                    let context = super._invokeContext;
-                    debug('Processing Poll request: ', event);
-                    return super.done();
+                    return collector.handlePollRequest(event);
                     break;
                 default:
                     break;
@@ -56,7 +61,27 @@ class PawsCollector extends AlAwsCollector {
             default:
                 break;
         }
-        super.handleEvent(event);
+        return super.handleEvent(event);
+    }
+    
+    handlePollRequest(event) {
+        let collector = this;
+        const logs = collector.extensionGetLogs(event, "", function(err, logs, newState){
+            console.log('!!!Logs', logs.length);
+            collector.done();
+        });
+    }
+    
+    extensionGetLogs(event, state, callback) {
+        throw Error("not implemented extensionGetLogs()");
+    }
+    
+    extensionGetRegisterParameters(event) {
+        throw Error("not implemented extensionGetRegisterParameters()");
+    }
+    
+    extensionFormatLog() {
+        throw Error("not implemented extensionFormatLog()");
     }
 }
 

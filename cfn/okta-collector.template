@@ -25,7 +25,12 @@
         "PackagesBucketPrefix": {
             "Description": "S3 bucket name prefix where collector packages are located. ",
             "Type": "String",
-            "Default": "rcs-alertlogic-collectors",
+            "Default": "rcs-alertlogic-collectors"
+        },
+        "Extension": {
+            "Description": "Poll collector extension",
+            "Type": "String",
+            "Default": "okta"
         },
         "OktaApiEndpoint": {
             "Description": "Okta endpoint",
@@ -404,6 +409,15 @@
                   },
                   "al_data_residency":{
                       "Ref":"AlDataResidency"
+                  },
+                  "paws_extension":{
+                      "Ref":"Extension"
+                  },
+                  "okta_endpoint":{
+                    "Ref":"OktaApiEndpoint"
+                  },
+                  "okta_token":{
+                    "Ref":"OktaToken"
                   }
                }
             },
