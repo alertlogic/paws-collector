@@ -36,6 +36,10 @@ class PawsCollector extends AlAwsCollector {
         return super.register(event, registerProps);
     }
     
+    processLogs(messages, formatFun, hostmetaElems, callback) {
+        super.processLogs(messages, formatFun, hostmetaElems, callback);
+    }
+    
     deregister(event) {
         let collector = this;
         let stack = {
