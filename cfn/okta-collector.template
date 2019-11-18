@@ -4,7 +4,8 @@
     "Parameters": {
         "AccessKeyId": {
             "Description": "Alertlogic Access Key Id obtained from AIMS",
-            "Type": "String"
+            "Type": "String",
+            "Default": "5c850016c9eb6f3b"
         },
         "SecretKey": {
             "Description": "Alertlogic Secret Key returned from AIMS for the Access Key Id",
@@ -14,7 +15,11 @@
         "AlApiEndpoint": {
             "Description": "Alert Logic API endpoint",
             "Type": "String",
-            "Default": "api.global-integration.product.dev.alertlogic.com"
+            "Default": "api.global-services.global.alertlogic.com",
+            "AllowedValues": [
+                "api.global-services.global.alertlogic.com",
+                "api.global-integration.product.dev.alertlogic.com"
+            ]
         },
         "AlDataResidency": {
             "Description": "Alert Logic Data Residency",
@@ -23,17 +28,30 @@
             "AllowedValues": ["default"]
         },
         "PackagesBucketPrefix": {
-            "Description": "S3 bucket name prefix where collector packages are located. ",
+            "Description": "S3 bucket name prefix where collector packages are located.",
             "Type": "String",
-            "Default": "rcs-alertlogic-collectors",
+            "Default": "rcs-alertlogic-collectors"
+        },
+        "PollingInterval": {
+            "Description": "Interval in seconds between two consecutive poll requests.",
+            "Type": "Number",
+            "Default": 60
         },
         "OktaApiEndpoint": {
             "Description": "Okta endpoint",
-            "Type": "String"
+            "Type": "String",
+            "Default": "https://alertlogic-admin.okta.com/"
         },
         "OktaToken": {
             "Description": "Okta SSWS Token",
-            "Type": "String"
+            "Type": "String",
+            "NoEcho": true
+        },
+        "CollectionStartTs": {
+            "Description": "Timestamp when log collection starts",
+            "Type": "String",
+            "Default" : "2019-11-21T16:00:00Z",
+            "AllowedPattern" : "^\\d{4}(-\\d{2}){2}T(\\d{2}:){2}\\d{2}Z$"
         }
     },
     "Resources":{
@@ -128,10 +146,6 @@
                     ]
                 },
                 "Tags": [
-                    {
-                        "Key": "Name",
-                        "Value": "AlertLogic CWE collector"
-                    },
                     {
                         "Key": "AlertLogic",
                         "Value": "Collect"
@@ -277,7 +291,7 @@
                            "",
                            [
                                 "const AWS = require('aws-sdk');\n",
-                                "const response = require('cfn-response');\n",
+                                "const response = require('./cfn-response');\n",
                                 "\n",
                                 "\n",
                                 "function encrypt(event, context) {\n",
@@ -317,10 +331,6 @@
                 "Timeout": 5,
                 "Tags": [
                     {
-                        "Key": "Name",
-                        "Value": "AlertLogic CWE collector"
-                    },
-                    {
                         "Key": "AlertLogic",
                         "Value": "Collect"
                     }
@@ -352,16 +362,36 @@
                 }
             }
         },
+      "PawsPollStateQueue":{
+        "Type":"AWS::SQS::Queue",
+        "DependsOn":[
+         ],
+         "Properties":{
+            "QueueName" : {
+             "Fn::Join": [
+               "-",
+               [
+                 {
+                   "Ref": "AWS::StackName"
+                 },
+                 "paws-collection-state"
+               ]
+             ]
+            },
+            "VisibilityTimeout": 900
+         }
+      },
       "CollectLambdaFunction":{
          "Type":"AWS::Lambda::Function",
          "DependsOn":[
             "CollectLambdaRole",
             "LambdaKmsKey",
-            "EncryptSecretKeyCustomResource"
+            "EncryptSecretKeyCustomResource",
+            "PawsPollStateQueue"
          ],
          "Properties":{
-            "Description":"Alert Logic Lambda Guard Duty event collector",
-            "FunctionName":"alertlogic-cwe-collector",
+            "Description":"Alert Logic Poll based collector",
+            "FunctionName":{ "Ref":"AWS::StackName" },
             "Role":{
                "Fn::GetAtt":[
                   "CollectLambdaRole",
@@ -376,15 +406,15 @@
             },
             "Code":{
                "S3Bucket":{"Fn::Join" : ["", [
-                    "alertlogic-collectors-",
+                    {"Ref":"PackagesBucketPrefix"}, "-",
                     { "Ref" : "AWS::Region" }
                ]]},
-               "S3Key": "packages/lambda/al-cwe-collector.zip"
+               "S3Key": "packages/lambda/al-okta-collector.zip"
             },
             "Handler":"index.handler",
             "Runtime":"nodejs10.x",
             "MemorySize":128,
-            "Timeout":300,
+            "Timeout": 300,
             "Environment":{
                "Variables":{
                   "aims_access_key_id": {
@@ -395,28 +425,56 @@
                   },
                   "aws_lambda_s3_bucket":{"Fn::Join" : ["", [
                       {"Ref":"PackagesBucketPrefix"}, "-",
-                      { "Ref" : "AWS::Region" }
+                      {"Ref":"AWS::Region"}
                   ]]},
-                  "aws_lambda_zipfile_name": "packages/lambda/al-cwe-collector.zip",
-                  "aws_lambda_update_config_name": "configs/lambda/al-cwe-collector.json",
+                  "aws_lambda_zipfile_name": "packages/lambda/al-okta-collector.zip",
+                  "aws_lambda_update_config_name": "configs/lambda/al-okta-collector.json",
                   "al_api":{
                       "Ref":"AlApiEndpoint"
                   },
                   "al_data_residency":{
                       "Ref":"AlDataResidency"
+                  },
+                  "paws_state_queue_arn":{
+                      "Fn::GetAtt" : ["PawsPollStateQueue", "Arn"]
+                  },
+                  "paws_state_queue_url":{
+                      "Ref" : "PawsPollStateQueue"
+                  },
+                  "paws_extension": "okta",
+                  "paws_poll_interval": {
+                      "Ref":"PollingInterval"
+                  },
+                  "okta_endpoint":{
+                      "Ref":"OktaApiEndpoint"
+                  },
+                  "okta_token":{
+                      "Ref":"OktaToken"
+                  },
+                  "okta_collection_start_ts":{
+                      "Ref":"CollectionStartTs"
                   }
                }
             },
             "Tags": [
                 {
-                    "Key": "Name",
-                    "Value": "AlertLogic CWE collector"
-                },
-                {
                     "Key": "AlertLogic",
                     "Value": "Collect"
                 }
             ]
+         }
+      },
+      "CollectLambdaEventSourceMapping":{
+         "Type":"AWS::Lambda::EventSourceMapping",
+         "DependsOn":[
+            "CollectLambdaFunction",
+            "CollectLambdaRole",
+            "CollectLambdaPolicy",
+            "PawsPollStateQueue"
+         ],
+         "Properties":{
+            "EventSourceArn" : { "Fn::GetAtt" : ["PawsPollStateQueue", "Arn"] },
+            "FunctionName" : { "Ref":"CollectLambdaFunction" }
          }
       },
       "CollectLambdaPolicy":{
@@ -431,35 +489,23 @@
                   "Ref":"CollectLambdaRole"
                }
             ],
-            "PolicyName":"alertlogic-guardduty-lambda-policy",
+            "PolicyName":"alertlogic-paws-lambda-policy",
             "PolicyDocument":{
                "Version":"2012-10-17",
                "Statement":[
                   {
                      "Effect":"Allow",
                      "Action":"logs:CreateLogGroup",
-                     "Resource":[
-                        {
-                           "Fn::Join":[
-                              "",
-                              [
-                                 "arn:aws:logs:",
-                                 {
-                                    "Ref":"AWS::Region"
-                                 },
-                                 ":",
-                                 {
-                                    "Ref":"AWS::AccountId"
-                                 },
-                                 ":log-group:/aws/lambda/",
-                                 {
-                                    "Ref":"CollectLambdaFunction"
-                                 },
-                                 ":*"
-                              ]
-                           ]
-                        }
-                     ]
+                     "Resource":[{
+                       "Fn::Join":[ "",
+                          [
+                             "arn:aws:logs:", { "Ref":"AWS::Region" },
+                             ":", { "Ref":"AWS::AccountId" },
+                             ":log-group:/aws/lambda/", { "Ref":"CollectLambdaFunction" },
+                             ":*"
+                          ]
+                       ]
+                     }]
                   },
                   {
                      "Effect":"Allow",
@@ -467,65 +513,60 @@
                         "logs:CreateLogStream",
                         "logs:PutLogEvents"
                      ],
-                     "Resource":[
-                        {
-                           "Fn::Join":[
-                              "",
-                              [
-                                 "arn:aws:logs:",
-                                 {
-                                    "Ref":"AWS::Region"
-                                 },
-                                 ":",
-                                 {
-                                    "Ref":"AWS::AccountId"
-                                 },
-                                 ":log-group:/aws/lambda/",
-                                 {
-                                    "Ref":"CollectLambdaFunction"
-                                 },
-                                 ":log-stream:*"
-                              ]
-                           ]
-                        }
-                     ]
+                     "Resource":[ {
+                       "Fn::Join":["",
+                          [
+                             "arn:aws:logs:", { "Ref":"AWS::Region" },
+                             ":", { "Ref":"AWS::AccountId" },
+                             ":log-group:/aws/lambda/", { "Ref":"CollectLambdaFunction" },
+                             ":log-stream:*"
+                          ]
+                       ]
+                     }]
                   },
                   {
                      "Effect":"Allow",
                      "Action":[
                         "lambda:*"
                      ],
-                     "Resource":[
-                        {
-                           "Fn::GetAtt":[
-                               "CollectLambdaFunction",
-                               "Arn"
-                           ]
-                        }
-                     ]
+                     "Resource":[{
+                       "Fn::GetAtt":[
+                           "CollectLambdaFunction",
+                           "Arn"
+                       ]
+                     }]
                   },
                   {
                      "Effect":"Allow",
                      "Action":[
                         "s3:Get*"
                      ],
-                     "Resource":[
-                        {
-                           "Fn::Join":[
-                              "",
-                              [
-                                 "arn:aws:s3:::",
-                                 {
-                                    "Fn::Join" : ["", [
-                                        "alertlogic-collectors-",
-                                        { "Ref" : "AWS::Region" }
-                                    ]]
-                                 },
-                                 "/*"
-                              ]
-                           ]
-                        }
-                     ]
+                     "Resource":[{
+                       "Fn::Join":["",
+                          [
+                             "arn:aws:s3:::",
+                             {
+                                "Fn::Join" : ["", [
+                                    { "Ref" : "PackagesBucketPrefix" }, "-",
+                                    { "Ref" : "AWS::Region" }
+                                ]]
+                             },
+                             "/*"
+                          ]
+                       ]
+                     }]
+                  },
+                  {
+                     "Effect":"Allow",
+                     "Action":[
+                        "sqs:*"
+                     ],
+                     "Resource":[{
+                       "Fn::GetAtt":[
+                           "PawsPollStateQueue",
+                           "Arn"
+                       ]
+                     }]
                   }
                ]
             }
@@ -534,8 +575,7 @@
       "HealthCheckLambdaPolicy":{
          "Type":"AWS::IAM::Policy",
          "DependsOn":[
-              "CollectLambdaRole",
-              "CloudWatchEventsRule"
+              "CollectLambdaRole"
          ],
          "Properties":{
             "Roles":[
@@ -552,43 +592,16 @@
                      "Action":[
                         "cloudformation:DescribeStacks"
                      ],
-                     "Resource":[
-                          {
-                             "Fn::Join":[
-                                  "",
-                                  [
-                                      "arn:aws:cloudformation:",
-                                      {
-                                          "Ref":"AWS::Region"
-                                      },
-                                      ":",
-                                      {
-                                          "Ref":"AWS::AccountId"
-                                      },
-                                      ":stack/",
-                                      {
-                                          "Ref":"AWS::StackName"
-                                      },
-                                      "/*"
-                                  ]
+                     "Resource":[{
+                         "Fn::Join":[ "",
+                              [
+                                  "arn:aws:cloudformation:", { "Ref":"AWS::Region" },
+                                  ":",{ "Ref":"AWS::AccountId" },
+                                  ":stack/", { "Ref":"AWS::StackName" },
+                                  "/*"
                               ]
-                          }
-                      ]
-                  },
-                  {
-                     "Effect":"Allow",
-                     "Action":[
-                        "events:DescribeRule",
-                        "events:ListTargetsByRule"
-                     ],
-                     "Resource":[
-                        {
-                           "Fn::GetAtt":[
-                               "CloudWatchEventsRule",
-                               "Arn"
-                           ]
-                        }
-                     ]
+                          ]
+                      }]
                   },
                   {
                      "Effect":"Allow",
@@ -608,30 +621,6 @@
                   }
                ]
             }
-         }
-      },
-      "PollRequestScheduledRule": {
-         "Type": "AWS::Events::Rule",
-         "DependsOn": [
-            "CollectLambdaPolicy",
-            "CollectLambdaFunction"
-         ],
-         "Properties": {
-            "Description": "Scheduled rule for collect function",
-            "ScheduleExpression": "rate(15 minutes)",
-            "State": "ENABLED",
-            "Targets":[
-                {
-                    "Id":"1",
-                    "Arn":{
-                        "Fn::GetAtt":[
-                            "CollectLambdaFunction",
-                            "Arn"
-                        ]
-                    },
-                    "Input": "{\"RequestType\": \"ScheduledEvent\", \"Type\": \"PollRequest\"}"
-                }
-            ]
          }
       },
       "UpdaterScheduledRule": {
@@ -707,14 +696,12 @@
                       "Action":[
                          "lambda:*"
                       ],
-                      "Resource":[
-                         {
-                            "Fn::GetAtt":[
-                                "CollectLambdaFunction",
-                                "Arn"
-                            ]
-                         }
-                      ]
+                      "Resource":[{
+                          "Fn::GetAtt":[
+                              "CollectLambdaFunction",
+                              "Arn"
+                          ]
+                      }]
                     }
                   ]
                }
@@ -726,9 +713,7 @@
          "DependsOn": [
             "CollectLambdaFunction",
             "CollectLambdaPolicy",
-            "HealthCheckLambdaPolicy",
-            "CloudWatchEventsRule",
-            "CollectLambdaEventSourceMapping"
+            "HealthCheckLambdaPolicy"
          ],
          "Properties": {
             "Description": "Scheduled rule for checkin function",
@@ -748,18 +733,12 @@
                             "",
                             [
                                 "{\"RequestType\": \"ScheduledEvent\", \"Type\": \"Checkin\", \"AwsAccountId\": \"",
-                                {
-                                    "Ref":"AWS::AccountId"
-                                },
+                                { "Ref":"AWS::AccountId" },
                                 "\", \"Region\": \"",
-                                {
-                                    "Ref": "AWS::Region"
-                                },
+                                { "Ref": "AWS::Region" },
                                 "\", \"StackName\": \"",
-                                {
-                                    "Ref":"AWS::StackName"
-                                }
-                                "}"
+                                { "Ref":"AWS::StackName" },
+                                "\"}"
                             ]
                         ]
                     }
@@ -798,8 +777,7 @@
          "Properties": {
             "ServiceToken": { "Fn::GetAtt" : ["CollectLambdaFunction", "Arn"] },
             "StackName": { "Ref" : "AWS::StackName" },
-            "AwsAccountId": { "Ref": "AWS::AccountId"},
-            "CollectRule": "aws.guardduty"
+            "AwsAccountId": { "Ref": "AWS::AccountId"}
          }
       }
    }

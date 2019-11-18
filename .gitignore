@@ -1,0 +1,16 @@
+package-lock.json
+node_modules/
+test/report.xml
+#idea
+.idea/
+nbproject/
+.nyc_output/
+al-cwe-collector.zip
+coverage/
+test/ide_test.js
+.env
+**/local/env.json
+.project
+**.zip
+**/report.xml
+
