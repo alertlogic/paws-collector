@@ -8,10 +8,6 @@
     "lint": "jshint --exclude \"./node_modules/*\" **/*.js",
     "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=cobertura mocha --colors --reporter mocha-jenkins-reporter"
   },
-  "files": [
-    "extensions/",
-    "README.md"
-  ],
   "devDependencies": {
     "aws-sdk": "*",
     "aws-sdk-mock": "*",
