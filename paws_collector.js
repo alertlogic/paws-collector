@@ -67,8 +67,11 @@ class PawsCollector extends AlAwsCollector {
     handlePollRequest(event) {
         let collector = this;
         const logs = collector.extensionGetLogs(event, "", function(err, logs, newState){
-            console.log('!!!Logs', logs.length);
-            collector.done();
+            console.log('!!!Received logs', logs.length);
+            super.processLogs(logs, collector.extensionFormatLog, null, function(error){
+                console.log('!!!Logs processed', error);
+                collector.done(error);
+            });
         });
     }
     

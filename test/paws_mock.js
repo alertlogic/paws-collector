@@ -22,11 +22,11 @@ const CWL_TEST_EVENT = {
 };
 
 const STACK_ID = 'arn:aws:cloudformation:us-east-1:352283894008:stack/test/87b3dc90-bd7e-11e7-9e43-503abe701cfd';
-const FUNCTION_ARN = 'arn:aws:lambda:us-east-1:352283894008:function:test-guardduty-01-CollectLambdaFunction-2CWNLPPW5XO8';
-const FUNCTION_NAME = 'test-VpcFlowCollectLambdaFunction-1JNNKQIPOTEST';
-const REGISTRATION_TEST_URL = '/aws/cwl/353333894008/us-east-1/' + encodeURIComponent(FUNCTION_NAME);
+const FUNCTION_ARN = 'arn:aws:lambda:us-east-1:352283894008:function:test-01-CollectLambdaFunction-2CWNLPPW5XO8';
+const FUNCTION_NAME = 'test-TestCollectLambdaFunction-1JNNKQIPOTEST';
+const REGISTRATION_TEST_URL = '/aws/test/353333894008/us-east-1/' + encodeURIComponent(FUNCTION_NAME);
 const STACK_NAME = 'test-stack-01';
-const LOG_GROUP = 'username-vpc-flow-logs-group';
+const LOG_GROUP = 'username-logs-group';
 
 const REGISTRATION_TEST_EVENT = {
     'RequestType': 'Create',
