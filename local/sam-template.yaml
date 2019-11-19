@@ -16,6 +16,8 @@ Resources:
           azollect_api:
           ingest_api:
           DEBUG:
+          paws_state_queue_arn:
+          paws_state_queue_url:
           paws_extension:
           okta_endpoint:
           okta_token:

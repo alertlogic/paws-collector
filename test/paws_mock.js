@@ -6,6 +6,7 @@ process.env.aims_access_key_id = 'aims-key-id';
 process.env.aims_secret_key = 'aims-secret-key-encrypted';
 process.env.log_group = 'logGroupName';
 process.env.paws_state_queue_arn = 'arn:aws:sqs:us-east-1:352283894008:test-queue';
+process.env.paws_state_queue_url = 'https://sqs.us-east-1.amazonaws.com/352283894008/test-queue';
 process.env.paws_extension = 'okta';
 process.env.okta_endpoint = 'https://test.alertlogic.com/';
 process.env.okta_token = 'okta-token';

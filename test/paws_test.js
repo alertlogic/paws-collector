@@ -73,6 +73,12 @@ function mockSetEnvStub() {
     });
 }
 
+function mockSQSSendMessage(returnObject) {
+    AWS.mock('SQS', 'sendMessage', function (params, callback) {
+        let buf = Buffer(JSON.stringify(returnObject));
+        return callback(null, {Body: buf});
+    });
+}
 class TestCollector extends PawsCollector {
     constructor(ctx, creds) {
         super(ctx, creds, 'test-collector');
@@ -102,7 +108,7 @@ describe('Unit Tests', function() {
     beforeEach(function(){
         AWS.mock('KMS', 'decrypt', function (params, callback) {
             const data = {
-                    Plaintext : 'decrypted-aims-sercret-key'
+                Plaintext : 'decrypted-aims-sercret-key'
             };
             return callback(null, data);
         });
@@ -114,6 +120,8 @@ describe('Unit Tests', function() {
 
         setAlServiceStub();
         mockSetEnvStub();
+        
+        mockSQSSendMessage({});
     });
 
     afterEach(function(){
@@ -134,6 +142,7 @@ describe('Unit Tests', function() {
                     done();
                 }
             };
+
             const testEvent = {
                 Records: [
                     {
