@@ -6,7 +6,7 @@ Resources:
   LocalLambda:
     Type: AWS::Serverless::Function
     Properties:
-      KmsKeyArn: <kms-key-arn>
+      KmsKeyArn: arn:aws:kms:us-east-1:352283894008:key/c061f745-970c-4684-bd87-ae7af817bf3b
       Environment:
         Variables:
           aims_secret_key:
@@ -16,6 +16,10 @@ Resources:
           azollect_api:
           ingest_api:
           DEBUG:
+          paws_extension:
+          okta_endpoint:
+          okta_token:
+          collector_id:
       Runtime: nodejs8.10
       Handler: index.handler
       Timeout: 300 

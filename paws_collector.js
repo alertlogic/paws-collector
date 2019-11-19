@@ -49,33 +49,37 @@ class PawsCollector extends AlAwsCollector {
     
     handleEvent(event) {
         let collector = this;
-        switch (event.RequestType) {
-        case 'ScheduledEvent':
-            switch (event.Type) {
-                case 'PollRequest':
-                    return collector.handlePollRequest(event);
-                    break;
-                default:
-                    break;
+        if (event.Records) {
+            let stateMsg = event.Records[0];
+            if (stateMsg.eventSourceARN === process.env.paws_state_queue_arn) {
+                return collector.handlePollRequest(stateMsg);
+            } else {
+                return super.handleEvent(event);
             }
-            default:
-                break;
+        } else {
+            return super.handleEvent(event);
         }
-        return super.handleEvent(event);
     };
     
-    handlePollRequest(event) {
+    handlePollRequest(stateMsg) {
         let collector = this;
-        const logs = collector.extensionGetLogs(event, "", function(err, logs, newState){
+        let pawsState = JSON.parse(stateMsg.body);
+        
+        const logs = collector.extensionGetLogs(pawsState.extension_state, function(err, logs, newState){
             console.log('!!!Received logs', logs.length);
-            collector.processLog(logs, collector.extensionFormatLog, null, function(error){
-                console.log('!!!Logs processed', error);
-                collector.done(error);
+            collector.processLog(logs, collector.extensionFormatLog, null, function(error) {
+                console.log('!!!Logs processed ', error);
+                if (!err) {
+                    // TODO: update state
+                    collector.done();
+                } else {
+                    collector.done(error);
+                }
             });
         });
     };
     
-    extensionGetLogs(event, state, callback) {
+    extensionGetLogs(state, callback) {
         throw Error("not implemented extensionGetLogs()");
     };
     

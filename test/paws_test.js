@@ -77,7 +77,7 @@ class TestCollector extends PawsCollector {
     constructor(ctx, creds) {
         super(ctx, creds, 'test-collector');
     }
-    extensionGetLogs(event, state, callback) {
+    extensionGetLogs(state, callback) {
         return callback(null, ["log"]);
     }
     
@@ -135,8 +135,12 @@ describe('Unit Tests', function() {
                 }
             };
             const testEvent = {
-                RequestType: 'ScheduledEvent',
-                Type: 'PollRequest'
+                Records: [
+                    {
+                        "body": "{\n  \"extension_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
+                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
+                    }
+                ]
             };
             
             AlAwsCollector.load().then(function(creds) {
