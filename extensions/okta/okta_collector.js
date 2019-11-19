@@ -33,15 +33,15 @@ class OktaCollector extends PawsCollector {
         };
     }
     
-    extensionGetLogs(event, state, callback) {
+    extensionGetLogs(state, callback) {
         const oktaClient = new okta.Client({
             orgUrl: process.env.okta_endpoint,
             token: process.env.okta_token
         });
         console.log('!!!Collecting logs.');
         const collection = oktaClient.getLogs({
-            since: '2019-11-15T23:00:00Z',
-            until: '2019-11-15T23:30:00Z'
+            since: state.since,
+            until: state.until
         });
         let logAcc = [];
         collection.each(log => {

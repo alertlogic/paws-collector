@@ -5,9 +5,11 @@ process.env.azollect_api = 'azcollect.global-services.global.alertlogic.com';
 process.env.aims_access_key_id = 'aims-key-id';
 process.env.aims_secret_key = 'aims-secret-key-encrypted';
 process.env.log_group = 'logGroupName';
+process.env.paws_state_queue_arn = "arn:aws:sqs:us-east-1:352283894008:paws-state-queue";
 process.env.paws_extension = 'okta';
 process.env.okta_endpoint = 'https://test.alertlogic.com/';
 process.env.okta_token = 'okta-token';
+process.env.collector_id = 'collector-id';
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',

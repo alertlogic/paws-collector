@@ -16,9 +16,11 @@ Resources:
           azollect_api:
           ingest_api:
           DEBUG:
+          paws_state_queue_arn:
           paws_extension:
           okta_endpoint:
           okta_token:
+          collector_id:
       Runtime: nodejs8.10
       Handler: index.handler
       Timeout: 300 
