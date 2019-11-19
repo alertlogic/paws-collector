@@ -40,7 +40,7 @@ class PawsCollector extends AlAwsCollector {
             function(asyncCallback) {
                 return collector.extensionInitCollectionState(event, asyncCallback);
             },
-            function(state, nextInvocationTimeout) {
+            function(state, nextInvocationTimeout, asyncCallback) {
                 return collector._storeCollectionState({}, state, nextInvocationTimeout, asyncCallback);
             },
             function(sqsResponse, asyncCallback) {
