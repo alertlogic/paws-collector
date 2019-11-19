@@ -35,8 +35,6 @@ class PawsCollector extends AlAwsCollector {
             stackName : event.ResourceProperties.StackName,
             extensionName : collector._extensionName
         };
-        let custom = collector.extensionGetRegisterParameters(event);
-        registerProps = Object.assign(stack, custom);
         
         async.waterfall([
             function(asyncCallback) {
@@ -44,12 +42,16 @@ class PawsCollector extends AlAwsCollector {
             },
             function(state, nextInvocationTimeout) {
                 return collector._storeCollectionState({}, state, nextInvocationTimeout, asyncCallback);
+            },
+            function(sqsResponse, asyncCallback) {
+                return collector.extensionGetRegisterParameters(event, asyncCallback);
             }
-        ], function(err) {
+        ], function(err, customRegister) {
             if (err) {
                 console.err('PAWS000101 Error during registration', err);
                 return collector.done(err);
             } else {
+                let registerProps = Object.assign(stack, customRegister);
                 return superRegister(event, registerProps);
             }
         });
@@ -57,13 +59,18 @@ class PawsCollector extends AlAwsCollector {
     
     deregister(event) {
         let collector = this;
+        let superDeregister = super.deregister;
         let stack = {
             stackName : event.ResourceProperties.StackName,
             extensionName : collector._extensionName
         };
-        let custom = collector.extensionGetRegisterParameters(event);
-        registerProps = Object.assign(stack, custom);
-        return super.deregister(event, registerProps);
+        let custom = collector.extensionGetRegisterParameters(event, function(err, customRegister) {
+            if (err) {
+                console.warn('PAWS000102 Error during deregistration', err);
+            } 
+            let registerProps = Object.assign(stack, customRegister);
+            return superDeregister(event, registerProps);
+        });
     };
     
     handleEvent(event) {
@@ -146,7 +153,7 @@ class PawsCollector extends AlAwsCollector {
      * @returns callback - (error, objectWithRegistrationProperties)
      * 
      */
-    extensionGetRegisterParameters(event) {
+    extensionGetRegisterParameters(event, callback) {
         throw Error("not implemented extensionGetRegisterParameters()");
     };
     
