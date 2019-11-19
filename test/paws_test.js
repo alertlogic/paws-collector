@@ -83,12 +83,17 @@ class TestCollector extends PawsCollector {
     constructor(ctx, creds) {
         super(ctx, creds, 'test-collector');
     }
-    extensionGetLogs(state, callback) {
-        return callback(null, ["log"]);
+    
+    extensionInitCollectionState(event, callback) {
+        return callback(null, {state: 'initial-state'}, 900);
     }
     
-    extensionGetRegisterParameters(event) {
-        return {};
+    extensionGetLogs(state, callback) {
+        return callback(null, ['log1', 'log2'], {state: 'new-state'}, 900);
+    }
+    
+    extensionGetRegisterParameters(event, callback) {
+        return callback(null, {register: 'test-param'});
     }
     
     extensionFormatLog(msg) {
