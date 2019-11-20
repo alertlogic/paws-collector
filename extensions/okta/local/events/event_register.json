@@ -1,0 +1,16 @@
+{
+    "RequestType": "Create",
+    "ServiceToken": "arn:aws:lambda:eu-west-1:352283894008:function:username-test-remov-GetEndpointsLambdaFuncti-RVS9Y1YR1GJR",
+    "ResponseURL": "https://cloudformation-custom-resource-response-euwest1.s3-eu-west-1.amazonaws.com/arn%3Aaws%3Acloudformation%3Aeu-west-1%3A352283894008%3Astack/username-test-removed-creds-4/b8d29ba0-c499-11e7-a296-503abe701cd1%7CEndpointAPIs%7Cf0e0cab3-b258-4058-b56a-820c76ff30a5?AWSAccessKeyId=AKIAJ7MCS7PVEUOADEEA&Expires=1510162268&Signature=i83yhDz11gTyT4ACewvG6yKRjp4%3D",
+    "StackId": "arn:aws:cloudformation:eu-west-1:352283894008:stack/username-test-removed-creds-4/b8d29ba0-c499-11e7-a296-503abe701cd1",
+    "RequestId": "f0e0cab3-b258-4058-b56a-820c76ff30a5",
+    "LogicalResourceId": "EndpointAPIs",
+    "ResourceType": "AWS::CloudFormation::CustomResource",
+    "ResourceProperties": {
+        "ServiceToken": "arn:aws:lambda:eu-west-1:352283894008:function:username-test-remov-GetEndpointsLambdaFuncti-RVS9Y1YR1GJR",
+        "StackName": "username-test-1",
+        "AwsAccountId": "352283894008",
+        "VpcId" : "vpc-id",
+        "LogGroup" : "log-group-name"
+    }
+}

@@ -9,6 +9,7 @@ Resources:
       KmsKeyArn: arn:aws:kms:us-east-1:352283894008:key/c061f745-970c-4684-bd87-ae7af817bf3b
       Environment:
         Variables:
+          AWS_LAMBDA_FUNCTION_NAME:
           aims_secret_key:
           aims_access_key_id:
           al_api:
@@ -17,6 +18,8 @@ Resources:
           ingest_api:
           DEBUG:
           paws_state_queue_arn:
+          paws_state_queue_url:
+          paws_poll_interval:
           paws_extension:
           okta_endpoint:
           okta_token:
