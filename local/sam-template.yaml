@@ -18,6 +18,7 @@ Resources:
           DEBUG:
           paws_state_queue_arn:
           paws_state_queue_url:
+          paws_poll_interval:
           paws_extension:
           okta_endpoint:
           okta_token:

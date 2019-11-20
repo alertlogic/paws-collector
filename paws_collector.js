@@ -112,7 +112,7 @@ class PawsCollector extends AlAwsCollector {
     _storeCollectionState(pawsState, newExtState, invocationTimeout, callback) {
         let collector = this;
         var sqs = new AWS.SQS({apiVersion: '2012-11-05'});
-        const nextInvocationTimeout = invocationTimeout ? invocationTimeout : process.env.poll_interval;
+        const nextInvocationTimeout = invocationTimeout ? invocationTimeout : process.env.paws_poll_interval;
         pawsState.extension_state = newExtState;
 
         const params = {
