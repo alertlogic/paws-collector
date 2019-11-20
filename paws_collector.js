@@ -30,7 +30,6 @@ class PawsCollector extends AlAwsCollector {
     
     register(event) {
         let collector = this;
-        let superRegister = super.register;
         let stack = {
             stackName : event.ResourceProperties.StackName,
             extensionName : collector._extensionName
@@ -52,14 +51,13 @@ class PawsCollector extends AlAwsCollector {
                 return collector.done(err);
             } else {
                 let registerProps = Object.assign(stack, customRegister);
-                return superRegister(event, registerProps);
+                return AlAwsCollector.prototype.register.call(collector, event, registerProps);
             }
         });
     };
     
     deregister(event) {
         let collector = this;
-        let superDeregister = super.deregister;
         let stack = {
             stackName : event.ResourceProperties.StackName,
             extensionName : collector._extensionName
@@ -69,7 +67,7 @@ class PawsCollector extends AlAwsCollector {
                 console.warn('PAWS000102 Error during deregistration', err);
             } 
             let registerProps = Object.assign(stack, customRegister);
-            return superDeregister(event, registerProps);
+            return AlAwsCollector.prototype.deregister.call(collector, event, registerProps);
         });
     };
     
