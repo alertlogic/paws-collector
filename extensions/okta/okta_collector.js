@@ -7,6 +7,9 @@
  * @end
  * -----------------------------------------------------------------------------
  */
+'use strict';
+
+const moment = require('moment');
 const okta = require('@okta/okta-sdk-nodejs');
 const parse = require('@alertlogic/al-collector-js').Parse;
 const PawsCollector = require('paws-collector').PawsCollector;
@@ -27,10 +30,22 @@ class OktaCollector extends PawsCollector {
         super(context, creds, 'okta');
     }
     
-    extensionGetRegisterParameters(event) {
-        return {
-            okta_endpoint: process.env.okta_endpoint
+    extensionInitCollectionState(event, callback) {
+        const startTs = process.env.okta_collection_start_ts ? 
+                process.env.okta_collection_start_ts :
+                    moment().toISOString();
+        const endTs = moment(startTs).add(15, 'minutes').toISOString();
+        const initialState = {
+            since: startTs,
+            until: endTs
         };
+        return callback(null, initialState, 1);
+    }
+    
+    extensionGetRegisterParameters(event, callback) {
+        return callback(null, {
+            okta_endpoint: process.env.okta_endpoint
+        });
     }
     
     extensionGetLogs(state, callback) {
@@ -38,7 +53,6 @@ class OktaCollector extends PawsCollector {
             orgUrl: process.env.okta_endpoint,
             token: process.env.okta_token
         });
-        console.log('!!!Collecting logs.');
         const collection = oktaClient.getLogs({
             since: state.since,
             until: state.until
@@ -48,11 +62,9 @@ class OktaCollector extends PawsCollector {
             logAcc.push(log);
         })
         .then(() => {
-            console.log('!!!done');
-            return callback(null, logAcc, state);
+            return callback(null, logAcc, state, 0);
         })
         .catch((error) => {
-            console.log('!!! Logs Error', error);
             return callback(error);
         });
     }

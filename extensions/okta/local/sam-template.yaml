@@ -23,6 +23,7 @@ Resources:
           paws_extension:
           okta_endpoint:
           okta_token:
+          okta_collection_start_ts:
           collector_id:
       Runtime: nodejs8.10
       Handler: index.handler
