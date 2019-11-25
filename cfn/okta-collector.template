@@ -419,7 +419,7 @@
             },
             "Handler":"index.handler",
             "Runtime":"nodejs10.x",
-            "MemorySize":128,
+            "MemorySize":256,
             "Timeout": 300,
             "Environment":{
                "Variables":{
