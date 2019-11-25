@@ -11,10 +11,10 @@
       "name": "Alert Logic NPM Team",
       "email": "npm@alertlogic.com"
     }
-  ]
+  ],
   "scripts": {
     "lint": "jshint --exclude \"./node_modules/*\" **/*.js",
-    "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=cobertura mocha --colors --reporter mocha-jenkins-reporter"
+    "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=cobertura mocha --colors --reporter mocha-jenkins-reporter",
     "publish": "npm publish --access=public"
   },
   "devDependencies": {
