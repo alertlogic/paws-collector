@@ -33,7 +33,8 @@ class PawsCollector extends AlAwsCollector {
         let collector = this;
         let stack = {
             stackName : event.ResourceProperties.StackName,
-            extensionName : collector._extensionName
+            extensionName : collector._extensionName,
+            pawsEndpoint : process.env.paws_endpoint
         };
         
         async.waterfall([
@@ -153,7 +154,7 @@ class PawsCollector extends AlAwsCollector {
      * 
      */
     extensionGetRegisterParameters(event, callback) {
-        throw Error("not implemented extensionGetRegisterParameters()");
+        return callback(null, {});;
     };
     
     /** 

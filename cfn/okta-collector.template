@@ -43,13 +43,13 @@
             "Type": "Number",
             "Default": 60
         },
-        "OktaApiEndpoint": {
-            "Description": "Okta endpoint",
+        "PollApiEndpoint": {
+            "Description": "URL to poll",
             "Type": "String",
             "Default": "https://alertlogic-admin.okta.com/"
         },
-        "OktaToken": {
-            "Description": "Okta SSWS Token",
+        "PollApiSecret": {
+            "Description": "Authentication secret to use for requests to PollApiEndpoint",
             "Type": "String",
             "NoEcho": true
         },
@@ -450,19 +450,19 @@
                   "paws_state_queue_url":{
                       "Ref" : "PawsPollStateQueue"
                   },
-                  "paws_extension": "okta",
                   "paws_poll_interval": {
                       "Ref":"PollingInterval"
                   },
-                  "okta_endpoint":{
-                      "Ref":"OktaApiEndpoint"
+                  "paws_endpoint":{
+                      "Ref":"PollApiEndpoint"
                   },
-                  "okta_token":{
-                      "Ref":"OktaToken"
+                  "paws_api_secret":{
+                      "Ref":"PollApiSecret"
                   },
-                  "okta_collection_start_ts":{
+                  "paws_collection_start_ts":{
                       "Ref":"CollectionStartTs"
                   }
+                  "paws_extension": "okta"
                }
             },
             "Tags": [

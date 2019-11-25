@@ -31,8 +31,8 @@ class OktaCollector extends PawsCollector {
     }
     
     extensionInitCollectionState(event, callback) {
-        const startTs = process.env.okta_collection_start_ts ? 
-                process.env.okta_collection_start_ts :
+        const startTs = process.env.paws_collection_start_ts ? 
+                process.env.paws_collection_start_ts :
                     moment().toISOString();
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
         const initialState = {
@@ -43,17 +43,11 @@ class OktaCollector extends PawsCollector {
         return callback(null, initialState, 1);
     }
     
-    extensionGetRegisterParameters(event, callback) {
-        return callback(null, {
-            okta_endpoint: process.env.okta_endpoint
-        });
-    }
-    
     extensionGetLogs(state, callback) {
         let collector = this;
         const oktaClient = new okta.Client({
-            orgUrl: process.env.okta_endpoint,
-            token: process.env.okta_token
+            orgUrl: process.env.paws_endpoint,
+            token: process.env.paws_api_secret
         });
         console.info(`OKTA000001 Collecting data from ${state.since} till ${state.until}`);
         const collection = oktaClient.getLogs({
