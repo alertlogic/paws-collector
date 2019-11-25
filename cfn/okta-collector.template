@@ -461,7 +461,7 @@
                   },
                   "paws_collection_start_ts":{
                       "Ref":"CollectionStartTs"
-                  }
+                  },
                   "paws_extension": "okta"
                }
             },
