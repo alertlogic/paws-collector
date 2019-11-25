@@ -32,6 +32,12 @@
             "Type": "String",
             "Default": "rcs-alertlogic-collectors"
         },
+        
+        "CollectorId": {
+            "Description": "Optional, a collector UUID if known.",
+            "Type": "String",
+            "Default": "none"
+        },
         "PollingInterval": {
             "Description": "Interval in seconds between two consecutive poll requests.",
             "Type": "Number",
@@ -434,6 +440,9 @@
                   },
                   "al_data_residency":{
                       "Ref":"AlDataResidency"
+                  },
+                  "collector_id": {
+                      "Ref":"CollectorId"
                   },
                   "paws_state_queue_arn":{
                       "Fn::GetAtt" : ["PawsPollStateQueue", "Arn"]
