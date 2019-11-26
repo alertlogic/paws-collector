@@ -29,7 +29,7 @@
     "sinon": "^7.5.0"
   },
   "dependencies": {
-    "al-aws-collector-js": "@alertlogic/al-aws-collector-js",
+    "@alertlogic/al-aws-collector-js": "2.0.0",
     "async": "3.1.0",
     "debug": "4.1.1",
     "moment": "2.24.0"

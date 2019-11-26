@@ -14,7 +14,7 @@ const async = require('async');
 const debug = require('debug')('index');
 const AWS = require('aws-sdk');
 
-const AlAwsCollector = require('al-aws-collector-js').AlAwsCollector;
+const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector;
 const m_packageJson = require('./package.json');
 
 class PawsCollector extends AlAwsCollector {

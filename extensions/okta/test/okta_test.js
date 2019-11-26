@@ -6,7 +6,7 @@ const m_response = require('cfn-response');
 const oktaMock = require('./okta_mock');
 var m_alCollector = require('@alertlogic/al-collector-js');
 var OktaCollector = require('../okta_collector').OktaCollector;
-const m_al_aws = require('al-aws-collector-js').Util;
+const m_al_aws = require('@alertlogic/al-aws-collector-js').Util;
 
 
 var alserviceStub = {};
