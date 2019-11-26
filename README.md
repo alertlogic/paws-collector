@@ -1,5 +1,5 @@
 # paws-collector
-Alert Logic AWS Based API Poll (PAWS) Log Collector.
+Alert Logic AWS Based API Poll (PAWS) Log Collector Library.
 
 # Overview
 This repository contains the AWS  JavaScript Lambda function and CloudFormation 
@@ -21,7 +21,7 @@ The `Updater` syncs from the Alert Logic S3 bucket where you originally deployed
 
 ## Collection Trigger
 
-The `Collector` function is an AWS lambda function which is triggered by Timer based CloudWatch Event.
+The `Collector` function is an AWS lambda function which is triggered by SQS which contains collection state message.
 During each invocation the function polls 3rd party service log API and sends retrieved data to 
 AlertLogic `Ingest` service for further processing.
 
@@ -34,14 +34,22 @@ an AWS Scheduled Event that occurs every 15 minutes.
 
 # Development
 
-## Building a package for OKTA
+## Build
 Clone this repository and build a lambda package by executing:
 ```
 $ git clone https://github.com/alertlogic/paws-collector.git
 $ cd paws-collector
-$ make deps && make test
-$ AWS_LAMBDA_PAWS_PACKAGE_NAME=al-okta-collector.zip make package
+$ make deps test package
 ```
+
+## Build collector for Okta
+Clone this repository and build a lambda package by executing:
+```
+$ git clone https://github.com/alertlogic/paws-collector.git
+$ cd paws-collector/extensions/okta
+$ make deps test package
+```
+
 The package name is *al-okta-collector.zip*
 
 ## Debugging
