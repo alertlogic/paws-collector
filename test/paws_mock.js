@@ -5,6 +5,13 @@ process.env.azollect_api = 'azcollect.global-services.global.alertlogic.com';
 process.env.aims_access_key_id = 'aims-key-id';
 process.env.aims_secret_key = 'aims-secret-key-encrypted';
 process.env.log_group = 'logGroupName';
+process.env.paws_state_queue_arn = 'arn:aws:sqs:us-east-1:352283894008:test-queue';
+process.env.paws_state_queue_url = 'https://sqs.us-east-1.amazonaws.com/352283894008/test-queue';
+process.env.paws_extension = 'okta';
+process.env.paws_poll_interval = 900;
+process.env.okta_endpoint = 'https://test.alertlogic.com/';
+process.env.okta_token = 'okta-token';
+process.env.collector_id = 'collector-id';
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',
@@ -19,11 +26,11 @@ const CWL_TEST_EVENT = {
 };
 
 const STACK_ID = 'arn:aws:cloudformation:us-east-1:352283894008:stack/test/87b3dc90-bd7e-11e7-9e43-503abe701cfd';
-const FUNCTION_ARN = 'arn:aws:lambda:us-east-1:352283894008:function:test-guardduty-01-CollectLambdaFunction-2CWNLPPW5XO8';
-const FUNCTION_NAME = 'test-VpcFlowCollectLambdaFunction-1JNNKQIPOTEST';
-const REGISTRATION_TEST_URL = '/aws/cwl/353333894008/us-east-1/' + encodeURIComponent(FUNCTION_NAME);
+const FUNCTION_ARN = 'arn:aws:lambda:us-east-1:352283894008:function:test-01-CollectLambdaFunction-2CWNLPPW5XO8';
+const FUNCTION_NAME = 'test-TestCollectLambdaFunction-1JNNKQIPOTEST';
+const REGISTRATION_TEST_URL = '/aws/test/353333894008/us-east-1/' + encodeURIComponent(FUNCTION_NAME);
 const STACK_NAME = 'test-stack-01';
-const LOG_GROUP = 'username-vpc-flow-logs-group';
+const LOG_GROUP = 'username-logs-group';
 
 const REGISTRATION_TEST_EVENT = {
     'RequestType': 'Create',

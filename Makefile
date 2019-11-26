@@ -21,6 +21,9 @@ package: test package.zip
 package.zip: node_modules/ *.js package.json
 	zip -r $(AWS_LAMBDA_PAWS_PACKAGE_NAME) $^
 
+publish:
+	npm run rel
+
 deploy:
 	aws lambda update-function-code --function-name $(AWS_LAMBDA_PAWS_FUNCTION_NAME) --zip-file fileb://$(AWS_LAMBDA_PAWS_PACKAGE_NAME)
 

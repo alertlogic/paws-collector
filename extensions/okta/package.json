@@ -1,0 +1,28 @@
+{
+  "name": "okta-collector",
+  "version": "0.0.1",
+  "description": "Alert Logic AWS based Okta Log Collector extension",
+  "repository": {},
+  "private": true,
+  "scripts": {
+    "lint": "jshint --exclude \"./node_modules/*\" **/*.js",
+    "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=cobertura mocha --colors --reporter mocha-jenkins-reporter"
+  },
+  "devDependencies": {
+    "jshint": "^2.9.5",
+    "mocha": "^6.2.2",
+    "mocha-jenkins-reporter": "^0.4.2",
+    "nyc": "^14.1.1",
+    "rewire": "^4.0.1",
+    "sinon": "^7.5.0"
+  },
+  "dependencies": {
+    "@okta/okta-sdk-nodejs": "3.1.0",
+    "@alertlogic/al-collector-js": "1.3.4",
+    "async": "3.1.0",
+    "debug": "4.1.1",
+    "moment": "2.24.0",
+    "paws-collector": "alertlogic/paws-collector#initial"
+  },
+  "author": "Alert Logic Inc."
+}

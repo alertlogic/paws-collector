@@ -9,6 +9,7 @@ Resources:
       KmsKeyArn: arn:aws:kms:us-east-1:352283894008:key/c061f745-970c-4684-bd87-ae7af817bf3b
       Environment:
         Variables:
+          AWS_LAMBDA_FUNCTION_NAME:
           aims_secret_key:
           aims_access_key_id:
           al_api:
@@ -22,6 +23,7 @@ Resources:
           paws_extension:
           okta_endpoint:
           okta_token:
+          okta_collection_start_ts:
           collector_id:
       Runtime: nodejs8.10
       Handler: index.handler

@@ -1,0 +1,14 @@
+node_modules/
+test/report.xml
+#idea
+.idea/
+nbproject/
+.nyc_output/
+coverage/
+test/ide_test.js
+.env
+**/local/env.json
+.project
+**.zip
+**/report.xml
+
