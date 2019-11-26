@@ -2,13 +2,13 @@
     "AWSTemplateFormatVersion": "2010-09-09",
     "Description": "Alert Logic template for creating a Okta Logs collector",
     "Parameters": {
-        "AccessKeyId": {
-            "Description": "Alertlogic Access Key Id obtained from AIMS",
+        "AlertlogicAccessKeyId": {
+            "Description": "Alert Logic Access Key Id obtained from AIMS",
             "Type": "String",
             "Default": "5c850016c9eb6f3b"
         },
-        "SecretKey": {
-            "Description": "Alertlogic Secret Key returned from AIMS for the Access Key Id",
+        "AlertlogicSecretKey": {
+            "Description": "Alert Logic Secret Key returned from AIMS for the Access Key Id",
             "Type": "String",
             "NoEcho": true
         },
@@ -33,6 +33,11 @@
             "Default": "rcs-alertlogic-collectors"
         },
         
+        "AlertlogicCustomerId": {
+            "Description": "Optional, Alert Logic customer ID which collected data should be reported for. If not set customer ID is derived from AIMs tokens",
+            "Type": "String",
+            "Default": ""
+        },
         "CollectorId": {
             "Description": "Optional, a collector UUID if known.",
             "Type": "String",
@@ -364,7 +369,7 @@
                     ]
                 },
                 "Plaintext": {
-                    "Ref": "SecretKey"
+                    "Ref": "AlertlogicSecretKey"
                 }
             }
         },
@@ -424,7 +429,7 @@
             "Environment":{
                "Variables":{
                   "aims_access_key_id": {
-                      "Ref":"AccessKeyId"
+                      "Ref":"AlertlogicAccessKeyId"
                   },
                   "aims_secret_key":{
                       "Fn::GetAtt": ["EncryptSecretKeyCustomResource", "EncryptedText"]
@@ -440,6 +445,9 @@
                   },
                   "al_data_residency":{
                       "Ref":"AlDataResidency"
+                  },
+                  "customer_id": {
+                      "Ref":"AlertlogicCustomerId"
                   },
                   "collector_id": {
                       "Ref":"CollectorId"
