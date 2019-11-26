@@ -12,7 +12,7 @@
 const moment = require('moment');
 const okta = require('@okta/okta-sdk-nodejs');
 const parse = require('@alertlogic/al-collector-js').Parse;
-const PawsCollector = require('paws-collector').PawsCollector;
+const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 
 
 const typeIdPaths = [
