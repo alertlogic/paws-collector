@@ -4,8 +4,7 @@
     "Parameters": {
         "AlertlogicAccessKeyId": {
             "Description": "Alert Logic Access Key Id obtained from AIMS",
-            "Type": "String",
-            "Default": "5c850016c9eb6f3b"
+            "Type": "String"
         },
         "AlertlogicSecretKey": {
             "Description": "Alert Logic Secret Key returned from AIMS for the Access Key Id",
