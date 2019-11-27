@@ -18,14 +18,14 @@ const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector
 const m_packageJson = require('./package.json');
 
 class PawsCollector extends AlAwsCollector {
-    constructor(context, creds, collectorType) {
+    constructor(context, creds, pawsCollectorType) {
         super(context, 'paws',
               AlAwsCollector.IngestTypes.LOGMSGS,
               m_packageJson.version,
               creds,
               null, [], []);
-        console.info('PAWS000100 Loading collector', collectorType);
-        this._collectorType = collectorType;
+        console.info('PAWS000100 Loading collector', pawsCollectorType);
+        this._pawsCollectorType = pawsCollectorType;
         this.pollInterval = process.env.paws_poll_interval;
     };
     
@@ -33,7 +33,7 @@ class PawsCollector extends AlAwsCollector {
         let collector = this;
         let stack = {
             stackName : event.ResourceProperties.StackName,
-            pawsCollectorType : collector._collectorType,
+            pawsCollectorType : collector._pawsCollectorType,
             pawsEndpoint : process.env.paws_endpoint
         };
         
@@ -62,7 +62,7 @@ class PawsCollector extends AlAwsCollector {
         let collector = this;
         let stack = {
             stackName : event.ResourceProperties.StackName,
-            pawsCollectorType : collector._collectorType
+            pawsCollectorType : collector._pawsCollectorType
         };
         let custom = collector.pawsGetRegisterParameters(event, function(err, customRegister) {
             if (err) {
