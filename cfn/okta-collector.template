@@ -48,13 +48,13 @@
             "Type": "Number",
             "Default": 60
         },
-        "PollApiEndpoint": {
+        "OktaEndpoint": {
             "Description": "URL to poll",
             "Type": "String",
             "Default": "https://alertlogic-admin.okta.com/"
         },
-        "PollApiSecret": {
-            "Description": "Authentication secret to use for requests to PollApiEndpoint",
+        "OktaSecret": {
+            "Description": "Authentication secret to use for requests to OktaEndpoint",
             "Type": "String",
             "NoEcho": true
         },
@@ -389,7 +389,8 @@
                ]
              ]
             },
-            "VisibilityTimeout": 900
+            "VisibilityTimeout": 900,
+            "MessageRetentionPeriod": 1209600
          }
       },
       "CollectLambdaFunction":{
@@ -462,10 +463,10 @@
                       "Ref":"PollingInterval"
                   },
                   "paws_endpoint":{
-                      "Ref":"PollApiEndpoint"
+                      "Ref":"OktaEndpoint"
                   },
                   "paws_api_secret":{
-                      "Ref":"PollApiSecret"
+                      "Ref":"OktaSecret"
                   },
                   "paws_collection_start_ts":{
                       "Ref":"CollectionStartTs"
