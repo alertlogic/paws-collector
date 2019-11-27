@@ -131,8 +131,8 @@ class PawsCollector extends AlAwsCollector {
      * @returns callback - (error, stateObject, nextInvocationTimeoutSec)
      * 
      */
-    extensionInitCollectionState(event, callback) {
-        throw Error("not implemented extensionInitCollectionState()");
+    pawsInitCollectionState(event, callback) {
+        throw Error("not implemented pawsInitCollectionState()");
     }
     
     /** 
@@ -142,8 +142,8 @@ class PawsCollector extends AlAwsCollector {
      * @returns callback - (error, logsArray, stateObject, nextInvocationTimeoutSec)
      * 
      */
-    extensionGetLogs(state, callback) {
-        throw Error("not implemented extensionGetLogs()");
+    pawsGetLogs(state, callback) {
+        throw Error("not implemented pawsGetLogs()");
     };
     
     /** 
@@ -153,16 +153,16 @@ class PawsCollector extends AlAwsCollector {
      * @returns callback - (error, objectWithRegistrationProperties)
      * 
      */
-    extensionGetRegisterParameters(event, callback) {
-        return callback(null, {});;
+    pawsGetRegisterParameters(event, callback) {
+        return callback(null, {});
     };
     
     /** 
      * @function extension callback to format received data
      * Refer to al-collector-js.buildPayload parseCallback param
      */
-    extensionFormatLog() {
-        throw Error("not implemented extensionFormatLog()");
+    pawsFormatLog() {
+        throw Error("not implemented pawsFormatLog()");
     };
 }
 

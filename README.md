@@ -46,7 +46,7 @@ $ make deps test package
 Clone this repository and build a lambda package by executing:
 ```
 $ git clone https://github.com/alertlogic/paws-collector.git
-$ cd paws-collector/extensions/okta
+$ cd paws-collector/collectors/okta
 $ make deps test package
 ```
 
