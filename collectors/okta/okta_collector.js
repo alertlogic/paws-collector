@@ -30,7 +30,7 @@ class OktaCollector extends PawsCollector {
         super(context, creds, 'okta');
     }
     
-    extensionInitCollectionState(event, callback) {
+    pawsInitCollectionState(event, callback) {
         const startTs = process.env.paws_collection_start_ts ? 
                 process.env.paws_collection_start_ts :
                     moment().toISOString();
@@ -43,7 +43,7 @@ class OktaCollector extends PawsCollector {
         return callback(null, initialState, 1);
     }
     
-    extensionGetLogs(state, callback) {
+    pawsGetLogs(state, callback) {
         let collector = this;
         const oktaClient = new okta.Client({
             orgUrl: process.env.paws_endpoint,
@@ -89,7 +89,7 @@ class OktaCollector extends PawsCollector {
         };
     }
     
-    extensionFormatLog(msg) {
+    pawsFormatLog(msg) {
         const ts = parse.getMsgTs(msg, tsPaths);
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
         

@@ -5,9 +5,7 @@ AWS_LAMBDA_PAWS_PACKAGE_NAME ?= al-paws-collector.zip
 
 all: test package package.zip
 
-deps: node_modules
-
-node_modules:
+deps:
 	npm install
 
 compile: deps
