@@ -109,14 +109,10 @@ describe('Unit Tests', function() {
                     done();
                 }
             };
-//            const testEvent = {
-//                RequestType: 'ScheduledEvent',
-//                Type: 'PollRequest'
-//            };
             
             OktaCollector.load().then(function(creds) {
                 var collector = new OktaCollector(ctx, creds, 'okta');
-                let fmt = collector.extensionFormatLog(oktaMock.OKTA_LOG_EVENT);
+                let fmt = collector.pawsFormatLog(oktaMock.OKTA_LOG_EVENT);
                 console.log('!!!', fmt);
                 done();
             });

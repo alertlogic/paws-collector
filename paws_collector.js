@@ -18,14 +18,14 @@ const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector
 const m_packageJson = require('./package.json');
 
 class PawsCollector extends AlAwsCollector {
-    constructor(context, creds, extensionName) {
+    constructor(context, creds, collectorType) {
         super(context, 'paws',
               AlAwsCollector.IngestTypes.LOGMSGS,
               m_packageJson.version,
               creds,
               null, [], []);
-        console.info('PAWS000100 Loading extension', extensionName);
-        this._extensionName = extensionName;
+        console.info('PAWS000100 Loading collector', collectorType);
+        this._collectorType = collectorType;
         this.pollInterval = process.env.paws_poll_interval;
     };
     
@@ -33,19 +33,19 @@ class PawsCollector extends AlAwsCollector {
         let collector = this;
         let stack = {
             stackName : event.ResourceProperties.StackName,
-            extensionName : collector._extensionName,
+            pawsCollectorType : collector._collectorType,
             pawsEndpoint : process.env.paws_endpoint
         };
         
         async.waterfall([
             function(asyncCallback) {
-                return collector.extensionInitCollectionState(event, asyncCallback);
+                return collector.pawsInitCollectionState(event, asyncCallback);
             },
             function(state, nextInvocationTimeout, asyncCallback) {
                 return collector._storeCollectionState({}, state, nextInvocationTimeout, asyncCallback);
             },
             function(sqsResponse, asyncCallback) {
-                return collector.extensionGetRegisterParameters(event, asyncCallback);
+                return collector.pawsGetRegisterParameters(event, asyncCallback);
             }
         ], function(err, customRegister) {
             if (err) {
@@ -62,9 +62,9 @@ class PawsCollector extends AlAwsCollector {
         let collector = this;
         let stack = {
             stackName : event.ResourceProperties.StackName,
-            extensionName : collector._extensionName
+            pawsCollectorType : collector._collectorType
         };
-        let custom = collector.extensionGetRegisterParameters(event, function(err, customRegister) {
+        let custom = collector.pawsGetRegisterParameters(event, function(err, customRegister) {
             if (err) {
                 console.warn('PAWS000102 Error during deregistration', err);
             } 
@@ -93,11 +93,11 @@ class PawsCollector extends AlAwsCollector {
         
         async.waterfall([
             function(asyncCallback) {
-                return collector.extensionGetLogs(pawsState.extension_state, asyncCallback);
+                return collector.pawsGetLogs(pawsState.priv_collector_state, asyncCallback);
             },
             function(logs, newExtState, nextInvocationTimeout, asyncCallback) {
                 console.info('PAWS000200 Log events received ', logs.length);
-                return collector.processLog(logs, collector.extensionFormatLog, null, function(err) {
+                return collector.processLog(logs, collector.pawsFormatLog, null, function(err) {
                     return asyncCallback(err, newExtState, nextInvocationTimeout);
                 });
             },
@@ -113,7 +113,7 @@ class PawsCollector extends AlAwsCollector {
         let collector = this;
         var sqs = new AWS.SQS({apiVersion: '2012-11-05'});
         const nextInvocationTimeout = invocationTimeout ? invocationTimeout : collector.pollInterval;
-        pawsState.extension_state = newExtState;
+        pawsState.priv_collector_state = newExtState;
 
         const params = {
             MessageBody: JSON.stringify(pawsState),
@@ -125,7 +125,7 @@ class PawsCollector extends AlAwsCollector {
     };
     
     /** 
-     * @function extension callback to initialize collection state
+     * @function collector callback to initialize collection state
      * @param event - collector register event coming in from CFT.
      * @param callback
      * @returns callback - (error, stateObject, nextInvocationTimeoutSec)
@@ -136,8 +136,8 @@ class PawsCollector extends AlAwsCollector {
     }
     
     /** 
-     * @function extension callback to receive logs data
-     * @param state - collection state specific to an extension.
+     * @function collector callback to receive logs data
+     * @param state - collection state specific to a PAWS collector.
      * @param callback
      * @returns callback - (error, logsArray, stateObject, nextInvocationTimeoutSec)
      * 
@@ -147,7 +147,7 @@ class PawsCollector extends AlAwsCollector {
     };
     
     /** 
-     * @function extension callback to get extension specific (de)registration parameters
+     * @function collector callback to get specific (de)registration parameters
      * @param event - collector register event coming in from CFT during stack Create/Delete operations.
      * @param callback
      * @returns callback - (error, objectWithRegistrationProperties)
@@ -158,7 +158,7 @@ class PawsCollector extends AlAwsCollector {
     };
     
     /** 
-     * @function extension callback to format received data
+     * @function collector callback to format received data
      * Refer to al-collector-js.buildPayload parseCallback param
      */
     pawsFormatLog() {

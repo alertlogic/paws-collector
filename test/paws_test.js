@@ -84,19 +84,19 @@ class TestCollector extends PawsCollector {
         super(ctx, creds, 'test-collector');
     }
     
-    extensionInitCollectionState(event, callback) {
+    pawsInitCollectionState(event, callback) {
         return callback(null, {state: 'initial-state'}, 900);
     }
     
-    extensionGetLogs(state, callback) {
+    pawsGetLogs(state, callback) {
         return callback(null, ['log1', 'log2'], {state: 'new-state'}, 900);
     }
     
-    extensionGetRegisterParameters(event, callback) {
+    pawsGetRegisterParameters(event, callback) {
         return callback(null, {register: 'test-param'});
     }
     
-    extensionFormatLog(msg) {
+    pawsFormatLog(msg) {
         let formattedMsg = {
             messageTs: 12345678,
             priority: 11,
