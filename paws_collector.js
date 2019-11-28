@@ -32,7 +32,6 @@ class PawsCollector extends AlAwsCollector {
     register(event) {
         let collector = this;
         let stack = {
-            stackName : event.ResourceProperties.StackName,
             pawsCollectorType : collector._pawsCollectorType,
             pawsEndpoint : process.env.paws_endpoint
         };
@@ -61,7 +60,6 @@ class PawsCollector extends AlAwsCollector {
     deregister(event) {
         let collector = this;
         let stack = {
-            stackName : event.ResourceProperties.StackName,
             pawsCollectorType : collector._pawsCollectorType
         };
         let custom = collector.pawsGetRegisterParameters(event, function(err, customRegister) {
