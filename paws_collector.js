@@ -29,10 +29,17 @@ class PawsCollector extends AlAwsCollector {
         this.pollInterval = process.env.paws_poll_interval;
     };
     
+    getProperties() {
+        const baseProps = super.getProperties();
+        let pawsProps = {
+            pawsCollectorType : this._pawsCollectorType
+        };
+        return Object.assign(pawsProps, baseProps);
+    };
+    
     register(event) {
         let collector = this;
-        let stack = {
-            pawsCollectorType : collector._pawsCollectorType,
+        let pawsRegisterProps = {
             pawsEndpoint : process.env.paws_endpoint
         };
         
@@ -51,7 +58,7 @@ class PawsCollector extends AlAwsCollector {
                 console.err('PAWS000101 Error during registration', err);
                 return collector.done(err);
             } else {
-                let registerProps = Object.assign(stack, customRegister);
+                let registerProps = Object.assign(pawsRegisterProps, customRegister);
                 return AlAwsCollector.prototype.register.call(collector, event, registerProps);
             }
         });
@@ -59,14 +66,14 @@ class PawsCollector extends AlAwsCollector {
     
     deregister(event) {
         let collector = this;
-        let stack = {
+        let pawsRegisterProps = {
             pawsCollectorType : collector._pawsCollectorType
         };
         let custom = collector.pawsGetRegisterParameters(event, function(err, customRegister) {
             if (err) {
                 console.warn('PAWS000102 Error during deregistration', err);
             } 
-            let registerProps = Object.assign(stack, customRegister);
+            let registerProps = Object.assign(pawsRegisterProps, customRegister);
             return AlAwsCollector.prototype.deregister.call(collector, event, registerProps);
         });
     };
