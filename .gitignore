@@ -11,4 +11,5 @@ test/ide_test.js
 .project
 **.zip
 **/report.xml
-
+**.swp
+**.swo

@@ -34,6 +34,9 @@ an AWS Scheduled Event that occurs every 15 minutes.
 
 # Development
 
+## Creating New Collector Types
+run `npm run create-collector <<name>> <<version>>` to create a skeleton collector in the `collectors` folder.
+
 ## Build
 Clone this repository and build a lambda package by executing:
 ```
