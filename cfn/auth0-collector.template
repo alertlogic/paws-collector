@@ -29,7 +29,7 @@
         "PackagesBucketPrefix": {
             "Description": "S3 bucket name prefix where collector packages are located.",
             "Type": "String",
-            "Default": "rcs-alertlogic-collectors"
+            "Default": "alertlogic-collectors"
         },
         
         "AlertlogicCustomerId": {
