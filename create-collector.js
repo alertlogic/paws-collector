@@ -56,9 +56,9 @@ function copyFiles(path, dir){
         if(file.match(/\.template/)){
             const fileContents = fs.readFileSync(srcPath, 'utf8')
             // Replace all of the template values with real values
-            const replacedContents = fileContents.replace(/\{\{\s*type\s*\}\}/, type)
-                .replace(/\{\{\s*Type\s*\}\}/, Type)
-                .replace(/\{\{\s*version\s*\}\}/, version)
+            const replacedContents = fileContents.replace(/\{\{\s*type\s*\}\}/g, type)
+                .replace(/\{\{\s*Type\s*\}\}/g, Type)
+                .replace(/\{\{\s*version\s*\}\}/g, version)
             fs.writeFileSync(destPath, replacedContents, {'encoding': 'utf8'})
             console.log(`populating and copying file ${destPath}`)
         }else{
