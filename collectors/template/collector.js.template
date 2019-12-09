@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * @copyright (C) 2019, Alert Logic, Inc
+ * @copyright (C) {{year}}, Alert Logic, Inc
  * @doc
  *
  * {{type}} class.
@@ -33,6 +33,8 @@ class {{Type}}Collector extends PawsCollector {
                     moment().toISOString();
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
         const initialState = {
+            // TODO: define initial collection state specific to your collector.
+            // You will get this state back with each invocation
             since: startTs,
             until: endTs,
             poll_interval_sec: 1
@@ -63,6 +65,8 @@ class {{Type}}Collector extends PawsCollector {
                 1 : this.pollInterval;
         
         return  {
+            // TODO: define the next collection state.
+            // This needs to be in the smae format as the intial colletion state above
              since: nextSinceTs,
              until: nextUntilMoment.toISOString(),
              poll_interval_sec: nextPollInterval
@@ -70,6 +74,7 @@ class {{Type}}Collector extends PawsCollector {
     }
     
     pawsFormatLog(msg) {
+        // TODO: double check that this message parsing fits your use case
         const ts = parse.getMsgTs(msg, tsPaths);
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
         

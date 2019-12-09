@@ -1,10 +1,19 @@
 const fs = require('fs')
 
 const name = process.argv[2]
-const version = process.argv[3] | "0.0.0"
+const version = process.argv[3]
+const prefix = process.argv[4]
+
 //do some basic validation on the name for length and it suitability as a js varaible
+if(!process.argv[2], !process.argv[3], !process.argv[4]){
+    console.log("usage: npm run create-collector <<name>> <<version>> <<log-prefix>>")
+    return
+}
 if(name.length < 2){
     throw new Error("Please choose a name for this collector longer than two characters")
+}
+if(prefix.length > 4){
+    throw new Error("Please choose a log prefix for this collector less than four characters")
 }
 if(!isNaN(parseInt(name.charAt(0), 10))){
     throw new Error("Please ensure the first character of the collector name is not a number")
@@ -13,6 +22,9 @@ if(!isNaN(parseInt(name.charAt(0), 10))){
 //The different cases of the name
 const type = name.toLowerCase().replace(/[\W]+/, "")
 const Type = type.charAt(0).toUpperCase() + type.slice(1)
+const TYPE = prefix.toUpperCase().replace(/[\W]+/, "")
+const date = new Date()
+const year = date.getFullYear()
 
 const collectDir = './collectors/' + type
 
@@ -58,6 +70,8 @@ function copyFiles(path, dir){
             // Replace all of the template values with real values
             const replacedContents = fileContents.replace(/\{\{\s*type\s*\}\}/g, type)
                 .replace(/\{\{\s*Type\s*\}\}/g, Type)
+                .replace(/\{\{\s*TYPE\s*\}\}/g, TYPE)
+                .replace(/\{\{\s*year\s*\}\}/g, year)
                 .replace(/\{\{\s*version\s*\}\}/g, version)
             fs.writeFileSync(destPath, replacedContents, {'encoding': 'utf8'})
             console.log(`populating and copying file ${destPath}`)

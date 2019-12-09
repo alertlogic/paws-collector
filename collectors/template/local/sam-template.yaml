@@ -6,7 +6,7 @@ Resources:
   LocalLambda:
     Type: AWS::Serverless::Function
     Properties:
-      KmsKeyArn: arn:aws:kms:us-east-1:352283894008:key/c061f745-970c-4684-bd87-ae7af817bf3b
+      KmsKeyArn: your-arn-here
       Environment:
         Variables:
           AWS_LAMBDA_FUNCTION_NAME:
@@ -21,11 +21,8 @@ Resources:
           paws_state_queue_url:
           paws_poll_interval:
           paws_extension:
-          okta_endpoint:
-          okta_token:
-          okta_collection_start_ts:
           collector_id:
-      Runtime: nodejs8.10
+      Runtime: nodejs10.x
       Handler: index.handler
       Timeout: 300 
       MemorySize: 1024
