@@ -7,11 +7,12 @@ process.env.aims_secret_key = 'aims-secret-key-encrypted';
 process.env.log_group = 'logGroupName';
 process.env.paws_state_queue_arn = 'arn:aws:sqs:us-east-1:352283894008:test-queue';
 process.env.paws_state_queue_url = 'https://sqs.us-east-1.amazonaws.com/352283894008/test-queue';
-process.env.paws_extension = 'okta';
+process.env.paws_type_name = 'okta';
 process.env.paws_poll_interval = 900;
-process.env.okta_endpoint = 'https://test.alertlogic.com/';
-process.env.okta_token = 'okta-token';
+process.env.paws_endpoint = 'https://test.alertlogic.com/';
+process.env.paws_api_secret = 'api-token';
 process.env.collector_id = 'collector-id';
+process.env.paws_api_client_id = 'api-client-id';
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',
