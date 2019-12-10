@@ -7,7 +7,7 @@
             "attributes": {
                 "ApproximateReceiveCount": "1",
                 "SentTimestamp": "1574159909907",
-                "SenderId": "AIDAJQUTUC6GE7XGWPOBG",
+                "SenderId": "SomeSenderId",
                 "ApproximateFirstReceiveTimestamp": "1574159909968"
             },
             "messageAttributes": {},

@@ -1,0 +1,15 @@
+local/
+cfn/
+collectors/
+node_modules/
+.idea/
+nbproject/
+.nyc_output/
+coverage/
+test/ide_test.js
+.env
+.project
+**.zip
+**/report.xml
+PULL_REQUEST_TEMPLATE.md
+.travis.yml
