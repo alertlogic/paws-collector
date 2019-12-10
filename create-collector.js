@@ -37,6 +37,10 @@ if (!fs.existsSync(collectDir)){
 //read temp directory
 const templateDir = './collectors/template'
 copyFiles(templateDir, collectDir)
+console.log('populating writing cloud formation template')
+const fileContents = fs.readFileSync('cfn/collector.template.template', 'utf8')
+const replacedContents = populateTemplate(fileContents)
+fs.writeFileSync(`cfn/${type}_collector.template`, replacedContents, {'encoding': 'utf8'})
 
 console.log("--------------------------------------")
 console.log(`Successfully created ${Type} collector type in ${collectDir}`)
@@ -67,12 +71,7 @@ function copyFiles(path, dir){
 
         if(file.match(/\.template/)){
             const fileContents = fs.readFileSync(srcPath, 'utf8')
-            // Replace all of the template values with real values
-            const replacedContents = fileContents.replace(/\{\{\s*type\s*\}\}/g, type)
-                .replace(/\{\{\s*Type\s*\}\}/g, Type)
-                .replace(/\{\{\s*TYPE\s*\}\}/g, TYPE)
-                .replace(/\{\{\s*year\s*\}\}/g, year)
-                .replace(/\{\{\s*version\s*\}\}/g, version)
+            const replacedContents = populateTemplate(fileContents)
             fs.writeFileSync(destPath, replacedContents, {'encoding': 'utf8'})
             console.log(`populating and copying file ${destPath}`)
         }else{
@@ -80,4 +79,13 @@ function copyFiles(path, dir){
             console.log(`copying file ${destPath}`)
         }
     });
+}
+
+function populateTemplate(fileContents){
+    // Replace all of the template values with real values
+    return fileContents.replace(/\{\{\s*type\s*\}\}/g, type)
+        .replace(/\{\{\s*Type\s*\}\}/g, Type)
+        .replace(/\{\{\s*TYPE\s*\}\}/g, TYPE)
+        .replace(/\{\{\s*year\s*\}\}/g, year)
+        .replace(/\{\{\s*version\s*\}\}/g, version)
 }
