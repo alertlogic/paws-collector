@@ -1,0 +1,809 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Alert Logic template for creating a O365 Logs collector",
+    "Parameters": {
+        "AlertlogicAccessKeyId": {
+            "Description": "Alert Logic Access Key Id obtained from AIMS",
+            "Type": "String",
+            "Default": "5c850016c9eb6f3b"
+        },
+        "AlertlogicSecretKey": {
+            "Description": "Alert Logic Secret Key returned from AIMS for the Access Key Id",
+            "Type": "String",
+            "NoEcho": true
+        },
+        "AlApiEndpoint": {
+            "Description": "Alert Logic API endpoint",
+            "Type": "String",
+            "Default": "api.global-services.global.alertlogic.com",
+            "AllowedValues": [
+                "api.global-services.global.alertlogic.com",
+                "api.global-integration.product.dev.alertlogic.com"
+            ]
+        },
+        "AlDataResidency": {
+            "Description": "Alert Logic Data Residency",
+            "Type": "String",
+            "Default": "default",
+            "AllowedValues": ["default"]
+        },
+        "PackagesBucketPrefix": {
+            "Description": "S3 bucket name prefix where collector packages are located.",
+            "Type": "String",
+            "Default": "rcs-alertlogic-collectors"
+        },
+        
+        "AlertlogicCustomerId": {
+            "Description": "Optional, Alert Logic customer ID which collected data should be reported for. If not set customer ID is derived from AIMs tokens",
+            "Type": "String",
+            "Default": ""
+        },
+        "CollectorId": {
+            "Description": "Optional, a collector UUID if known.",
+            "Type": "String",
+            "Default": "none"
+        },
+        "PollingInterval": {
+            "Description": "Interval in seconds between two consecutive poll requests.",
+            "Type": "Number",
+            "Default": 60
+        },
+        "Azure_App_Registration_Client_Id": {
+            "Description": "App Registration Client ID",
+            "Type": "String",
+            "Default": ""
+        },
+        "Azure_App_Registration_Client_Secret": {
+            "Description": "App Registration Client Secret",
+            "Type": "String",
+            "NoEcho": true
+        },
+        "Azure_Tenant_Id": {
+            "Description": "Azure Tenant ID",
+            "Type": "String"
+        },
+        "CollectionStartTs": {
+            "Description": "Timestamp when log collection starts",
+            "Type": "String",
+            "Default" : "2019-11-21T16:00:00Z",
+            "AllowedPattern" : "^\\d{4}(-\\d{2}){2}T(\\d{2}:){2}\\d{2}Z$"
+        }
+    },
+    "Resources":{
+      "CollectLambdaRole":{
+         "Type":"AWS::IAM::Role",
+         "Properties":{
+            "Path":"/",
+            "AssumeRolePolicyDocument":{
+               "Version":"2012-10-17",
+               "Statement":[
+                  {
+                     "Effect":"Allow",
+                     "Principal":{
+                        "Service":[
+                           "lambda.amazonaws.com"
+                        ]
+                     },
+                     "Action":[
+                        "sts:AssumeRole"
+                     ]
+                  }
+               ]
+            }
+         }
+      },
+        "LambdaKmsKey": {
+            "Type": "AWS::KMS::Key",
+            "DependsOn":[
+                "CollectLambdaRole",
+                "EncryptLambdaRole"
+            ],
+            "Properties": {
+               "Description": "kms key used to encrypt credentials for lambda",
+               "KeyPolicy": {
+                    "Version": "2012-10-17",
+                    "Id": "al-kms-policy",
+                    "Statement": [
+                        {
+                            "Sid": "Enable IAM User Permissions",
+                            "Effect": "Allow",
+                            "Principal": {
+                            "AWS": {
+                             "Fn::Join": [
+                               ":",
+                               [
+                                 "arn:aws:iam",
+                                 "",
+                                 {
+                                   "Ref": "AWS::AccountId"
+                                 },
+                                 "root"
+                               ]
+                             ]
+                            }
+                            },
+                            "Action": "kms:*",
+                            "Resource": "*"
+                       },
+                       {
+                            "Sid": "Allow use of the key for lambda",
+                            "Effect": "Allow",
+                            "Principal": {
+                              "AWS": {
+                                "Fn::GetAtt": [
+                                  "CollectLambdaRole",
+                                  "Arn"
+                                ]
+                              }
+                            },
+                            "Action": [
+                              "kms:Decrypt",
+                              "kms:Encrypt"
+                            ],
+                            "Resource": "*"
+                       },
+                       {
+                          "Sid": "Allow use of the key for lambda encryption",
+                          "Effect": "Allow",
+                          "Principal": {
+                             "AWS": {
+                                "Fn::GetAtt": [
+                                   "EncryptLambdaRole",
+                                   "Arn"
+                                ]
+                             }
+                          },
+                          "Action": [
+                             "kms:Encrypt"
+                          ],
+                          "Resource": "*"
+                       }
+                    ]
+                },
+                "Tags": [
+                    {
+                        "Key": "AlertLogic",
+                        "Value": "Collect"
+                    }
+                ]
+            }
+        },
+        "BasicLambdaRole":{
+            "Type":"AWS::IAM::Role",
+            "Properties":{
+                "Path":"/",
+                "AssumeRolePolicyDocument":{
+                    "Version":"2012-10-17",
+                    "Statement":[
+                        {
+                            "Effect":"Allow",
+                            "Principal":{
+                                "Service":[
+                                    "lambda.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                   ]
+                }
+            }
+        },
+        "EncryptLambdaRole":{
+            "Type":"AWS::IAM::Role",
+            "Properties":{
+                "Path":"/",
+                "AssumeRolePolicyDocument":{
+                    "Version":"2012-10-17",
+                    "Statement":[
+                        {
+                            "Effect":"Allow",
+                            "Principal":{
+                                "Service":[
+                                    "lambda.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                   ]
+                }
+            }
+        },
+        "EncryptLambdaPolicy":{
+            "Type":"AWS::IAM::Policy",
+            "DependsOn":[
+                "EncryptLambdaRole",
+                "EncryptLambdaFunction"
+            ],
+            "Properties":{
+                "Roles":[
+                   {
+                      "Ref":"EncryptLambdaRole"
+                   }
+                ],
+                "PolicyName":"alertlogic-encrypt-lambda-policy",
+                "PolicyDocument":{
+                    "Version":"2012-10-17",
+                    "Statement":[
+                        {
+                            "Effect":"Allow",
+                            "Action":"logs:CreateLogGroup",
+                            "Resource":[
+                                {
+                                    "Fn::Join":[
+                                        "",
+                                        [
+                                            "arn:aws:logs:",
+                                            {
+                                                "Ref":"AWS::Region"
+                                            },
+                                            ":",
+                                            {
+                                                "Ref":"AWS::AccountId"
+                                            },
+                                            ":log-group:/aws/lambda/",
+                                            {
+                                                "Ref":"EncryptLambdaFunction"
+                                            },
+                                            ":*"
+                                        ]
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "Effect":"Allow",
+                            "Action":[
+                                "logs:CreateLogStream",
+                                "logs:PutLogEvents"
+                            ],
+                            "Resource":[
+                                {
+                                   "Fn::Join":[
+                                        "",
+                                        [
+                                            "arn:aws:logs:",
+                                            {
+                                                "Ref":"AWS::Region"
+                                            },
+                                            ":",
+                                            {
+                                                "Ref":"AWS::AccountId"
+                                            },
+                                            ":log-group:/aws/lambda/",
+                                            {
+                                                "Ref":"EncryptLambdaFunction"
+                                            },
+                                            ":log-stream:*"
+                                        ]
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
+        "EncryptLambdaFunction":{
+            "Type":"AWS::Lambda::Function",
+            "DependsOn":[
+                "EncryptLambdaRole"
+            ],
+            "Properties":{
+                "Description":"Alert Logic Lambda Encrypt function",
+                "Role":{
+                    "Fn::GetAtt":[
+                        "EncryptLambdaRole",
+                        "Arn"
+                    ]
+                },
+                "Code":{
+                    "ZipFile": {
+                       "Fn::Join": [
+                           "",
+                           [
+                                "const AWS = require('aws-sdk');\n",
+                                "const response = require('./cfn-response');\n",
+                                "\n",
+                                "\n",
+                                "function encrypt(event, context) {\n",
+                                "    const params = {\n",
+                                "        KeyId: event.ResourceProperties.KeyId,\n",
+                                "        Plaintext: event.ResourceProperties.Plaintext\n",
+                                "    };\n",
+                                "    const kms = new AWS.KMS();\n",
+                                "    kms.encrypt(params, function(err, data) {\n",
+                                "        if (err) {\n",
+                                "            console.log(err, err.stack); // an error occurred\n",
+                                "            return response.send(event, context, response.FAILED);\n",
+                                "        }\n",
+                                "        var base64 = new Buffer(data.CiphertextBlob).toString('base64');\n",
+                                "        var responseData = {\n",
+                                "            EncryptedText : base64\n",
+                                "        };\n",
+                                "        return response.send(event, context, response.SUCCESS, responseData);\n",
+                                "    });\n",
+                                "}\n",
+                                "\n",
+                                "\n",
+                                "exports.handler = (event, context, callback) => {\n",
+                                "    if (event.ResourceType == 'AWS::CloudFormation::CustomResource' &&\n",
+                                "        event.RequestType == 'Create') {\n",
+                                "        return encrypt(event, context);\n",
+                                "    }\n",
+                                "    return response.send(event, context, response.SUCCESS);\n",
+                                "}"
+                            ]
+                        ]
+                    }
+                },
+                "Handler":"index.handler",
+                "Runtime":"nodejs10.x",
+                "MemorySize":128,
+                "Timeout": 5,
+                "Tags": [
+                    {
+                        "Key": "AlertLogic",
+                        "Value": "Collect"
+                    }
+                ]
+            }
+        },
+        "EncryptSecretKeyCustomResource": {
+            "Type": "AWS::CloudFormation::CustomResource",
+            "DependsOn": [
+                "LambdaKmsKey",
+                "EncryptLambdaFunction",
+                "EncryptLambdaPolicy"
+            ],
+            "Properties": {
+                "ServiceToken": {
+                    "Fn::GetAtt": [
+                        "EncryptLambdaFunction",
+                        "Arn"
+                    ]
+                },
+                "KeyId": {
+                    "Fn::GetAtt": [
+                        "LambdaKmsKey",
+                        "Arn"
+                    ]
+                },
+                "Plaintext": {
+                    "Ref": "AlertlogicSecretKey"
+                }
+            }
+        },
+      "PawsPollStateQueue":{
+        "Type":"AWS::SQS::Queue",
+        "DependsOn":[
+         ],
+         "Properties":{
+            "QueueName" : {
+             "Fn::Join": [
+               "-",
+               [
+                 {
+                   "Ref": "AWS::StackName"
+                 },
+                 "paws-collection-state"
+               ]
+             ]
+            },
+            "VisibilityTimeout": 900,
+            "MessageRetentionPeriod": 1209600
+         }
+      },
+      "CollectLambdaFunction":{
+         "Type":"AWS::Lambda::Function",
+         "DependsOn":[
+            "CollectLambdaRole",
+            "LambdaKmsKey",
+            "EncryptSecretKeyCustomResource",
+            "PawsPollStateQueue"
+         ],
+         "Properties":{
+            "Description":"Alert Logic Poll based collector",
+            "FunctionName":{ "Ref":"AWS::StackName" },
+            "Role":{
+               "Fn::GetAtt":[
+                  "CollectLambdaRole",
+                  "Arn"
+               ]
+            },
+            "KmsKeyArn": {
+               "Fn::GetAtt": [
+                  "LambdaKmsKey",
+                  "Arn"
+               ]
+            },
+            "Code":{
+               "S3Bucket":{"Fn::Join" : ["", [
+                    {"Ref":"PackagesBucketPrefix"}, "-",
+                    { "Ref" : "AWS::Region" }
+               ]]},
+               "S3Key": "packages/lambda/al-o365-collector.zip"
+            },
+            "Handler":"index.handler",
+            "Runtime":"nodejs10.x",
+            "MemorySize":256,
+            "Timeout": 300,
+            "Environment":{
+               "Variables":{
+                  "aims_access_key_id": {
+                      "Ref":"AlertlogicAccessKeyId"
+                  },
+                  "aims_secret_key":{
+                      "Fn::GetAtt": ["EncryptSecretKeyCustomResource", "EncryptedText"]
+                  },
+                  "aws_lambda_s3_bucket":{"Fn::Join" : ["", [
+                      {"Ref":"PackagesBucketPrefix"}, "-",
+                      {"Ref":"AWS::Region"}
+                  ]]},
+                  "aws_lambda_zipfile_name": "packages/lambda/al-o365-collector.zip",
+                  "aws_lambda_update_config_name": "configs/lambda/al-o365-collector.json",
+                  "al_api":{
+                      "Ref":"AlApiEndpoint"
+                  },
+                  "al_data_residency":{
+                      "Ref":"AlDataResidency"
+                  },
+                  "customer_id": {
+                      "Ref":"AlertlogicCustomerId"
+                  },
+                  "collector_id": {
+                      "Ref":"CollectorId"
+                  },
+                  "paws_state_queue_arn":{
+                      "Fn::GetAtt" : ["PawsPollStateQueue", "Arn"]
+                  },
+                  "paws_state_queue_url":{
+                      "Ref" : "PawsPollStateQueue"
+                  },
+                  "paws_poll_interval": {
+                      "Ref":"PollingInterval"
+                  },
+                  "CUSTOMCONNSTR_APP_CLIENT_ID":{
+                      "Ref":"Azure_App_Registration_Client_Id"
+                  },
+                  "AZURE_APP_TENANT_ID":{
+                      "Ref":"Azure_Tenant_Id"
+                  },
+                  "CUSTOMCONNSTR_APP_CLIENT_SECRET":{
+                      "Ref":"Azure_App_Registration_Client_Secret"
+                  },
+                  "paws_collection_start_ts":{
+                      "Ref":"CollectionStartTs"
+                  },
+                  "paws_extension": "o365"
+               }
+            },
+            "Tags": [
+                {
+                    "Key": "AlertLogic",
+                    "Value": "Collect"
+                }
+            ]
+         }
+      },
+      "CollectLambdaEventSourceMapping":{
+         "Type":"AWS::Lambda::EventSourceMapping",
+         "DependsOn":[
+            "CollectLambdaFunction",
+            "CollectLambdaRole",
+            "CollectLambdaPolicy",
+            "PawsPollStateQueue"
+         ],
+         "Properties":{
+            "EventSourceArn" : { "Fn::GetAtt" : ["PawsPollStateQueue", "Arn"] },
+            "FunctionName" : { "Ref":"CollectLambdaFunction" }
+         }
+      },
+      "CollectLambdaPolicy":{
+         "Type":"AWS::IAM::Policy",
+         "DependsOn":[
+            "CollectLambdaFunction",
+            "CollectLambdaRole"
+         ],
+         "Properties":{
+            "Roles":[
+               {
+                  "Ref":"CollectLambdaRole"
+               }
+            ],
+            "PolicyName":"alertlogic-paws-lambda-policy",
+            "PolicyDocument":{
+               "Version":"2012-10-17",
+               "Statement":[
+                  {
+                     "Effect":"Allow",
+                     "Action":"logs:CreateLogGroup",
+                     "Resource":[{
+                       "Fn::Join":[ "",
+                          [
+                             "arn:aws:logs:", { "Ref":"AWS::Region" },
+                             ":", { "Ref":"AWS::AccountId" },
+                             ":log-group:/aws/lambda/", { "Ref":"CollectLambdaFunction" },
+                             ":*"
+                          ]
+                       ]
+                     }]
+                  },
+                  {
+                     "Effect":"Allow",
+                     "Action":[
+                        "logs:CreateLogStream",
+                        "logs:PutLogEvents"
+                     ],
+                     "Resource":[ {
+                       "Fn::Join":["",
+                          [
+                             "arn:aws:logs:", { "Ref":"AWS::Region" },
+                             ":", { "Ref":"AWS::AccountId" },
+                             ":log-group:/aws/lambda/", { "Ref":"CollectLambdaFunction" },
+                             ":log-stream:*"
+                          ]
+                       ]
+                     }]
+                  },
+                  {
+                     "Effect":"Allow",
+                     "Action":[
+                        "lambda:*"
+                     ],
+                     "Resource":[{
+                       "Fn::GetAtt":[
+                           "CollectLambdaFunction",
+                           "Arn"
+                       ]
+                     }]
+                  },
+                  {
+                     "Effect":"Allow",
+                     "Action":[
+                        "s3:Get*"
+                     ],
+                     "Resource":[{
+                       "Fn::Join":["",
+                          [
+                             "arn:aws:s3:::",
+                             {
+                                "Fn::Join" : ["", [
+                                    { "Ref" : "PackagesBucketPrefix" }, "-",
+                                    { "Ref" : "AWS::Region" }
+                                ]]
+                             },
+                             "/*"
+                          ]
+                       ]
+                     }]
+                  },
+                  {
+                     "Effect":"Allow",
+                     "Action":[
+                        "sqs:*"
+                     ],
+                     "Resource":[{
+                       "Fn::GetAtt":[
+                           "PawsPollStateQueue",
+                           "Arn"
+                       ]
+                     }]
+                  }
+               ]
+            }
+         }
+      },
+      "HealthCheckLambdaPolicy":{
+         "Type":"AWS::IAM::Policy",
+         "DependsOn":[
+              "CollectLambdaRole"
+         ],
+         "Properties":{
+            "Roles":[
+               {
+                  "Ref":"CollectLambdaRole"
+               }
+            ],
+            "PolicyName":"alertlogic-health-check-lambda-policy",
+            "PolicyDocument":{
+               "Version":"2012-10-17",
+               "Statement":[
+                  {
+                     "Effect":"Allow",
+                     "Action":[
+                        "cloudformation:DescribeStacks"
+                     ],
+                     "Resource":[{
+                         "Fn::Join":[ "",
+                              [
+                                  "arn:aws:cloudformation:", { "Ref":"AWS::Region" },
+                                  ":",{ "Ref":"AWS::AccountId" },
+                                  ":stack/", { "Ref":"AWS::StackName" },
+                                  "/*"
+                              ]
+                          ]
+                      }]
+                  },
+                  {
+                     "Effect":"Allow",
+                     "Action":[
+                        "lambda:ListEventSourceMappings"
+                     ],
+                     "Resource": "*"
+                  },
+                  {
+                     "Effect":"Allow",
+                     "Action":[
+                        "cloudwatch:Get*",
+                        "cloudwatch:Describe*",
+                        "cloudwatch:List*"
+                     ],
+                     "Resource": "*"
+                  }
+               ]
+            }
+         }
+      },
+      "UpdaterScheduledRule": {
+         "Type": "AWS::Events::Rule",
+         "DependsOn": [
+            "CollectLambdaPolicy",
+            "CollectLambdaFunction"
+         ],
+         "Properties": {
+            "Description": "Scheduled rule for updater function",
+            "ScheduleExpression": "rate(12 hours)",
+            "State": "ENABLED",
+            "Targets":[
+                {
+                    "Id":"1",
+                    "Arn":{
+                        "Fn::GetAtt":[
+                            "CollectLambdaFunction",
+                            "Arn"
+                        ]
+                    },
+                    "Input": "{\"RequestType\": \"ScheduledEvent\", \"Type\": \"SelfUpdate\"}"
+                }
+            ]
+         }
+      },
+      "UpdaterScheduledRuleLambdaInvokePermission": {
+          "Type": "AWS::Lambda::Permission",
+          "DependsOn": [
+            "CollectLambdaFunction",
+            "CollectLambdaPolicy",
+            "UpdaterScheduledRule"
+          ],
+          "Properties": {
+            "Action": "lambda:InvokeFunction",
+            "FunctionName": {
+              "Ref": "CollectLambdaFunction"
+            },
+            "Principal": "events.amazonaws.com",
+            "SourceArn":{
+              "Fn::GetAtt": [
+                "UpdaterScheduledRule",
+                "Arn"
+              ]
+            }
+          }
+      },
+      "CloudWatchEventsRole":{
+         "Type": "AWS::IAM::Role",
+         "DependsOn":[
+            "CollectLambdaFunction",
+            "CollectLambdaPolicy"
+         ],
+         "Properties": {
+            "AssumeRolePolicyDocument": {
+               "Version" : "2012-10-17",
+               "Statement": [ {
+                  "Effect": "Allow",
+                  "Principal": {
+                     "Service": [ "events.amazonaws.com" ]
+                  },
+                  "Action": [ "sts:AssumeRole" ]
+               } ]
+            },
+            "Path": "/",
+            "Policies": [ {
+               "PolicyName": "root",
+               "PolicyDocument": {
+                  "Version" : "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect":"Allow",
+                      "Action":[
+                         "lambda:*"
+                      ],
+                      "Resource":[{
+                          "Fn::GetAtt":[
+                              "CollectLambdaFunction",
+                              "Arn"
+                          ]
+                      }]
+                    }
+                  ]
+               }
+            }]
+         }
+      },
+      "CheckinScheduledRule": {
+         "Type": "AWS::Events::Rule",
+         "DependsOn": [
+            "CollectLambdaFunction",
+            "CollectLambdaPolicy",
+            "HealthCheckLambdaPolicy"
+         ],
+         "Properties": {
+            "Description": "Scheduled rule for checkin function",
+            "ScheduleExpression": "rate(15 minutes)",
+            "State": "ENABLED",
+            "Targets":[
+                {
+                    "Id":"1",
+                    "Arn":{
+                        "Fn::GetAtt":[
+                            "CollectLambdaFunction",
+                            "Arn"
+                        ]
+                    },
+                    "Input": {
+                        "Fn::Join":[
+                            "",
+                            [
+                                "{\"RequestType\": \"ScheduledEvent\", \"Type\": \"Checkin\", \"AwsAccountId\": \"",
+                                { "Ref":"AWS::AccountId" },
+                                "\", \"Region\": \"",
+                                { "Ref": "AWS::Region" },
+                                "\", \"StackName\": \"",
+                                { "Ref":"AWS::StackName" },
+                                "\"}"
+                            ]
+                        ]
+                    }
+                }
+            ]
+         }
+      },
+      "CheckinScheduledRuleLambdaInvokePermission": {
+          "Type": "AWS::Lambda::Permission",
+          "DependsOn": [
+            "CollectLambdaFunction",
+            "CollectLambdaPolicy",
+            "HealthCheckLambdaPolicy",
+            "CheckinScheduledRule"
+          ],
+          "Properties": {
+            "Action": "lambda:InvokeFunction",
+            "FunctionName": {
+              "Ref": "CollectLambdaFunction"
+            },
+            "Principal": "events.amazonaws.com",
+            "SourceArn":{
+              "Fn::GetAtt": [
+                "CheckinScheduledRule",
+                "Arn"
+              ]
+            }
+          }
+      },
+      "RegistrationResource": {
+         "Type": "Custom::RegistrationResource",
+         "DependsOn": [
+            "CollectLambdaFunction",
+            "CollectLambdaPolicy"
+         ],
+         "Properties": {
+            "ServiceToken": { "Fn::GetAtt" : ["CollectLambdaFunction", "Arn"] },
+            "StackName": { "Ref" : "AWS::StackName" },
+            "AwsAccountId": { "Ref": "AWS::AccountId"}
+         }
+      }
+   }
+}
