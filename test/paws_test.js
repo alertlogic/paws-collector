@@ -5,7 +5,6 @@ const m_response = require('cfn-response');
 
 const pawsMock = require('./paws_mock');
 var m_alCollector = require('@alertlogic/al-collector-js');
-var AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector;
 var PawsCollector = require('../paws_collector').PawsCollector;
 const m_al_aws = require('@alertlogic/al-aws-collector-js').Util;
 
@@ -81,7 +80,7 @@ function mockSQSSendMessage(returnObject) {
 }
 class TestCollector extends PawsCollector {
     constructor(ctx, creds) {
-        super(ctx, creds, 'test-collector');
+        super(ctx, creds);
     }
     
     pawsInitCollectionState(event, callback) {
@@ -113,7 +112,7 @@ describe('Unit Tests', function() {
     beforeEach(function(){
         AWS.mock('KMS', 'decrypt', function (params, callback) {
             const data = {
-                Plaintext : 'decrypted-aims-sercret-key'
+                Plaintext : 'decrypted-sercret-key'
             };
             return callback(null, data);
         });
@@ -157,8 +156,8 @@ describe('Unit Tests', function() {
                 ]
             };
             
-            AlAwsCollector.load().then(function(creds) {
-                var collector = new TestCollector(ctx, creds, 'test');
+            PawsCollector.load().then(function(creds) {
+                var collector = new TestCollector(ctx, creds);
                 collector.handleEvent(testEvent);
             });
         });
@@ -194,8 +193,8 @@ describe('Unit Tests', function() {
                 }
             };
             
-            AlAwsCollector.load().then(function(creds) {
-                var collector = new TestCollector(ctx, creds, 'test');
+            PawsCollector.load().then((creds) => {
+                var collector = new TestCollector(ctx, creds);
                 collector.handleEvent(testEvent);
             });
         });
