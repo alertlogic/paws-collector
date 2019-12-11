@@ -110,8 +110,8 @@ describe('Unit Tests', function() {
                 }
             };
             
-            OktaCollector.load().then(function({aimsCreds, pawsCreds}) {
-                var collector = new OktaCollector(ctx, aimsCreds, pawsCreds);
+            OktaCollector.load().then(function(creds) {
+                var collector = new OktaCollector(ctx, creds);
                 let fmt = collector.pawsFormatLog(oktaMock.OKTA_LOG_EVENT);
                 console.log('!Formatted event', fmt);
                 done();
