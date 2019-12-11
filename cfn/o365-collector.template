@@ -62,6 +62,11 @@
             "Description": "Azure Tenant ID",
             "Type": "String"
         },
+        "Azure_Content_Streams": {
+            "Description": "The Content Streams to Collect",
+            "Type": "CommaDelimitedList",
+            "Default": "Audit.AzureActiveDirectory, Audit.Exchange, Audit.SharePoint, Audit.General"
+        },
         "CollectionStartTs": {
             "Description": "Timestamp when log collection starts",
             "Type": "String",

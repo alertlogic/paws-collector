@@ -53,12 +53,13 @@ class O365Collector extends PawsCollector {
         const contentPromises = streams.map((stream) => {
             return m_o365mgmnt.subscriptionsContent(stream, state.since, state.until)
         });
-        // Get 
+        // Get the streams from env vars and collect the content
         Promise.all(contentPromises).then(results => {
             const agregateResult = results.reduce((agg, e) => [...e, ...agg], []);
 
             const contentPromises = agregateResult.map(({contentUri}) => m_o365mgmnt.getContent(contentUri));
             return Promise.all(contentPromises);
+        // Call all of the content urls and agregate the resutls
         }).then(content => {
             const flattenedResult = content.reduce((agg, e) => [...e, ...agg], []);
 

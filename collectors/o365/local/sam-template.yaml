@@ -32,5 +32,5 @@ Resources:
           collector_id:
       Runtime: nodejs10.x
       Handler: index.handler
-      Timeout: 30 
+      Timeout: 60 
       MemorySize: 1024
