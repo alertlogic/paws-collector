@@ -59,11 +59,11 @@ class PawsCollector extends AlAwsCollector {
         })
     }
     
-    constructor(context, creds, pawsCreds) {
+    constructor(context, {aimsCreds, pawsCreds}) {
         super(context, 'paws',
               AlAwsCollector.IngestTypes.LOGMSGS,
               m_packageJson.version,
-              creds,
+              aimsCreds,
               null, [], []);
         console.info('PAWS000100 Loading collector', process.env.paws_type_name);
         this._pawsCreds = pawsCreds;

@@ -79,8 +79,8 @@ function mockSQSSendMessage(returnObject) {
     });
 }
 class TestCollector extends PawsCollector {
-    constructor(ctx, aimsCreds, pawsCreds) {
-        super(ctx, aimsCreds, pawsCreds);
+    constructor(ctx, creds) {
+        super(ctx, creds);
     }
     
     pawsInitCollectionState(event, callback) {
@@ -156,8 +156,8 @@ describe('Unit Tests', function() {
                 ]
             };
             
-            PawsCollector.load().then(function({aimsCreds, pawsCreds}) {
-                var collector = new TestCollector(ctx, aimsCreds, pawsCreds);
+            PawsCollector.load().then(function(creds) {
+                var collector = new TestCollector(ctx, creds);
                 collector.handleEvent(testEvent);
             });
         });
@@ -193,8 +193,8 @@ describe('Unit Tests', function() {
                 }
             };
             
-            PawsCollector.load().then(({aimsCreds, pawsCreds}) => {
-                var collector = new TestCollector(ctx, aimsCreds, pawsCreds);
+            PawsCollector.load().then((creds) => {
+                var collector = new TestCollector(ctx, creds);
                 collector.handleEvent(testEvent);
             });
         });
