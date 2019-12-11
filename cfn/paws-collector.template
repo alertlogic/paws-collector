@@ -531,7 +531,7 @@
                       "Ref":"PawsClientId"
                   },
                   "paws_api_secret":{
-                      "Ref":"PawsSecret"
+                      "Fn::GetAtt": ["EncryptPawsSecret", "EncryptedText"]
                   },
                   "paws_collection_start_ts":{
                       "Ref":"CollectionStartTs"
