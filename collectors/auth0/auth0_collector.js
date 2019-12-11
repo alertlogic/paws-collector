@@ -54,7 +54,7 @@ class Auth0Collector extends PawsCollector {
         })
         .then(() => {
             const nextLogId = (logAcc.length > 0) ? logAcc[logAcc.length-1].log_id : state.last_log_id;
-            const lastLogTs = (logAcc.length > 0) ? logAcc[logAcc.length-1].date : null,
+            const lastLogTs = (logAcc.length > 0) ? logAcc[logAcc.length-1].date : null;
             const newState = collector._getNextCollectionState(state, nextLogId, lastLogTs);
             console.info(`AUTZ000002 Next collection in ${newState.poll_interval_sec} seconds`);
             return callback(null, logAcc, newState, newState.poll_interval_sec);
