@@ -46,7 +46,7 @@ class Auth0Collector extends PawsCollector {
             clientSecret: process.env.paws_api_secret,
             scope: 'read:logs'
         });
-        let params = state.last_log_id ? {from: state.last_log_id} : {q: "date=[" + state.since + " TO *]"};
+        let params = state.last_log_id ? {from: state.last_log_id} : {q: "date=[" + state.since + " TO *]", sort: "date:1"};
         const collection = auth0Client.getLogs(params);
         let logAcc = [];
         collection.each(log => {
