@@ -358,7 +358,7 @@
                     }
                 },
                 "Handler":"index.handler",
-                "Runtime":"nodejs12.x",
+                "Runtime":"nodejs10.x",
                 "MemorySize":128,
                 "Timeout": 5,
                 "Tags": [
@@ -475,7 +475,7 @@
                ]]}
             },
             "Handler":"index.handler",
-            "Runtime":"nodejs12.x",
+            "Runtime":"nodejs10.x",
             "MemorySize": { "Ref" : "CollectorFunctionMemorySize" },
             "Timeout": { "Ref" : "CollectorFunctionTimeout" },
             "Environment":{
