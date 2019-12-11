@@ -26,7 +26,7 @@ function getDecryptedPawsCredentials(callback) {
         const kms = new AWS.KMS();
         console.log('Decrypting PAWS creds');
         kms.decrypt(
-            {CiphertextBlob: new Buffer(process.env.paws_api_secret, 'base64')},
+            {CiphertextBlob: Buffer.from(process.env.paws_api_secret, 'base64')},
             (err, data) => {
                 if (err) {
                     return callback(err);
