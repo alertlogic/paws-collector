@@ -35,12 +35,12 @@
             "Description": "A collector type name. For example, okta, auth0",
             "Type": "String"
         },
-        "CollectorFuctionMemorySize": {
+        "CollectorFunctionMemorySize": {
             "Description": "Memory size for a collector function",
             "Type": "Number",
             "Default": 256
         },
-        "CollectorFuctionTimeout": {
+        "CollectorFunctionTimeout": {
             "Description": "Invocation timeout for a collector function.",
             "Type": "Number",
             "Default" : 300
@@ -445,7 +445,7 @@
             "CollectLambdaRole",
             "LambdaKmsKey",
             "EncryptSecretKeyCustomResource",
-            "EcryptPawsSecret",
+            "EncryptPawsSecret",
             "PawsPollStateQueue"
          ],
          "Properties":{
@@ -522,7 +522,7 @@
                       "Ref":"PollingInterval"
                   },
                   "paws_endpoint":{
-                      "Ref":"OktaEndpoint"
+                      "Ref":"PawsEndpoint"
                   },
                   "paws_api_auth_type":{
                       "Ref":"PawsAuthType"
