@@ -1,0 +1,21 @@
+/* -----------------------------------------------------------------------------
+ * @copyright (C) 2019, Alert Logic, Inc
+ * @doc
+ *
+ * {{Type}} System logs extension.
+ *
+ * @end
+ * -----------------------------------------------------------------------------
+ */
+
+const debug = require('debug') ('index');
+
+const {{Type}}Collector = require('./{{type}}_collector').{{Type}}Collector;
+
+exports.handler = function(event, context) {
+    debug('input event: ', event);
+    {{Type}}Collector.load().then(function(creds) {
+        var {{type}}c = new {{Type}}Collector(context, creds);
+        {{type}}c.handleEvent(event);
+    });
+};
