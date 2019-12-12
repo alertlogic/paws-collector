@@ -26,9 +26,6 @@ const tsPaths = [
 
 
 class OktaCollector extends PawsCollector {
-    constructor(context, creds) {
-        super(context, creds, 'okta');
-    }
     
     pawsInitCollectionState(event, callback) {
         const startTs = process.env.paws_collection_start_ts ? 
@@ -47,7 +44,7 @@ class OktaCollector extends PawsCollector {
         let collector = this;
         const oktaClient = new okta.Client({
             orgUrl: process.env.paws_endpoint,
-            token: process.env.paws_api_secret
+            token: collector.secret
         });
         console.info(`OKTA000001 Collecting data from ${state.since} till ${state.until}`);
         const collection = oktaClient.getLogs({

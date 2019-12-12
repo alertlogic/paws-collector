@@ -26,9 +26,6 @@ const tsPaths = [
 
 
 class Auth0Collector extends PawsCollector {
-    constructor(context, creds) {
-        super(context, creds, 'auth0');
-    }
     
     pawsInitCollectionState(event, callback) {
         const initialState = {
@@ -41,9 +38,9 @@ class Auth0Collector extends PawsCollector {
     pawsGetLogs(state, callback) {
         let collector = this;
         const auth0Client = new ManagementClient({
-            domain: process.env.paws_domain,
-            clientId: process.env.paws_client_id,
-            clientSecret: process.env.paws_api_secret,
+            domain: process.env.paws_endpoint,
+            clientId: collector.collectorId,
+            clientSecret: collector.secret,
             scope: 'read:logs'
         });
         let params = state.last_log_id ? {from: state.last_log_id} : {q: "date=[" + state.since + " TO *]", sort: "date:1"};

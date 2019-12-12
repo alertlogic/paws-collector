@@ -77,7 +77,7 @@ describe('Unit Tests', function() {
     beforeEach(function(){
         AWS.mock('KMS', 'decrypt', function (params, callback) {
             const data = {
-                    Plaintext : 'decrypted-aims-sercret-key'
+                    Plaintext : 'decrypted-sercret-key'
             };
             return callback(null, data);
         });
@@ -111,9 +111,9 @@ describe('Unit Tests', function() {
             };
             
             OktaCollector.load().then(function(creds) {
-                var collector = new OktaCollector(ctx, creds, 'okta');
+                var collector = new OktaCollector(ctx, creds);
                 let fmt = collector.pawsFormatLog(oktaMock.OKTA_LOG_EVENT);
-                console.log('!!!', fmt);
+                console.log('!!Formatted event', fmt);
                 done();
             });
         });
