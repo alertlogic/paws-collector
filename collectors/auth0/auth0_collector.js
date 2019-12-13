@@ -39,7 +39,7 @@ class Auth0Collector extends PawsCollector {
         let collector = this;
         const auth0Client = new ManagementClient({
             domain: process.env.paws_endpoint,
-            clientId: collector.collectorId,
+            clientId: collector.clientId,
             clientSecret: collector.secret,
             scope: 'read:logs'
         });
