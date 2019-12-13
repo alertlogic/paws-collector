@@ -48,24 +48,23 @@
             "Type": "Number",
             "Default": 60
         },
-        "Azure_App_Registration_Client_Id": {
+        "AzureAppRegistrationClientId": {
             "Description": "App Registration Client ID",
-            "Type": "String",
-            "Default": ""
+            "Type": "String"
         },
-        "Azure_App_Registration_Client_Secret": {
+        "AzureAppRegistrationClientSecret": {
             "Description": "App Registration Client Secret",
             "Type": "String",
             "NoEcho": true
         },
-        "Azure_Tenant_Id": {
+        "AzureTenantId": {
             "Description": "Azure Tenant ID",
             "Type": "String"
         },
-        "Azure_Content_Streams": {
+        "AzureContentStreams": {
             "Description": "The Content Streams to Collect",
-            "Type": "CommaDelimitedList",
-            "Default": "Audit.AzureActiveDirectory, Audit.Exchange, Audit.SharePoint, Audit.General"
+            "Type": "String",
+            "Default": "[\"Audit.AzureActiveDirectory\", \"Audit.Exchange\", \"Audit.SharePoint\", \"Audit.General\"]"
         },
         "CollectionStartTs": {
             "Description": "Timestamp when log collection starts",
@@ -472,17 +471,21 @@
                       "Ref":"PollingInterval"
                   },
                   "CUSTOMCONNSTR_APP_CLIENT_ID":{
-                      "Ref":"Azure_App_Registration_Client_Id"
+                      "Ref":"AzureAppRegistrationClientId"
                   },
                   "AZURE_APP_TENANT_ID":{
-                      "Ref":"Azure_Tenant_Id"
+                      "Ref":"AzureTenantId"
                   },
                   "CUSTOMCONNSTR_APP_CLIENT_SECRET":{
-                      "Ref":"Azure_App_Registration_Client_Secret"
+                      "Ref":"AzureAppRegistrationClientSecret"
+                  },
+                  "O365_CONTENT_STREAMS":{
+                      "Ref":"AzureContentStreams"
                   },
                   "paws_collection_start_ts":{
                       "Ref":"CollectionStartTs"
                   },
+                  "paws_endpoint": "https://managment.office.com/",
                   "paws_extension": "o365"
                }
             },

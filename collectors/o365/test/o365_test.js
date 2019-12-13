@@ -110,7 +110,7 @@ describe('Unit Tests', function() {
                 }
             };
             
-            OktaCollector.load().then(function(creds) {
+            O365Collector.load().then(function(creds) {
                 var collector = new O365Collector(ctx, creds, 'o365');
                 let fmt = collector.pawsFormatLog(o365Mock.LOG_EVENT);
                 console.log('!!!', fmt);

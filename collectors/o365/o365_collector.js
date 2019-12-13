@@ -38,9 +38,20 @@ class O365Collector extends PawsCollector {
         const initialState = {
             since: startTs,
             until: endTs,
-            poll_interval_sec: 1
+            poll_interval_sec: this.pollInterval
         };
         return callback(null, initialState, 1);
+    }
+
+    pawsGetRegisterParameters(event, callback){
+        const regValues = {
+            dataType: this._ingestType,
+            version: this._version,
+            collectorId: "none",
+            stackName: event.ResourceProperties.StackName
+        };
+
+        callback(null, regValues);
     }
     
     pawsGetLogs(state, callback) {

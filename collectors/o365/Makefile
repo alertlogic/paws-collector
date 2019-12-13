@@ -19,7 +19,7 @@ test: compile
 	
 package: test package.zip
 
-package.zip: node_modules/ *.js package.json
+package.zip: node_modules/ lib/ *.js package.json
 	zip -r $(AWS_LAMBDA_PACKAGE_NAME) $^
 
 deploy:
