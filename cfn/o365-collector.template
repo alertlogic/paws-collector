@@ -381,6 +381,31 @@
                 }
             }
         },
+        "EncryptPawsSecret": {
+            "Type": "AWS::CloudFormation::CustomResource",
+            "DependsOn": [
+                "LambdaKmsKey",
+                "EncryptLambdaFunction",
+                "EncryptLambdaPolicy"
+            ],
+            "Properties": {
+                "ServiceToken": {
+                    "Fn::GetAtt": [
+                        "EncryptLambdaFunction",
+                        "Arn"
+                    ]
+                },
+                "KeyId": {
+                    "Fn::GetAtt": [
+                        "LambdaKmsKey",
+                        "Arn"
+                    ]
+                },
+                "Plaintext": {
+                    "Ref": "AzureAppRegistrationClientSecret"
+                }
+            }
+        },
       "PawsPollStateQueue":{
         "Type":"AWS::SQS::Queue",
         "DependsOn":[
@@ -476,8 +501,8 @@
                   "AZURE_APP_TENANT_ID":{
                       "Ref":"AzureTenantId"
                   },
-                  "CUSTOMCONNSTR_APP_CLIENT_SECRET":{
-                      "Ref":"AzureAppRegistrationClientSecret"
+                  "paws_api_secret":{
+                      "Fn::GetAtt": ["EncryptPawsSecret", "EncryptedText"]
                   },
                   "O365_CONTENT_STREAMS":{
                       "Ref":"AzureContentStreams"

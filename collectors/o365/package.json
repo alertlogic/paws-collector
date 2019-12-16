@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@alertlogic/al-collector-js": "1.4.0",
-    "@alertlogic/paws-collector": "1.0.4",
+    "@alertlogic/paws-collector": "1.0.8",
     "@azure/ms-rest-js": "2.0.4",
     "@azure/ms-rest-azure-js": "2.0.1",
     "@azure/ms-rest-nodeauth": "2.0.5",

@@ -97,6 +97,27 @@ describe('Unit Tests', function() {
         responseStub.restore();
     });
     
+    describe('Get Inital State Tests', function() {
+        it('get inital state less than 7 days in the past', function(done) {
+            let ctx = {
+                invokedFunctionArn : o365Mock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+            O365Collector.load().then(function(creds) {
+                var collector = new O365Collector(ctx, creds, 'o365');
+                let fmt = collector.pawsFormatLog(o365Mock.LOG_EVENT);
+                assert.equal(fmt.progName, 'O365Collector');
+                done();
+            });
+        });
+    });
+
     describe('Format Tests', function() {
         it('log format success', function(done) {
             let ctx = {
@@ -109,11 +130,10 @@ describe('Unit Tests', function() {
                     done();
                 }
             };
-            
             O365Collector.load().then(function(creds) {
                 var collector = new O365Collector(ctx, creds, 'o365');
                 let fmt = collector.pawsFormatLog(o365Mock.LOG_EVENT);
-                console.log('!!!', fmt);
+                assert.equal(fmt.progName, 'O365Collector');
                 done();
             });
         });

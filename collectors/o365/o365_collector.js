@@ -31,10 +31,22 @@ class O365Collector extends PawsCollector {
     }
     
     pawsInitCollectionState(event, callback) {
-        const startTs = process.env.paws_collection_start_ts ? 
+        let startTs = process.env.paws_collection_start_ts ? 
                 process.env.paws_collection_start_ts :
                     moment().toISOString();
-        const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
+        let endTs;
+
+        if(moment().diff(startTs, 'days') > 7){
+            startTs = moment().subtract(7, 'days').toISOString();
+            console.log("Start timestamp is more than 7 days in the past. This is not allowed in the MS managment API. setting the start time to 7 days in the past");
+        }
+        
+        if(moment().diff(startTs, 'hours') > 24){
+            endTs = moment(startTs).add(24, 'hours').toISOString();
+        }
+        else {
+            endTs = moment(startTs).toISOString();
+        }
         const initialState = {
             since: startTs,
             until: endTs,
@@ -47,6 +59,7 @@ class O365Collector extends PawsCollector {
         const regValues = {
             dataType: this._ingestType,
             version: this._version,
+            pawsCollectorType: 'o365',
             collectorId: "none",
             stackName: event.ResourceProperties.StackName
         };

@@ -4,6 +4,7 @@ process.env.ingest_api = 'ingest.global-services.global.alertlogic.com';
 process.env.azollect_api = 'azcollect.global-services.global.alertlogic.com';
 process.env.aims_access_key_id = 'aims-key-id';
 process.env.aims_secret_key = 'aims-secret-key-encrypted';
+process.env.paws_api_secret = 'paws-secret-key-encrypted';
 process.env.log_group = 'logGroupName';
 process.env.paws_state_queue_arn = "arn:aws:sqs:us-east-1:352283894008:paws-state-queue";
 process.env.AZURE_APP_TENANT_ID = '79ca7c9d-83ce-498f-952f-4c03b56ab573';
