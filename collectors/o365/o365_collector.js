@@ -37,7 +37,9 @@ class O365Collector extends PawsCollector {
         let endTs;
 
         if(moment().diff(startTs, 'days') > 7){
-            startTs = moment().subtract(7, 'days').toISOString();
+            // Subtracting less than 7 days to avoid weird race conditions with the azure api...
+            // Missing about 9 seconds of historical logs shouldn't be too bad.
+            startTs = moment().subtract(6.9999, 'days').toISOString();
             console.log("Start timestamp is more than 7 days in the past. This is not allowed in the MS managment API. setting the start time to 7 days in the past");
         }
         
@@ -105,7 +107,16 @@ class O365Collector extends PawsCollector {
                 nowMoment.toISOString() :
                 curState.until;
 
-        const nextUntilMoment = moment(nextSinceTs).add(this.pollInterval, 'seconds');
+        let nextUntilMoment;
+        if(nowMoment.diff(nextSinceTs, 'hours') > 24){
+            nextUntilMoment = moment(nextSinceTs).add(24, 'hours');
+        }
+        else if(nowMoment.diff(nextSinceTs, 'hours') > 1){
+            nextUntilMoment = moment(nextSinceTs).add(1, 'hours');
+        }
+        else{
+            nextUntilMoment = moment(nextSinceTs).add(this.pollInterval, 'seconds');
+        }
         // Check if we're behind collection schedule and need to catch up.
         const nextPollInterval = nowMoment.diff(nextUntilMoment, 'seconds') > this.pollInterval ?
                 1 : this.pollInterval;
