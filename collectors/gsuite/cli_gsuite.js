@@ -39,8 +39,8 @@ const debug = require('debug') ('index');
 const argv = require('yargs').argv;
 
 // Initialization
-const pollInterval = argv.poll_interval ? argv.poll_interval : 5;
-const pollCount = argv.poll_count ? argv.poll_count : 1;
+const pollInterval = argv.poll_interval ? argv.poll_interval : 30;
+const pollCount = argv.poll_count ? argv.poll_count : 2;
 
 // Service credentials
 //   - simulate decrypted credentials by passing in from CLI arguments

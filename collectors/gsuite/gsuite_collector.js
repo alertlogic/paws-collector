@@ -12,45 +12,35 @@
 const moment = require('moment');
 const request = require('request');
 const parse = require('@alertlogic/al-collector-js').Parse;
-// const ManagementClient = require('auth0').ManagementClient;
 const { google } = require('googleapis');
 const { auth } = require('google-auth-library');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 
-
 const typeIdPaths = [
-    { path: ['etag'] }
+    { path: ['kind'] }
 ];
 
 const tsPaths = [
-    { path: ['id.time'] }
+    { path: ['id','time'] }
 ];
 
-function  listLoginEvents(auth, callback) {
+function  listLoginEvents(auth, params, callback) {
     const service = google.admin({version: 'reports_v1', auth});
-    service.activities.list({
-        userKey: 'all',
-        applicationName: 'login',
-        maxResults: 10,
-    }, (err, res) => {
-        // console.log('SERVICE.ACTIVITES.LIST');
-        // console.log(res);
-        // console.log('----------------------');
-        // console.log("error : ",err);
-        if (err) return callback(null, err);;
+    params['userKey'] = 'all';
+    params['applicationName'] = 'login';
+    service.activities.list(params, (err, res) => {
+        if (!('items' in res.data)) return Error('No more logs');; 
+        if (err) return callback(null, err);
         return callback(res.data.items);
    });
 }
 
 class GsuiteCollector extends PawsCollector {
-    
-
-    
 
     pawsInitCollectionState(event, callback) {
         const initialState = {
             since: process.env.paws_collection_start_ts ? process.env.paws_collection_start_ts : moment().subtract(5, 'minutes').toISOString(),
-            poll_interval_sec: 1
+            poll_interval_sec: 5
         };
         return callback(null, initialState, 1);
     }
@@ -59,46 +49,30 @@ class GsuiteCollector extends PawsCollector {
         let collector = this;
 
         const keysEnvVar = process.env.paws_creds;
-        // console.log(process.env.paws_creds);
         if (!keysEnvVar) {
-        throw new Error('The $CREDS environment variable was not found!');
+            throw new Error('The $CREDS environment variable was not found!');
         }
 
         const keys = JSON.parse(keysEnvVar);
         const client = auth.fromJSON(keys);
         client.subject = process.env.paws_email_id;
         client.scopes = ['https://www.googleapis.com/auth/admin.reports.audit.readonly'];
-        // const service = google.admin({version: 'reports_v1', client});
 
-
-
-
-        // let params = state.last_log_id ? {from: state.last_log_id} : {q: "date=[" + state.since + " TO *]", sort: "date:1"};
-        // const collection = auth0Client.getLogs(params);
         let logAcc = [];
-        listLoginEvents(client, function(collection, error){
-            if (error) {
+        let params = {startTime : state.since};
+        listLoginEvents(client, params, function(collection, error){
+            if (error){
                 return callback(error);
             }
-             // console.log('error', error);
-             // console.log('collection', collection);
-            collection.forEach(log => {
-                logAcc.push(log);
-            });
 
-            const nextLogId = (logAcc.length > 0) ? logAcc[logAcc.length-1].log_id : state.last_log_id;
-            const lastLogTs = (logAcc.length > 0) ? logAcc[logAcc.length-1].date : null;
+            const nextLogId = (collection.length > 0) ? collection[collection.length-1].log_id : state.last_log_id;
+            const lastLogTs = (collection.length > 0) ? collection[collection.length-1].id.time : null;
             const newState = collector._getNextCollectionState(state, nextLogId, lastLogTs);
             console.info(`AUTZ000002 Next collection in ${newState.poll_interval_sec} seconds`);
             
-            return callback(null, logAcc, newState, newState.poll_interval_sec);
-            
-            
-          
-        });
+            return callback(null, collection, newState, newState.poll_interval_sec);
 
-        // console.log(logAcc);
-        
+        });        
     }
     
     _getNextCollectionState(curState, nextLogId, lastLogTs) {
@@ -111,6 +85,7 @@ class GsuiteCollector extends PawsCollector {
         
         return  {
             last_log_id: nextLogId,
+            since: lastLogMoment.format(),
             poll_interval_sec: nextPollInterval
         };
     }
