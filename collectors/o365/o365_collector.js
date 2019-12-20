@@ -17,6 +17,7 @@ const parse = require('@alertlogic/al-collector-js').Parse;
 
 // Subtracting less than 7 days to avoid weird race conditions with the azure api...
 // Missing about 9 seconds of historical logs shouldn't be too bad.
+// If you get an error form the o365 managment api about your date range being more than 7 days in the past, you should remove some 9s from this number.
 const PARTIAL_WEEK = 6.9999;
 
 const typeIdPaths = [
