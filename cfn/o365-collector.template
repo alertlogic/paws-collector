@@ -510,8 +510,11 @@
                   "paws_collection_start_ts":{
                       "Ref":"CollectionStartTs"
                   },
+                  "stack_name": {
+                      "Ref":"AWS::StackName"
+                  },
                   "paws_endpoint": "https://managment.office.com/",
-                  "paws_extension": "o365"
+                  "paws_type_name": "o365"
                }
             },
             "Tags": [

@@ -477,7 +477,10 @@
                   "paws_collection_start_ts":{
                       "Ref":"CollectionStartTs"
                   },
-                  "paws_extension": "auth0"
+                  "stack_name": {
+                      "Ref":"AWS::StackName"
+                  },
+                  "paws_type_name": "auth0"
                }
             },
             "Tags": [
