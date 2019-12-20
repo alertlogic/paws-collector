@@ -81,9 +81,9 @@ class O365Collector extends PawsCollector {
         });
         // Get the streams from env vars and collect the content
         Promise.all(contentPromises).then(results => {
-            const agregateResult = results.reduce((agg, e) => [...e, ...agg], []);
+            const aggregateResult = results.reduce((agg, e) => [...e, ...agg], []);
 
-            const contentPromises = agregateResult.map(({contentUri}) => m_o365mgmnt.getContent(contentUri));
+            const contentPromises = aggregateResult.map(({contentUri}) => m_o365mgmnt.getContent(contentUri));
             return Promise.all(contentPromises);
         // Call all of the content urls and agregate the resutls
         }).then(content => {
@@ -109,9 +109,11 @@ class O365Collector extends PawsCollector {
 
         let nextUntilMoment;
         if(nowMoment.diff(nextSinceTs, 'hours') > 24){
+            console.log('collection is more than 24 hours behind. Increasing the collection time to catch up')
             nextUntilMoment = moment(nextSinceTs).add(24, 'hours');
         }
         else if(nowMoment.diff(nextSinceTs, 'hours') > 1){
+            console.log('collection is more than 1 hour behind. Inccreaing the collection time to catch up')
             nextUntilMoment = moment(nextSinceTs).add(1, 'hours');
         }
         else{
