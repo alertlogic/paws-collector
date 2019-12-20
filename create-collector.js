@@ -65,7 +65,7 @@ function copyFiles(path, dir){
         //if the template file is either collector, test, or mock, add the collector type to the path.
         if(['collector', 'test', 'mock'].some(e => file.match(e))){
             destPath = `${dir}/${type}_${file.replace(/\.template/, '')}`
-        // special case for collector json
+        // special case for collector.json
         } if(['collector.json'].some(e => file.match(e))){
             destPath = `${dir}/al-${type}-${file.replace(/\.template/, '')}`
         } else{
