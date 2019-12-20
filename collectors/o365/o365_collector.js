@@ -15,6 +15,9 @@ const m_o365mgmnt = require('./lib/o365_mgmnt');
 
 const parse = require('@alertlogic/al-collector-js').Parse;
 
+// Subtracting less than 7 days to avoid weird race conditions with the azure api...
+// Missing about 9 seconds of historical logs shouldn't be too bad.
+const PARTIAL_WEEK = 6.9999;
 
 const typeIdPaths = [
    { path: ['CreationTime'] }
@@ -37,9 +40,7 @@ class O365Collector extends PawsCollector {
         let endTs;
 
         if(moment().diff(startTs, 'days') > 7){
-            // Subtracting less than 7 days to avoid weird race conditions with the azure api...
-            // Missing about 9 seconds of historical logs shouldn't be too bad.
-            startTs = moment().subtract(6.9999, 'days').toISOString();
+            startTs = moment().subtract(PARTIAL_WEEK, 'days').toISOString();
             console.log("Start timestamp is more than 7 days in the past. This is not allowed in the MS managment API. setting the start time to 7 days in the past");
         }
         
