@@ -32,7 +32,7 @@
  */
 
 // Instantiate your collector
-const Collector = require('./gsuite_collector').GsuiteCollector;
+const Collector = require('./collector').GsuiteCollector;
 
 // Environment
 const debug = require('debug') ('index');

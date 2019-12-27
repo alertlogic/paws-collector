@@ -12,9 +12,9 @@
 const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const parse = require('@alertlogic/al-collector-js').Parse;
-const { google } = require('googleapis');
+
 const { auth } = require('google-auth-library');
-const utils = require('utils');
+const utils = require('./utils');
 
 
 const typeIdPaths = [
@@ -38,6 +38,7 @@ class GsuiteCollector extends PawsCollector {
         //         process.env.paws_collection_start_ts :
         //             moment().toISOString();
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
+
         const initialState = {
             // TODO: define initial collection state specific to your collector.
             // You will get this state back with each invocation
@@ -68,17 +69,17 @@ class GsuiteCollector extends PawsCollector {
         
         let params = {startTime : state.since, endTime: state.until};
 
-        utils.listLoginEvents(client, params, function(collection, error){
+        utils.listEvents(client, params, function(collection, error){
             if (error){
                 return callback(error);
             }
             // console.log(collection[1].events[0]);
-            
+            // console.log(collection);
             // const lastLogTs = params.endTime;
             const newState = collector._getNextCollectionState(state);
             console.info(`GSUI000002 Next collection in ${newState.poll_interval_sec} seconds`);
             
-            return callback(null, [], newState, newState.poll_interval_sec);
+            return callback(null, collection, newState, newState.poll_interval_sec);
 
         });        
     
