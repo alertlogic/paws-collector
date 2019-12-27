@@ -32,10 +32,10 @@ class GsuiteCollector extends PawsCollector {
     }
     
     pawsInitCollectionState(event, callback) {
-        const startTs = process.env.paws_collection_start_ts ? process.env.paws_collection_start_ts : moment().subtract(20, 'days').toISOString();
+        const startTs = process.env.paws_collection_start_ts ? process.env.paws_collection_start_ts : moment().subtract(5, 'minutes').toISOString();
 
-        // const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
-        const endTs = moment().toISOString();
+        const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
+
         const initialState = {
             // TODO: define initial collection state specific to your collector.
             // You will get this state back with each invocation
@@ -66,17 +66,20 @@ class GsuiteCollector extends PawsCollector {
         
         let params = {startTime : state.since, endTime: state.until, applicationNames: applicationNames};
 
-        utils.listEvents(client, params, [], function(collection, error){
-            if (error){
-                return callback(error);
-            }
+        applicationNames.forEach((applicationName) => {
+            params['applicationName'] = applicationName;
+            utils.listEvents(client, params, [], function(collection, error){
+                if (error){
+                    return callback(error);
+                }
 
-            const newState = collector._getNextCollectionState(state);
-            console.info(`GSUI000002 Next collection in ${newState.poll_interval_sec} seconds`);
-            
-            return callback(null, collection, newState, newState.poll_interval_sec);
+                const newState = collector._getNextCollectionState(state);
+                console.info(`GSUI000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                
+                return callback(null, collection, newState, newState.poll_interval_sec);
 
-        });        
+            });        
+        });
     }
     
     _getNextCollectionState(curState) {
