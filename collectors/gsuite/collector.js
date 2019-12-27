@@ -32,13 +32,10 @@ class GsuiteCollector extends PawsCollector {
     }
     
     pawsInitCollectionState(event, callback) {
-        const startTs = process.env.paws_collection_start_ts ? process.env.paws_collection_start_ts : moment().subtract(5, 'minutes').toISOString();
+        const startTs = process.env.paws_collection_start_ts ? process.env.paws_collection_start_ts : moment().subtract(20, 'days').toISOString();
 
-        // const startTs = process.env.paws_collection_start_ts ? 
-        //         process.env.paws_collection_start_ts :
-        //             moment().toISOString();
-        const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
-
+        // const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
+        const endTs = moment().toISOString();
         const initialState = {
             // TODO: define initial collection state specific to your collector.
             // You will get this state back with each invocation
@@ -63,31 +60,23 @@ class GsuiteCollector extends PawsCollector {
         const client = auth.fromJSON(keys);
         client.subject = process.env.paws_email_id;
         // TODO: change this to CFT var
-        client.scopes = ['https://www.googleapis.com/auth/admin.reports.audit.readonly'];
-
+        client.scopes = process.env.paws_scopes.split(',');
+        const applicationNames = process.env.paws_application_names.split(',');
         console.info(`GSUI000001 Collecting data from ${state.since} till ${state.until}`);
         
-        let params = {startTime : state.since, endTime: state.until};
+        let params = {startTime : state.since, endTime: state.until, applicationNames: applicationNames};
 
-        utils.listEvents(client, params, function(collection, error){
+        utils.listEvents(client, params, [], function(collection, error){
             if (error){
                 return callback(error);
             }
-            // console.log(collection[1].events[0]);
-            // console.log(collection);
-            // const lastLogTs = params.endTime;
+
             const newState = collector._getNextCollectionState(state);
             console.info(`GSUI000002 Next collection in ${newState.poll_interval_sec} seconds`);
             
             return callback(null, collection, newState, newState.poll_interval_sec);
 
         });        
-    
-
-
-        // const newState = collector._getNextCollectionState(state);
-        // console.info(`GSUI000002 Next collection in ${newState.poll_interval_sec} seconds`);
-        // return callback(null, [], newState, newState.poll_interval_sec);
     }
     
     _getNextCollectionState(curState) {
