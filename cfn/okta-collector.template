@@ -470,7 +470,10 @@
                   "paws_collection_start_ts":{
                       "Ref":"CollectionStartTs"
                   },
-                  "paws_extension": "okta"
+                  "stack_name": {
+                      "Ref":"AWS::StackName"
+                  },
+                  "paws_type_name": "okta"
                }
             },
             "Tags": [
