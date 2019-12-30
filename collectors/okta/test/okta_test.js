@@ -1,7 +1,9 @@
 const assert = require('assert');
 const sinon = require('sinon');
+const moment = require('moment');
 var AWS = require('aws-sdk-mock');
 const m_response = require('cfn-response');
+const okta = require('@okta/okta-sdk-nodejs');
 
 const oktaMock = require('./okta_mock');
 var m_alCollector = require('@alertlogic/al-collector-js');
@@ -96,6 +98,66 @@ describe('Unit Tests', function() {
         setEnvStub.restore();
         responseStub.restore();
     });
+
+    describe('pawsInitCollectionState', function() {
+        let ctx = {
+            invokedFunctionArn : oktaMock.FUNCTION_ARN,
+            fail : function(error) {
+                assert.fail(error);
+                done();
+            },
+            succeed : function() {
+                done();
+            }
+        };
+        it('sets up intial state correctly', function(done) {
+            OktaCollector.load().then(function(creds) {
+                const testPollInterval = 60;
+                var collector = new OktaCollector(ctx, creds, 'okta');
+                const startDate = moment().subtract(1, 'days').toISOString();
+                process.env.paws_collection_start_ts = startDate;
+                collector.pollInterval = testPollInterval;
+
+                collector.pawsInitCollectionState(oktaMock.LOG_EVENT, (err, initialState, nextPoll) => {
+                    assert.equal(initialState.since, startDate, "Dates are not equal");
+                    assert.equal(moment(initialState.until).diff(initialState.since, 'seconds'), testPollInterval);
+                    assert.equal(initialState.poll_interval_sec, 1)
+                    done();
+                });
+            });
+        });
+    });
+
+    describe('_getNextCollectionState', function() {
+        let ctx = {
+            invokedFunctionArn : oktaMock.FUNCTION_ARN,
+            fail : function(error) {
+                assert.fail(error);
+                done();
+            },
+            succeed : function() {
+                done();
+            }
+        };
+        it('sets the correct since if the last until is in the future', function(done) {
+            const startDate = moment()
+            const curState = {
+                since: startDate.toISOString(),
+                until: startDate.add(2, 'days').toISOString(),
+                poll_interval_sec: 1
+            };
+            OktaCollector.load().then(function(creds) {
+                const testPollInterval = 55;
+                var collector = new OktaCollector(ctx, creds, 'okta');
+                collector.pollInterval = testPollInterval;
+                const newState = collector._getNextCollectionState(curState);
+                assert.notEqual(moment(newState.until).toISOString(), curState.until)
+                assert.equal(newState.poll_interval_sec, collector.pollInterval);
+                done();
+            });
+        });
+    });
+
     
     describe('Format Tests', function() {
         it('log format success', function(done) {
@@ -113,7 +175,8 @@ describe('Unit Tests', function() {
             OktaCollector.load().then(function(creds) {
                 var collector = new OktaCollector(ctx, creds);
                 let fmt = collector.pawsFormatLog(oktaMock.OKTA_LOG_EVENT);
-                console.log('!!Formatted event', fmt);
+                assert.equal(fmt.progName, 'OktaCollector');
+                assert.ok(fmt.messageTypeId);
                 done();
             });
         });
