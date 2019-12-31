@@ -128,6 +128,47 @@ describe('Unit Tests', function() {
         });
     });
 
+    describe('pawsGetLogs', function() {
+        let ctx = {
+            invokedFunctionArn : oktaMock.FUNCTION_ARN,
+            fail : function(error) {
+                assert.fail(error);
+                done();
+            },
+            succeed : function() {
+                done();
+            }
+        };
+        it('gets logs correctly', function(done) {
+            const {Client} = okta;
+            const oktaSdkMock = sinon.stub(Client.prototype, 'getLogs').callsFake(() => {
+                return {
+                    each: (callback) => {
+                        ['foo', 'bar', 'baz'].forEach(callback);
+                        return new Promise((res, rej) => {
+                            res();
+                        });
+                    }
+                }
+            })
+            OktaCollector.load().then(function(creds) {
+                const testPollInterval = 60;
+                var collector = new OktaCollector(ctx, creds, 'okta');
+                const startDate = moment().subtract(1, 'days').toISOString();
+                const mockState = {
+                    since: startDate,
+                    until: moment().toISOString()
+                }
+
+                collector.pawsGetLogs(mockState, (err, logs, newState, nextPoll) => {
+                    assert.equal(logs.length, 3);
+                    assert.equal(newState.since, mockState.until);
+                    done();
+                });
+            });
+        });
+    });
+
     describe('_getNextCollectionState', function() {
         let ctx = {
             invokedFunctionArn : oktaMock.FUNCTION_ARN,
