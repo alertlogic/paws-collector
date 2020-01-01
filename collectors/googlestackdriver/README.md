@@ -10,6 +10,16 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 Refer to [CF template readme](./cfn/README.md) for installation instructions.
 
+## Generate Google API key file
+1. In the Google Cloud Console, go to the Create service account key page.
+2. From the Service account list, select New service account.
+3. In the Service account name field, enter a name.
+4. From the Role list, select Project > Owner.
+
+Note: The Role field authorizes your service account to access resources. You can view and change this field later by using the Cloud Console. If you are developing a production app, specify more granular permissions than Project > Owner. For more information, see granting roles to service accounts.
+
+5. Click Create. A JSON file that contains your key downloads to your computer.
+
 # How it works
 
 ## Update Trigger
