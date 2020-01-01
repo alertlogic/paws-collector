@@ -11,6 +11,7 @@
 
 const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
+const parse = require('@alertlogic/al-collector-js').Parse;
 
 
 const typeIdPaths = [
