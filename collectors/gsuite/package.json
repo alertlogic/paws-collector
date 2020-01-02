@@ -23,7 +23,7 @@
     "@alertlogic/paws-collector": "1.0.6",
     "async": "3.1.0",
     "debug": "4.1.1",
-    "googleapis": "^39.2.0",
+    "googleapis": "39.2.0",
     "moment": "2.24.0"
   },
   "author": "Alert Logic Inc."
