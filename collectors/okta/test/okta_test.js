@@ -104,11 +104,8 @@ describe('Unit Tests', function() {
             invokedFunctionArn : oktaMock.FUNCTION_ARN,
             fail : function(error) {
                 assert.fail(error);
-                done();
             },
-            succeed : function() {
-                done();
-            }
+            succeed : function() {}
         };
         it('sets up intial state correctly', function(done) {
             OktaCollector.load().then(function(creds) {
@@ -121,7 +118,7 @@ describe('Unit Tests', function() {
                 collector.pawsInitCollectionState(oktaMock.LOG_EVENT, (err, initialState, nextPoll) => {
                     assert.equal(initialState.since, startDate, "Dates are not equal");
                     assert.equal(moment(initialState.until).diff(initialState.since, 'seconds'), testPollInterval);
-                    assert.equal(initialState.poll_interval_sec, 1)
+                    assert.equal(initialState.poll_interval_sec, 1);
                     done();
                 });
             });
@@ -133,11 +130,8 @@ describe('Unit Tests', function() {
             invokedFunctionArn : oktaMock.FUNCTION_ARN,
             fail : function(error) {
                 assert.fail(error);
-                done();
             },
-            succeed : function() {
-                done();
-            }
+            succeed : function() {}
         };
         it('gets logs correctly', function(done) {
             const {Client} = okta;
@@ -149,20 +143,20 @@ describe('Unit Tests', function() {
                             res();
                         });
                     }
-                }
-            })
+                };
+            });
             OktaCollector.load().then(function(creds) {
-                const testPollInterval = 60;
                 var collector = new OktaCollector(ctx, creds, 'okta');
                 const startDate = moment().subtract(1, 'days').toISOString();
                 const mockState = {
                     since: startDate,
                     until: moment().toISOString()
-                }
+                };
 
                 collector.pawsGetLogs(mockState, (err, logs, newState, nextPoll) => {
                     assert.equal(logs.length, 3);
                     assert.equal(newState.since, mockState.until);
+                    oktaSdkMock.restore();
                     done();
                 });
             });
@@ -174,14 +168,11 @@ describe('Unit Tests', function() {
             invokedFunctionArn : oktaMock.FUNCTION_ARN,
             fail : function(error) {
                 assert.fail(error);
-                done();
             },
-            succeed : function() {
-                done();
-            }
+            succeed : function() {}
         };
         it('sets the correct since if the last until is in the future', function(done) {
-            const startDate = moment()
+            const startDate = moment();
             const curState = {
                 since: startDate.toISOString(),
                 until: startDate.add(2, 'days').toISOString(),
@@ -192,7 +183,7 @@ describe('Unit Tests', function() {
                 var collector = new OktaCollector(ctx, creds, 'okta');
                 collector.pollInterval = testPollInterval;
                 const newState = collector._getNextCollectionState(curState);
-                assert.notEqual(moment(newState.until).toISOString(), curState.until)
+                assert.notEqual(moment(newState.until).toISOString(), curState.until);
                 assert.equal(newState.poll_interval_sec, collector.pollInterval);
                 done();
             });
