@@ -62,7 +62,7 @@ class GsuiteCollector extends PawsCollector {
     // TODO: change this to CFT var
     client.scopes = process.env.paws_scopes.split(",");
     const applicationNames = process.env.paws_application_names.split(",");
-    
+    let promises = [];
     applicationNames.forEach(applicationName => {
       let params = {
         startTime: state.since,
@@ -73,20 +73,22 @@ class GsuiteCollector extends PawsCollector {
       console.info(
         `GSUI000001 Collecting data for ${applicationName} from ${state.since} till ${state.until}`
       );
-  
-      utils.listEvents(client, params, [], function(error, collection) {
-        if (error) {
-          return callback(error);
-        }
+      const promise = utils.listEvents(client, params, []);
+      promises.push(promise)
 
-        const newState = collector._getNextCollectionState(state);
-        console.info(
-          `GSUI000002 Next collection in ${newState.poll_interval_sec} seconds`
-        );
-
-        return callback(null, collection, newState, newState.poll_interval_sec);
-      });
     });
+    Promise.all(promises).then((collection) => {
+      let logAcc = [];
+      collection.forEach(log => logAcc.push(...log));
+      const newState = collector._getNextCollectionState(state);
+      console.info(
+        `GSUI000002 Next collection in ${newState.poll_interval_sec} seconds`
+      );
+      return callback(null, logAcc, newState, newState.poll_interval_sec);
+    })
+      .catch((error) => {
+        return callback(error);
+      });
   }
 
   _getNextCollectionState(curState) {

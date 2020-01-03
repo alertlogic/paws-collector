@@ -1,29 +1,25 @@
 const { google } = require("googleapis");
 
-function listEvents(auth, params, accumulator, callback) {
+function listEvents(auth, params, accumulator) {
   const service = google.admin({ version: "reports_v1", auth });
-
-  service.activities.list(params, (err, res) => {
-    if (accumulator.length == 0) {
-      if (err) {
-        return callback(err, null);
-      }
-      if (!("items" in res.data)) {
-        return callback(null, []);
-      }
+  return new Promise(function (resolve, reject) {
+    getGsuiteData(params);
+    function getGsuiteData(params) {
+      service.activities.list(params).then(response => {
+        if (response.data['items']) {
+          accumulator.push(...response.data.items);
+        }
+        if (response.data['nextPageToken']) {
+          params["pageToken"] = response.data.nextPageToken;
+          getGsuiteData(params);
+        }
+        else {
+          resolve(accumulator);
+        }
+      }).catch(error => {
+        reject(error);
+      });
     }
-
-    if ("items" in res.data) {
-      accumulator.push(...res.data.items);
-    }
-
-    if (!("nextPageToken" in res.data)) {
-      return callback(null, accumulator);
-    }
-
-    params["pageToken"] = res.data.nextPageToken;
-
-    listEvents(auth, params, accumulator, callback);
   });
 }
 
