@@ -2,7 +2,7 @@
  * @copyright (C) 2019, Alert Logic, Inc
  * @doc
  *
- * {{Type}} System logs extension.
+ * O365 System logs extension.
  *
  * @end
  * -----------------------------------------------------------------------------
@@ -10,12 +10,12 @@
 
 const debug = require('debug') ('index');
 
-const {{Type}}Collector = require('./collector').{{Type}}Collector;
+const O365Collector = require('./o365_collector').O365Collector;
 
 exports.handler = function(event, context) {
     debug('input event: ', event);
-    {{Type}}Collector.load().then(function(creds) {
-        var {{type}}c = new {{Type}}Collector(context, creds);
-        {{type}}c.handleEvent(event);
+    O365Collector.load().then(function(creds) {
+        var o365c = new O365Collector(context, creds);
+        o365c.handleEvent(event);
     });
 };

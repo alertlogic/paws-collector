@@ -536,6 +536,9 @@
                   "paws_collection_start_ts":{
                       "Ref":"CollectionStartTs"
                   },
+                  "stack_name": {
+                      "Ref":"AWS::StackName"
+                  },
                   "paws_type_name":{
                       "Ref" : "PawsCollectorTypeName"
                   }

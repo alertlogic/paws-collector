@@ -78,6 +78,14 @@ function mockSQSSendMessage(returnObject) {
         return callback(null, {Body: buf});
     });
 }
+
+function mockSQSSendMessageBatch(returnObject) {
+    AWS.mock('SQS', 'sendMessageBatch', function (params, callback) {
+        let buf = Buffer(JSON.stringify(returnObject));
+        return callback(null, {Body: buf});
+    });
+}
+
 class TestCollector extends PawsCollector {
     constructor(ctx, creds) {
         super(ctx, creds);
@@ -113,6 +121,35 @@ class TestCollectorNoOverrides extends PawsCollector {
     }
 }
 
+class TestCollectorMultiState extends PawsCollector {
+    constructor(ctx, creds) {
+        super(ctx, creds);
+    }
+    
+    pawsInitCollectionState(event, callback) {
+        return callback(null, [{state: 'initial-state-1'}, {state: 'initial-state-2'}], 900);
+    }
+    
+    pawsGetLogs(state, callback) {
+        return callback(null, ['log1', 'log2'], [{state: 'new-state-1'}, {state: 'new-state-2'}], 900);
+    }
+    
+    pawsGetRegisterParameters(event, callback) {
+        return callback(null, {register: 'test-param'});
+    }
+    
+    pawsFormatLog(msg) {
+        let formattedMsg = {
+            messageTs: 12345678,
+            priority: 11,
+            progName: 'OktaCollectorArrayState',
+            message: JSON.stringify({test: 'message'}),
+            messageType: 'json/aws.test'
+        };
+        return formattedMsg;
+    }
+}
+
 describe('Unit Tests', function() {
 
     beforeEach(function(){
@@ -132,6 +169,7 @@ describe('Unit Tests', function() {
         mockSetEnvStub();
         
         mockSQSSendMessage({});
+        mockSQSSendMessageBatch({});
     });
 
     afterEach(function(){
@@ -141,7 +179,7 @@ describe('Unit Tests', function() {
     });
     
     describe('Poll Request Tests', function() {
-        it('poll request success', function(done) {
+        it('poll request success, single state', function(done) {
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,
                 fail : function(error) {
@@ -156,14 +194,41 @@ describe('Unit Tests', function() {
             const testEvent = {
                 Records: [
                     {
-                        "body": "{\n  \"extension_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
+                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
                         "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
                     }
                 ]
             };
             
-            PawsCollector.load().then(function(creds) {
+            TestCollector.load().then(function(creds) {
                 var collector = new TestCollector(ctx, creds);
+                collector.handleEvent(testEvent);
+            });
+        });
+        
+        it('poll request success, multiple state', function(done) {
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+
+            const testEvent = {
+                Records: [
+                    {
+                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
+                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
+                    }
+                ]
+            };
+            
+            TestCollectorMultiState.load().then(function(creds) {
+                var collector = new TestCollectorMultiState(ctx, creds);
                 collector.handleEvent(testEvent);
             });
         });
