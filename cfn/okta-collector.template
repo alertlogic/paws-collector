@@ -49,8 +49,7 @@
         },
         "OktaEndpoint": {
             "Description": "URL to poll",
-            "Type": "String",
-            "Default": "https://alertlogic-admin.okta.com/"
+            "Type": "String"
         },
         "OktaSecret": {
             "Description": "Authentication secret to use for requests to OktaEndpoint",
@@ -372,6 +371,31 @@
                 }
             }
         },
+        "EncryptPawsSecret": {
+            "Type": "AWS::CloudFormation::CustomResource",
+            "DependsOn": [
+                "LambdaKmsKey",
+                "EncryptLambdaFunction",
+                "EncryptLambdaPolicy"
+            ],
+            "Properties": {
+                "ServiceToken": {
+                    "Fn::GetAtt": [
+                        "EncryptLambdaFunction",
+                        "Arn"
+                    ]
+                },
+                "KeyId": {
+                    "Fn::GetAtt": [
+                        "LambdaKmsKey",
+                        "Arn"
+                    ]
+                },
+                "Plaintext": {
+                    "Ref": "OktaSecret"
+                }
+            }
+        },
       "PawsPollStateQueue":{
         "Type":"AWS::SQS::Queue",
         "DependsOn":[
@@ -398,6 +422,7 @@
             "CollectLambdaRole",
             "LambdaKmsKey",
             "EncryptSecretKeyCustomResource",
+            "EncryptPawsSecret",
             "PawsPollStateQueue"
          ],
          "Properties":{
@@ -465,7 +490,7 @@
                       "Ref":"OktaEndpoint"
                   },
                   "paws_api_secret":{
-                      "Ref":"OktaSecret"
+                      "Fn::GetAtt": ["EncryptPawsSecret", "EncryptedText"]
                   },
                   "paws_collection_start_ts":{
                       "Ref":"CollectionStartTs"
