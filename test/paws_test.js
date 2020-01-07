@@ -85,7 +85,7 @@ class TestCollector extends PawsCollector {
     
     pawsInitCollectionState(event, callback) {
         return callback(null, {state: 'initial-state'}, 900);
-    }
+    }   
     
     pawsGetLogs(state, callback) {
         return callback(null, ['log1', 'log2'], {state: 'new-state'}, 900);
@@ -100,10 +100,16 @@ class TestCollector extends PawsCollector {
             messageTs: 12345678,
             priority: 11,
             progName: 'OktaCollector',
-            message: JSON.stringify({test: 'message'}),
+            message: JSON.stringify(msg),
             messageType: 'json/aws.test'
         };
         return formattedMsg;
+    }
+}
+
+class TestCollectorNoOverrides extends PawsCollector {
+    constructor(ctx, creds) {
+        super(ctx, creds);
     }
 }
 
@@ -196,6 +202,187 @@ describe('Unit Tests', function() {
             PawsCollector.load().then((creds) => {
                 var collector = new TestCollector(ctx, creds);
                 collector.handleEvent(testEvent);
+            });
+        });
+    });
+    
+    describe('Format Log Tests', function(){
+        it('Format success', function(done) {
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                },
+                succeed : function() {
+                }
+            };
+            
+            const formattedMsg = {
+                messageTs: 12345678,
+                priority: 11,
+                progName: 'OktaCollector',
+                message: '"test"',
+                messageType: 'json/aws.test'
+            };
+            
+            PawsCollector.load().then((creds) => {
+            const collector = new TestCollector(ctx, creds);
+            const returned = collector.pawsFormatLog("test");
+            assert.deepEqual(returned, formattedMsg);
+            done();
+            });
+        });
+        it('Format throw', function(done) {
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                },
+                succeed : function() {
+                }
+            };
+            PawsCollector.load().then((creds) => {
+            var collector = new TestCollectorNoOverrides(ctx, creds);
+            assert.throws(function() {collector.pawsFormatLog("test");}, Error);
+            done();
+            });
+        });
+    });
+    
+    describe('Get Log Tests', function(){
+        it('Get Log success', function(done) {
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+        
+            const callbackStub = sinon.spy(TestCollector.prototype, "pawsGetLogs");
+            var aimsCreds = pawsMock.AIMS_TEST_CREDS;
+            var pawsCreds = pawsMock.PAWS_TEST_CREDS;
+            var collector = new TestCollector(ctx, {aimsCreds, pawsCreds});
+            const mockState = {state: 'initial-state'};
+            collector.pawsGetLogs(mockState, (error, logs, newState, newTimeout) => {
+                assert.ok(callbackStub.called);
+                assert.equal(error, null);
+                assert.equal(logs.length, 2);
+                assert.deepEqual(newState, {state: 'new-state'});
+                assert.equal(newTimeout, 900);
+                callbackStub.restore();
+                done();
+            });
+        });
+        it('Get Log throw', function(done){
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                },
+                succeed : function() {
+                    
+                }
+            };
+            
+            const state = {state: 'initial-state'};
+            const callbackStub = sinon.stub(TestCollector.prototype, "pawsGetLogs");
+            PawsCollector.load().then((creds) => {
+                var collector = new TestCollectorNoOverrides(ctx, creds);
+                assert.throws(function() {collector.pawsGetLogs(state, callbackStub);}, Error);
+                done();
+            });
+        });    
+    });
+    describe('Init Collection Tests', function(){
+        it('Init Collection State success', function(done){
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                },
+                succeed : function() {
+        
+                }
+            };
+            const testEvent = {"event": "create"};
+            const callbackStub = sinon.spy(TestCollector.prototype, "pawsInitCollectionState");
+            PawsCollector.load().then((creds) => {
+                var collector = new TestCollector(ctx, creds);
+                collector.pawsInitCollectionState(testEvent, (error, newState, newTimeout) => {
+                    assert.ok(callbackStub.called);
+                    assert.equal(error, null);
+                    assert.deepEqual(newState, {state: 'initial-state'});
+                    assert.equal(newTimeout, 900);
+                    callbackStub.restore();
+                    done();
+                });
+            });
+        });
+        it('Init Collection State throw', function(done){
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                },
+                succeed : function(){
+                    
+                }
+            };
+            
+            const testEvent = {"event" : "create"};
+            const callbackStub = sinon.stub(TestCollector.prototype, "pawsInitCollectionState");
+            PawsCollector.load().then((creds) => {
+                var collector = new TestCollectorNoOverrides(ctx, creds);
+                assert.throws( function() {collector.pawsInitCollectionState(testEvent, callbackStub);}, Error);
+                done();
+            });
+        });
+    });
+    describe('Get Register Parameters Tests', function(){
+        it('Get Register Parameters populated', function(done){
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                },
+                succeed : function(){
+                    
+                }
+            };
+            
+            const testEvent = {"event" : "create"};
+            PawsCollector.load().then((creds) => {
+                var collector = new TestCollector(ctx, creds);
+                collector.pawsGetRegisterParameters(testEvent, (error, objectWithRegistrationProperties) =>{
+                    assert.equal(error, null);
+                    assert.deepEqual(objectWithRegistrationProperties, {register: 'test-param'});
+                    done();
+                });
+            });
+        });
+        it('Get Register Parameters empty', function(done){
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                },
+                succeed : function(){
+                    
+                }
+            };
+            
+            const testEvent = {"event" : "create"};
+            PawsCollector.load().then((creds) => {
+                var collector = new TestCollectorNoOverrides(ctx, creds);
+                collector.pawsGetRegisterParameters(testEvent, (error, objectWithRegistrationProperties) =>{
+                    assert.equal(error, null);
+                    assert.deepEqual(objectWithRegistrationProperties, {});
+                    done();
+                });
             });
         });
     });
