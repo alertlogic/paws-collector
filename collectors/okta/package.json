@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "lint": "jshint --exclude \"./node_modules/*\" **/*.js",
-    "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=cobertura mocha --colors --reporter mocha-jenkins-reporter"
+    "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=text mocha --colors"
   },
   "devDependencies": {
     "aws-sdk": "*",
@@ -21,7 +21,7 @@
   "dependencies": {
     "@okta/okta-sdk-nodejs": "3.1.0",
     "@alertlogic/al-collector-js": "1.4.2",
-    "@alertlogic/paws-collector": "1.0.8",
+    "@alertlogic/paws-collector": "1.0.10",
     "async": "3.1.0",
     "debug": "4.1.1",
     "moment": "2.24.0"

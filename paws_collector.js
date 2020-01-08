@@ -85,16 +85,15 @@ class PawsCollector extends AlAwsCollector {
     getProperties() {
         const baseProps = super.getProperties();
         let pawsProps = {
-            pawsCollectorType : this._pawsCollectorType
+            pawsCollectorType : this._pawsCollectorType,
+            pawsEndpoint : process.env.paws_endpoint
         };
         return Object.assign(pawsProps, baseProps);
     };
     
     register(event) {
         let collector = this;
-        let pawsRegisterProps = {
-            pawsEndpoint : process.env.paws_endpoint
-        };
+        let pawsRegisterProps = this.getProperties();
         
         async.waterfall([
             function(asyncCallback) {
