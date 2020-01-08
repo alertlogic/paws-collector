@@ -10,7 +10,7 @@
 
 const debug = require('debug') ('index');
 
-const GsuiteCollector = require('./gsuite_collector').GsuiteCollector;
+const GsuiteCollector = require('./collector').GsuiteCollector;
 
 exports.handler = function(event, context) {
     debug('input event: ', event);

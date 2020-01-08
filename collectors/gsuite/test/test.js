@@ -5,7 +5,7 @@ const m_response = require('cfn-response');
 
 const gsuiteMock = require('./gsuite_mock');
 var m_alCollector = require('@alertlogic/al-collector-js');
-var GsuiteCollector = require('../gsuite_collector').GsuiteCollector;
+var GsuiteCollector = require('../collector').GsuiteCollector;
 const m_al_aws = require('@alertlogic/al-aws-collector-js').Util;
 
 describe('Unit Tests', function() {

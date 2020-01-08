@@ -49,13 +49,10 @@ class GsuiteCollector extends PawsCollector {
   pawsGetLogs(state, callback) {
     let collector = this;
 
-    // TODO: Change this to logging
-    // TODO: Change the environment vars to CFT vars
-    const keysEnvVar = process.env.paws_creds;
+    const keysEnvVar = collector.secret;
     if (!keysEnvVar) {
       throw new Error("The $CREDS environment variable was not found!");
     }
-
     const keys = JSON.parse(keysEnvVar);
     const client = auth.fromJSON(keys);
     client.subject = process.env.paws_email_id;

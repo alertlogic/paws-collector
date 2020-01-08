@@ -10,8 +10,8 @@ Resources:
       Environment:
         Variables:
           AWS_LAMBDA_FUNCTION_NAME:
-          aims_secret_key:
-          aims_access_key_id:
+          aims_secret_key: 
+          aims_access_key_id: 
           al_api:
           stack_name:
           azollect_api:
@@ -21,6 +21,10 @@ Resources:
           paws_state_queue_url:
           paws_poll_interval:
           paws_extension:
+          paws_scopes: 
+          paws_application_names:   
+          paws_email_id: 
+          paws_api_secret: 
           collector_id:
       Runtime: nodejs10.x
       Handler: index.handler

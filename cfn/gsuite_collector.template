@@ -79,6 +79,18 @@
             "Type": "String",
             "NoEcho": true
         },
+	    "PawsScope": {
+            "Description": "Define Scope, if it is multiple pass as comma separated string for gsuite",
+            "Type": "String",
+        },
+        "PawsApplicationNames": {
+            "Description": "Define Application name, if it is multiple pass as comma separated string for Gsuite",
+            "Type": "String",
+        },
+        "PawsEmailId": {
+            "Description": "Email ID for gsuit",
+            "Type": "String",
+        },
         "CollectionStartTs": {
             "Description": "Timestamp when log collection starts",
             "Type": "String",
@@ -534,13 +546,13 @@
                       "Fn::GetAtt": ["EncryptPawsSecret", "EncryptedText"]
                   },
                   "paws_scope": {
-
+                      "Ref":"PawsScope"
                   },
-                  "paws_creds": {
-
+                  "paws_application_names": {
+                      "Ref":"PawsApplicationNames"
                   },
                   "paws_email_id": {
-
+                      "Ref":"PawsEmailId"
                   },
                   "paws_collection_start_ts":{
                       "Ref":"CollectionStartTs"
