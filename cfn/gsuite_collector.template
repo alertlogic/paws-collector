@@ -80,7 +80,7 @@
             "NoEcho": true
         },
 	    "PawsScope": {
-            "Description": "Define Scope, if it is multiple pass as comma separated string for gsuite",
+            "Description": "Define Scope, if it is multiple pass as comma separated string for Gsuite",
             "Type": "String",
         },
         "PawsApplicationNames": {
@@ -88,7 +88,7 @@
             "Type": "String",
         },
         "PawsEmailId": {
-            "Description": "Email ID for gsuit",
+            "Description": "Email ID for Gsuite",
             "Type": "String",
         },
         "CollectionStartTs": {
