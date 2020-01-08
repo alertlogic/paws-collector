@@ -67,25 +67,7 @@ class O365Management extends msRestAzure.AzureServiceClient {
         }
     }
 
-    // standard request handler
-    requestHandler(httpRequest){
-        return (res) => {
-            let {parsedBody, bodyAsText, status} = res;
-            if(!parsedBody){
-                parsedBody = JSON.parse(bodyAsText);
-            }
-            if (status !== 200) {
-                let error = new Error(parsedBody);
-                error.statusCode = status;
-                error.request = msRest.stripRequest(httpRequest);
-                error.response = msRest.stripResponse(res);
-                throw error
-            }
-            return parsedBody;
-        }
-    }
-    
-    subscriptionsContent(contentType, startTs, endTs, options, callback) {
+    subscriptionsContent(contentType, startTs, endTs, options) {
         let client = this;
         // Construct URL
         let baseUrl = this.baseUri;
@@ -125,12 +107,76 @@ class O365Management extends msRestAzure.AzureServiceClient {
         }
         httpRequest.headers.set('Content-Type', 'application/json; charset=utf-8');
         httpRequest.body = null;
-        // Create handler
-        const handler = this.requestHandler(httpRequest);
         // Send Request
-        return client.sendRequest(httpRequest).then(handler);
+        return client.sendRequest(httpRequest).then((res) => {
+            let {parsedBody, headers, bodyAsText, status} = res;
+            if(!parsedBody){
+                parsedBody = JSON.parse(bodyAsText);
+            }
+            if (status !== 200) {
+                let error = new Error(parsedBody);
+                error.statusCode = status;
+                error.request = msRest.stripRequest(httpRequest);
+                error.response = msRest.stripResponse(res);
+                throw error
+            }
+            const nextPage = headers.get('NextPageUri');
+            if(nextPage){
+                console.log('subsequent page detected calling: ', nextPage);
+                return this.getNextSubscriptionsContentPage(parsedHeaders.NextPageUri, parsedBody, options);
+            }
+            return parsedBody;
+        });
     }
     
+    getNextSubscriptionsContentPage(nextPageUrl, contentAcc, options) {
+        let client = this;
+    
+        const httpOptions = {};
+        if (!this.generateClientRequestId) {
+            httpOptions.disableClientRequestId = true;
+        }
+
+        // Create HTTP transport objects
+        let httpRequest = new msWebResource(httpOptions);
+        httpRequest.method = 'GET';
+        httpRequest.url = nextPageUrl;
+        // Set Headers
+        if (this.acceptLanguage !== undefined && this.acceptLanguage !== null) {
+            httpRequest.headers.set('accept-language', this.acceptLanguage);
+        }
+        if(options) {
+            for(let headerName in options.customHeaders) {
+                if (options.customHeaders.hasOwnProperty(headerName)) {
+                    httpRequest.headers.set(headerName, options.customHeaders[headerName]);
+                }
+            }
+        }
+        httpRequest.headers.set('Content-Type', 'application/json; charset=utf-8');
+        httpRequest.body = null;
+        // Send Request
+        return client.sendRequest(httpRequest).then((res) => {
+            let {parsedBody, headers, bodyAsText, status} = res;
+            if(!parsedBody){
+                parsedBody = JSON.parse(bodyAsText);
+            }
+            if (status !== 200) {
+                let error = new Error(parsedBody);
+                error.statusCode = status;
+                error.request = msRest.stripRequest(httpRequest);
+                error.response = msRest.stripResponse(res);
+                throw error
+            }
+
+            const newAcc = [ ...contentAcc, ...parsedBody ];
+            const nextPage = headers.get('NextPageUri');
+            if(nextPage){
+                console.log('subsequent page detected calling: ', nextPage);
+                return this.getNextSubscriptionsContentPage(parsedHeaders.NextPageUri, newAcc, options);
+            }
+            return newAcc;
+        });
+    }
     getContent(uri, options, callback) {
         let client = this;
         let publisherId = this.publisherId;
@@ -164,10 +210,22 @@ class O365Management extends msRestAzure.AzureServiceClient {
         }
         httpRequest.headers.set('Content-Type', 'application/json; charset=utf-8');
         httpRequest.body = null;
-        // Create handler
-        const handler = this.requestHandler(httpRequest);
+
         // Send Request
-        return client.sendRequest(httpRequest).then(handler);
+        return client.sendRequest(httpRequest).then((res) => {
+            let {parsedBody, bodyAsText, status} = res;
+            if(!parsedBody){
+                parsedBody = JSON.parse(bodyAsText);
+            }
+            if (status !== 200) {
+                let error = new Error(parsedBody);
+                error.statusCode = status;
+                error.request = msRest.stripRequest(httpRequest);
+                error.response = msRest.stripResponse(res);
+                throw error
+            }
+            return parsedBody;
+        });
     }
 }
 

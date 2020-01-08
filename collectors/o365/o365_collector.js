@@ -49,7 +49,7 @@ class O365Collector extends PawsCollector {
             endTs = moment(startTs).add(24, 'hours').toISOString();
         }
         else {
-            endTs = moment(startTs).toISOString();
+            endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
         }
         const initialState = {
             since: startTs,
@@ -94,7 +94,7 @@ class O365Collector extends PawsCollector {
             console.info(`O365000002 Next collection in ${newState.poll_interval_sec} seconds`);
             callback(null, flattenedResult, newState, newState.poll_interval_sec);
         }).catch(err => {
-            console.error(`O365000003 Error in collection: ${err}`);
+            console.error(`O365000003 Error in collection: ${err.message}`);
             callback(err);
         })
 
