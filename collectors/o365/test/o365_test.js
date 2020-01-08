@@ -128,11 +128,8 @@ describe('O365 Collector Tests', function() {
             invokedFunctionArn : o365Mock.FUNCTION_ARN,
             fail : function(error) {
                 assert.fail(error);
-                done();
             },
-            succeed : function() {
-                done();
-            }
+            succeed : function() {}
         };
         it('get inital state less than 7 days in the past', function(done) {
             O365Collector.load().then(function(creds) {
@@ -142,7 +139,7 @@ describe('O365 Collector Tests', function() {
 
                 collector.pawsInitCollectionState(o365Mock.LOG_EVENT, (err, initialState, nextPoll) => {
                     assert.equal(initialState.since, startDate, "Dates are not equal");
-                    assert.notEqual(moment(initialState.until).diff(initialState.since, 'hours'), 24)
+                    assert.notEqual(moment(initialState.until).diff(initialState.since, 'hours'), 24);
                     done();
                 });
             });
@@ -155,7 +152,7 @@ describe('O365 Collector Tests', function() {
 
                 collector.pawsInitCollectionState(o365Mock.LOG_EVENT, (err, initialState, nextPoll) => {
                     assert.notEqual(initialState.since, startDate, "Date is more than 7 days in the past");
-                    assert.equal(moment(initialState.until).diff(initialState.since, 'hours'), 24)
+                    assert.equal(moment(initialState.until).diff(initialState.since, 'hours'), 24);
                     done();
                 });
             });
@@ -167,7 +164,7 @@ describe('O365 Collector Tests', function() {
                 process.env.paws_collection_start_ts = startDate;
 
                 collector.pawsInitCollectionState(o365Mock.LOG_EVENT, (err, initialState, nextPoll) => {
-                    assert.notEqual(moment(initialState.until).diff(initialState.since, 'hours'), 24)
+                    assert.notEqual(moment(initialState.until).diff(initialState.since, 'hours'), 24);
                     done();
                 });
             });
@@ -179,7 +176,7 @@ describe('O365 Collector Tests', function() {
                 process.env.paws_collection_start_ts = startDate;
 
                 collector.pawsInitCollectionState(o365Mock.LOG_EVENT, (err, initialState, nextPoll) => {
-                    assert.equal(moment(initialState.until).diff(initialState.since, 'hours'), 24)
+                    assert.equal(moment(initialState.until).diff(initialState.since, 'hours'), 24);
                     done();
                 });
             });
@@ -191,14 +188,11 @@ describe('O365 Collector Tests', function() {
             invokedFunctionArn : o365Mock.FUNCTION_ARN,
             fail : function(error) {
                 assert.fail(error);
-                done();
             },
-            succeed : function() {
-                done();
-            }
+            succeed : function() {}
         };
         it('get next state if more than 24 hours in the past', function(done) {
-            const startDate = moment().subtract(3, 'days')
+            const startDate = moment().subtract(3, 'days');
             const curState = {
                 since: startDate.toISOString(),
                 until: startDate.add(2, 'days').toISOString(),
@@ -207,13 +201,13 @@ describe('O365 Collector Tests', function() {
             O365Collector.load().then(function(creds) {
                 var collector = new O365Collector(ctx, creds, 'o365');
                 const newState = collector._getNextCollectionState(curState);
-                assert.equal(moment(newState.until).diff(newState.since, 'hours'), 1)
+                assert.equal(moment(newState.until).diff(newState.since, 'hours'), 1);
                 assert.equal(newState.poll_interval_sec, 1);
                 done();
             });
         });
         it('get next state if less than 24 hours in the past but more than an hour', function(done) {
-            const startDate = moment().subtract(3, 'hours')
+            const startDate = moment().subtract(3, 'hours');
             const curState = {
                 since: startDate.toISOString(),
                 until: startDate.add(1, 'hours').toISOString(),
@@ -222,13 +216,13 @@ describe('O365 Collector Tests', function() {
             O365Collector.load().then(function(creds) {
                 var collector = new O365Collector(ctx, creds, 'o365');
                 const newState = collector._getNextCollectionState(curState);
-                assert.equal(moment(newState.until).diff(newState.since, 'hours'), 1)
+                assert.equal(moment(newState.until).diff(newState.since, 'hours'), 1);
                 assert.equal(newState.poll_interval_sec, 1);
                 done();
             });
         });
         it('get next state if less than 1 hour in the past but more than the polling interval', function(done) {
-            const startDate = moment().subtract(20, 'minutes')
+            const startDate = moment().subtract(20, 'minutes');
             O365Collector.load().then(function(creds) {
                 var collector = new O365Collector(ctx, creds, 'o365');
                 const curState = {
@@ -245,7 +239,7 @@ describe('O365 Collector Tests', function() {
         it('get next state if within polling interval', function(done) {
             O365Collector.load().then(function(creds) {
                 var collector = new O365Collector(ctx, creds, 'o365');
-                const startDate = moment().subtract(collector.pollInterval * 2, 'seconds')
+                const startDate = moment().subtract(collector.pollInterval * 2, 'seconds');
                 const curState = {
                     since: startDate.toISOString(),
                     until: startDate.add(collector.pollInterval, 'seconds').toISOString(),
@@ -264,35 +258,22 @@ describe('O365 Collector Tests', function() {
             invokedFunctionArn : o365Mock.FUNCTION_ARN,
             fail : function(error) {
                 assert.fail(error);
-                done();
             },
-            succeed : function() {
-                done();
-            }
+            succeed : function() {}
         };
 
         it('Get Logs Sunny', function(done) {
-            let ctx = {
-                invokedFunctionArn : o365Mock.FUNCTION_ARN,
-                fail : function(error) {
-                    assert.fail(error);
-                    done();
-                },
-                succeed : function() {
-                    done();
-                }
-            };
             setO365MangementStub();
             O365Collector.load().then(function(creds) {
                 var collector = new O365Collector(ctx, creds, 'o365');
-                const startDate = moment().subtract(3, 'days')
+                const startDate = moment().subtract(3, 'days');
                 const curState = {
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     poll_interval_sec: 1
                 };
 
-                let fmt = collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
                     assert.equal(logs.length, 4);
                     assert.equal(moment(newState.until).diff(newState.since, 'hours'), 1);
                     assert.equal(newState.poll_interval_sec, 1);
@@ -315,26 +296,16 @@ describe('O365 Collector Tests', function() {
                         });
                     });
 
-            let ctx = {
-                invokedFunctionArn : o365Mock.FUNCTION_ARN,
-                fail : function(error) {
-                    assert.fail(error);
-                    done();
-                },
-                succeed : function() {
-                    done();
-                }
-            };
             O365Collector.load().then(function(creds) {
                 var collector = new O365Collector(ctx, creds, 'o365');
-                const startDate = moment().subtract(3, 'days')
+                const startDate = moment().subtract(3, 'days');
                 const curState = {
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     poll_interval_sec: 1
                 };
 
-                let fmt = collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
                     assert.notEqual(err, null);
                     restoreO365ManagemntStub();
                     done();
@@ -348,29 +319,16 @@ describe('O365 Collector Tests', function() {
             invokedFunctionArn : o365Mock.FUNCTION_ARN,
             fail : function(error) {
                 assert.fail(error);
-                done();
             },
-            succeed : function() {
-                done();
-            }
+            succeed : function() {}
         };
 
         it('Get register body', function(done) {
-            let ctx = {
-                invokedFunctionArn : o365Mock.FUNCTION_ARN,
-                fail : function(error) {
-                    assert.fail(error);
-                    done();
-                },
-                succeed : function() {
-                    done();
-                }
-            };
             O365Collector.load().then(function(creds) {
                 var collector = new O365Collector(ctx, creds, 'o365');
                 const sampleEvent = {ResourceProperties: {StackName: 'a-stack-name'}};
 
-                let fmt = collector.pawsGetRegisterParameters(sampleEvent, (err, regValues) =>{
+                collector.pawsGetRegisterParameters(sampleEvent, (err, regValues) =>{
                     const expectedRegValues = {
                         dataType: collector._ingestType,
                         version: collector._version,

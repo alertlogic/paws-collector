@@ -1,17 +1,9 @@
 const assert = require('assert');
 const sinon = require('sinon');
 const {O365Management} = require('../lib/o365_mgmnt/o365management');
-var m_alCollector = require('@alertlogic/al-collector-js');
 const msRest = require('@azure/ms-rest-js');
-const {AzureServiceClient}= require('@azure/ms-rest-azure-js');
 const {ApplicationTokenCredentials} = require('@azure/ms-rest-nodeauth');
 const msWebResource = msRest.WebResource;
-
-var alserviceStub = {};
-var responseStub = {};
-var setEnvStub = {};
-var subscriptionsContentStub;
-var getContentStub;
 
 function createManagmentInstance(){
     var g_appAdCreds = new ApplicationTokenCredentials(
@@ -21,7 +13,7 @@ function createManagmentInstance(){
         'https://manage.office.com'
     );
 
-    return new O365Management(g_appAdCreds, process.env.AZURE_APP_TENANT_ID)
+    return new O365Management(g_appAdCreds, process.env.AZURE_APP_TENANT_ID);
 }
 
 describe('O365 managment tests', function() {
@@ -87,18 +79,18 @@ describe('O365 managment tests', function() {
                             status: 200
                         };
 
-                        assert.equal(request.method, 'GET')
-                        assert.notEqual(request.headers.headersArray(), 0)
+                        assert.equal(request.method, 'GET');
+                        assert.notEqual(request.headers.headersArray(), 0);
                         return resolve(mockRes);
                     });
                 });
 
             const managementInstance = createManagmentInstance();
             managementInstance.subscriptionsContent('AFakeStream', 'startDate', 'endDate', {}).then(() => {
-                sendRequestStub.restore()
+                sendRequestStub.restore();
                 done();
-            })
-        })
+            });
+        });
 
         it('sets custom headers correctly', (done) => {
             sendRequestStub = sinon.stub(O365Management.prototype, 'sendRequest').callsFake(
@@ -110,8 +102,8 @@ describe('O365 managment tests', function() {
                             status: 200
                         };
 
-                        assert.equal(request.headers.contains('foo'), true)
-                        assert.equal(request.headers.get('foo'), 'bar')
+                        assert.equal(request.headers.contains('foo'), true);
+                        assert.equal(request.headers.get('foo'), 'bar');
                         return resolve(mockRes);
                     });
                 });
@@ -121,13 +113,13 @@ describe('O365 managment tests', function() {
                 customHeaders:{
                     foo: "bar"
                 }
-            }
+            };
             managementInstance.subscriptionsContent('AFakeStream', 'startDate', 'endDate', options).then(() => {
                 sendRequestStub.restore();
                 done();
-            })
-        })
-    })
+            });
+        });
+    });
 
     describe('getContent', () => {
         let sendRequestStub;
@@ -142,18 +134,18 @@ describe('O365 managment tests', function() {
                             status: 200
                         };
 
-                        assert.equal(request.method, 'GET')
-                        assert.notEqual(request.headers.headersArray(), 0)
+                        assert.equal(request.method, 'GET');
+                        assert.notEqual(request.headers.headersArray(), 0);
                         return resolve(mockRes);
                     });
                 });
 
             const managementInstance = createManagmentInstance();
             managementInstance.getContent('https://www.joeiscool.com', {}).then(() => {
-                sendRequestStub.restore()
+                sendRequestStub.restore();
                 done();
-            })
-        })
+            });
+        });
 
         it('sets custom headers correctly', (done) => {
             sendRequestStub = sinon.stub(O365Management.prototype, 'sendRequest').callsFake(
@@ -165,8 +157,8 @@ describe('O365 managment tests', function() {
                             status: 200
                         };
 
-                        assert.equal(request.headers.contains('foo'), true)
-                        assert.equal(request.headers.get('foo'), 'bar')
+                        assert.equal(request.headers.contains('foo'), true);
+                        assert.equal(request.headers.get('foo'), 'bar');
                         return resolve(mockRes);
                     });
                 });
@@ -176,12 +168,12 @@ describe('O365 managment tests', function() {
                 customHeaders:{
                     foo: "bar"
                 }
-            }
+            };
             managementInstance.getContent('https://www.joeiscool.com', options).then(() => {
                 sendRequestStub.restore();
                 done();
-            })
-        })
-    })
+            });
+        });
+    });
 
 });

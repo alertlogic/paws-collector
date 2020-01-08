@@ -1,11 +1,10 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Alert Logic template for creating a O365 Logs collector",
+    "Description": "Alert Logic template for creating an O365 Logs collector",
     "Parameters": {
         "AlertlogicAccessKeyId": {
             "Description": "Alert Logic Access Key Id obtained from AIMS",
-            "Type": "String",
-            "Default": "5c850016c9eb6f3b"
+            "Type": "String"
         },
         "AlertlogicSecretKey": {
             "Description": "Alert Logic Secret Key returned from AIMS for the Access Key Id",
@@ -30,7 +29,7 @@
         "PackagesBucketPrefix": {
             "Description": "S3 bucket name prefix where collector packages are located.",
             "Type": "String",
-            "Default": "rcs-alertlogic-collectors"
+            "Default": "alertlogic-collectors"
         },
         
         "AlertlogicCustomerId": {
@@ -65,6 +64,11 @@
             "Description": "The Content Streams to Collect",
             "Type": "String",
             "Default": "[\"Audit.AzureActiveDirectory\", \"Audit.Exchange\", \"Audit.SharePoint\", \"Audit.General\"]"
+        },
+        "MsManagementEndpoint": {
+            "Description": "Mangament endpoint to poll",
+            "Type": "String",
+            "Default": "https://managment.office.com/"
         },
         "CollectionStartTs": {
             "Description": "Timestamp when log collection starts",
@@ -513,7 +517,9 @@
                   "stack_name": {
                       "Ref":"AWS::StackName"
                   },
-                  "paws_endpoint": "https://managment.office.com/",
+                  "paws_endpoint": {
+                      "Ref": "MsManagementEndpoint"
+                  },
                   "paws_type_name": "o365"
                }
             },
