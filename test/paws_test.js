@@ -348,8 +348,7 @@ describe('Unit Tests', function() {
                 fail : function(error) {
                     assert.fail(error);
                 },
-                succeed : function() {
-                    
+                succeed : function() {    
                 }
             };
             
@@ -370,7 +369,6 @@ describe('Unit Tests', function() {
                     assert.fail(error);
                 },
                 succeed : function() {
-        
                 }
             };
             const testEvent = {"event": "create"};
@@ -394,7 +392,6 @@ describe('Unit Tests', function() {
                     assert.fail(error);
                 },
                 succeed : function(){
-                    
                 }
             };
             
@@ -415,7 +412,6 @@ describe('Unit Tests', function() {
                     assert.fail(error);
                 },
                 succeed : function(){
-                    
                 }
             };
             
@@ -436,7 +432,6 @@ describe('Unit Tests', function() {
                     assert.fail(error);
                 },
                 succeed : function(){
-                    
                 }
             };
             
