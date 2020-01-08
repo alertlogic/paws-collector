@@ -24,6 +24,7 @@ function getDecryptedPawsCredentials(callback) {
         return callback(null, PAWS_DECRYPTED_CREDS);
     } else {
         const kms = new AWS.KMS();
+        console.log('Decrypting PAWS creds');
         kms.decrypt(
             {CiphertextBlob: Buffer.from(process.env.paws_api_secret, 'base64')},
             (err, data) => {
@@ -54,8 +55,8 @@ class PawsCollector extends AlAwsCollector {
                         resolve({aimsCreds : aimsCreds, pawsCreds: pawsCreds});
                     }
                 });
-            })
-        })
+            });
+        });
     }
     
     constructor(context, {aimsCreds, pawsCreds}) {
@@ -68,19 +69,19 @@ class PawsCollector extends AlAwsCollector {
         this._pawsCreds = pawsCreds;
         this._pawsCollectorType = process.env.paws_type_name;
         this.pollInterval = process.env.paws_poll_interval;
-    };
+    }
     
     get secret () {
         return this._pawsCreds.secret;
-    };
+    }
     
     get clientId () {
         return this._pawsCreds.client_id;
-    };
+    }
     
     get authType() {
         return this._pawsCreds.auth_type;
-    };
+    }
     
     getProperties() {
         const baseProps = super.getProperties();
@@ -89,7 +90,7 @@ class PawsCollector extends AlAwsCollector {
             pawsEndpoint : process.env.paws_endpoint
         };
         return Object.assign(pawsProps, baseProps);
-    };
+    }
     
     register(event) {
         let collector = this;
@@ -114,7 +115,7 @@ class PawsCollector extends AlAwsCollector {
                 return AlAwsCollector.prototype.register.call(collector, event, registerProps);
             }
         });
-    };
+    }
     
     deregister(event) {
         let collector = this;
@@ -128,7 +129,7 @@ class PawsCollector extends AlAwsCollector {
             let registerProps = Object.assign(pawsRegisterProps, customRegister);
             return AlAwsCollector.prototype.deregister.call(collector, event, registerProps);
         });
-    };
+    }
     
     handleEvent(event) {
         let collector = this;
@@ -142,7 +143,7 @@ class PawsCollector extends AlAwsCollector {
         } else {
             return super.handleEvent(event);
         }
-    };
+    }
     
     handlePollRequest(stateSqsMsg) {
         let collector = this;
@@ -152,55 +153,25 @@ class PawsCollector extends AlAwsCollector {
             function(asyncCallback) {
                 return collector.pawsGetLogs(pawsState.priv_collector_state, asyncCallback);
             },
-            function(logs, privCollectorState, nextInvocationTimeout, asyncCallback) {
+            function(logs, newExtState, nextInvocationTimeout, asyncCallback) {
                 console.info('PAWS000200 Log events received ', logs.length);
                 return collector.processLog(logs, collector.pawsFormatLog, null, function(err) {
-                    return asyncCallback(err, privCollectorState, nextInvocationTimeout);
+                    return asyncCallback(err, newExtState, nextInvocationTimeout);
                 });
             },
-            function(privCollectorState, nextInvocationTimeout, asyncCallback) {
-                return collector._storeCollectionState(pawsState, privCollectorState, nextInvocationTimeout, asyncCallback);
+            function(newExtState, nextInvocationTimeout, asyncCallback) {
+                return collector._storeCollectionState(pawsState, newExtState, nextInvocationTimeout, asyncCallback);
             }
         ], function(error) {
             collector.done(error);
         });
-    };
-    
-    _storeCollectionState(pawsState, privCollectorState, invocationTimeout, callback) {
-        if (Array.isArray(privCollectorState)) {
-            return this._storeCollectionStateArray(pawsState, privCollectorState, invocationTimeout, callback);
-        } else {
-            return this._storeCollectionStateSingle(pawsState, privCollectorState, invocationTimeout, callback);
-        }
     }
     
-    _storeCollectionStateArray(pawsState, privCollectorStates, invocationTimeout, callback) {
-        // TODO: if 'privCollectorStates' length more than 10 split into multiple SQS messages batches (10 messages per batch) 
+    _storeCollectionState(pawsState, newExtState, invocationTimeout, callback) {
         let collector = this;
         var sqs = new AWS.SQS({apiVersion: '2012-11-05'});
         const nextInvocationTimeout = invocationTimeout ? invocationTimeout : collector.pollInterval;
-        let SQSMsgs = privCollectorStates.map(function(privState, index) {
-            let pState = pawsState;
-            pState.priv_collector_state = privState;
-            return {
-                Id: index.toString(),
-                MessageBody: JSON.stringify(pawsState),
-                DelaySeconds: nextInvocationTimeout
-            };
-        });
-        
-        const params = {
-            Entries: SQSMsgs,
-            QueueUrl: process.env.paws_state_queue_url
-        };
-        // Current state message will be removed by Lambda trigger upon successful completion
-        sqs.sendMessageBatch(params, callback);
-    }
-    _storeCollectionStateSingle(pawsState, privCollectorState, invocationTimeout, callback) {
-        let collector = this;
-        var sqs = new AWS.SQS({apiVersion: '2012-11-05'});
-        const nextInvocationTimeout = invocationTimeout ? invocationTimeout : collector.pollInterval;
-        pawsState.priv_collector_state = privCollectorState;
+        pawsState.priv_collector_state = newExtState;
 
         const params = {
             MessageBody: JSON.stringify(pawsState),
@@ -209,13 +180,13 @@ class PawsCollector extends AlAwsCollector {
         };
         // Current state message will be removed by Lambda trigger upon successful completion
         sqs.sendMessage(params, callback);
-    };
+    }
     
     /** 
      * @function collector callback to initialize collection state
      * @param event - collector register event coming in from CFT.
      * @param callback
-     * @returns callback - (error, stateObjectOrArray, nextInvocationTimeoutSec).
+     * @returns callback - (error, stateObject, nextInvocationTimeoutSec)
      * 
      */
     pawsInitCollectionState(event, callback) {
@@ -226,12 +197,12 @@ class PawsCollector extends AlAwsCollector {
      * @function collector callback to receive logs data
      * @param state - collection state specific to a PAWS collector.
      * @param callback
-     * @returns callback - (error, logsArray, stateObjectOrArray, nextInvocationTimeoutSec).
+     * @returns callback - (error, logsArray, stateObject, nextInvocationTimeoutSec)
      * 
      */
     pawsGetLogs(state, callback) {
         throw Error("not implemented pawsGetLogs()");
-    };
+    }
     
     /** 
      * @function collector callback to get specific (de)registration parameters
@@ -242,7 +213,7 @@ class PawsCollector extends AlAwsCollector {
      */
     pawsGetRegisterParameters(event, callback) {
         return callback(null, {});
-    };
+    }
     
     /** 
      * @function collector callback to format received data
@@ -250,10 +221,9 @@ class PawsCollector extends AlAwsCollector {
      */
     pawsFormatLog() {
         throw Error("not implemented pawsFormatLog()");
-    };
+    }
 }
 
 module.exports = {
     PawsCollector: PawsCollector
-}
-
+};
