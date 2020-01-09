@@ -65,6 +65,11 @@
             "Type": "String",
             "Default": "[\"Audit.AzureActiveDirectory\", \"Audit.Exchange\", \"Audit.SharePoint\", \"Audit.General\"]"
         },
+        "MaxPages" :{
+            "Description": "The maximium number of pages of content data retrieved per invocation",
+            "Type": "Number",
+            "Default": 10
+        },
         "CollectionStartTs": {
             "Description": "Timestamp when log collection starts",
             "Type": "String",
@@ -512,7 +517,16 @@
                   "stack_name": {
                       "Ref":"AWS::StackName"
                   },
+<<<<<<< HEAD
                   "paws_endpoint": "https://managment.office.com/",
+=======
+                  "paws_endpoint": {
+                      "Ref": "MsManagementEndpoint"
+                  },
+                  "maxPages": {
+                      "Ref": "MaxPages"
+                  },
+>>>>>>> update max pages param and env var for cft
                   "paws_type_name": "o365"
                }
             },
