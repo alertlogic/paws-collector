@@ -30,9 +30,6 @@ const tsPaths = [
 
 console.log(process.env.O365_CONTENT_STREAMS)
 class O365Collector extends PawsCollector {
-    constructor(context, creds) {
-        super(context, creds, 'o365');
-    }
     
     pawsInitCollectionState(event, callback) {
         let startTs = process.env.paws_collection_start_ts ? 
@@ -51,11 +48,19 @@ class O365Collector extends PawsCollector {
         else {
             endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
         }
-        const initialState = {
-            since: startTs,
-            until: endTs,
-            poll_interval_sec: this.pollInterval
-        };
+
+        // Create a new 
+        const streams = JSON.parse(process.env.O365_CONTENT_STREAMS);
+        const initialStates = streams.map(stream => {
+            return {
+                stream,
+                since: startTs,
+                until: endTs,
+                nextPage: null,
+                poll_interval_sec: this.pollInterval
+            }
+        });
+
         return callback(null, initialState, 1);
     }
 
@@ -73,49 +78,61 @@ class O365Collector extends PawsCollector {
     
     pawsGetLogs(state, callback) {
         let collector = this;
-        console.info(`O365000001 Collecting data from ${state.since} till ${state.until}`);
-        const newState = collector._getNextCollectionState(state);
+        console.info(`O365000001 Collecting data from ${state.since} till ${state.until} for stream ${state.stream}`);
+        let pageCount = 0;
 
-        // get the content for the timestamp
-        const streams = JSON.parse(process.env.O365_CONTENT_STREAMS)
-        // Get the streams from env vars and collect the content
-        const contentPromises = streams.map((stream) => {
-            const handleContentCallback = ({parsedBody, nextPageUri}) => {
-                // we can put pagination controlls here.
-                // If we wanted to control the number of pages for example
-                // What I would do is if the pagination limit runs out and there are more pages,
-                // we can return a new "continuation state" that contains teh next page and continue
-                // on a subsequent invocation
-                if(nextPageUri){
-                    return m_o365mgmnt.getNextSubscriptionsContentPage(nextPageUri)
-                        .then((nextPageRes) => {
-                            return {
-                                parsedBody: [...parsedBody, ...nextPageRes.parsedBody],
-                                nextPageUri: nextPageRes.nextPageUri
-                            }
-                        })
-                        .then(handleContentCallback);
-                }
-                else{
-                    return parsedBody
-                }
-            };
+        // Page aggregation handler
+        const handleContentCallback = ({parsedBody, nextPageUri}) => {
 
-            return m_o365mgmnt.subscriptionsContent(stream, state.since, state.until)
-                .then(handleContentCall)
-                .then(results => {
-                    const contentPromises = results.map(({contentUri}) => m_o365mgmnt.getContent(contentUri));
-                    return Promise.all(contentPromises).then(content => {
-                        return content.reduce((agg, e) => [...e, ...agg], []);
-                    });
+            if(nextPageUri && pageCount < process.env.maxPages){
+                pageCount++;
+                return m_o365mgmnt.getNextSubscriptionsContentPage(nextPageUri)
+                    .then((nextPageRes) => {
+                        return {
+                            parsedBody: [...parsedBody, ...nextPageRes.parsedBody],
+                            nextPageUri: nextPageRes.nextPageUri
+                        }
+                    })
+                    .then(handleContentCallback);
+            }
+            else{
+                return {
+                    parsedBody,
+                    nextPageUri
+                }
+            }
+        };
+
+        // If the state has a next page value, then just start with that.
+        const initialQuery = state.nextPage ?
+            contentPromise =  m_o365mgmnt.getNextSubscriptionsContentPage(state.nextPage):
+            m_o365mgmnt.subscriptionsContent(state.stream, state.since, state.until);
+
+        // Call out to get content pages and form result
+        const contentPromise = initialQuery.then(handleContentCallback)
+            .then(({parsedBody, nextPageUri}) => {
+                const contentUriPromises = parsedBody.map(({contentUri}) => m_o365mgmnt.getContent(contentUri));
+
+                return Promise.all(contentUriPromises).then(content => {
+                    return {
+                        logs: content.reduce((agg, e) => [...e, ...agg], []),
+                        nextPage: nextPageUri
+                    };
                 });
-        })
+            });
 
-        // Now that we have all the content uri promises agregated, we can call hem and collect them
-        Promise.all(contentPromises).then(content => {
-            const flattenedResult = content.reduce((agg, e) => [...e, ...agg], []);
-            console.info(`O365000002 Next collection in ${newState.poll_interval_sec} seconds`);
-            callback(null, flattenedResult, newState, newState.poll_interval_sec);
+        // Now that we have all the content uri promises agregated, we can call them and collect the data
+        contentPromise.then(({logs, nextPage}) => {
+
+            let newState;
+            if(nextPage === undefined){
+                newState = this._getNextCollectionState(state);
+            } else {
+                newState = this._getNextCollectionStateWithNextPage(state, nextPage);
+            }
+
+            console.info(`O365000002 Next collection for ${newState.stream} in ${newState.poll_interval_sec} seconds`);
+            callback(null, logs, newState, newState.poll_interval_sec);
         }).catch(err => {
             console.error(`O365000003 Error in collection: ${err.message}`);
             callback(err);
@@ -149,10 +166,21 @@ class O365Collector extends PawsCollector {
                 1 : this.pollInterval;
         
         return  {
-             since: nextSinceTs,
-             until: nextUntilMoment.toISOString(),
-             poll_interval_sec: nextPollInterval
+            stream: curState.stream,
+            since: nextSinceTs,
+            until: nextUntilMoment.toISOString(),
+            poll_interval_sec: nextPollInterval
         };
+    }
+
+    _getNextCollectionStateWithNextPage({stream, since, until}, nextPage) {
+        return {
+            stream,
+            since,
+            until,
+            nextPage,
+            poll_interval_sec: 1
+        }
     }
     
     pawsFormatLog(msg) {
