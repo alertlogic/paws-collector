@@ -132,37 +132,7 @@ class O365Management extends msRestAzure.AzureServiceClient {
         return client.sendRequest(httpRequest).then(handler);
     }
     
-    getNextSubscriptionsContentPage(nextPageUrl, options) {
-        let client = this;
-    
-        const httpOptions = {};
-        if (!this.generateClientRequestId) {
-            httpOptions.disableClientRequestId = true;
-        }
-
-        // Create HTTP transport objects
-        let httpRequest = new msWebResource(httpOptions);
-        httpRequest.method = 'GET';
-        httpRequest.url = nextPageUrl;
-        // Set Headers
-        if (this.acceptLanguage !== undefined && this.acceptLanguage !== null) {
-            httpRequest.headers.set('accept-language', this.acceptLanguage);
-        }
-        if(options) {
-            for(let headerName in options.customHeaders) {
-                if (options.customHeaders.hasOwnProperty(headerName)) {
-                    httpRequest.headers.set(headerName, options.customHeaders[headerName]);
-                }
-            }
-        }
-        httpRequest.headers.set('Content-Type', 'application/json; charset=utf-8');
-        httpRequest.body = null;
-        // Request Handler
-        const handler = this.requestHandler(httpRequest);
-        // Send Request
-        return client.sendRequest(httpRequest).then(handler);
-    }
-    getContent(uri, options, callback) {
+    getPreFormedUrl(uri, options, callback) {
         let client = this;
         let publisherId = this.publisherId;
         let requestUrl = uri;
@@ -199,9 +169,7 @@ class O365Management extends msRestAzure.AzureServiceClient {
         // Request Handler
         const handler = this.requestHandler(httpRequest);
         // Send Request
-        return client.sendRequest(httpRequest)
-            .then(handler)
-            .then(({parsedBody}) => parsedBody);
+        return client.sendRequest(httpRequest).then(handler)
     }
 }
 
