@@ -67,6 +67,25 @@ class O365Management extends msRestAzure.AzureServiceClient {
         }
     }
 
+    // standard request handler
+    requestHandler(httpRequest){
+        return (res) => {
+            let {parsedBody, headers, bodyAsText, status} = res;
+            if(!parsedBody){
+                parsedBody = JSON.parse(bodyAsText);
+            }
+            if (status !== 200) {
+                let error = new Error(parsedBody);
+                error.statusCode = status;
+                error.request = msRest.stripRequest(httpRequest);
+                error.response = msRest.stripResponse(res);
+                throw error
+            }
+            const nextPageUri = headers.get('NextPageUri');
+            return { parsedBody, nextPageUri };
+        }
+    }
+    
     subscriptionsContent(contentType, startTs, endTs, options) {
         let client = this;
         // Construct URL
@@ -107,29 +126,13 @@ class O365Management extends msRestAzure.AzureServiceClient {
         }
         httpRequest.headers.set('Content-Type', 'application/json; charset=utf-8');
         httpRequest.body = null;
+        // Request Handler
+        const handler = this.requestHandler(httpRequest);
         // Send Request
-        return client.sendRequest(httpRequest).then((res) => {
-            let {parsedBody, headers, bodyAsText, status} = res;
-            if(!parsedBody){
-                parsedBody = JSON.parse(bodyAsText);
-            }
-            if (status !== 200) {
-                let error = new Error(parsedBody);
-                error.statusCode = status;
-                error.request = msRest.stripRequest(httpRequest);
-                error.response = msRest.stripResponse(res);
-                throw error
-            }
-            const nextPage = headers.get('NextPageUri');
-            if(nextPage){
-                console.log('subsequent page detected calling: ', nextPage);
-                return this.getNextSubscriptionsContentPage(parsedHeaders.NextPageUri, parsedBody, options);
-            }
-            return parsedBody;
-        });
+        return client.sendRequest(httpRequest).then(handler);
     }
     
-    getNextSubscriptionsContentPage(nextPageUrl, contentAcc, options) {
+    getNextSubscriptionsContentPage(nextPageUrl, options) {
         let client = this;
     
         const httpOptions = {};
@@ -154,28 +157,10 @@ class O365Management extends msRestAzure.AzureServiceClient {
         }
         httpRequest.headers.set('Content-Type', 'application/json; charset=utf-8');
         httpRequest.body = null;
+        // Request Handler
+        const handler = this.requestHandler(httpRequest);
         // Send Request
-        return client.sendRequest(httpRequest).then((res) => {
-            let {parsedBody, headers, bodyAsText, status} = res;
-            if(!parsedBody){
-                parsedBody = JSON.parse(bodyAsText);
-            }
-            if (status !== 200) {
-                let error = new Error(parsedBody);
-                error.statusCode = status;
-                error.request = msRest.stripRequest(httpRequest);
-                error.response = msRest.stripResponse(res);
-                throw error
-            }
-
-            const newAcc = [ ...contentAcc, ...parsedBody ];
-            const nextPage = headers.get('NextPageUri');
-            if(nextPage){
-                console.log('subsequent page detected calling: ', nextPage);
-                return this.getNextSubscriptionsContentPage(parsedHeaders.NextPageUri, newAcc, options);
-            }
-            return newAcc;
-        });
+        return client.sendRequest(httpRequest).then(handler);
     }
     getContent(uri, options, callback) {
         let client = this;
@@ -211,21 +196,12 @@ class O365Management extends msRestAzure.AzureServiceClient {
         httpRequest.headers.set('Content-Type', 'application/json; charset=utf-8');
         httpRequest.body = null;
 
+        // Request Handler
+        const handler = this.requestHandler(httpRequest);
         // Send Request
-        return client.sendRequest(httpRequest).then((res) => {
-            let {parsedBody, bodyAsText, status} = res;
-            if(!parsedBody){
-                parsedBody = JSON.parse(bodyAsText);
-            }
-            if (status !== 200) {
-                let error = new Error(parsedBody);
-                error.statusCode = status;
-                error.request = msRest.stripRequest(httpRequest);
-                error.response = msRest.stripResponse(res);
-                throw error
-            }
-            return parsedBody;
-        });
+        return client.sendRequest(httpRequest)
+            .then(handler)
+            .then(({parsedBody}) => parsedBody);
     }
 }
 

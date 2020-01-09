@@ -78,19 +78,42 @@ class O365Collector extends PawsCollector {
 
         // get the content for the timestamp
         const streams = JSON.parse(process.env.O365_CONTENT_STREAMS)
-        const contentPromises = streams.map((stream) => {
-            return m_o365mgmnt.subscriptionsContent(stream, state.since, state.until)
-        });
         // Get the streams from env vars and collect the content
-        Promise.all(contentPromises).then(results => {
-            const aggregateResult = results.reduce((agg, e) => [...e, ...agg], []);
+        const contentPromises = streams.map((stream) => {
+            const handleContentCallback = ({parsedBody, nextPageUri}) => {
+                // we can put pagination controlls here.
+                // If we wanted to control the number of pages for example
+                // What I would do is if the pagination limit runs out and there are more pages,
+                // we can return a new "continuation state" that contains teh next page and continue
+                // on a subsequent invocation
+                if(nextPageUri){
+                    return m_o365mgmnt.getNextSubscriptionsContentPage(nextPageUri)
+                        .then((nextPageRes) => {
+                            return {
+                                parsedBody: [...parsedBody, ...nextPageRes.parsedBody],
+                                nextPageUri: nextPageRes.nextPageUri
+                            }
+                        })
+                        .then(handleContentCallback);
+                }
+                else{
+                    return parsedBody
+                }
+            };
 
-            const contentPromises = aggregateResult.map(({contentUri}) => m_o365mgmnt.getContent(contentUri));
-            return Promise.all(contentPromises);
-        // Call all of the content urls and agregate the resutls
-        }).then(content => {
+            return m_o365mgmnt.subscriptionsContent(stream, state.since, state.until)
+                .then(handleContentCall)
+                .then(results => {
+                    const contentPromises = results.map(({contentUri}) => m_o365mgmnt.getContent(contentUri));
+                    return Promise.all(contentPromises).then(content => {
+                        return content.reduce((agg, e) => [...e, ...agg], []);
+                    });
+                });
+        })
+
+        // Now that we have all the content uri promises agregated, we can call hem and collect them
+        Promise.all(contentPromises).then(content => {
             const flattenedResult = content.reduce((agg, e) => [...e, ...agg], []);
-
             console.info(`O365000002 Next collection in ${newState.poll_interval_sec} seconds`);
             callback(null, flattenedResult, newState, newState.poll_interval_sec);
         }).catch(err => {
