@@ -30,7 +30,7 @@ describe('O365 managment tests', function() {
             const mockRes = {
                 headers: {
                     get(key){
-                        return 'some-header-value'
+                        return 'some-header-value';
                     }
                 },
                 parsedBody: [{foo: "bar"}],
@@ -52,7 +52,7 @@ describe('O365 managment tests', function() {
             const mockRes = {
                 headers: {
                     get(key){
-                        return 'some-header-value'
+                        return 'some-header-value';
                     }
                 },
                 bodyAsText: '[{"foo": "bar"}]',
@@ -73,7 +73,7 @@ describe('O365 managment tests', function() {
             const mockRes = {
                 headers: {
                     get(key){
-                        return 'some-header-value'
+                        return 'some-header-value';
                     }
                 },
                 bodyAsText: '[{"foo": "bar"}]',
@@ -97,7 +97,7 @@ describe('O365 managment tests', function() {
                         const mockRes = {
                             headers: {
                                 get(key){
-                                    return 'some-header-value'
+                                    return 'some-header-value';
                                 }
                             },
                             parsedBody: [{foo: "bar"}],
@@ -125,7 +125,7 @@ describe('O365 managment tests', function() {
                         const mockRes = {
                             headers: {
                                 get(key){
-                                    return 'some-header-value'
+                                    return 'some-header-value';
                                 }
                             },
                             parsedBody: [{foo: "bar"}],
@@ -162,7 +162,7 @@ describe('O365 managment tests', function() {
                         const mockRes = {
                             headers: {
                                 get(key){
-                                    return 'some-header-value'
+                                    return 'some-header-value';
                                 }
                             },
                             parsedBody: [{foo: "bar"}],
@@ -190,7 +190,7 @@ describe('O365 managment tests', function() {
                         const mockRes = {
                             headers: {
                                 get(key){
-                                    return 'some-header-value'
+                                    return 'some-header-value';
                                 }
                             },
                             parsedBody: [{foo: "bar"}],
