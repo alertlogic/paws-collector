@@ -107,7 +107,7 @@ describe('Unit Tests', function() {
             },
             succeed : function() {}
         };
-        it('sets up intial state (startData < now - pollInterval)', function(done) {
+        it('sets up intial state (startDate < now - pollInterval)', function(done) {
             OktaCollector.load().then(function(creds) {
                 const testPollInterval = 60;
                 var collector = new OktaCollector(ctx, creds);
