@@ -104,7 +104,7 @@ class O365Collector extends PawsCollector {
 
         // If the state has a next page value, then just start with that.
         const initialListContent = state.nextPage ?
-            contentPromise =  m_o365mgmnt.getPreFormedUrl(state.nextPage):
+            m_o365mgmnt.getPreFormedUrl(state.nextPage):
             m_o365mgmnt.subscriptionsContent(state.stream, state.since, state.until);
 
         // Call out to get content pages and form result
