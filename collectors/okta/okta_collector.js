@@ -31,13 +31,12 @@ class OktaCollector extends PawsCollector {
         const startTs = process.env.paws_collection_start_ts ? 
                 process.env.paws_collection_start_ts :
                     moment().toISOString();
-        const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
-        const initialState = {
+        const initialState = this._getNextCollectionState({
             since: startTs,
-            until: endTs,
+            until: startTs,
             poll_interval_sec: 1
-        };
-        return callback(null, initialState, 1);
+        });
+        return callback(null, initialState, initialState.poll_interval_sec);
     }
     
     pawsGetLogs(state, callback) {
