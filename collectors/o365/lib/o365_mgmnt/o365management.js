@@ -70,7 +70,7 @@ class O365Management extends msRestAzure.AzureServiceClient {
     // standard request handler
     requestHandler(httpRequest){
         return (res) => {
-            let {parsedBody, bodyAsText, status} = res;
+            let {parsedBody, headers, bodyAsText, status} = res;
             if(!parsedBody){
                 parsedBody = JSON.parse(bodyAsText);
             }
@@ -81,11 +81,12 @@ class O365Management extends msRestAzure.AzureServiceClient {
                 error.response = msRest.stripResponse(res);
                 throw error
             }
-            return parsedBody;
+            const nextPageUri = headers.get('NextPageUri');
+            return { parsedBody, nextPageUri };
         }
     }
     
-    subscriptionsContent(contentType, startTs, endTs, options, callback) {
+    subscriptionsContent(contentType, startTs, endTs, options) {
         let client = this;
         // Construct URL
         let baseUrl = this.baseUri;
@@ -125,13 +126,13 @@ class O365Management extends msRestAzure.AzureServiceClient {
         }
         httpRequest.headers.set('Content-Type', 'application/json; charset=utf-8');
         httpRequest.body = null;
-        // Create handler
+        // Request Handler
         const handler = this.requestHandler(httpRequest);
         // Send Request
         return client.sendRequest(httpRequest).then(handler);
     }
     
-    getContent(uri, options, callback) {
+    getPreFormedUrl(uri, options, callback) {
         let client = this;
         let publisherId = this.publisherId;
         let requestUrl = uri;
@@ -164,7 +165,8 @@ class O365Management extends msRestAzure.AzureServiceClient {
         }
         httpRequest.headers.set('Content-Type', 'application/json; charset=utf-8');
         httpRequest.body = null;
-        // Create handler
+
+        // Request Handler
         const handler = this.requestHandler(httpRequest);
         // Send Request
         return client.sendRequest(httpRequest).then(handler);

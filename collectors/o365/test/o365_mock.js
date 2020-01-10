@@ -16,6 +16,7 @@ process.env.o365_endpoint = 'https://test.alertlogic.com/';
 process.env.o365_token = 'o365-token';
 process.env.collector_id = 'collector-id';
 process.env.paws_poll_interval = 60;
+process.env.maxPages = 2;
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',

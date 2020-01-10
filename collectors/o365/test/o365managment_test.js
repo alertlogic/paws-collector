@@ -28,6 +28,11 @@ describe('O365 managment tests', function() {
 
         it('handles a 200 result', (done) => {
             const mockRes = {
+                headers: {
+                    get(key){
+                        return 'some-header-value';
+                    }
+                },
                 parsedBody: [{foo: "bar"}],
                 bodyAsText: '[{"foo": "bar"}]',
                 status: 200
@@ -36,12 +41,20 @@ describe('O365 managment tests', function() {
             const handler = managmentInstance.requestHandler(httpRequest);
             const output = handler(mockRes);
 
-            assert.deepEqual(output, mockRes.parsedBody);
+            assert.deepEqual(output, {
+                nextPageUri: 'some-header-value',
+                parsedBody: mockRes.parsedBody
+            });
             done();
         });
 
         it('handles a 200 result without a parsed body', (done) => {
             const mockRes = {
+                headers: {
+                    get(key){
+                        return 'some-header-value';
+                    }
+                },
                 bodyAsText: '[{"foo": "bar"}]',
                 status: 200
             };
@@ -49,12 +62,20 @@ describe('O365 managment tests', function() {
             const handler = managmentInstance.requestHandler(httpRequest);
             const output = handler(mockRes);
 
-            assert.deepEqual(output, [{foo: "bar"}]);
+            assert.deepEqual(output, {
+                nextPageUri: 'some-header-value',
+                parsedBody: JSON.parse(mockRes.bodyAsText)
+            });
             done();
         });
 
         it('throws on anything but a 200', (done) => {
             const mockRes = {
+                headers: {
+                    get(key){
+                        return 'some-header-value';
+                    }
+                },
                 bodyAsText: '[{"foo": "bar"}]',
                 status: 400
             };
@@ -74,6 +95,11 @@ describe('O365 managment tests', function() {
                 function fakeFn(request) {
                     return new Promise(function(resolve, reject) {
                         const mockRes = {
+                            headers: {
+                                get(key){
+                                    return 'some-header-value';
+                                }
+                            },
                             parsedBody: [{foo: "bar"}],
                             bodyAsText: '[{"foo": "bar"}]',
                             status: 200
@@ -97,6 +123,11 @@ describe('O365 managment tests', function() {
                 function fakeFn(request) {
                     return new Promise(function(resolve, reject) {
                         const mockRes = {
+                            headers: {
+                                get(key){
+                                    return 'some-header-value';
+                                }
+                            },
                             parsedBody: [{foo: "bar"}],
                             bodyAsText: '[{"foo": "bar"}]',
                             status: 200
@@ -121,7 +152,7 @@ describe('O365 managment tests', function() {
         });
     });
 
-    describe('getContent', () => {
+    describe('getPreFormedUrl', () => {
         let sendRequestStub;
 
         it('formats the request object corectly', (done) => {
@@ -129,6 +160,11 @@ describe('O365 managment tests', function() {
                 function fakeFn(request) {
                     return new Promise(function(resolve, reject) {
                         const mockRes = {
+                            headers: {
+                                get(key){
+                                    return 'some-header-value';
+                                }
+                            },
                             parsedBody: [{foo: "bar"}],
                             bodyAsText: '[{"foo": "bar"}]',
                             status: 200
@@ -141,7 +177,7 @@ describe('O365 managment tests', function() {
                 });
 
             const managementInstance = createManagmentInstance();
-            managementInstance.getContent('https://www.joeiscool.com', {}).then(() => {
+            managementInstance.getPreFormedUrl('https://www.joeiscool.com', {}).then(() => {
                 sendRequestStub.restore();
                 done();
             });
@@ -152,6 +188,11 @@ describe('O365 managment tests', function() {
                 function fakeFn(request) {
                     return new Promise(function(resolve, reject) {
                         const mockRes = {
+                            headers: {
+                                get(key){
+                                    return 'some-header-value';
+                                }
+                            },
                             parsedBody: [{foo: "bar"}],
                             bodyAsText: '[{"foo": "bar"}]',
                             status: 200
@@ -169,7 +210,7 @@ describe('O365 managment tests', function() {
                     foo: "bar"
                 }
             };
-            managementInstance.getContent('https://www.joeiscool.com', options).then(() => {
+            managementInstance.getPreFormedUrl('https://www.joeiscool.com', options).then(() => {
                 sendRequestStub.restore();
                 done();
             });

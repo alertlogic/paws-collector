@@ -61,14 +61,14 @@ var _subscriptionsContent = function(contentType, startTs, endTs) {
  * @returns {Promise}
  *
  */
-var _getContent = function(contentUri) {
+var _getPreFormedUrl = function(contentUri) {
     return getO365ManagmentClient().then((client) => {
-        return client.getContent(contentUri, null);
+        return client.getPreFormedUrl(contentUri, null);
     });
 };
 
 
 module.exports = {
     subscriptionsContent : _subscriptionsContent,
-    getContent : _getContent
+    getPreFormedUrl : _getPreFormedUrl
 };

@@ -31,7 +31,6 @@
             "Type": "String",
             "Default": "alertlogic-collectors"
         },
-        
         "AlertlogicCustomerId": {
             "Description": "Optional, Alert Logic customer ID which collected data should be reported for. If not set customer ID is derived from AIMs tokens",
             "Type": "String",
@@ -64,6 +63,11 @@
             "Description": "The Content Streams to Collect",
             "Type": "String",
             "Default": "[\"Audit.AzureActiveDirectory\", \"Audit.Exchange\", \"Audit.SharePoint\", \"Audit.General\"]"
+        },
+        "MaxPages" :{
+            "Description": "The maximium number of pages of content data retrieved per invocation",
+            "Type": "Number",
+            "Default": 10
         },
         "CollectionStartTs": {
             "Description": "Timestamp when log collection starts",
@@ -513,6 +517,9 @@
                       "Ref":"AWS::StackName"
                   },
                   "paws_endpoint": "https://managment.office.com/",
+                  "maxPages": {
+                      "Ref": "MaxPages"
+                  },
                   "paws_type_name": "o365"
                }
             },
