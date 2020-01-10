@@ -28,7 +28,6 @@ const tsPaths = [
     { path: ['RecordType'] }
 ];
 
-console.log(process.env.O365_CONTENT_STREAMS)
 class O365Collector extends PawsCollector {
     
     pawsInitCollectionState(event, callback) {
@@ -39,7 +38,7 @@ class O365Collector extends PawsCollector {
 
         if(moment().diff(startTs, 'days') > 7){
             startTs = moment().subtract(PARTIAL_WEEK, 'days').toISOString();
-            console.log("Start timestamp is more than 7 days in the past. This is not allowed in the MS managment API. setting the start time to 7 days in the past");
+            console.info("O365000004 Start timestamp is more than 7 days in the past. This is not allowed in the MS managment API. setting the start time to 7 days in the past");
         }
         
         if(moment().diff(startTs, 'hours') > 24){
@@ -61,7 +60,7 @@ class O365Collector extends PawsCollector {
             }
         });
 
-        return callback(null, initialState, 1);
+        return callback(null, initialStates, 1);
     }
 
     pawsGetRegisterParameters(event, callback){
@@ -82,18 +81,18 @@ class O365Collector extends PawsCollector {
         let pageCount = 0;
 
         // Page aggregation handler
-        const handleContentCallback = ({parsedBody, nextPageUri}) => {
+        const listContentCallback = ({parsedBody, nextPageUri}) => {
 
             if(nextPageUri && pageCount < process.env.maxPages){
                 pageCount++;
-                return m_o365mgmnt.getNextSubscriptionsContentPage(nextPageUri)
+                return m_o365mgmnt.getPreFormedUrl(nextPageUri)
                     .then((nextPageRes) => {
                         return {
                             parsedBody: [...parsedBody, ...nextPageRes.parsedBody],
                             nextPageUri: nextPageRes.nextPageUri
                         }
                     })
-                    .then(handleContentCallback);
+                    .then(listContentCallback);
             }
             else{
                 return {
@@ -104,12 +103,12 @@ class O365Collector extends PawsCollector {
         };
 
         // If the state has a next page value, then just start with that.
-        const initialQuery = state.nextPage ?
+        const initialListContent = state.nextPage ?
             contentPromise =  m_o365mgmnt.getPreFormedUrl(state.nextPage):
             m_o365mgmnt.subscriptionsContent(state.stream, state.since, state.until);
 
         // Call out to get content pages and form result
-        const contentPromise = initialQuery.then(handleContentCallback)
+        const contentPromise = initialListContent.then(listContentCallback)
             .then(({parsedBody, nextPageUri}) => {
                 const contentUriPromises = parsedBody.map(({contentUri}) => m_o365mgmnt.getPreFormedUrl(contentUri));
 
@@ -131,11 +130,10 @@ class O365Collector extends PawsCollector {
                 newState = this._getNextCollectionStateWithNextPage(state, nextPage);
             }
 
-            console.info(`O365000002 Next collection for ${newState.stream} in ${newState.poll_interval_sec} seconds`);
-            callback(null, logs, newState, newState.poll_interval_sec);
+            return callback(null, logs, newState, newState.poll_interval_sec);
         }).catch(err => {
             console.error(`O365000003 Error in collection: ${err.message}`);
-            callback(err);
+            return callback(err);
         })
 
     }

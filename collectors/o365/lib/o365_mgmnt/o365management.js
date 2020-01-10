@@ -169,7 +169,7 @@ class O365Management extends msRestAzure.AzureServiceClient {
         // Request Handler
         const handler = this.requestHandler(httpRequest);
         // Send Request
-        return client.sendRequest(httpRequest).then(handler)
+        return client.sendRequest(httpRequest).then(handler);
     }
 }
 
