@@ -65,11 +65,8 @@ class O365Collector extends PawsCollector {
 
     pawsGetRegisterParameters(event, callback){
         const regValues = {
-            dataType: this._ingestType,
-            version: this._version,
-            pawsCollectorType: 'o365',
-            collectorId: "none",
-            stackName: event.ResourceProperties.StackName
+            azureTenantId: process.env.AZURE_APP_TENANT_ID,
+            azureStreams: process.env.O365_CONTENT_STREAMS
         };
 
         callback(null, regValues);
