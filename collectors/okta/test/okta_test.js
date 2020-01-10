@@ -107,10 +107,10 @@ describe('Unit Tests', function() {
             },
             succeed : function() {}
         };
-        it('sets up intial state correctly', function(done) {
+        it('sets up intial state (startDate < now - pollInterval)', function(done) {
             OktaCollector.load().then(function(creds) {
                 const testPollInterval = 60;
-                var collector = new OktaCollector(ctx, creds, 'okta');
+                var collector = new OktaCollector(ctx, creds);
                 const startDate = moment().subtract(1, 'days').toISOString();
                 process.env.paws_collection_start_ts = startDate;
                 collector.pollInterval = testPollInterval;
@@ -119,6 +119,43 @@ describe('Unit Tests', function() {
                     assert.equal(initialState.since, startDate, "Dates are not equal");
                     assert.equal(moment(initialState.until).diff(initialState.since, 'seconds'), testPollInterval);
                     assert.equal(initialState.poll_interval_sec, 1);
+                    assert.equal(nextPoll, 1);
+                    done();
+                });
+            });
+        });
+        
+        it('sets up intial state (now - pollInterval < startDate < now)', function(done) {
+            OktaCollector.load().then(function(creds) {
+                const testPollInterval = 60;
+                var collector = new OktaCollector(ctx, creds);
+                const startDate = moment().subtract(20, 'seconds').toISOString();
+                process.env.paws_collection_start_ts = startDate;
+                collector.pollInterval = testPollInterval;
+
+                collector.pawsInitCollectionState(oktaMock.LOG_EVENT, (err, initialState, nextPoll) => {
+                    assert.equal(initialState.since, startDate, "Dates are not equal");
+                    assert.equal(moment(initialState.until).diff(initialState.since, 'seconds'), testPollInterval);
+                    assert.equal(initialState.poll_interval_sec, testPollInterval);
+                    assert.equal(nextPoll, testPollInterval);
+                    done();
+                });
+            });
+        });
+        
+        it('sets up intial state (startDate = now)', function(done) {
+            OktaCollector.load().then(function(creds) {
+                const testPollInterval = 60;
+                var collector = new OktaCollector(ctx, creds);
+                const startDate = moment().toISOString();
+                process.env.paws_collection_start_ts = startDate;
+                collector.pollInterval = testPollInterval;
+
+                collector.pawsInitCollectionState(oktaMock.LOG_EVENT, (err, initialState, nextPoll) => {
+                    assert.equal(initialState.since, startDate, "Dates are not equal");
+                    assert.equal(moment(initialState.until).diff(initialState.since, 'seconds'), testPollInterval);
+                    assert.equal(initialState.poll_interval_sec, testPollInterval);
+                    assert.equal(nextPoll, testPollInterval);
                     done();
                 });
             });
