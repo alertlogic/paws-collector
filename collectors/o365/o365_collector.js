@@ -56,7 +56,7 @@ class O365Collector extends PawsCollector {
                 since: startTs,
                 until: endTs,
                 nextPage: null,
-                poll_interval_sec: this.pollInterval
+                poll_interval_sec: 1
             }
         });
 
