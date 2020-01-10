@@ -20,8 +20,8 @@
   },
   "dependencies": {
     "@alertlogic/al-collector-js": "1.4.2",
-    "@alertlogic/paws-collector": "1.0.8",
-    "@google-cloud/logging": "^6.0.0",
+    "@alertlogic/paws-collector": "1.0.10",
+    "@google-cloud/logging": "6.0.0",
     "async": "3.1.0",
     "debug": "4.1.1",
     "moment": "2.24.0"

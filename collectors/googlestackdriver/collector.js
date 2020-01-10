@@ -43,7 +43,7 @@ class GooglestackdriverCollector extends PawsCollector {
 
         // Start API client
         const client = new logging.v2.LoggingServiceV2Client({
-            credentials: JSON.parse(this._pawsCreds.secret)
+            credentials: JSON.parse(collector.secret)
         });
 
 
@@ -52,10 +52,12 @@ class GooglestackdriverCollector extends PawsCollector {
         // TODO: figure out a better way to format this. I'm pretty sure that it needs the newlines in it.
         const filter = `timestamp >= "${state.since}"
 timestamp < "${state.until}"`;
-        const formattedResourceNames = JSON.parse(process.env.google_project_ids).map(e => `projects/${e}`);
+        const resourceNames = JSON.parse(process.env.google_resource_ids);
+
+        const options = {autoPaginate: true};
 
         // TODO: check out how the "autopagination" functionality works on this.
-        client.listLogEntries({filter:filter, resourceNames: formattedResourceNames})
+        client.listLogEntries({filter:filter, resourceNames}, options)
             .then(responses => {
                 const resources = responses[0];
 
