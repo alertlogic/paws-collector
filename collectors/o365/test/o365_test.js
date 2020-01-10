@@ -507,11 +507,8 @@ describe('O365 Collector Tests', function() {
 
                 collector.pawsGetRegisterParameters(sampleEvent, (err, regValues) =>{
                     const expectedRegValues = {
-                        dataType: collector._ingestType,
-                        version: collector._version,
-                        pawsCollectorType: 'o365',
-                        collectorId: 'none',
-                        stackName: sampleEvent.ResourceProperties.StackName
+                        azureStreams: '["Audit.AzureActiveDirectory", "Audit.Exchange", "Audit.SharePoint", "Audit.General"]',
+                        azureTenantId: '79ca7c9d-83ce-498f-952f-4c03b56ab573'
                     };
                     assert.deepEqual(regValues, expectedRegValues);
                     done();

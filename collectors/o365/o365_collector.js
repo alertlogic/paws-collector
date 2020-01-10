@@ -48,7 +48,7 @@ class O365Collector extends PawsCollector {
             endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
         }
 
-        // Create a new 
+        // Create a new
         const streams = JSON.parse(process.env.O365_CONTENT_STREAMS);
         const initialStates = streams.map(stream => {
             return {

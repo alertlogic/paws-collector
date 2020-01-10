@@ -31,7 +31,6 @@
             "Type": "String",
             "Default": "alertlogic-collectors"
         },
-        
         "AlertlogicCustomerId": {
             "Description": "Optional, Alert Logic customer ID which collected data should be reported for. If not set customer ID is derived from AIMs tokens",
             "Type": "String",
@@ -517,16 +516,10 @@
                   "stack_name": {
                       "Ref":"AWS::StackName"
                   },
-<<<<<<< HEAD
                   "paws_endpoint": "https://managment.office.com/",
-=======
-                  "paws_endpoint": {
-                      "Ref": "MsManagementEndpoint"
-                  },
                   "maxPages": {
                       "Ref": "MaxPages"
                   },
->>>>>>> update max pages param and env var for cft
                   "paws_type_name": "o365"
                }
             },
