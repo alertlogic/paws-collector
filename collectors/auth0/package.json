@@ -6,10 +6,11 @@
   "private": true,
   "scripts": {
     "lint": "jshint --exclude \"./node_modules/*\" **/*.js",
-    "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=cobertura mocha --colors --reporter mocha-jenkins-reporter"
+    "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=text mocha --colors"
   },
   "devDependencies": {
-    "aws-sdk": "^2.588.0",
+    "aws-sdk": "*",
+    "aws-sdk-mock": "*",
     "jshint": "^2.9.5",
     "mocha": "^6.2.2",
     "mocha-jenkins-reporter": "^0.4.2",
