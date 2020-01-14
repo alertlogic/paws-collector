@@ -43,7 +43,7 @@
             "Default": "none"
         },
         "GCPKey": {
-            "Description": "Client secret for Auth0 authentication",
+            "Description": "Client secret for GCP authentication",
             "Type": "String",
             "NoEcho": true
         },
@@ -64,7 +64,7 @@
           }
     },
     "Resources":{
-      "Auth0CollectorStack" : {
+      "GoogleStackdriverCollectorStack" : {
       "Type" : "AWS::CloudFormation::Stack",
       "Properties" : {
         "TemplateURL" : {"Fn::Join" : ["", [
@@ -82,9 +82,7 @@
           "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
           "CollectorId" : { "Ref":"CollectorId" },
           "PollingInterval" : 60,
-          "PawsEndpoint" : { "Ref":"Auth0Domain" },
           "PawsAuthType" : "oauth2",
-          "PawsClientId" : { "Ref":"Auth0ClientId" },
           "PawsSecret" : { "Ref":"GCPKey" },
           "CollectionStartTs" : { "Ref":"CollectionStartTs" }
         }
