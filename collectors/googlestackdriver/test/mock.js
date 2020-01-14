@@ -16,7 +16,45 @@ const AIMS_TEST_CREDS = {
     secret_key: 'test-secret-key'
 };
 
-const LOG_EVENT = { labels: {},
+const LOG_EVENT_JSON_PAYLOAD = { labels: {},
+    insertId: '-qwnqhydhp96',
+    httpRequest: null,
+    resource: { labels: [Object], type: 'project' },
+    timestamp: { seconds: '1577807973', nanos: 776000000 },
+    severity: 'NOTICE',
+    logName:
+     'projects/joe-test-8675309/logs/cloudaudit.googleapis.com%2Factivity',
+    operation: null,
+    trace: '',
+    sourceLocation: null,
+    receiveTimestamp: { seconds: '1577807974', nanos: 105817306 },
+    metadata: null,
+    spanId: '',
+    traceSampled: false,
+    jsonPayload:{
+        foo: "some arbitrary key value data"
+    },
+    payload: 'jsonPayload' };
+
+const LOG_EVENT_TEXT_PAYLOAD = { labels: {},
+    insertId: '-qwnqhydhp96',
+    httpRequest: null,
+    resource: { labels: [Object], type: 'project' },
+    timestamp: { seconds: '1577807973', nanos: 776000000 },
+    severity: 'NOTICE',
+    logName:
+     'projects/joe-test-8675309/logs/cloudaudit.googleapis.com%2Factivity',
+    operation: null,
+    trace: '',
+    sourceLocation: null,
+    receiveTimestamp: { seconds: '1577807974', nanos: 105817306 },
+    metadata: null,
+    spanId: '',
+    traceSampled: false,
+    textPayload:"An arbitrary payload string",
+    payload: 'textPayload' };
+
+const LOG_EVENT_PROTO_PAYLOAD = { labels: {},
     insertId: '-qwnqhydhp96',
     httpRequest: null,
     resource: { labels: [Object], type: 'project' },
@@ -44,5 +82,7 @@ module.exports = {
     AIMS_TEST_CREDS: AIMS_TEST_CREDS,
     FUNCTION_ARN: FUNCTION_ARN,
     FUNCTION_NAME: FUNCTION_NAME,
-    LOG_EVENT: LOG_EVENT
+    LOG_EVENT_JSON_PAYLOAD,
+    LOG_EVENT_TEXT_PAYLOAD,
+    LOG_EVENT_PROTO_PAYLOAD
 };

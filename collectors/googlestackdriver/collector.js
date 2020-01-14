@@ -16,14 +16,12 @@ const logging = require('@google-cloud/logging');
 
 
 const typeIdPaths = [
+    // TODO: determine if there are any solid paths in JSON and Text payloads. I think these payloads are arbitrary
     {path: ['protoPayload', 'type_url']}
 ];
 
 class GooglestackdriverCollector extends PawsCollector {
-    constructor(context, creds) {
-        super(context, creds, 'googlestackdriver');
-    }
-    
+
     pawsInitCollectionState(event, callback) {
         // TODO: put in some more efficient catching up logic for historical logs. Stackdriver stores logs for 30 days
         const startTs = process.env.paws_collection_start_ts ? 
@@ -112,7 +110,7 @@ timestamp < "${state.until}"`;
             formattedMsg.messageTypeId = `${typeId}`;
         }
         if (ts.nanos) {
-            formattedMsg.messageTsUs = ts.usec;
+            formattedMsg.messageTsUs = ts.nanos;
         }
         return formattedMsg;
     }
