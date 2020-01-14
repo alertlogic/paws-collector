@@ -60,6 +60,7 @@ timestamp < "${state.until}"`;
         client.listLogEntries({filter:filter, resourceNames}, options)
             .then(responses => {
                 const resources = responses[0];
+                console.log(resources);
 
                 const newState = collector._getNextCollectionState(state);
                 console.info(`GSTA000002 Next collection in ${newState.poll_interval_sec} seconds`);
