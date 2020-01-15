@@ -31,9 +31,87 @@ const LOG_EVENT_JSON_PAYLOAD = { labels: {},
     metadata: null,
     spanId: '',
     traceSampled: false,
-    jsonPayload:{
-        foo: "some arbitrary key value data"
-    },
+    jsonPayload:,{
+        "fields": {
+            "resource": {
+                "structValue": {
+                    "fields": {
+                        "id": {
+                            "stringValue": "7214092729133430404",
+                            "kind": "stringValue"
+                        },
+                        "region": {
+                            "stringValue": "asia-northeast3",
+                            "kind": "stringValue"
+                        },
+                        "name": {
+                            "stringValue": "default",
+                            "kind": "stringValue"
+                        },
+                        "type": {
+                            "stringValue": "subnetwork",
+                            "kind": "stringValue"
+                        }
+                    }
+                },
+                "kind": "structValue"
+            },
+            "event_type": {
+                "stringValue": "GCE_OPERATION_DONE",
+                "kind": "stringValue"
+            },
+            "trace_id": {
+                "stringValue": "operation-1579031101569-59c1ed3e5f8fe-e5a0bde3-b85c1f44",
+                "kind": "stringValue"
+            },
+            "operation": {
+                "structValue": {
+                    "fields": {
+                        "name": {
+                            "stringValue": "operation-1579031101569-59c1ed3e5f8fe-e5a0bde3-b85c1f44",
+                            "kind": "stringValue"
+                        },
+                        "type": {
+                            "stringValue": "operation",
+                            "kind": "stringValue"
+                        },
+                        "id": {
+                            "stringValue": "192307605219288274",
+                            "kind": "stringValue"
+                        },
+                        "region": {
+                            "stringValue": "asia-northeast3",
+                            "kind": "stringValue"
+                        }
+                    }
+                },
+                "kind": "structValue"
+            },
+            "event_subtype": {
+                "stringValue": "compute.subnetworks.createOrUpdateVirtualSubnetwork",
+                "kind": "stringValue"
+            },
+            "version": {
+                "stringValue": "1.2",
+                "kind": "stringValue"
+            },
+            "event_timestamp_us": {
+                "stringValue": "1579031109043790",
+                "kind": "stringValue"
+            },
+            "actor": {
+                "structValue": {
+                    "fields": {
+                        "user": {
+                            "stringValue": "",
+                            "kind": "stringValue"
+                        }
+                    }
+                },
+                "kind": "structValue"
+            }
+        }
+    }
     payload: 'jsonPayload' };
 
 const LOG_EVENT_TEXT_PAYLOAD = { labels: {},
