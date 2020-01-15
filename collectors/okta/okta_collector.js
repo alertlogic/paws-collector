@@ -11,6 +11,7 @@
 
 const moment = require('moment');
 const okta = require('@okta/okta-sdk-nodejs');
+const healthChecks = require("./health_checks");
 const parse = require('@alertlogic/al-collector-js').Parse;
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 
@@ -26,6 +27,14 @@ const tsPaths = [
 
 
 class OktaCollector extends PawsCollector {
+    
+    constructor(context, {aimsCreds, pawsCreds}){
+        super(context, 'paws',
+            AlAwsCollector.IngestTyps.LOGMSGS,
+            m_packageJson.version,
+            aimsCreds,
+            null, [healthChecks.oktaTokenHealthCheck], []);
+    }
     
     pawsInitCollectionState(event, callback) {
         const startTs = process.env.paws_collection_start_ts ? 
