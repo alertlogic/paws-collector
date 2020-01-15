@@ -14,7 +14,10 @@ node_modules:
 compile: deps
 	npm run lint
 
-test: compile
+check-deps:
+	node check-package-version.js
+
+test: compile check-deps
 	npm run test
 	
 package: test package.zip
