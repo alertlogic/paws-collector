@@ -99,12 +99,7 @@
             "Description": "Collector specific string type parameter 2.",
             "Type": "String",
             "Default": ""
-        },
-        "CollectorParamEncryptedString1" :{
-            "Description": "Collector specific encrypted string type parameter 1.",
-            "Type": "String",
-            "Default": ""
-        },
+        }
     },
     "Resources":{
       "CollectLambdaRole":{
