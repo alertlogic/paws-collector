@@ -1,6 +1,8 @@
+AWS_LAMBDA_S3_BUCKET ?= alertlogic-collectors
 AWS_LAMBDA_FUNCTION_NAME ?= alertlogic-okta-collector
 AWS_LAMBDA_PACKAGE_NAME ?= al-okta-collector.zip
-AWS_LAMBDA_S3_BUCKET ?= alertlogic-collectors
+AWS_LAMBDA_CONFIG_PATH ?= ./al-okta-collector.json
+AWS_CFN_TEMPLATE_PATH ?= ./cfn/okta-collector.template
 
 .PHONY: test
 
@@ -26,7 +28,9 @@ deploy:
 	aws lambda update-function-code --function-name $(AWS_LAMBDA_FUNCTION_NAME) --zip-file fileb://$(AWS_LAMBDA_PACKAGE_NAME)
 
 upload:
-	aws s3 cp ./$(AWS_LAMBDA_PACKAGE_NAME) s3://$(AWS_LAMBDA_S3_BUCKET)
+	aws s3 cp ./$(AWS_LAMBDA_PACKAGE_NAME) s3://$(AWS_LAMBDA_S3_BUCKET)/packages/lambda/
+	aws s3 cp $(AWS_LAMBDA_CONFIG_PATH) s3://$(AWS_LAMBDA_S3_BUCKET)/configs/lambda/
+	aws s3 cp $(AWS_CFN_TEMPLATE_PATH) s3://$(AWS_LAMBDA_S3_BUCKET)/cfn/
 	
 sam-local:
 	@echo "Invoking ${AWS_LAMBDA_FUNCTION_NAME} locally."
