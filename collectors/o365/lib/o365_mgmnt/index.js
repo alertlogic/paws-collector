@@ -17,14 +17,16 @@ const {ApplicationTokenCredentials} = require('@azure/ms-rest-nodeauth');
 
 function getO365ManagmentClient(){
     return PawsCollector.load().then(({pawsCreds}) => {
+        const AzureTenantId = process.env.paws_collector_param_string_1;
+        
         var g_appAdCreds = new ApplicationTokenCredentials(
-            process.env.CUSTOMCONNSTR_APP_CLIENT_ID,
-            process.env.AZURE_APP_TENANT_ID,
+            pawsCreds.client_id,
+            AzureTenantId,
             pawsCreds.secret,
             'https://manage.office.com'
         );
 
-        return new m_o365mgmnt.O365Management(g_appAdCreds, process.env.AZURE_APP_TENANT_ID)
+        return new m_o365mgmnt.O365Management(g_appAdCreds, AzureTenantId)
     })
 }
 

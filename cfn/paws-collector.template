@@ -72,17 +72,33 @@
         },
         "PawsClientId": {
             "Description": "Client ID for oauth2 authentication type",
-            "Type": "String"
+            "Type": "String",
+            "Default": ""
         },
         "PawsSecret": {
             "Description": "Client secret for oauth2 or secret token for ssws.",
             "Type": "String",
             "NoEcho": true
         },
+        "PawsMaxPagesPerInvocation" :{
+            "Description": "The maximum number of pages of content data retrieved per invocation",
+            "Type": "Number",
+            "Default": 10
+        },
         "CollectionStartTs": {
             "Description": "Optional. Timestamp when log collection starts. For example, 2020-01-13T16:00:00Z.",
             "Type": "String",
             "AllowedPattern" : "(?:^\\d{4}(-\\d{2}){2}T(\\d{2}:){2}\\d{2}Z$)?"
+        },
+        "CollectorParamString1" :{
+            "Description": "Collector specific string type parameter 1.",
+            "Type": "String",
+            "Default": ""
+        },
+        "CollectorParamString2" :{
+            "Description": "Collector specific string type parameter 2.",
+            "Type": "String",
+            "Default": ""
         }
     },
     "Resources":{
@@ -539,7 +555,16 @@
                       "Ref":"AWS::StackName"
                   },
                   "paws_type_name":{
-                      "Ref" : "PawsCollectorTypeName"
+                      "Ref":"PawsCollectorTypeName"
+                  },
+                  "paws_max_pages_per_invocation": {
+                    "Ref":"PawsMaxPagesPerInvocation"
+                  },
+                  "paws_collector_param_string_1": {
+                    "Ref": "CollectorParamString1"
+                  },
+                  "paws_collector_param_string_2": {
+                    "Ref": "CollectorParamString2"
                   }
                }
             },
