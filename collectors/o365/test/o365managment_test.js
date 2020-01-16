@@ -7,13 +7,13 @@ const msWebResource = msRest.WebResource;
 
 function createManagmentInstance(){
     var g_appAdCreds = new ApplicationTokenCredentials(
-        process.env.CUSTOMCONNSTR_APP_CLIENT_ID,
-        process.env.AZURE_APP_TENANT_ID,
+        process.env.paws_api_client_id,
+        process.env.paws_collector_param_string_1,
         'a secret',
         'https://manage.office.com'
     );
 
-    return new O365Management(g_appAdCreds, process.env.AZURE_APP_TENANT_ID);
+    return new O365Management(g_appAdCreds, process.env.paws_collector_param_string_1);
 }
 
 describe('O365 managment tests', function() {

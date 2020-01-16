@@ -435,7 +435,7 @@ describe('O365 Collector Tests', function() {
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
                     assert.ok(getPreFormedUrlStub.getCall(0).calledWithExactly('a fake next page'));
                     assert.ok(getPreFormedUrlStub.getCall(1).calledWithExactly('a fake next page'));
-                    assert.equal(logs.length, parseInt(process.env.maxPages) + 1);
+                    assert.equal(logs.length, parseInt(process.env.paws_max_pages_per_invocation) + 1);
                     assert.equal(newState.nextPage, 'a fake next page');
                     restoreO365ManagemntStub();
                     done();
@@ -483,7 +483,7 @@ describe('O365 Collector Tests', function() {
                     assert.equal(subscriptionsContentStub.called, false);
                     assert.ok(getPreFormedUrlStub.getCall(0).calledWithExactly('next page from state'));
                     assert.ok(getPreFormedUrlStub.getCall(1).calledWithExactly('a fake next page'));
-                    assert.equal(logs.length, parseInt(process.env.maxPages) + 1);
+                    assert.equal(logs.length, parseInt(process.env.paws_max_pages_per_invocation) + 1);
                     assert.equal(newState.nextPage, 'a fake next page');
                     restoreO365ManagemntStub();
                     done();

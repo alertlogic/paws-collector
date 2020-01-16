@@ -49,7 +49,7 @@ class O365Collector extends PawsCollector {
         }
 
         // Create a new
-        const streams = JSON.parse(process.env.O365_CONTENT_STREAMS);
+        const streams = JSON.parse(process.env.paws_collector_param_string_2);
         const initialStates = streams.map(stream => {
             return {
                 stream,
@@ -65,8 +65,8 @@ class O365Collector extends PawsCollector {
 
     pawsGetRegisterParameters(event, callback){
         const regValues = {
-            azureTenantId: process.env.AZURE_APP_TENANT_ID,
-            azureStreams: process.env.O365_CONTENT_STREAMS
+            azureTenantId: process.env.paws_collector_param_string_1,
+            azureStreams: process.env.paws_collector_param_string_2
         };
 
         callback(null, regValues);
@@ -80,7 +80,7 @@ class O365Collector extends PawsCollector {
         // Page aggregation handler
         const listContentCallback = ({parsedBody, nextPageUri}) => {
 
-            if(nextPageUri && pageCount < process.env.maxPages){
+            if(nextPageUri && pageCount < process.env.paws_max_pages_per_invocation){
                 pageCount++;
                 return m_o365mgmnt.getPreFormedUrl(nextPageUri)
                     .then((nextPageRes) => {
@@ -150,7 +150,7 @@ class O365Collector extends PawsCollector {
             nextUntilMoment = moment(nextSinceTs).add(24, 'hours');
         }
         else if(nowMoment.diff(nextSinceTs, 'hours') > 1){
-            console.log('collection is more than 1 hour behind. Inccreaing the collection time to catch up')
+            console.log('collection is more than 1 hour behind. Increasing the collection time to catch up')
             nextUntilMoment = moment(nextSinceTs).add(1, 'hours');
         }
         else{
