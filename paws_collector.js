@@ -17,15 +17,52 @@ const AWS = require('aws-sdk');
 const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector;
 const m_packageJson = require('./package.json');
 
+const CREDS_FILE_PATH = '/tmp/paws_credsi.json';
 var PAWS_DECRYPTED_CREDS = null;
 
-function getDecryptedPawsCredentials(callback) {
+function getPawsCredsFile(){
+    return new Promise((resolve, reject) => {
+        // check if the creds file is cached and retrieve it if it is not
+        if(!fs.existsSync(CREDS_FILE_PATH)){
+            const s3 = new AWS.S3({apiVersion: '2006-03-01'});
+            const kms = new AWS.KMS();
+
+            // retrive the object from S3
+            var params = {
+                Bucket: process.env.paws_creds_file_bucket,
+                Key: process.env.paws_creds_file_key
+            };
+            s3.getObject(params, (err, data) => {
+                if (err) return reject(Error(err, err.stack));
+
+                // encrypt the file contents and cache on the lambda container file system
+                const encryptParams ={
+                    KeyId: process.env.aws_kms_arn,
+                    Plaintext: data.Body
+                };
+                kms.encrypt(encryptParams, (encryptError, encryptResponse) => {
+                    if (err) return reject(Error(err, err.stack));
+
+                    const fs.writeiFileSync(CREDS_FILE_PATH, encryptResponse.CiphertextBlob);
+                    // I know this is inefficient to pass the data I just encrypted to be immediately decrypted,
+                    // but I thought it was nicer to keep the subesquent function's inteface simple.
+                    return resolve(encryptResponse.CiphertextBlob);
+                })
+            });
+        }
+        else {
+            return resolve(fs.readFileSync(CREDS_FILE_PATH));
+        }
+    });
+};
+
+function getDecryptedPawsCredentials(credsBuffer, callback) {
     if (PAWS_DECRYPTED_CREDS) {
         return callback(null, PAWS_DECRYPTED_CREDS);
     } else {
         const kms = new AWS.KMS();
         kms.decrypt(
-            {CiphertextBlob: Buffer.from(process.env.paws_api_secret, 'base64')},
+            {CiphertextBlob: credsBuffer},
             (err, data) => {
                 if (err) {
                     return callback(err);
@@ -35,7 +72,7 @@ function getDecryptedPawsCredentials(callback) {
                         client_id: process.env.paws_api_client_id,
                         secret: data.Plaintext.toString('ascii')
                     };
-                    
+
                     return callback(null, PAWS_DECRYPTED_CREDS);
                 }
             });
@@ -47,17 +84,31 @@ class PawsCollector extends AlAwsCollector {
     static load() {
         return new Promise(function(resolve, reject){
             AlAwsCollector.load().then(function(aimsCreds) {
-                getDecryptedPawsCredentials(function(err, pawsCreds) {
-                    if (err){
-                        reject(err);
-                    } else {
-                        resolve({aimsCreds : aimsCreds, pawsCreds: pawsCreds});
-                    }
-                });
-            })
-        })
+                if(process.env.paws_auth_type === 's3object'){
+                    getPawsCredsFile().then(credsBuffer => {
+                        getDecryptedPawsCredentials(credsBuffer, function(err, pawsCreds) {
+                            if (err){
+                                reject(err);
+                            } else {
+                                resolve({aimsCreds : aimsCreds, pawsCreds: pawsCreds});
+                            }
+                        });
+                    });
+                }
+                else{
+                    const enVarCreds = Buffer.from(process.env.paws_api_secret, 'base64');
+                    getDecryptedPawsCredentials(credsBuffer, function(err, pawsCreds) {
+                        if (err){
+                            reject(err);
+                        } else {
+                            resolve({aimsCreds : aimsCreds, pawsCreds: pawsCreds});
+                        }
+                    });
+                }
+            });
+        });
     }
-    
+
     constructor(context, {aimsCreds, pawsCreds}) {
         super(context, 'paws',
               AlAwsCollector.IngestTypes.LOGMSGS,

@@ -70,6 +70,11 @@
             "Type": "String",
             "Default": "ssws"
         },
+        "PawsCredsBucket": {
+            "Description": "A communal bucket to store paws creds, if necessary",
+            "Type": "String",
+            "Default": ""
+        },
         "PawsClientId": {
             "Description": "Client ID for oauth2 authentication type",
             "Type": "String",
@@ -100,6 +105,14 @@
             "Type": "String",
             "Default": ""
         }
+    },
+    "Conditions" : {
+        "CreateCredentialsBucket" : {"Fn::And": [
+            {"Fn::Equals" : [{"Ref" : "PawsAuthType"}, "s3object"]},
+            {"Fn::Not" : [
+                {"Fn::Equals" : [{"Ref" : "PawsCredsBucket"}, ""]}
+            ]}
+        ]}
     },
     "Resources":{
       "CollectLambdaRole":{
@@ -288,6 +301,32 @@
                         },
                         {
                             "Effect":"Allow",
+                            "Action":"s3:CreateObject",
+                            "Resource":[
+                                {
+                                    "Fn::Join":[
+                                        "",
+                                        [
+                                            "arn:aws:logs:",
+                                            {
+                                                "Ref":"AWS::Region"
+                                            },
+                                            ":",
+                                            {
+                                                "Ref":"AWS::AccountId"
+                                            },
+                                            ":log-group:/aws/lambda/",
+                                            {
+                                                "Ref":"EncryptLambdaFunction"
+                                            },
+                                            ":*"
+                                        ]
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "Effect":"Allow",
                             "Action":[
                                 "logs:CreateLogStream",
                                 "logs:PutLogEvents"
@@ -319,6 +358,26 @@
                 }
             }
         },
+        "CredentialsBucket": {
+            "Type":"AWS::s3::Bucket",
+            "Condition": "CreateCredentialsBucket",
+            "Properties" : {
+                "BucketEncryption" : {
+                    "ServerSideEncryptionConfiguration" : [{
+                        "ServerSideEncryptionByDefault" : {
+                            "KMSMasterKeyID" : {
+                                "Fn::GetAtt": [
+                                    "LambdaKmsKey",
+                                    "Arn"
+                                ]
+                            },
+                            "SSEAlgorithm" : "aws:kms"
+                        }
+                    }]
+                },
+                "BucketName" : "Some name"
+            }
+        },
         "EncryptLambdaFunction":{
             "Type":"AWS::Lambda::Function",
             "DependsOn":[
@@ -347,6 +406,8 @@
                                 "        Plaintext: event.ResourceProperties.Plaintext\n",
                                 "    };\n",
                                 "    const kms = new AWS.KMS();\n",
+                                "    const s3 = new AWS.S3();\n",
+                                "    // We will put the stuff in the bucket here tomorrow.\n",
                                 "    kms.encrypt(params, function(err, data) {\n",
                                 "        if (err) {\n",
                                 "            console.log(err, err.stack); // an error occurred\n",
@@ -388,6 +449,7 @@
             "Type": "AWS::CloudFormation::CustomResource",
             "DependsOn": [
                 "LambdaKmsKey",
+                "CredentialsBucket",
                 "EncryptLambdaFunction",
                 "EncryptLambdaPolicy"
             ],
@@ -402,6 +464,16 @@
                     "Fn::GetAtt": [
                         "LambdaKmsKey",
                         "Arn"
+                    ]
+                },
+                "AuthType": {
+                    "Ref": "PawsAuthType"
+                },
+                "CredsBucket": {
+                    "Fn:If": [
+                        "CreateCredentialsBucket",
+                        {"Fn::Sub" : ["${ImReallySorryIDidThisHack}", {"ImReallySorryIDidThisHack": {"Fn::GetAtt" : ["CredentialsBucket", "BucketName"]}}]},
+                        { "Ref": "PawsCredsBucket" }
                     ]
                 },
                 "Plaintext": {
@@ -515,6 +587,9 @@
                       { "Ref" : "PawsCollectorTypeName" },
                       "-collector.json"
                   ]]},
+                  "aws_kms_arn": {
+                    "Fn::GetAtt": ["LambdaKmsKey", "Arn"]
+                  },
                   "al_api":{
                       "Ref":"AlApiEndpoint"
                   },
