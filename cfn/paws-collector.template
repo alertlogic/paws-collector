@@ -408,7 +408,6 @@
             "Type": "AWS::CloudFormation::CustomResource",
             "DependsOn": [
                 "LambdaKmsKey",
-                "CredentialsBucket",
                 "EncryptLambdaFunction",
                 "EncryptLambdaPolicy"
             ],
@@ -536,9 +535,6 @@
                       { "Ref" : "PawsCollectorTypeName" },
                       "-collector.json"
                   ]]},
-                  "aws_kms_arn": {
-                    "Fn::GetAtt": ["LambdaKmsKey", "Arn"]
-                  },
                   "al_api":{
                       "Ref":"AlApiEndpoint"
                   },
