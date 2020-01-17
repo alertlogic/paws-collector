@@ -1,0 +1,87 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Alert Logic template for creating a Okta Logs collector",
+    "Parameters": {
+        "AlertlogicAccessKeyId": {
+            "Description": "Alert Logic Access Key Id obtained from AIMS",
+            "Type": "String"
+        },
+        "AlertlogicSecretKey": {
+            "Description": "Alert Logic Secret Key returned from AIMS for the Access Key Id",
+            "Type": "String",
+            "NoEcho": true
+        },
+        "AlApiEndpoint": {
+            "Description": "Alert Logic API endpoint",
+            "Type": "String",
+            "Default": "api.global-services.global.alertlogic.com",
+            "AllowedValues": [
+                "api.global-services.global.alertlogic.com",
+                "api.global-integration.product.dev.alertlogic.com"
+            ]
+        },
+        "AlDataResidency": {
+            "Description": "Alert Logic Data Residency",
+            "Type": "String",
+            "Default": "default",
+            "AllowedValues": ["default"]
+        },
+        "PackagesBucketPrefix": {
+            "Description": "S3 bucket name prefix where collector packages are located.",
+            "Type": "String",
+            "Default": "alertlogic-collectors"
+        },
+        
+        "AlertlogicCustomerId": {
+            "Description": "Optional. Alert Logic customer ID which collected data should be reported for. If not set customer ID is derived from AIMs tokens",
+            "Type": "String",
+            "Default": ""
+        },
+        "CollectorId": {
+            "Description": "Optional. A collector UUID if known.",
+            "Type": "String",
+            "Default": "none"
+        },
+        "OktaEndpoint": {
+            "Description": "URL to poll. For example, https://alertlogic.okta.com/",
+            "Type": "String"
+        },
+        "OktaSecret": {
+            "Description": "Authentication secret to use for requests to OktaEndpoint",
+            "Type": "String",
+            "NoEcho": true
+        },
+        "CollectionStartTs": {
+            "Description": "Optional. Timestamp when log collection starts. For example, 2020-01-13T16:00:00Z",
+            "Type": "String",
+            "AllowedPattern" : "(?:^\\d{4}(-\\d{2}){2}T(\\d{2}:){2}\\d{2}Z$)?"
+        }
+    },
+    "Resources":{
+      "OktaCollectorStack" : {
+        "Type" : "AWS::CloudFormation::Stack",
+        "Properties" : {
+          "TemplateURL" : {"Fn::Join" : ["", [
+                    "https://s3.amazonaws.com/",
+                    {"Ref":"PackagesBucketPrefix"}, "-us-east-1",
+                    "/cfn/paws-collector.template"
+               ]]},
+          "Parameters" : {
+            "AlertlogicAccessKeyId" : { "Ref":"AlertlogicAccessKeyId" },
+            "AlertlogicSecretKey" : { "Ref":"AlertlogicSecretKey" },
+            "AlApiEndpoint" : { "Ref":"AlApiEndpoint" },
+            "AlDataResidency" : { "Ref":"AlDataResidency" },
+            "PackagesBucketPrefix" : { "Ref":"PackagesBucketPrefix" },
+            "PawsCollectorTypeName" : "okta",
+            "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
+            "CollectorId" : { "Ref":"CollectorId" },
+            "PollingInterval" : 60,
+            "PawsEndpoint" : { "Ref":"OktaEndpoint" },
+            "PawsAuthType" : "ssws",
+            "PawsSecret" : { "Ref":"OktaSecret" },
+            "CollectionStartTs" : { "Ref":"CollectionStartTs" }
+          }
+        }
+      }
+    }
+}
