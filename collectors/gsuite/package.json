@@ -16,7 +16,8 @@
     "mocha-jenkins-reporter": "^0.4.2",
     "nyc": "^14.1.1",
     "rewire": "^4.0.1",
-    "sinon": "^7.5.0"
+    "sinon": "^7.5.0",
+    "moment": "2.24.0"
   },
   "dependencies": {
     "@alertlogic/al-collector-js": "1.4.2",

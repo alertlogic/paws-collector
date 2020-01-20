@@ -81,15 +81,15 @@
         },
 	    "PawsScope": {
             "Description": "Define Scope, if it is multiple pass as comma separated string for Gsuite",
-            "Type": "String",
+            "Type": "String"
         },
         "PawsApplicationNames": {
             "Description": "Define Application name, if it is multiple pass as comma separated string for Gsuite",
-            "Type": "String",
+            "Type": "String"
         },
         "PawsEmailId": {
             "Description": "Email ID for Gsuite",
-            "Type": "String",
+            "Type": "String"
         },
         "CollectionStartTs": {
             "Description": "Timestamp when log collection starts",
