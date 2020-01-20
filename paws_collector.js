@@ -28,7 +28,7 @@ function getPawsCredsFile(){
             const kms = new AWS.KMS();
 
             // doing the string manipulation here because doing it here is way less groos than doing it in the cfn
-            const s3PathParts = process.env.paws_creds_file_path.split(/);
+            const s3PathParts = process.env.paws_creds_file_path.split('/');
 
             // retrive the object from S3
             var params = {
@@ -45,7 +45,7 @@ function getPawsCredsFile(){
                 kms.encrypt(encryptParams, (encryptError, encryptResponse) => {
                     if (err) return reject(Error(err, err.stack));
 
-                    const fs.writeiFileSync(CREDS_FILE_PATH, encryptResponse.CiphertextBlob);
+                    fs.writeiFileSync(CREDS_FILE_PATH, encryptResponse.CiphertextBlob);
                     return resolve(encryptResponse.CiphertextBlob);
                 })
             });
