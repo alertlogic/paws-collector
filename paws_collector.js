@@ -84,19 +84,18 @@ class PawsCollector extends AlAwsCollector {
     static load() {
         return new Promise(function(resolve, reject){
             AlAwsCollector.load().then(function(aimsCreds) {
-                if(process.env.paws_auth_type === 's3object'){
-                    getPawsCredsFile().then(credsBuffer => {
-                        getDecryptedPawsCredentials(credsBuffer, function(err, pawsCreds) {
-                            if (err){
-                                reject(err);
-                            } else {
-                                resolve({aimsCreds : aimsCreds, pawsCreds: pawsCreds});
-                            }
-                        });
-                    });
+                let credsPromise;
+
+                switch(process.env.paws_auth_type){
+                    case 's3object':
+                        credsPromise = getPawsCredsFile();
+                        break;
+                    default:
+                        const enVarCreds = Buffer.from(process.env.paws_api_secret, 'base64');
+                        credsPromise = new Promise(res => res(enVarCreds));
                 }
-                else{
-                    const enVarCreds = Buffer.from(process.env.paws_api_secret, 'base64');
+
+                credsPromise.then(credsBuffer => {
                     getDecryptedPawsCredentials(credsBuffer, function(err, pawsCreds) {
                         if (err){
                             reject(err);
@@ -104,7 +103,7 @@ class PawsCollector extends AlAwsCollector {
                             resolve({aimsCreds : aimsCreds, pawsCreds: pawsCreds});
                         }
                     });
-                }
+                });
             });
         });
     }

@@ -86,7 +86,7 @@
             "Default": 10
         },
         "PawsCredsUri": {
-            "Description": "The S3 object where credentials are stored",
+            "Description": "The S3 object where credentials are stored. Only used when PawsAuthType is 's3object'",
             "Type": "String",
             "Default": ""
         },
