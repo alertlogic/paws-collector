@@ -43,7 +43,7 @@ function getPawsCredsFile(){
                     Plaintext: data.Body
                 };
                 kms.encrypt(encryptParams, (encryptError, encryptResponse) => {
-                    if (err) return reject(Error(err, err.stack));
+                    if (encryptError) return reject(Error(encryptError, encryptError.stack));
 
                     fs.writeiFileSync(CREDS_FILE_PATH, encryptResponse.CiphertextBlob);
                     return resolve(encryptResponse.CiphertextBlob);
