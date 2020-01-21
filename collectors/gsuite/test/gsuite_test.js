@@ -15,6 +15,7 @@ const { auth } = require("google-auth-library");
 var responseStub = {};
 let listEvent;
 let authenticationT;
+const _0=0;
 
 function setAlServiceStub() {
     authenticationT  = sinon.stub(auth, 'fromJSON').callsFake(
@@ -135,8 +136,8 @@ describe('Unit Tests', function() {
                 process.env.paws_scopes = 'test';
                 process.env.paws_application_names = 'test1,test2';  
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
-                    console.log(logs);
                     assert.equal(logs.length, 2);
+                    assert.ok(logs[_0].kind);
                     done();
                 });
                 
@@ -161,7 +162,6 @@ describe('Unit Tests', function() {
             GsuiteCollector.load().then(function(creds) {
                 var collector = new GsuiteCollector(ctx, creds, 'gsuite');
                 let fmt = collector.pawsFormatLog(gsuiteMock.LOG_EVENT);
-                console.log(fmt);
                 assert.equal(fmt.progName, 'GsuiteCollector');
                 assert.ok(fmt.messageTypeId);
                 done();
@@ -189,7 +189,7 @@ describe('Unit Tests', function() {
             GsuiteCollector.load().then(function(creds) {
                 var collector = new GsuiteCollector(ctx, creds, 'gsuite');
                 let nextState = collector._getNextCollectionState(curState);
-                console.log(nextState);
+                assert.ok(nextState.since);
                 done();
             });
         });

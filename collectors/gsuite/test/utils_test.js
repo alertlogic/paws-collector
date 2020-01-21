@@ -7,17 +7,16 @@ const { google, admin_reports_v1 } = require("googleapis");
 let mockServiceObject, mockActivityObject, service;
 describe('Unit Tests', function () {
 
-    beforeEach(function () {
-        service = new admin_reports_v1.Admin();
+    beforeEach(function () { 
+        service = sinon.createStubInstance(admin_reports_v1.Admin);
+        service.activities = gsuiteMock.MOCK_ACTIVITES;
         mockServiceObject = sinon.stub(google, 'admin').callsFake(
             function fakeFn(path) {
                 return service;
-            });
-
-        
+            });        
     });
 
-    afterEach(function () {
+    afterEach(function () {   
         mockServiceObject.restore();
         mockActivityObject.restore();
     });
@@ -49,8 +48,8 @@ describe('Unit Tests', function () {
                 token: true
             };
             let accumulator = [];
-            utils.listEvents(auth, params, accumulator).then(data => {
-                assert(accumulator.length == 2, "accumulator length is ok");
+            utils.listEvents(auth, params, accumulator).then(data => {     
+                assert(accumulator.length == 2, "accumulator length is wrong");
                 done();
             });
         });
@@ -62,11 +61,8 @@ describe('Unit Tests', function () {
             let auth = null;
             let params = {};
             let accumulator = [];
-            utils.listEvents(auth, params, accumulator).then(data => {
-                assert(accumulator.length == 4, "accumulator length is ok");
-                done();
-            }).catch(err=>{
-                console.log('ERROR CASE');
+            utils.listEvents(auth, params, accumulator).catch(err=>{
+                assert.ok(err);
                 done();
             });
         });

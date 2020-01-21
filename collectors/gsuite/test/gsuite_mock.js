@@ -57,10 +57,8 @@ const LOG_EVENT = {
     ]
   };
 
-const MOCK_LOG = {
-    // Here is where you fill in you mock log event
-    CreationTime: new Date().toISOString(),
-    RecordType: "MockRecordType"
+const MOCK_ACTIVITES={
+  list:()=>{}
 };
 
 const FUNCTION_ARN = 'arn:aws:lambda:us-east-1:352283894008:function:test-01-CollectLambdaFunction-2CWNLPPW5XO8';
@@ -71,5 +69,5 @@ module.exports = {
     FUNCTION_ARN: FUNCTION_ARN,
     FUNCTION_NAME: FUNCTION_NAME,
     LOG_EVENT: LOG_EVENT,
-    MOCK_LOG: MOCK_LOG
+    MOCK_ACTIVITES: MOCK_ACTIVITES
 };
