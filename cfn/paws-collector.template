@@ -62,8 +62,7 @@
         },
         "PawsEndpoint": {
             "Description": "URL to poll",
-            "Type": "String",
-            "Default": "https://alertlogic-admin.okta.com/"
+            "Type": "String"
         },
         "PawsAuthType": {
             "Description": "Target API authentication type. Supported types: ssws, oauth2",
@@ -85,9 +84,10 @@
             "Type": "Number",
             "Default": 10
         },
-        "PawsCredsUri": {
-            "Description": "The S3 object where credentials are stored. Only used when PawsAuthType is 's3object'",
+        "PawsCredsS3Uri": {
+            "Description": "The S3 uri where object where credentials are stored. in the for s3://<bucket>/<object-path> Only used when PawsAuthType is 's3object'",
             "Type": "String",
+            "AllowedPattern" : "^s3:\/\/[a-z,\-,0-9]*\/[a-z,\-,\.,\_,0-9]*",
             "Default": ""
         },
         "CollectionStartTs": {
@@ -293,21 +293,6 @@
                         },
                         {
                             "Effect":"Allow",
-                            "Action":"s3:Get*",
-                            "Resource":[
-                                {
-                                   "Fn::Join":["",
-                                      [
-                                         "arn:aws:s3:::",
-                                         { "Fn::Selecct": ["1", {"Fn:Split": ["//", {"Ref": "PawsCredsUri"}] } ] }
-                                      ]
-                                   ]
-
-                                }
-                            ]
-                        },
-                        {
-                            "Effect":"Allow",
                             "Action":[
                                 "logs:CreateLogStream",
                                 "logs:PutLogEvents"
@@ -383,10 +368,11 @@
                                 "\n",
                                 "exports.handler = (event, context, callback) => {\n",
                                 "    if (event.ResourceType == 'AWS::CloudFormation::CustomResource' &&\n",
-                                "        event.RequestType == 'Create') {\n",
+                                "        event.RequestType == 'Create' &&\n",
+                                "        event.ResourceProperties.Plaintext.length  > 0) {\n",
                                 "        return encrypt(event, context);\n",
                                 "    }\n",
-                                "    return response.send(event, context, response.SUCCESS);\n",
+                                "    return response.send(event, context, response.SUCCESS, {EncryptedText: \"\"});\n",
                                 "}"
                             ]
                         ]
@@ -565,11 +551,14 @@
                   "paws_api_client_id":{
                       "Ref":"PawsClientId"
                   },
+                  "paws_kms_key_arn":{
+                      "Ref":"LambdaKmsKey"
+                  },
                   "paws_api_secret":{
                       "Fn::GetAtt": ["EncryptPawsSecret", "EncryptedText"]
                   },
-                  "paws_creds_file_path":{
-                      "Fn::Select": ["1", {"Fn:Split": ["//", {"Ref": "PawsCredsUri"}] } ]
+                  "paws_s3_object_path":{
+                      "Ref": "PawsCredsS3Uri"
                   },
                   "paws_collection_start_ts":{
                       "Ref":"CollectionStartTs"
@@ -641,6 +630,21 @@
                           ]
                        ]
                      }]
+                  },
+                  {
+                      "Effect":"Allow",
+                      "Action":"s3:Get*",
+                      "Resource":[
+                          {
+                             "Fn::Join":["",
+                                [
+                                   "arn:aws:s3:::",
+                                   { "Fn::Select": ["1", {"Fn::Split": ["//", {"Ref": "PawsCredsUri"}] } ] }
+                                ]
+                             ]
+
+                          }
+                      ]
                   },
                   {
                      "Effect":"Allow",

@@ -13,6 +13,7 @@
 const async = require('async');
 const debug = require('debug')('index');
 const AWS = require('aws-sdk');
+const fs = require('fs');
 
 const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector;
 const m_packageJson = require('./package.json');
@@ -28,24 +29,26 @@ function getPawsCredsFile(){
             const kms = new AWS.KMS();
 
             // doing the string manipulation here because doing it here is way less groos than doing it in the cfn
-            const s3PathParts = process.env.paws_creds_file_path.split('/');
+            const s3Path = process.env.paws_s3_object_path.split('//')[1];
+            const s3PathParts = s3Path.split('/');
 
             // retrive the object from S3
             var params = {
                 Bucket: s3PathParts.shift(),
-                Key: s3PathParts.slice(1).join('/')
+                Key: s3PathParts.join('/')
             };
             s3.getObject(params, (err, data) => {
-                if (err) return reject(Error(err, err.stack));
+                if (err) return reject(new Error(err, err.stack));
 
                 // encrypt the file contents and cache on the lambda container file system
                 const encryptParams ={
-                    Plaintext: data.Body
+                    Plaintext: data.Body,
+                    KeyId: process.env.paws_kms_key_arn
                 };
                 kms.encrypt(encryptParams, (encryptError, encryptResponse) => {
-                    if (encryptError) return reject(Error(encryptError, encryptError.stack));
+                    if (encryptError) return reject(new Error(encryptError, encryptError.stack));
 
-                    fs.writeiFileSync(CREDS_FILE_PATH, encryptResponse.CiphertextBlob);
+                    fs.writeFileSync(CREDS_FILE_PATH, encryptResponse.CiphertextBlob);
                     return resolve(encryptResponse.CiphertextBlob);
                 })
             });
@@ -70,7 +73,7 @@ function getDecryptedPawsCredentials(credsBuffer, callback) {
                     PAWS_DECRYPTED_CREDS = {
                         auth_type: process.env.paws_api_auth_type,
                         client_id: process.env.paws_api_client_id,
-                        secret: data.Plaintext.toString('.ascii')
+                        secret: data.Plaintext.toString('ascii')
                     };
 
                     return callback(null, PAWS_DECRYPTED_CREDS);
@@ -95,7 +98,7 @@ class PawsCollector extends AlAwsCollector {
                         credsPromise = new Promise(res => res(enVarCreds));
                 }
 
-                credsPromise.then(credsBuffer => {
+                return credsPromise.then(credsBuffer => {
                     getDecryptedPawsCredentials(credsBuffer, function(err, pawsCreds) {
                         if (err){
                             reject(err);
@@ -103,7 +106,7 @@ class PawsCollector extends AlAwsCollector {
                             resolve({aimsCreds : aimsCreds, pawsCreds: pawsCreds});
                         }
                     });
-                });
+                }).catch(err => console.log("Error getting Paws Credentials", err));
             });
         });
     }
@@ -304,6 +307,7 @@ class PawsCollector extends AlAwsCollector {
 }
 
 module.exports = {
+    getPawsCredsFile,
     PawsCollector: PawsCollector
 }
 

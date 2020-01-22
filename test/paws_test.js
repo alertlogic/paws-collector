@@ -1,6 +1,7 @@
 const assert = require('assert');
 const sinon = require('sinon');
 var AWS = require('aws-sdk-mock');
+const fs = require('fs');
 const m_response = require('cfn-response');
 
 const pawsMock = require('./paws_mock');
@@ -154,8 +155,32 @@ describe('Unit Tests', function() {
 
     beforeEach(function(){
         AWS.mock('KMS', 'decrypt', function (params, callback) {
+            let data;
+            if(params.CiphertextBlob.toString() === 'creds-from-file'){
+                console.log('dcrypting file');
+                data = {
+                    Plaintext : 'decrypted-sercret-key-from-file'
+                };
+            }
+            else{
+                console.log('decrypting somthing else');
+                data = {
+                    Plaintext : 'decrypted-sercret-key'
+                };
+            }
+            return callback(null, data);
+        });
+
+        AWS.mock('KMS', 'encrypt', function (params, callback) {
             const data = {
-                Plaintext : 'decrypted-sercret-key'
+                CiphertextBlob : Buffer.from('creds-from-file')
+            };
+            return callback(null, data);
+        });
+
+        AWS.mock('S3', 'getObject', function (params, callback) {
+            const data = {
+                Body: Buffer.from('creds-from-file')
             };
             return callback(null, data);
         });
@@ -176,6 +201,67 @@ describe('Unit Tests', function() {
         restoreAlServiceStub();
         setEnvStub.restore();
         responseStub.restore();
+    });
+
+    describe('Load function', function() {
+        let fileWriteStub;
+        let fileReadStub;
+        let fileExistsStub;
+        const CREDS_FILE_PATH = '/tmp/paws_creds.json';
+        
+        beforeEach(() => {
+            fileWriteStub = sinon.spy(fs, 'writeFileSync');
+            fileReadStub = sinon.spy(fs, 'readFileSync');
+        });
+
+        afterEach(() => {
+            fileWriteStub.restore();
+            fileReadStub.restore();
+        });
+
+        it('gets creds from s3 if present and writes them to cache', function(done){
+            const oldAuthType = process.env.paws_auth_type;
+            process.env.paws_auth_type = 's3object';
+            fileExistsStub = sinon.stub(fs, 'existsSync').callsFake(() => {
+                return false;
+            });
+
+            TestCollector.load().then(function({pawsCreds}){
+                assert.ok(fileReadStub.called);
+                assert.ok(fileWriteStub.calledWith(CREDS_FILE_PATH));
+                process.env.paws_auth_type = oldAuthType;
+                fileExistsStub.restore();
+                done();
+            });
+        });
+
+        it('gets creds from cache', function(done){
+            const oldAuthType = process.env.paws_auth_type;
+            process.env.paws_auth_type = 's3object';
+            fs.writeFileSync(CREDS_FILE_PATH, 'some file content');
+            fileWriteStub.resetHistory();
+            fileExistsStub = sinon.stub(fs, 'existsSync').callsFake(() => {
+                return true;
+            });
+
+            TestCollector.load().then(function({pawsCreds}){
+                assert.equal(fileReadStub.calledWith(CREDS_FILE_PATH), true);
+                assert.equal(fileWriteStub.calledWith(CREDS_FILE_PATH), false);
+                process.env.paws_auth_type = oldAuthType;
+                fs.unlinkSync(CREDS_FILE_PATH);
+                fileExistsStub.restore();
+                done();
+            });
+        });
+
+        it('does not get the creds from a file when the auth type is not s3object', function(done){
+            TestCollector.load().then(function({pawsCreds}){
+                assert.equal(fileWriteStub.called, false);
+                assert.equal(fileReadStub.called, false);
+                fileExistsStub.restore();
+                done();
+            });
+        });
     });
     
     describe('Poll Request Tests', function() {
