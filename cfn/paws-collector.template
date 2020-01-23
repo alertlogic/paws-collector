@@ -639,7 +639,7 @@
                              "Fn::Join":["",
                                 [
                                    "arn:aws:s3:::",
-                                   { "Fn::Select": ["1", {"Fn::Split": ["//", {"Ref": "PawsCredsUri"}] } ] }
+                                   { "Fn::Select": ["1", {"Fn::Split": ["//", {"Ref": "PawsCredsS3Uri"}] } ] }
                                 ]
                              ]
 
