@@ -106,7 +106,7 @@ class PawsCollector extends AlAwsCollector {
                             resolve({aimsCreds : aimsCreds, pawsCreds: pawsCreds});
                         }
                     });
-                }).catch(err => console.log("Error getting Paws Credentials", err));
+                }).catch(err => console.error(`PAWS000400 Error getting Paws Credentials ${err}`));
             });
         });
     }

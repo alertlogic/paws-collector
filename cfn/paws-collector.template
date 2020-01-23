@@ -552,7 +552,7 @@
                       "Ref":"PawsClientId"
                   },
                   "paws_kms_key_arn":{
-                      "Ref":"LambdaKmsKey"
+                      "Fn::GetAtt": [ "LambdaKmsKey", "Arn" ]
                   },
                   "paws_api_secret":{
                       "Fn::GetAtt": ["EncryptPawsSecret", "EncryptedText"]
