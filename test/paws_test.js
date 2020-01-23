@@ -213,7 +213,7 @@ describe('Unit Tests', function() {
         const CREDS_FILE_PATH = '/tmp/paws_creds.json';
         
         beforeEach(() => {
-            rewiredTestModule.__set__("PAWS_DECRYPTED_CREDS", null)
+            rewiredTestModule.__set__("PAWS_DECRYPTED_CREDS", null);
             fileWriteStub = sinon.spy(fs, 'writeFileSync');
             fileReadStub = sinon.spy(fs, 'readFileSync');
         });
