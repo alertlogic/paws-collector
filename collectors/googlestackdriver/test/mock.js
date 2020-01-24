@@ -31,7 +31,7 @@ const LOG_EVENT_JSON_PAYLOAD = { labels: {},
     metadata: null,
     spanId: '',
     traceSampled: false,
-    jsonPayload:,{
+    jsonPayload:{
         "fields": {
             "resource": {
                 "structValue": {
@@ -111,7 +111,7 @@ const LOG_EVENT_JSON_PAYLOAD = { labels: {},
                 "kind": "structValue"
             }
         }
-    }
+    },
     payload: 'jsonPayload' };
 
 const LOG_EVENT_TEXT_PAYLOAD = { labels: {},
@@ -149,8 +149,8 @@ const LOG_EVENT_PROTO_PAYLOAD = { labels: {},
     traceSampled: false,
     protoPayload:
      { type_url: 'type.googleapis.com/google.cloud.audit.AuditLog',
-       value:
-        <Buffer 12 00 1a 1c 0a 1a 6a 6f 73 65 70 68 2e 64 72 61 67 6f 76 69 63 68 40 67 6d 61 69 6c 2e 63 6f 6d 22 94 01 0a 0d 31 36 35 2e 32 32 35 2e 38 31 2e 39 36 ... > },
+       value:"Some buffer"
+     },
     payload: 'protoPayload' };
 
 const FUNCTION_ARN = 'arn:aws:lambda:us-east-1:352283894008:function:test-01-CollectLambdaFunction-2CWNLPPW5XO8';
