@@ -28,12 +28,14 @@ class GooglestackdriverCollector extends PawsCollector {
                 process.env.paws_collection_start_ts :
                     moment().toISOString();
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
-        const initialState = {
+        const resourceNames = JSON.parse(process.env.paws_collector_param_string_1);
+        const initialStates = resourceNames.map(resource => ({
+            resource,
             since: startTs,
             until: endTs,
             poll_interval_sec: 1
-        };
-        return callback(null, initialState, 1);
+        }));
+        return callback(null, initialStates, 1);
     }
     
     pawsGetLogs(state, callback) {
@@ -50,12 +52,11 @@ class GooglestackdriverCollector extends PawsCollector {
         // TODO: figure out a better way to format this. I'm pretty sure that it needs the newlines in it.
         const filter = `timestamp >= "${state.since}"
 timestamp < "${state.until}"`;
-        const resourceNames = JSON.parse(process.env.google_resource_ids);
 
         const options = {autoPaginate: true};
 
         // TODO: check out how the "autopagination" functionality works on this.
-        client.listLogEntries({filter:filter, resourceNames}, options)
+        client.listLogEntries({filter:filter, [state.resource]}, options)
             .then(responses => {
                 const resources = responses[0];
                 console.log(resources);

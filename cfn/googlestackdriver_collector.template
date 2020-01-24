@@ -24,14 +24,15 @@
             "Description": "Alert Logic Data Residency",
             "Type": "String",
             "Default": "default",
-            "AllowedValues": ["default"]
+            "AllowedValues": [
+                "default"
+            ]
         },
         "PackagesBucketPrefix": {
             "Description": "S3 bucket name prefix where collector packages are located.",
             "Type": "String",
             "Default": "alertlogic-collectors"
         },
-
         "AlertlogicCustomerId": {
             "Description": "Optional, Alert Logic customer ID which collected data should be reported for. If not set customer ID is derived from AIMs tokens",
             "Type": "String",
@@ -42,10 +43,10 @@
             "Type": "String",
             "Default": "none"
         },
-        "GCPKey": {
-            "Description": "Client secret for GCP authentication",
+        "GCPKeyUri": {
+            "Description": "S3 uri for the client secret for GCP authentication",
             "Type": "String",
-            "NoEcho": true
+            "Default": ""
         },
         "GoogleResourceIds": {
             "Description": "JSON list of google resources to poll logs from. In the format <resourceType>/<resourceID>",
@@ -54,39 +55,64 @@
         "CollectionStartTs": {
             "Description": "Timestamp when log collection starts. For example, 2020-01-13T16:00:00Z",
             "Type": "String",
-            "AllowedPattern" : "(?:^\\d{4}(-\\d{2}){2}T(\\d{2}:){2}\\d{2}Z$)?"
+            "AllowedPattern": "(?:^\\d{4}(-\\d{2}){2}T(\\d{2}:){2}\\d{2}Z$)?"
         }
     },
-    "Environment":{
-       "Variables":{
-          "google_resource_ids":{
-              "Ref":"GoogleResourceIds"
-          }
-    },
-    "Resources":{
-      "GoogleStackdriverCollectorStack" : {
-      "Type" : "AWS::CloudFormation::Stack",
-      "Properties" : {
-        "TemplateURL" : {"Fn::Join" : ["", [
-                    "https://s3.amazonaws.com/",
-                    {"Ref":"PackagesBucketPrefix"}, "-us-east-1",
-                    "/cfn/paws-collector.template"
-               ]]},
-        "Parameters" : {
-          "AlertlogicAccessKeyId" : { "Ref":"AlertlogicAccessKeyId" },
-          "AlertlogicSecretKey" : { "Ref":"AlertlogicSecretKey" },
-          "AlApiEndpoint" : { "Ref":"AlApiEndpoint" },
-          "AlDataResidency" : { "Ref":"AlDataResidency" },
-          "PackagesBucketPrefix" : { "Ref":"PackagesBucketPrefix" },
-          "PawsCollectorTypeName" : "googlestackdriver",
-          "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
-          "CollectorId" : { "Ref":"CollectorId" },
-          "PollingInterval" : 60,
-          "PawsAuthType" : "oauth2",
-          "PawsSecret" : { "Ref":"GCPKey" },
-          "CollectionStartTs" : { "Ref":"CollectionStartTs" }
+    "Resources": {
+        "GoogleStackdriverCollectorStack": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "https://s3.amazonaws.com/",
+                            {
+                                "Ref": "PackagesBucketPrefix"
+                            },
+                            "-us-east-1",
+                            "/cfn/paws-collector.template"
+                        ]
+                    ]
+                },
+                "Parameters": {
+                    "AlertlogicAccessKeyId": {
+                        "Ref": "AlertlogicAccessKeyId"
+                    },
+                    "AlertlogicSecretKey": {
+                        "Ref": "AlertlogicSecretKey"
+                    },
+                    "AlApiEndpoint": {
+                        "Ref": "AlApiEndpoint"
+                    },
+                    "AlDataResidency": {
+                        "Ref": "AlDataResidency"
+                    },
+                    "PackagesBucketPrefix": {
+                        "Ref": "PackagesBucketPrefix"
+                    },
+                    "PawsCollectorTypeName": "googlestackdriver",
+                    "AlertlogicCustomerId": {
+                        "Ref": "AlertlogicCustomerId"
+                    },
+                    "PawsCredsS3Uri": {
+                        "Ref": "GCPKeyUri"
+                    },
+                    "CollectorId": {
+                        "Ref": "CollectorId"
+                    },
+                    "PollingInterval": 60,
+                    "PawsAuthType": "s3object",
+                    "PawsSecret": "IN-FILE",
+                    "PawsEndpoint": "NO-ENDPOINT",
+                    "CollectorParamString1": {
+                        "Ref": "GoogleResourceIds"
+                    },
+                    "CollectionStartTs": {
+                        "Ref": "CollectionStartTs"
+                    }
+                }
+            }
         }
-      }
     }
-   }
 }
