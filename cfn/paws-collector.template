@@ -46,12 +46,12 @@
             "Default" : 300
         },
         "AlertlogicCustomerId": {
-            "Description": "Optional, Alert Logic customer ID which collected data should be reported for. If not set customer ID is derived from AIMs tokens",
+            "Description": "Optional. Alert Logic customer ID which collected data should be reported for. If not set customer ID is derived from AIMs tokens",
             "Type": "String",
             "Default": ""
         },
         "CollectorId": {
-            "Description": "Optional, a collector UUID if known.",
+            "Description": "Optional. A collector UUID if known.",
             "Type": "String",
             "Default": "none"
         },
@@ -62,8 +62,7 @@
         },
         "PawsEndpoint": {
             "Description": "URL to poll",
-            "Type": "String",
-            "Default": "https://alertlogic-admin.okta.com/"
+            "Type": "String"
         },
         "PawsAuthType": {
             "Description": "Target API authentication type. Supported types: ssws, oauth2",
@@ -72,18 +71,39 @@
         },
         "PawsClientId": {
             "Description": "Client ID for oauth2 authentication type",
-            "Type": "String"
+            "Type": "String",
+            "Default": ""
         },
         "PawsSecret": {
             "Description": "Client secret for oauth2 or secret token for ssws.",
             "Type": "String",
             "NoEcho": true
         },
-        "CollectionStartTs": {
-            "Description": "Timestamp when log collection starts",
+        "PawsMaxPagesPerInvocation" :{
+            "Description": "The maximum number of pages of content data retrieved per invocation",
+            "Type": "Number",
+            "Default": 10
+        },
+        "PawsCredsS3Uri": {
+            "Description": "The S3 uri where object where credentials are stored. in the for s3://<bucket>/<object-path> Only used when PawsAuthType is 's3object'",
             "Type": "String",
-            "Default" : "2019-11-21T16:00:00Z",
-            "AllowedPattern" : "^\\d{4}(-\\d{2}){2}T(\\d{2}:){2}\\d{2}Z$"
+            "AllowedPattern" : "^s3:\/\/[a-z,\-,0-9]*\/[a-z,\-,\.,\_,0-9]*",
+            "Default": ""
+        },
+        "CollectionStartTs": {
+            "Description": "Optional. Timestamp when log collection starts. For example, 2020-01-13T16:00:00Z.",
+            "Type": "String",
+            "AllowedPattern" : "(?:^\\d{4}(-\\d{2}){2}T(\\d{2}:){2}\\d{2}Z$)?"
+        },
+        "CollectorParamString1" :{
+            "Description": "Collector specific string type parameter 1.",
+            "Type": "String",
+            "Default": ""
+        },
+        "CollectorParamString2" :{
+            "Description": "Collector specific string type parameter 2.",
+            "Type": "String",
+            "Default": ""
         }
     },
     "Resources":{
@@ -348,10 +368,11 @@
                                 "\n",
                                 "exports.handler = (event, context, callback) => {\n",
                                 "    if (event.ResourceType == 'AWS::CloudFormation::CustomResource' &&\n",
-                                "        event.RequestType == 'Create') {\n",
+                                "        event.RequestType == 'Create' &&\n",
+                                "        event.ResourceProperties.Plaintext.length  > 0) {\n",
                                 "        return encrypt(event, context);\n",
                                 "    }\n",
-                                "    return response.send(event, context, response.SUCCESS);\n",
+                                "    return response.send(event, context, response.SUCCESS, {EncryptedText: \"\"});\n",
                                 "}"
                             ]
                         ]
@@ -530,8 +551,14 @@
                   "paws_api_client_id":{
                       "Ref":"PawsClientId"
                   },
+                  "paws_kms_key_arn":{
+                      "Fn::GetAtt": [ "LambdaKmsKey", "Arn" ]
+                  },
                   "paws_api_secret":{
                       "Fn::GetAtt": ["EncryptPawsSecret", "EncryptedText"]
+                  },
+                  "paws_s3_object_path":{
+                      "Ref": "PawsCredsS3Uri"
                   },
                   "paws_collection_start_ts":{
                       "Ref":"CollectionStartTs"
@@ -540,7 +567,16 @@
                       "Ref":"AWS::StackName"
                   },
                   "paws_type_name":{
-                      "Ref" : "PawsCollectorTypeName"
+                      "Ref":"PawsCollectorTypeName"
+                  },
+                  "paws_max_pages_per_invocation": {
+                    "Ref":"PawsMaxPagesPerInvocation"
+                  },
+                  "paws_collector_param_string_1": {
+                    "Ref": "CollectorParamString1"
+                  },
+                  "paws_collector_param_string_2": {
+                    "Ref": "CollectorParamString2"
                   }
                }
             },
@@ -594,6 +630,21 @@
                           ]
                        ]
                      }]
+                  },
+                  {
+                      "Effect":"Allow",
+                      "Action":"s3:Get*",
+                      "Resource":[
+                          {
+                             "Fn::Join":["",
+                                [
+                                   "arn:aws:s3:::",
+                                   { "Fn::Select": ["1", {"Fn::Split": ["//", {"Ref": "PawsCredsS3Uri"}] } ] }
+                                ]
+                             ]
+
+                          }
+                      ]
                   },
                   {
                      "Effect":"Allow",
@@ -680,16 +731,7 @@
                      "Action":[
                         "cloudformation:DescribeStacks"
                      ],
-                     "Resource":[{
-                         "Fn::Join":[ "",
-                              [
-                                  "arn:aws:cloudformation:", { "Ref":"AWS::Region" },
-                                  ":",{ "Ref":"AWS::AccountId" },
-                                  ":stack/", { "Ref":"AWS::StackName" },
-                                  "/*"
-                              ]
-                          ]
-                      }]
+                     "Resource": "*"
                   },
                   {
                      "Effect":"Allow",

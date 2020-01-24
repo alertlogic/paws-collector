@@ -28,11 +28,7 @@ const tsPaths = [
     { path: ['RecordType'] }
 ];
 
-console.log(process.env.O365_CONTENT_STREAMS)
 class O365Collector extends PawsCollector {
-    constructor(context, creds) {
-        super(context, creds, 'o365');
-    }
     
     pawsInitCollectionState(event, callback) {
         let startTs = process.env.paws_collection_start_ts ? 
@@ -42,30 +38,35 @@ class O365Collector extends PawsCollector {
 
         if(moment().diff(startTs, 'days') > 7){
             startTs = moment().subtract(PARTIAL_WEEK, 'days').toISOString();
-            console.log("Start timestamp is more than 7 days in the past. This is not allowed in the MS managment API. setting the start time to 7 days in the past");
+            console.info("O365000004 Start timestamp is more than 7 days in the past. This is not allowed in the MS managment API. setting the start time to 7 days in the past");
         }
         
         if(moment().diff(startTs, 'hours') > 24){
             endTs = moment(startTs).add(24, 'hours').toISOString();
         }
         else {
-            endTs = moment(startTs).toISOString();
+            endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
         }
-        const initialState = {
-            since: startTs,
-            until: endTs,
-            poll_interval_sec: this.pollInterval
-        };
-        return callback(null, initialState, 1);
+
+        // Create a new
+        const streams = JSON.parse(process.env.paws_collector_param_string_2);
+        const initialStates = streams.map(stream => {
+            return {
+                stream,
+                since: startTs,
+                until: endTs,
+                nextPage: null,
+                poll_interval_sec: 1
+            }
+        });
+
+        return callback(null, initialStates, 1);
     }
 
     pawsGetRegisterParameters(event, callback){
         const regValues = {
-            dataType: this._ingestType,
-            version: this._version,
-            pawsCollectorType: 'o365',
-            collectorId: "none",
-            stackName: event.ResourceProperties.StackName
+            azureTenantId: process.env.paws_collector_param_string_1,
+            azureStreams: process.env.paws_collector_param_string_2
         };
 
         callback(null, regValues);
@@ -73,29 +74,63 @@ class O365Collector extends PawsCollector {
     
     pawsGetLogs(state, callback) {
         let collector = this;
-        console.info(`O365000001 Collecting data from ${state.since} till ${state.until}`);
-        const newState = collector._getNextCollectionState(state);
+        console.info(`O365000001 Collecting data from ${state.since} till ${state.until} for stream ${state.stream}`);
+        let pageCount = 0;
 
-        // get the content for the timestamp
-        const streams = JSON.parse(process.env.O365_CONTENT_STREAMS)
-        const contentPromises = streams.map((stream) => {
-            return m_o365mgmnt.subscriptionsContent(stream, state.since, state.until)
-        });
-        // Get the streams from env vars and collect the content
-        Promise.all(contentPromises).then(results => {
-            const aggregateResult = results.reduce((agg, e) => [...e, ...agg], []);
+        // Page aggregation handler
+        const listContentCallback = ({parsedBody, nextPageUri}) => {
 
-            const contentPromises = aggregateResult.map(({contentUri}) => m_o365mgmnt.getContent(contentUri));
-            return Promise.all(contentPromises);
-        // Call all of the content urls and agregate the resutls
-        }).then(content => {
-            const flattenedResult = content.reduce((agg, e) => [...e, ...agg], []);
+            if(nextPageUri && pageCount < process.env.paws_max_pages_per_invocation){
+                pageCount++;
+                return m_o365mgmnt.getPreFormedUrl(nextPageUri)
+                    .then((nextPageRes) => {
+                        return {
+                            parsedBody: [...parsedBody, ...nextPageRes.parsedBody],
+                            nextPageUri: nextPageRes.nextPageUri
+                        }
+                    })
+                    .then(listContentCallback);
+            }
+            else{
+                return {
+                    parsedBody,
+                    nextPageUri
+                }
+            }
+        };
 
-            console.info(`O365000002 Next collection in ${newState.poll_interval_sec} seconds`);
-            callback(null, flattenedResult, newState, newState.poll_interval_sec);
+        // If the state has a next page value, then just start with that.
+        const initialListContent = state.nextPage ?
+            m_o365mgmnt.getPreFormedUrl(state.nextPage):
+            m_o365mgmnt.subscriptionsContent(state.stream, state.since, state.until);
+
+        // Call out to get content pages and form result
+        const contentPromise = initialListContent.then(listContentCallback)
+            .then(({parsedBody, nextPageUri}) => {
+                const contentUriPromises = parsedBody.map(({contentUri}) => m_o365mgmnt.getPreFormedUrl(contentUri));
+
+                return Promise.all(contentUriPromises).then(content => {
+                    return {
+                        logs: content.reduce((agg, {parsedBody}) => [...parsedBody, ...agg], []),
+                        nextPage: nextPageUri
+                    };
+                });
+            });
+
+        // Now that we have all the content uri promises agregated, we can call them and collect the data
+        contentPromise.then(({logs, nextPage}) => {
+
+            let newState;
+            if(nextPage === undefined){
+                newState = this._getNextCollectionState(state);
+            } else {
+                newState = this._getNextCollectionStateWithNextPage(state, nextPage);
+            }
+
+            return callback(null, logs, newState, newState.poll_interval_sec);
         }).catch(err => {
-            console.error(`O365000003 Error in collection: ${err}`);
-            callback(err);
+            console.error(`O365000003 Error in collection: ${err.message}`);
+            return callback(err);
         })
 
     }
@@ -115,7 +150,7 @@ class O365Collector extends PawsCollector {
             nextUntilMoment = moment(nextSinceTs).add(24, 'hours');
         }
         else if(nowMoment.diff(nextSinceTs, 'hours') > 1){
-            console.log('collection is more than 1 hour behind. Inccreaing the collection time to catch up')
+            console.log('collection is more than 1 hour behind. Increasing the collection time to catch up')
             nextUntilMoment = moment(nextSinceTs).add(1, 'hours');
         }
         else{
@@ -126,10 +161,21 @@ class O365Collector extends PawsCollector {
                 1 : this.pollInterval;
         
         return  {
-             since: nextSinceTs,
-             until: nextUntilMoment.toISOString(),
-             poll_interval_sec: nextPollInterval
+            stream: curState.stream,
+            since: nextSinceTs,
+            until: nextUntilMoment.toISOString(),
+            poll_interval_sec: nextPollInterval
         };
+    }
+
+    _getNextCollectionStateWithNextPage({stream, since, until}, nextPage) {
+        return {
+            stream,
+            since,
+            until,
+            nextPage,
+            poll_interval_sec: 1
+        }
     }
     
     pawsFormatLog(msg) {

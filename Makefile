@@ -1,5 +1,7 @@
+AWS_LAMBDA_S3_BUCKET ?= alertlogic-collectors
 AWS_LAMBDA_PAWS_FUNCTION_NAME ?= alertlogic-paws-collector
 AWS_LAMBDA_PAWS_PACKAGE_NAME ?= al-paws-collector.zip
+AWS_CFN_TEMPLATE_PATH ?= ./cfn/paws-collector.template
 
 .PHONY: test
 
@@ -24,6 +26,9 @@ publish:
 
 deploy:
 	aws lambda update-function-code --function-name $(AWS_LAMBDA_PAWS_FUNCTION_NAME) --zip-file fileb://$(AWS_LAMBDA_PAWS_PACKAGE_NAME)
+
+upload:
+	aws s3 cp $(AWS_CFN_TEMPLATE_PATH) s3://$(AWS_LAMBDA_S3_BUCKET)/cfn/
 
 sam-local:
 	@echo "Invoking ${AWS_LAMBDA_PAWS_FUNCTION_NAME} locally."

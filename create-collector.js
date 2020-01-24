@@ -38,7 +38,7 @@ if (!fs.existsSync(collectDir)){
 const templateDir = './collectors/template'
 copyFiles(templateDir, collectDir)
 console.log('populating writing cloud formation template')
-const fileContents = fs.readFileSync('cfn/collector.template.template', 'utf8')
+const fileContents = fs.readFileSync('collectors/template/cfn/collector.template.template', 'utf8')
 const replacedContents = populateTemplate(fileContents)
 fs.writeFileSync(`cfn/${type}_collector.template`, replacedContents, {'encoding': 'utf8'})
 

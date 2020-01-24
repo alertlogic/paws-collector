@@ -1,6 +1,8 @@
 const assert = require('assert');
+const rewire = require('rewire');
 const sinon = require('sinon');
 var AWS = require('aws-sdk-mock');
+const fs = require('fs');
 const m_response = require('cfn-response');
 
 const pawsMock = require('./paws_mock');
@@ -93,7 +95,7 @@ class TestCollector extends PawsCollector {
     
     pawsInitCollectionState(event, callback) {
         return callback(null, {state: 'initial-state'}, 900);
-    }
+    }   
     
     pawsGetLogs(state, callback) {
         return callback(null, ['log1', 'log2'], {state: 'new-state'}, 900);
@@ -108,10 +110,16 @@ class TestCollector extends PawsCollector {
             messageTs: 12345678,
             priority: 11,
             progName: 'OktaCollector',
-            message: JSON.stringify({test: 'message'}),
+            message: JSON.stringify(msg),
             messageType: 'json/aws.test'
         };
         return formattedMsg;
+    }
+}
+
+class TestCollectorNoOverrides extends PawsCollector {
+    constructor(ctx, creds) {
+        super(ctx, creds);
     }
 }
 
@@ -148,8 +156,32 @@ describe('Unit Tests', function() {
 
     beforeEach(function(){
         AWS.mock('KMS', 'decrypt', function (params, callback) {
+            let data;
+            if(params.CiphertextBlob.toString() === 'creds-from-file'){
+                console.log('dcrypting file');
+                data = {
+                    Plaintext : 'decrypted-secret-key-from-file'
+                };
+            }
+            else{
+                console.log('decrypting somthing else');
+                data = {
+                    Plaintext : 'decrypted-sercret-key'
+                };
+            }
+            return callback(null, data);
+        });
+
+        AWS.mock('KMS', 'encrypt', function (params, callback) {
             const data = {
-                Plaintext : 'decrypted-sercret-key'
+                CiphertextBlob : Buffer.from('creds-from-file')
+            };
+            return callback(null, data);
+        });
+
+        AWS.mock('S3', 'getObject', function (params, callback) {
+            const data = {
+                Body: Buffer.from('creds-from-file')
             };
             return callback(null, data);
         });
@@ -170,6 +202,73 @@ describe('Unit Tests', function() {
         restoreAlServiceStub();
         setEnvStub.restore();
         responseStub.restore();
+    });
+
+    describe('Load function', function() {
+        const rewiredTestModule = rewire('../paws_collector');
+        const {PawsCollector: LoadTestCollector} = rewiredTestModule;
+        let fileWriteStub;
+        let fileReadStub;
+        let fileExistsStub;
+        const CREDS_FILE_PATH = '/tmp/paws_creds.json';
+        
+        beforeEach(() => {
+            rewiredTestModule.__set__("PAWS_DECRYPTED_CREDS", null);
+            fileWriteStub = sinon.spy(fs, 'writeFileSync');
+            fileReadStub = sinon.spy(fs, 'readFileSync');
+        });
+
+        afterEach(() => {
+            fileWriteStub.restore();
+            fileReadStub.restore();
+        });
+
+        it('gets creds from s3 if present and writes them to cache', function(done){
+            const oldAuthType = process.env.paws_auth_type;
+            process.env.paws_auth_type = 's3object';
+            fileExistsStub = sinon.stub(fs, 'existsSync').callsFake(() => {
+                return false;
+            });
+
+            LoadTestCollector.load().then(function({pawsCreds}){
+                assert.equal(pawsCreds.secret,  'decrypted-secret-key-from-file');
+                assert.ok(fileReadStub.called);
+                assert.ok(fileWriteStub.calledWith(CREDS_FILE_PATH));
+                process.env.paws_auth_type = oldAuthType;
+                fileExistsStub.restore();
+                done();
+            });
+        });
+
+        it('gets creds from cache', function(done){
+            const oldAuthType = process.env.paws_auth_type;
+            process.env.paws_auth_type = 's3object';
+            fs.writeFileSync(CREDS_FILE_PATH, 'creds-from-file');
+            fileWriteStub.resetHistory();
+            fileExistsStub = sinon.stub(fs, 'existsSync').callsFake(() => {
+                return true;
+            });
+
+            LoadTestCollector.load().then(function({pawsCreds}){
+                assert.equal(pawsCreds.secret,  'decrypted-secret-key-from-file');
+                assert.equal(fileReadStub.calledWith(CREDS_FILE_PATH), true);
+                assert.equal(fileWriteStub.calledWith(CREDS_FILE_PATH), false);
+                process.env.paws_auth_type = oldAuthType;
+                fs.unlinkSync(CREDS_FILE_PATH);
+                fileExistsStub.restore();
+                done();
+            });
+        });
+
+        it('does not get the creds from a file when the auth type is not s3object', function(done){
+            LoadTestCollector.load().then(function({pawsCreds}){
+                assert.notEqual(pawsCreds.secret,  'decrypted-secret-key-from-file');
+                assert.equal(fileWriteStub.called, false);
+                assert.equal(fileReadStub.called, false);
+                fileExistsStub.restore();
+                done();
+            });
+        });
     });
     
     describe('Poll Request Tests', function() {
@@ -261,6 +360,182 @@ describe('Unit Tests', function() {
             PawsCollector.load().then((creds) => {
                 var collector = new TestCollector(ctx, creds);
                 collector.handleEvent(testEvent);
+            });
+        });
+    });
+    
+    describe('Format Log Tests', function(){
+        it('Format success', function(done) {
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                },
+                succeed : function() {
+                }
+            };
+            
+            const formattedMsg = {
+                messageTs: 12345678,
+                priority: 11,
+                progName: 'OktaCollector',
+                message: '"test"',
+                messageType: 'json/aws.test'
+            };
+            
+            PawsCollector.load().then((creds) => {
+            const collector = new TestCollector(ctx, creds);
+            const returned = collector.pawsFormatLog("test");
+            assert.deepEqual(returned, formattedMsg);
+            done();
+            });
+        });
+        it('Format throw', function(done) {
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                },
+                succeed : function() {
+                }
+            };
+            PawsCollector.load().then((creds) => {
+            var collector = new TestCollectorNoOverrides(ctx, creds);
+            assert.throws(function() {collector.pawsFormatLog("test");}, Error);
+            done();
+            });
+        });
+    });
+    
+    describe('Get Log Tests', function(){
+        it('Get Log success', function(done) {
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+        
+            const callbackStub = sinon.spy(TestCollector.prototype, "pawsGetLogs");
+            var aimsCreds = pawsMock.AIMS_TEST_CREDS;
+            var pawsCreds = pawsMock.PAWS_TEST_CREDS;
+            var collector = new TestCollector(ctx, {aimsCreds, pawsCreds});
+            const mockState = {state: 'initial-state'};
+            collector.pawsGetLogs(mockState, (error, logs, newState, newTimeout) => {
+                assert.ok(callbackStub.called);
+                assert.equal(error, null);
+                assert.equal(logs.length, 2);
+                assert.deepEqual(newState, {state: 'new-state'});
+                assert.equal(newTimeout, 900);
+                callbackStub.restore();
+                done();
+            });
+        });
+        it('Get Log throw', function(done){
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                },
+                succeed : function() {    
+                }
+            };
+            
+            const state = {state: 'initial-state'};
+            const callbackStub = sinon.stub(TestCollector.prototype, "pawsGetLogs");
+            PawsCollector.load().then((creds) => {
+                var collector = new TestCollectorNoOverrides(ctx, creds);
+                assert.throws(function() {collector.pawsGetLogs(state, callbackStub);}, Error);
+                done();
+            });
+        });    
+    });
+    describe('Init Collection Tests', function(){
+        it('Init Collection State success', function(done){
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                },
+                succeed : function() {
+                }
+            };
+            const testEvent = {"event": "create"};
+            const callbackStub = sinon.spy(TestCollector.prototype, "pawsInitCollectionState");
+            PawsCollector.load().then((creds) => {
+                var collector = new TestCollector(ctx, creds);
+                collector.pawsInitCollectionState(testEvent, (error, newState, newTimeout) => {
+                    assert.ok(callbackStub.called);
+                    assert.equal(error, null);
+                    assert.deepEqual(newState, {state: 'initial-state'});
+                    assert.equal(newTimeout, 900);
+                    callbackStub.restore();
+                    done();
+                });
+            });
+        });
+        it('Init Collection State throw', function(done){
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                },
+                succeed : function(){
+                }
+            };
+            
+            const testEvent = {"event" : "create"};
+            const callbackStub = sinon.stub(TestCollector.prototype, "pawsInitCollectionState");
+            PawsCollector.load().then((creds) => {
+                var collector = new TestCollectorNoOverrides(ctx, creds);
+                assert.throws( function() {collector.pawsInitCollectionState(testEvent, callbackStub);}, Error);
+                done();
+            });
+        });
+    });
+    describe('Get Register Parameters Tests', function(){
+        it('Get Register Parameters populated', function(done){
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                },
+                succeed : function(){
+                }
+            };
+            
+            const testEvent = {"event" : "create"};
+            PawsCollector.load().then((creds) => {
+                var collector = new TestCollector(ctx, creds);
+                collector.pawsGetRegisterParameters(testEvent, (error, objectWithRegistrationProperties) =>{
+                    assert.equal(error, null);
+                    assert.deepEqual(objectWithRegistrationProperties, {register: 'test-param'});
+                    done();
+                });
+            });
+        });
+        it('Get Register Parameters empty', function(done){
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                },
+                succeed : function(){
+                }
+            };
+            
+            const testEvent = {"event" : "create"};
+            PawsCollector.load().then((creds) => {
+                var collector = new TestCollectorNoOverrides(ctx, creds);
+                collector.pawsGetRegisterParameters(testEvent, (error, objectWithRegistrationProperties) =>{
+                    assert.equal(error, null);
+                    assert.deepEqual(objectWithRegistrationProperties, {});
+                    done();
+                });
             });
         });
     });

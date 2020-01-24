@@ -1,0 +1,98 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Alert Logic template for creating an O365 Logs collector",
+    "Parameters": {
+        "AlertlogicAccessKeyId": {
+            "Description": "Alert Logic Access Key Id obtained from AIMS",
+            "Type": "String"
+        },
+        "AlertlogicSecretKey": {
+            "Description": "Alert Logic Secret Key returned from AIMS for the Access Key Id",
+            "Type": "String",
+            "NoEcho": true
+        },
+        "AlApiEndpoint": {
+            "Description": "Alert Logic API endpoint",
+            "Type": "String",
+            "Default": "api.global-services.global.alertlogic.com",
+            "AllowedValues": [
+                "api.global-services.global.alertlogic.com",
+                "api.global-integration.product.dev.alertlogic.com"
+            ]
+        },
+        "AlDataResidency": {
+            "Description": "Alert Logic Data Residency",
+            "Type": "String",
+            "Default": "default",
+            "AllowedValues": ["default"]
+        },
+        "PackagesBucketPrefix": {
+            "Description": "S3 bucket name prefix where collector packages are located.",
+            "Type": "String",
+            "Default": "alertlogic-collectors"
+        },
+        "AlertlogicCustomerId": {
+            "Description": "Optional. Alert Logic customer ID which collected data should be reported for. If not set customer ID is derived from AIMs tokens",
+            "Type": "String",
+            "Default": ""
+        },
+        "CollectorId": {
+            "Description": "Optional. A collector UUID if known.",
+            "Type": "String",
+            "Default": "none"
+        },
+        "AzureAppRegistrationClientId": {
+            "Description": "App Registration Client ID",
+            "Type": "String"
+        },
+        "AzureAppRegistrationClientSecret": {
+            "Description": "App Registration Client Secret",
+            "Type": "String",
+            "NoEcho": true
+        },
+        "AzureTenantId": {
+            "Description": "Azure Tenant ID",
+            "Type": "String"
+        },
+        "AzureContentStreams": {
+            "Description": "The Content Streams to Collect",
+            "Type": "String",
+            "Default": "[\"Audit.AzureActiveDirectory\", \"Audit.Exchange\", \"Audit.SharePoint\", \"Audit.General\"]"
+        },
+        "CollectionStartTs": {
+            "Description": "Optional. Timestamp when log collection starts. For example, 2019-11-21T16:00:00Z",
+            "Type": "String",
+            "AllowedPattern" : "(?:^\\d{4}(-\\d{2}){2}T(\\d{2}:){2}\\d{2}Z$)?"
+        }
+    },
+    "Resources":{
+      "O365CollectorStack" : {
+        "Type" : "AWS::CloudFormation::Stack",
+        "Properties" : {
+          "TemplateURL" : {"Fn::Join" : ["", [
+                    "https://s3.amazonaws.com/",
+                    {"Ref":"PackagesBucketPrefix"}, "-us-east-1",
+                    "/cfn/paws-collector.template"
+               ]]},
+          "Parameters" : {
+            "AlertlogicAccessKeyId" : { "Ref":"AlertlogicAccessKeyId" },
+            "AlertlogicSecretKey" : { "Ref":"AlertlogicSecretKey" },
+            "AlApiEndpoint" : { "Ref":"AlApiEndpoint" },
+            "AlDataResidency" : { "Ref":"AlDataResidency" },
+            "PackagesBucketPrefix" : { "Ref":"PackagesBucketPrefix" },
+            "PawsCollectorTypeName" : "o365",
+            "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
+            "CollectorId" : { "Ref":"CollectorId" },
+            "PollingInterval" : 60,
+            "PawsEndpoint" : "https://managment.office.com/",
+            "PawsAuthType" : "oauth2",
+            "PawsClientId" : { "Ref":"AzureAppRegistrationClientId" },
+            "PawsSecret" : { "Ref":"AzureAppRegistrationClientSecret" },
+            "CollectionStartTs" : { "Ref":"CollectionStartTs" },
+            "CollectorParamString1" : { "Ref":"AzureTenantId" },
+            "CollectorParamString2" : { "Ref":"AzureContentStreams" }
+          }
+        }
+      }
+   }
+}

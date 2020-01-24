@@ -4,18 +4,18 @@ process.env.ingest_api = 'ingest.global-services.global.alertlogic.com';
 process.env.azollect_api = 'azcollect.global-services.global.alertlogic.com';
 process.env.aims_access_key_id = 'aims-key-id';
 process.env.aims_secret_key = 'aims-secret-key-encrypted';
+process.env.paws_api_client_id = 'a-client-id';
 process.env.paws_api_secret = 'paws-secret-key-encrypted';
 process.env.log_group = 'logGroupName';
 process.env.paws_state_queue_arn = "arn:aws:sqs:us-east-1:352283894008:paws-state-queue";
-process.env.AZURE_APP_TENANT_ID = '79ca7c9d-83ce-498f-952f-4c03b56ab573';
-process.env.O365_CONTENT_STREAMS = '["Audit.AzureActiveDirectory", "Audit.Exchange", "Audit.SharePoint", "Audit.General"]';
-process.env.CUSTOMCONNSTR_APP_CLIENT_ID = 'a-client-id';
-process.env.CUSTOMCONNSTR_APP_CLIENT_SECRET = 'a-client-secret';
-process.env.paws_extension = 'o365';
-process.env.o365_endpoint = 'https://test.alertlogic.com/';
+process.env.paws_collector_param_string_1 = '79ca7c9d-83ce-498f-952f-4c03b56ab573';
+process.env.paws_collector_param_string_2 = '["Audit.AzureActiveDirectory", "Audit.Exchange", "Audit.SharePoint", "Audit.General"]';
+process.env.paws_type_name = 'o365';
+process.env.paws_endpoint = 'https://test.alertlogic.com/';
 process.env.o365_token = 'o365-token';
 process.env.collector_id = 'collector-id';
 process.env.paws_poll_interval = 60;
+process.env.paws_max_pages_per_invocation = 2;
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',

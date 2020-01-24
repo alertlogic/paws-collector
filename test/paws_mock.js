@@ -7,7 +7,10 @@ process.env.aims_secret_key = 'aims-secret-key-encrypted';
 process.env.log_group = 'logGroupName';
 process.env.paws_state_queue_arn = 'arn:aws:sqs:us-east-1:352283894008:test-queue';
 process.env.paws_state_queue_url = 'https://sqs.us-east-1.amazonaws.com/352283894008/test-queue';
+process.env.paws_s3_object_path = "s3://joe-creds-test/paws_creds.json";
+process.env.paws_kms_key_arn = "arn:aws:kms:us-east-1:352283894008:key/cdda86d5-615b-4dcc-9319-77ab34510473";
 process.env.paws_type_name = 'okta';
+process.env.paws_auth_type = 'auth';
 process.env.paws_poll_interval = 900;
 process.env.paws_endpoint = 'https://test.alertlogic.com/';
 process.env.paws_api_secret = 'api-token';
@@ -19,6 +22,11 @@ const AIMS_TEST_CREDS = {
     secret_key: 'test-secret-key'
 };
 
+const PAWS_TEST_CREDS = {
+    auth_type: process.env.paws_api_auth_type,
+    client_id: process.env.paws_api_client_id,
+    secret: process.env.paws_api_secret
+};
 
 const CWL_TEST_EVENT = {
     'awslogs' : { 
@@ -105,6 +113,7 @@ const HEALTCHECK_SUBSCRIPTION_FILTERS = {
 
 module.exports = {
     AIMS_TEST_CREDS : AIMS_TEST_CREDS,
+    PAWS_TEST_CREDS : PAWS_TEST_CREDS,
     CWL_TEST_EVENT : CWL_TEST_EVENT,
     FUNCTION_ARN : FUNCTION_ARN,
     STACK_NAME : STACK_NAME,

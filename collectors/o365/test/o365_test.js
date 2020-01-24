@@ -15,7 +15,7 @@ var alserviceStub = {};
 var responseStub = {};
 var setEnvStub = {};
 var subscriptionsContentStub;
-var getContentStub;
+var getPreFormedUrlStub;
 
 function setAlServiceStub() {
     alserviceStub.get = sinon.stub(m_alCollector.AlServiceC.prototype, 'get').callsFake(
@@ -66,20 +66,26 @@ function setO365MangementStub() {
                 var result = {
                     contentUri: "https://joeiscool.com/joeiscool"
                 };
-                return resolve([result]);
+                return resolve({
+                    nextPageUri: undefined,
+                    parsedBody: [result]
+                });
             });
         });
-    getContentStub = sinon.stub(m_o365mgmnt, 'getContent').callsFake(
+    getPreFormedUrlStub = sinon.stub(m_o365mgmnt, 'getPreFormedUrl').callsFake(
             function fakeFn(path, extraOptions) {
                 return new Promise(function(resolve, reject) {
-                    return resolve([o365Mock.MOCK_LOG]);
+                    return resolve({
+                        nextPageUri: undefined,
+                        parsedBody: [o365Mock.MOCK_LOG]
+                    });
                 });
             });
 }
 
 function restoreO365ManagemntStub() {
     subscriptionsContentStub.restore();
-    getContentStub.restore();
+    getPreFormedUrlStub.restore();
 }
 function mockSetEnvStub() {
     setEnvStub = sinon.stub(m_al_aws, 'setEnv').callsFake((vars, callback)=>{
@@ -128,11 +134,8 @@ describe('O365 Collector Tests', function() {
             invokedFunctionArn : o365Mock.FUNCTION_ARN,
             fail : function(error) {
                 assert.fail(error);
-                done();
             },
-            succeed : function() {
-                done();
-            }
+            succeed : function() {}
         };
         it('get inital state less than 7 days in the past', function(done) {
             O365Collector.load().then(function(creds) {
@@ -140,9 +143,11 @@ describe('O365 Collector Tests', function() {
                 const startDate = moment().subtract(1, 'days').toISOString();
                 process.env.paws_collection_start_ts = startDate;
 
-                collector.pawsInitCollectionState(o365Mock.LOG_EVENT, (err, initialState, nextPoll) => {
-                    assert.equal(initialState.since, startDate, "Dates are not equal");
-                    assert.notEqual(moment(initialState.until).diff(initialState.since, 'hours'), 24)
+                collector.pawsInitCollectionState(o365Mock.LOG_EVENT, (err, initialStates, nextPoll) => {
+                    initialStates.forEach((state) => {
+                        assert.equal(state.since, startDate, "Dates are not equal");
+                        assert.notEqual(moment(state.until).diff(state.since, 'hours'), 24);
+                    });
                     done();
                 });
             });
@@ -153,9 +158,11 @@ describe('O365 Collector Tests', function() {
                 const startDate = moment().subtract(8, 'days').toISOString();
                 process.env.paws_collection_start_ts = startDate;
 
-                collector.pawsInitCollectionState(o365Mock.LOG_EVENT, (err, initialState, nextPoll) => {
-                    assert.notEqual(initialState.since, startDate, "Date is more than 7 days in the past");
-                    assert.equal(moment(initialState.until).diff(initialState.since, 'hours'), 24)
+                collector.pawsInitCollectionState(o365Mock.LOG_EVENT, (err, initialStates, nextPoll) => {
+                    initialStates.forEach((state) => {
+                        assert.notEqual(state.since, startDate, "Date is more than 7 days in the past");
+                        assert.equal(moment(state.until).diff(state.since, 'hours'), 24);
+                    });
                     done();
                 });
             });
@@ -166,8 +173,10 @@ describe('O365 Collector Tests', function() {
                 const startDate = moment().subtract(12, 'hours').toISOString();
                 process.env.paws_collection_start_ts = startDate;
 
-                collector.pawsInitCollectionState(o365Mock.LOG_EVENT, (err, initialState, nextPoll) => {
-                    assert.notEqual(moment(initialState.until).diff(initialState.since, 'hours'), 24)
+                collector.pawsInitCollectionState(o365Mock.LOG_EVENT, (err, initialStates, nextPoll) => {
+                    initialStates.forEach((state) => {
+                        assert.notEqual(moment(state.until).diff(state.since, 'hours'), 24);
+                    });
                     done();
                 });
             });
@@ -178,8 +187,10 @@ describe('O365 Collector Tests', function() {
                 const startDate = moment().subtract(2, 'days').toISOString();
                 process.env.paws_collection_start_ts = startDate;
 
-                collector.pawsInitCollectionState(o365Mock.LOG_EVENT, (err, initialState, nextPoll) => {
-                    assert.equal(moment(initialState.until).diff(initialState.since, 'hours'), 24)
+                collector.pawsInitCollectionState(o365Mock.LOG_EVENT, (err, initialStates, nextPoll) => {
+                    initialStates.forEach((state) => {
+                        assert.equal(moment(state.until).diff(state.since, 'hours'), 24);
+                    });
                     done();
                 });
             });
@@ -191,14 +202,11 @@ describe('O365 Collector Tests', function() {
             invokedFunctionArn : o365Mock.FUNCTION_ARN,
             fail : function(error) {
                 assert.fail(error);
-                done();
             },
-            succeed : function() {
-                done();
-            }
+            succeed : function() {}
         };
         it('get next state if more than 24 hours in the past', function(done) {
-            const startDate = moment().subtract(3, 'days')
+            const startDate = moment().subtract(3, 'days');
             const curState = {
                 since: startDate.toISOString(),
                 until: startDate.add(2, 'days').toISOString(),
@@ -207,13 +215,13 @@ describe('O365 Collector Tests', function() {
             O365Collector.load().then(function(creds) {
                 var collector = new O365Collector(ctx, creds, 'o365');
                 const newState = collector._getNextCollectionState(curState);
-                assert.equal(moment(newState.until).diff(newState.since, 'hours'), 1)
+                assert.equal(moment(newState.until).diff(newState.since, 'hours'), 1);
                 assert.equal(newState.poll_interval_sec, 1);
                 done();
             });
         });
         it('get next state if less than 24 hours in the past but more than an hour', function(done) {
-            const startDate = moment().subtract(3, 'hours')
+            const startDate = moment().subtract(3, 'hours');
             const curState = {
                 since: startDate.toISOString(),
                 until: startDate.add(1, 'hours').toISOString(),
@@ -222,13 +230,13 @@ describe('O365 Collector Tests', function() {
             O365Collector.load().then(function(creds) {
                 var collector = new O365Collector(ctx, creds, 'o365');
                 const newState = collector._getNextCollectionState(curState);
-                assert.equal(moment(newState.until).diff(newState.since, 'hours'), 1)
+                assert.equal(moment(newState.until).diff(newState.since, 'hours'), 1);
                 assert.equal(newState.poll_interval_sec, 1);
                 done();
             });
         });
         it('get next state if less than 1 hour in the past but more than the polling interval', function(done) {
-            const startDate = moment().subtract(20, 'minutes')
+            const startDate = moment().subtract(20, 'minutes');
             O365Collector.load().then(function(creds) {
                 var collector = new O365Collector(ctx, creds, 'o365');
                 const curState = {
@@ -245,7 +253,7 @@ describe('O365 Collector Tests', function() {
         it('get next state if within polling interval', function(done) {
             O365Collector.load().then(function(creds) {
                 var collector = new O365Collector(ctx, creds, 'o365');
-                const startDate = moment().subtract(collector.pollInterval * 2, 'seconds')
+                const startDate = moment().subtract(collector.pollInterval * 2, 'seconds');
                 const curState = {
                     since: startDate.toISOString(),
                     until: startDate.add(collector.pollInterval, 'seconds').toISOString(),
@@ -264,36 +272,24 @@ describe('O365 Collector Tests', function() {
             invokedFunctionArn : o365Mock.FUNCTION_ARN,
             fail : function(error) {
                 assert.fail(error);
-                done();
             },
-            succeed : function() {
-                done();
-            }
+            succeed : function() {}
         };
 
         it('Get Logs Sunny', function(done) {
-            let ctx = {
-                invokedFunctionArn : o365Mock.FUNCTION_ARN,
-                fail : function(error) {
-                    assert.fail(error);
-                    done();
-                },
-                succeed : function() {
-                    done();
-                }
-            };
             setO365MangementStub();
             O365Collector.load().then(function(creds) {
                 var collector = new O365Collector(ctx, creds, 'o365');
-                const startDate = moment().subtract(3, 'days')
+                const startDate = moment().subtract(3, 'days');
                 const curState = {
+                    stream: "FakeStream",
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     poll_interval_sec: 1
                 };
 
-                let fmt = collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
-                    assert.equal(logs.length, 4);
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
+                    assert.equal(logs.length, 1);
                     assert.equal(moment(newState.until).diff(newState.since, 'hours'), 1);
                     assert.equal(newState.poll_interval_sec, 1);
                     restoreO365ManagemntStub();
@@ -308,75 +304,211 @@ describe('O365 Collector Tests', function() {
                         return reject('Here is an Error');
                     });
                 });
-            getContentStub = sinon.stub(m_o365mgmnt, 'getContent').callsFake(
+            getPreFormedUrlStub = sinon.stub(m_o365mgmnt, 'getPreFormedUrl').callsFake(
                     function fakeFn(path, extraOptions) {
                         return new Promise(function(resolve, reject) {
-                            return resolve([o365Mock.MOCK_LOG]);
+                            return resolve({parsedBody: [o365Mock.MOCK_LOG]});
                         });
                     });
 
-            let ctx = {
-                invokedFunctionArn : o365Mock.FUNCTION_ARN,
-                fail : function(error) {
-                    assert.fail(error);
-                    done();
-                },
-                succeed : function() {
-                    done();
-                }
-            };
             O365Collector.load().then(function(creds) {
                 var collector = new O365Collector(ctx, creds, 'o365');
-                const startDate = moment().subtract(3, 'days')
+                const startDate = moment().subtract(3, 'days');
                 const curState = {
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     poll_interval_sec: 1
                 };
 
-                let fmt = collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
                     assert.notEqual(err, null);
                     restoreO365ManagemntStub();
                     done();
                 });
             });
         });
-    });
+        it('Get next content page when present', function(done) {
+            subscriptionsContentStub = sinon.stub(m_o365mgmnt, 'subscriptionsContent').callsFake(
+                function fakeFn(path, extraOptions) {
+                    return new Promise(function(resolve, reject) {
+                        var result = {
+                            contentUri: "https://joeiscool.com/joeiscool"
+                        };
+                        return resolve({
+                            nextPageUri: 'a fake next page',
+                            parsedBody: [result]
+                        });
+                    });
+                });
+            getPreFormedUrlStub = sinon.stub(m_o365mgmnt, 'getPreFormedUrl');
+            getPreFormedUrlStub.onCall(0).callsFake(
+                function(path, extraOptions) {
+                    return new Promise(function(resolve, reject) {
+                        var result = {
+                            contentUri: "https://joeiscool.com/nextpage"
+                        };
+                        return resolve({
+                            nextPageUri: undefined,
+                            parsedBody: [result]
+                        });
+                    });
+                });
+            getPreFormedUrlStub.onCall(1).callsFake(
+                function(path, extraOptions) {
+                    return new Promise(function(resolve, reject) {
+                        var result = {
+                            aLogKey: "SomeLogValue1"
+                        };
+                        return resolve({
+                            nextPageUri: undefined,
+                            parsedBody: [result]
+                        });
+                    });
+                });
+            getPreFormedUrlStub.onCall(2).callsFake(
+                function(path, extraOptions) {
+                    return new Promise(function(resolve, reject) {
+                        var result = {
+                            aLogKey: "SomeLogValue2"
+                        };
+                        return resolve({
+                            nextPageUri: undefined,
+                            parsedBody: [result]
+                        });
+                    });
+                });
+            O365Collector.load().then(function(creds) {
+                var collector = new O365Collector(ctx, creds, 'o365');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    stream: "FakeStream",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
 
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
+                    assert.ok(getPreFormedUrlStub.calledWith("https://joeiscool.com/joeiscool"));
+                    assert.equal(logs.length, 2);
+                    restoreO365ManagemntStub();
+                    done();
+                });
+            });
+        });
+
+        it('Stops paginiating at the pagination limit', function(done) {
+            subscriptionsContentStub = sinon.stub(m_o365mgmnt, 'subscriptionsContent').callsFake(
+                function fakeFn(path, extraOptions) {
+                    return new Promise(function(resolve, reject) {
+                        var result = {
+                            contentUri: "https://joeiscool.com/joeiscool"
+                        };
+                        return resolve({
+                            nextPageUri: 'a fake next page',
+                            parsedBody: [result]
+                        });
+                    });
+                });
+            getPreFormedUrlStub = sinon.stub(m_o365mgmnt, 'getPreFormedUrl').callsFake(
+                function(path, extraOptions) {
+                    console.log("calling stub", path);
+                    return new Promise(function(resolve, reject) {
+                        var result = {
+                            contentUri: "https://joeiscool.com/nextpage"
+                        };
+                        return resolve({
+                            nextPageUri: 'a fake next page',
+                            parsedBody: [result]
+                        });
+                    });
+                });
+            O365Collector.load().then(function(creds) {
+                var collector = new O365Collector(ctx, creds, 'o365');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    stream: "FakeStream",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
+                    assert.ok(getPreFormedUrlStub.getCall(0).calledWithExactly('a fake next page'));
+                    assert.ok(getPreFormedUrlStub.getCall(1).calledWithExactly('a fake next page'));
+                    assert.equal(logs.length, parseInt(process.env.paws_max_pages_per_invocation) + 1);
+                    assert.equal(newState.nextPage, 'a fake next page');
+                    restoreO365ManagemntStub();
+                    done();
+                });
+            });
+        });
+        it('Resumes pagination when it recieves a nextpage in the state', function(done) {
+            subscriptionsContentStub = sinon.stub(m_o365mgmnt, 'subscriptionsContent').callsFake(
+                function fakeFn(path, extraOptions) {
+                    return new Promise(function(resolve, reject) {
+                        var result = {
+                            contentUri: "https://joeiscool.com/joeiscool"
+                        };
+                        return resolve({
+                            nextPageUri: 'a fake next page',
+                            parsedBody: [result]
+                        });
+                    });
+                });
+            getPreFormedUrlStub = sinon.stub(m_o365mgmnt, 'getPreFormedUrl').callsFake(
+                function(path, extraOptions) {
+                    console.log("calling stub", path);
+                    return new Promise(function(resolve, reject) {
+                        var result = {
+                            contentUri: "https://joeiscool.com/nextpage"
+                        };
+                        return resolve({
+                            nextPageUri: 'a fake next page',
+                            parsedBody: [result]
+                        });
+                    });
+                });
+            O365Collector.load().then(function(creds) {
+                var collector = new O365Collector(ctx, creds, 'o365');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    stream: "FakeStream",
+                    nextPage: "next page from state",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
+                    assert.equal(subscriptionsContentStub.called, false);
+                    assert.ok(getPreFormedUrlStub.getCall(0).calledWithExactly('next page from state'));
+                    assert.ok(getPreFormedUrlStub.getCall(1).calledWithExactly('a fake next page'));
+                    assert.equal(logs.length, parseInt(process.env.paws_max_pages_per_invocation) + 1);
+                    assert.equal(newState.nextPage, 'a fake next page');
+                    restoreO365ManagemntStub();
+                    done();
+                });
+            });
+        });
+    });
     describe('pawsGetRegisterParameters', function() {
         let ctx = {
             invokedFunctionArn : o365Mock.FUNCTION_ARN,
             fail : function(error) {
                 assert.fail(error);
-                done();
             },
-            succeed : function() {
-                done();
-            }
+            succeed : function() {}
         };
 
         it('Get register body', function(done) {
-            let ctx = {
-                invokedFunctionArn : o365Mock.FUNCTION_ARN,
-                fail : function(error) {
-                    assert.fail(error);
-                    done();
-                },
-                succeed : function() {
-                    done();
-                }
-            };
             O365Collector.load().then(function(creds) {
                 var collector = new O365Collector(ctx, creds, 'o365');
                 const sampleEvent = {ResourceProperties: {StackName: 'a-stack-name'}};
 
-                let fmt = collector.pawsGetRegisterParameters(sampleEvent, (err, regValues) =>{
+                collector.pawsGetRegisterParameters(sampleEvent, (err, regValues) =>{
                     const expectedRegValues = {
-                        dataType: collector._ingestType,
-                        version: collector._version,
-                        pawsCollectorType: 'o365',
-                        collectorId: 'none',
-                        stackName: sampleEvent.ResourceProperties.StackName
+                        azureStreams: '["Audit.AzureActiveDirectory", "Audit.Exchange", "Audit.SharePoint", "Audit.General"]',
+                        azureTenantId: '79ca7c9d-83ce-498f-952f-4c03b56ab573'
                     };
                     assert.deepEqual(regValues, expectedRegValues);
                     done();

@@ -1,27 +1,19 @@
 const assert = require('assert');
 const sinon = require('sinon');
 const {O365Management} = require('../lib/o365_mgmnt/o365management');
-var m_alCollector = require('@alertlogic/al-collector-js');
 const msRest = require('@azure/ms-rest-js');
-const {AzureServiceClient}= require('@azure/ms-rest-azure-js');
 const {ApplicationTokenCredentials} = require('@azure/ms-rest-nodeauth');
 const msWebResource = msRest.WebResource;
 
-var alserviceStub = {};
-var responseStub = {};
-var setEnvStub = {};
-var subscriptionsContentStub;
-var getContentStub;
-
 function createManagmentInstance(){
     var g_appAdCreds = new ApplicationTokenCredentials(
-        process.env.CUSTOMCONNSTR_APP_CLIENT_ID,
-        process.env.AZURE_APP_TENANT_ID,
+        process.env.paws_api_client_id,
+        process.env.paws_collector_param_string_1,
         'a secret',
         'https://manage.office.com'
     );
 
-    return new O365Management(g_appAdCreds, process.env.AZURE_APP_TENANT_ID)
+    return new O365Management(g_appAdCreds, process.env.paws_collector_param_string_1);
 }
 
 describe('O365 managment tests', function() {
@@ -36,6 +28,11 @@ describe('O365 managment tests', function() {
 
         it('handles a 200 result', (done) => {
             const mockRes = {
+                headers: {
+                    get(key){
+                        return 'some-header-value';
+                    }
+                },
                 parsedBody: [{foo: "bar"}],
                 bodyAsText: '[{"foo": "bar"}]',
                 status: 200
@@ -44,12 +41,20 @@ describe('O365 managment tests', function() {
             const handler = managmentInstance.requestHandler(httpRequest);
             const output = handler(mockRes);
 
-            assert.deepEqual(output, mockRes.parsedBody);
+            assert.deepEqual(output, {
+                nextPageUri: 'some-header-value',
+                parsedBody: mockRes.parsedBody
+            });
             done();
         });
 
         it('handles a 200 result without a parsed body', (done) => {
             const mockRes = {
+                headers: {
+                    get(key){
+                        return 'some-header-value';
+                    }
+                },
                 bodyAsText: '[{"foo": "bar"}]',
                 status: 200
             };
@@ -57,12 +62,20 @@ describe('O365 managment tests', function() {
             const handler = managmentInstance.requestHandler(httpRequest);
             const output = handler(mockRes);
 
-            assert.deepEqual(output, [{foo: "bar"}]);
+            assert.deepEqual(output, {
+                nextPageUri: 'some-header-value',
+                parsedBody: JSON.parse(mockRes.bodyAsText)
+            });
             done();
         });
 
         it('throws on anything but a 200', (done) => {
             const mockRes = {
+                headers: {
+                    get(key){
+                        return 'some-header-value';
+                    }
+                },
                 bodyAsText: '[{"foo": "bar"}]',
                 status: 400
             };
@@ -82,36 +95,46 @@ describe('O365 managment tests', function() {
                 function fakeFn(request) {
                     return new Promise(function(resolve, reject) {
                         const mockRes = {
+                            headers: {
+                                get(key){
+                                    return 'some-header-value';
+                                }
+                            },
                             parsedBody: [{foo: "bar"}],
                             bodyAsText: '[{"foo": "bar"}]',
                             status: 200
                         };
 
-                        assert.equal(request.method, 'GET')
-                        assert.notEqual(request.headers.headersArray(), 0)
+                        assert.equal(request.method, 'GET');
+                        assert.notEqual(request.headers.headersArray(), 0);
                         return resolve(mockRes);
                     });
                 });
 
             const managementInstance = createManagmentInstance();
             managementInstance.subscriptionsContent('AFakeStream', 'startDate', 'endDate', {}).then(() => {
-                sendRequestStub.restore()
+                sendRequestStub.restore();
                 done();
-            })
-        })
+            });
+        });
 
         it('sets custom headers correctly', (done) => {
             sendRequestStub = sinon.stub(O365Management.prototype, 'sendRequest').callsFake(
                 function fakeFn(request) {
                     return new Promise(function(resolve, reject) {
                         const mockRes = {
+                            headers: {
+                                get(key){
+                                    return 'some-header-value';
+                                }
+                            },
                             parsedBody: [{foo: "bar"}],
                             bodyAsText: '[{"foo": "bar"}]',
                             status: 200
                         };
 
-                        assert.equal(request.headers.contains('foo'), true)
-                        assert.equal(request.headers.get('foo'), 'bar')
+                        assert.equal(request.headers.contains('foo'), true);
+                        assert.equal(request.headers.get('foo'), 'bar');
                         return resolve(mockRes);
                     });
                 });
@@ -121,15 +144,15 @@ describe('O365 managment tests', function() {
                 customHeaders:{
                     foo: "bar"
                 }
-            }
+            };
             managementInstance.subscriptionsContent('AFakeStream', 'startDate', 'endDate', options).then(() => {
                 sendRequestStub.restore();
                 done();
-            })
-        })
-    })
+            });
+        });
+    });
 
-    describe('getContent', () => {
+    describe('getPreFormedUrl', () => {
         let sendRequestStub;
 
         it('formats the request object corectly', (done) => {
@@ -137,36 +160,46 @@ describe('O365 managment tests', function() {
                 function fakeFn(request) {
                     return new Promise(function(resolve, reject) {
                         const mockRes = {
+                            headers: {
+                                get(key){
+                                    return 'some-header-value';
+                                }
+                            },
                             parsedBody: [{foo: "bar"}],
                             bodyAsText: '[{"foo": "bar"}]',
                             status: 200
                         };
 
-                        assert.equal(request.method, 'GET')
-                        assert.notEqual(request.headers.headersArray(), 0)
+                        assert.equal(request.method, 'GET');
+                        assert.notEqual(request.headers.headersArray(), 0);
                         return resolve(mockRes);
                     });
                 });
 
             const managementInstance = createManagmentInstance();
-            managementInstance.getContent('https://www.joeiscool.com', {}).then(() => {
-                sendRequestStub.restore()
+            managementInstance.getPreFormedUrl('https://www.joeiscool.com', {}).then(() => {
+                sendRequestStub.restore();
                 done();
-            })
-        })
+            });
+        });
 
         it('sets custom headers correctly', (done) => {
             sendRequestStub = sinon.stub(O365Management.prototype, 'sendRequest').callsFake(
                 function fakeFn(request) {
                     return new Promise(function(resolve, reject) {
                         const mockRes = {
+                            headers: {
+                                get(key){
+                                    return 'some-header-value';
+                                }
+                            },
                             parsedBody: [{foo: "bar"}],
                             bodyAsText: '[{"foo": "bar"}]',
                             status: 200
                         };
 
-                        assert.equal(request.headers.contains('foo'), true)
-                        assert.equal(request.headers.get('foo'), 'bar')
+                        assert.equal(request.headers.contains('foo'), true);
+                        assert.equal(request.headers.get('foo'), 'bar');
                         return resolve(mockRes);
                     });
                 });
@@ -176,12 +209,12 @@ describe('O365 managment tests', function() {
                 customHeaders:{
                     foo: "bar"
                 }
-            }
-            managementInstance.getContent('https://www.joeiscool.com', options).then(() => {
+            };
+            managementInstance.getPreFormedUrl('https://www.joeiscool.com', options).then(() => {
                 sendRequestStub.restore();
                 done();
-            })
-        })
-    })
+            });
+        });
+    });
 
 });

@@ -13,19 +13,59 @@
 const async = require('async');
 const debug = require('debug')('index');
 const AWS = require('aws-sdk');
+const fs = require('fs');
 
 const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector;
 const m_packageJson = require('./package.json');
 
+const CREDS_FILE_PATH = '/tmp/paws_creds.json';
 var PAWS_DECRYPTED_CREDS = null;
 
-function getDecryptedPawsCredentials(callback) {
+function getPawsCredsFile(){
+    return new Promise((resolve, reject) => {
+        // check if the creds file is cached and retrieve it if it is not
+        if(!fs.existsSync(CREDS_FILE_PATH)){
+            const s3 = new AWS.S3({apiVersion: '2006-03-01'});
+            const kms = new AWS.KMS();
+
+            // doing the string manipulation here because doing it here is way less groos than doing it in the cfn
+            const s3Path = process.env.paws_s3_object_path.split('//')[1];
+            const s3PathParts = s3Path.split('/');
+
+            // retrive the object from S3
+            var params = {
+                Bucket: s3PathParts.shift(),
+                Key: s3PathParts.join('/')
+            };
+            s3.getObject(params, (err, data) => {
+                if (err) return reject(new Error(err, err.stack));
+
+                // encrypt the file contents and cache on the lambda container file system
+                const encryptParams ={
+                    Plaintext: data.Body,
+                    KeyId: process.env.paws_kms_key_arn
+                };
+                kms.encrypt(encryptParams, (encryptError, encryptResponse) => {
+                    if (encryptError) return reject(new Error(encryptError, encryptError.stack));
+
+                    fs.writeFileSync(CREDS_FILE_PATH, encryptResponse.CiphertextBlob);
+                    return resolve(encryptResponse.CiphertextBlob);
+                })
+            });
+        }
+        else {
+            return resolve(fs.readFileSync(CREDS_FILE_PATH));
+        }
+    });
+};
+
+function getDecryptedPawsCredentials(credsBuffer, callback) {
     if (PAWS_DECRYPTED_CREDS) {
         return callback(null, PAWS_DECRYPTED_CREDS);
     } else {
         const kms = new AWS.KMS();
         kms.decrypt(
-            {CiphertextBlob: Buffer.from(process.env.paws_api_secret, 'base64')},
+            {CiphertextBlob: credsBuffer},
             (err, data) => {
                 if (err) {
                     return callback(err);
@@ -35,7 +75,7 @@ function getDecryptedPawsCredentials(callback) {
                         client_id: process.env.paws_api_client_id,
                         secret: data.Plaintext.toString('ascii')
                     };
-                    
+
                     return callback(null, PAWS_DECRYPTED_CREDS);
                 }
             });
@@ -47,17 +87,30 @@ class PawsCollector extends AlAwsCollector {
     static load() {
         return new Promise(function(resolve, reject){
             AlAwsCollector.load().then(function(aimsCreds) {
-                getDecryptedPawsCredentials(function(err, pawsCreds) {
-                    if (err){
-                        reject(err);
-                    } else {
-                        resolve({aimsCreds : aimsCreds, pawsCreds: pawsCreds});
-                    }
-                });
-            })
-        })
+                let credsPromise;
+
+                switch(process.env.paws_auth_type){
+                    case 's3object':
+                        credsPromise = getPawsCredsFile();
+                        break;
+                    default:
+                        const enVarCreds = Buffer.from(process.env.paws_api_secret, 'base64');
+                        credsPromise = new Promise(res => res(enVarCreds));
+                }
+
+                return credsPromise.then(credsBuffer => {
+                    getDecryptedPawsCredentials(credsBuffer, function(err, pawsCreds) {
+                        if (err){
+                            reject(err);
+                        } else {
+                            resolve({aimsCreds : aimsCreds, pawsCreds: pawsCreds});
+                        }
+                    });
+                }).catch(err => console.error(`PAWS000400 Error getting Paws Credentials ${err}`));
+            });
+        });
     }
-    
+
     constructor(context, {aimsCreds, pawsCreds}) {
         super(context, 'paws',
               AlAwsCollector.IngestTypes.LOGMSGS,
@@ -85,16 +138,15 @@ class PawsCollector extends AlAwsCollector {
     getProperties() {
         const baseProps = super.getProperties();
         let pawsProps = {
-            pawsCollectorType : this._pawsCollectorType
+            pawsCollectorType : this._pawsCollectorType,
+            pawsEndpoint : process.env.paws_endpoint
         };
         return Object.assign(pawsProps, baseProps);
     };
     
     register(event) {
         let collector = this;
-        let pawsRegisterProps = {
-            pawsEndpoint : process.env.paws_endpoint
-        };
+        let pawsRegisterProps = this.getProperties();
         
         async.waterfall([
             function(asyncCallback) {
@@ -255,6 +307,7 @@ class PawsCollector extends AlAwsCollector {
 }
 
 module.exports = {
+    getPawsCredsFile,
     PawsCollector: PawsCollector
 }
 
