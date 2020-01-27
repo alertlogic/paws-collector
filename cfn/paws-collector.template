@@ -87,7 +87,7 @@
         "PawsCredsS3Uri": {
             "Description": "The S3 uri where object where credentials are stored. in the for s3://<bucket>/<object-path> Only used when PawsAuthType is 's3object'",
             "Type": "String",
-            "AllowedPattern" : "^s3:\/\/[a-z,\-,0-9]*\/[a-z,\-,\.,\_,0-9]*",
+            "AllowedPattern" : "^s3:\/\/[a-z,\\-,0-9]*\/[a-z,\\-,\\.,\\_,0-9]*",
             "Default": ""
         },
         "CollectionStartTs": {
