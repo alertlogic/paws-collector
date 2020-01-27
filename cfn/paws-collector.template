@@ -79,6 +79,16 @@
             "Type": "String",
             "NoEcho": true
         },
+        "PawsSecretParamTier": {
+            "Description": "Tier for AWS Param store param. Change this to advanced if the size of the PAws secrets is over 4kb",
+            "Type": "String",
+            "Default": "Standard",
+            "AllowedValues": [
+                "Standard",
+                "Advanced",
+                "Intelligent-Tiering"
+            ]
+        },
         "PawsMaxPagesPerInvocation" :{
             "Description": "The maximum number of pages of content data retrieved per invocation",
             "Type": "Number",
@@ -440,6 +450,27 @@
                 }
             }
         },
+        "PawsSecretParam": {
+            "Type": "AWS::SSM::Parameter",
+            "Properties": {
+                "Name": {"Fn::Join": [
+                    "",
+                    [
+                        "PAWS-SECRET-",
+                        {"Ref": "PawsCollectorTypeName"},
+                        "-",
+                        {"Ref": "AWS::StackName"}
+                    ]
+                ]},
+                "Type": {"Ref": "PawsSecretParamTier"},
+                "Value": {
+                    "Fn::GetAtt": ["EncryptPawsSecret", "EncryptedText"]
+                },
+                "Tags": {
+                    "StackId": {"Ref": "AWS::StackId"}
+                }
+            }
+        },
       "PawsPollStateQueue":{
         "Type":"AWS::SQS::Queue",
         "DependsOn":[
@@ -554,8 +585,8 @@
                   "paws_kms_key_arn":{
                       "Fn::GetAtt": [ "LambdaKmsKey", "Arn" ]
                   },
-                  "paws_api_secret":{
-                      "Fn::GetAtt": ["EncryptPawsSecret", "EncryptedText"]
+                  "paws_secret_param_name":{
+                      "Fn::GetAtt": ["PawsSecretParam", "Name"]
                   },
                   "paws_s3_object_path":{
                       "Ref": "PawsCredsS3Uri"
