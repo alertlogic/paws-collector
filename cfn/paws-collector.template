@@ -94,12 +94,6 @@
             "Type": "Number",
             "Default": 10
         },
-        "PawsCredsS3Uri": {
-            "Description": "The S3 uri where object where credentials are stored. in the for s3://<bucket>/<object-path> Only used when PawsAuthType is 's3object'",
-            "Type": "String",
-            "AllowedPattern" : "^s3:\/\/[a-z,\-,0-9]*\/[a-z,\-,\.,\_,0-9]*",
-            "Default": ""
-        },
         "CollectionStartTs": {
             "Description": "Optional. Timestamp when log collection starts. For example, 2020-01-13T16:00:00Z.",
             "Type": "String",
@@ -378,11 +372,10 @@
                                 "\n",
                                 "exports.handler = (event, context, callback) => {\n",
                                 "    if (event.ResourceType == 'AWS::CloudFormation::CustomResource' &&\n",
-                                "        event.RequestType == 'Create' &&\n",
-                                "        event.ResourceProperties.Plaintext.length  > 0) {\n",
+                                "        event.RequestType == 'Create') {\n",
                                 "        return encrypt(event, context);\n",
                                 "    }\n",
-                                "    return response.send(event, context, response.SUCCESS, {EncryptedText: \"\"});\n",
+                                "    return response.send(event, context, response.SUCCESS);\n",
                                 "}"
                             ]
                         ]
