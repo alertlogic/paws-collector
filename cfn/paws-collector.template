@@ -455,7 +455,8 @@
                         {"Ref": "AWS::StackName"}
                     ]
                 ]},
-                "Type": {"Ref": "PawsSecretParamTier"},
+                "Type": "String",
+                "Tier": {"Ref": "PawsSecretParamTier"},
                 "Value": {
                     "Fn::GetAtt": ["EncryptPawsSecret", "EncryptedText"]
                 },
@@ -579,10 +580,7 @@
                       "Fn::GetAtt": [ "LambdaKmsKey", "Arn" ]
                   },
                   "paws_secret_param_name":{
-                      "Fn::GetAtt": ["PawsSecretParam", "Name"]
-                  },
-                  "paws_s3_object_path":{
-                      "Ref": "PawsCredsS3Uri"
+                      "Ref":"PawsSecretParam"
                   },
                   "paws_collection_start_ts":{
                       "Ref":"CollectionStartTs"
@@ -659,7 +657,15 @@
                       "Effect":"Allow",
                       "Action":"ssm:GetParameter",
                       "Resource":[
-                          { "Fn::GetAtt":[ "PawsSecretParam", "Arn" ] }
+                          { "Fn::Join":["", [
+                              "arn:aws:ssm:",
+                              {"Ref": "AWS::Region"},
+                              ":",
+                              {"Ref": "AWS::AccountId"},
+                              ":parameter/",
+                              {"Ref":"PawsSecretParam"}
+                            ]]
+                          }
                       ]
                   },
                   {
