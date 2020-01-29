@@ -151,8 +151,6 @@ class TestCollectorMultiState extends PawsCollector {
 }
 
 describe('Unit Tests', function() {
-    let loadStub;
-
     beforeEach(function(){
         AWS.mock('KMS', 'decrypt', function (params, callback) {
             const data = {
