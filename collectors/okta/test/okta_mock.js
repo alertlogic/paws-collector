@@ -10,6 +10,7 @@ process.env.paws_type_name = 'okta';
 process.env.paws_endpoint = 'https://test.alertlogic.com/';
 process.env.paws_api_secret = 'okta-token';
 process.env.collector_id = 'collector-id';
+process.env.paws_secret_param_name = 'PAWS-SECRET-okta';
 process.env.paws_poll_interval = 60;
 
 const AIMS_TEST_CREDS = {
