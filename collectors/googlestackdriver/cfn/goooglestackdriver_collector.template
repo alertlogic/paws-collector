@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Alert Logic template for creating a Auth0 Logs collector",
+    "Description": "Alert Logic template for creating a Google Stackdriver Logs collector",
     "Parameters": {
         "AlertlogicAccessKeyId": {
             "Description": "Alert Logic Access Key Id obtained from AIMS",
@@ -43,10 +43,10 @@
             "Type": "String",
             "Default": "none"
         },
-        "GCPKeyUri": {
-            "Description": "S3 uri for the client secret for GCP authentication",
+        "GoogleSecret": {
+            "Description": "The JSON key for the service account used to call the stackdriver Endpoint",
             "Type": "String",
-            "Default": ""
+            "NoEcho": true
         },
         "GoogleResourceIds": {
             "Description": "JSON list of google resources to poll logs from. In the format <resourceType>/<resourceID>",
@@ -95,16 +95,13 @@
                     "AlertlogicCustomerId": {
                         "Ref": "AlertlogicCustomerId"
                     },
-                    "PawsCredsS3Uri": {
-                        "Ref": "GCPKeyUri"
-                    },
                     "CollectorId": {
                         "Ref": "CollectorId"
                     },
                     "PollingInterval": 60,
-                    "PawsAuthType": "s3object",
-                    "PawsSecret": "IN-FILE",
-                    "PawsEndpoint": "NO-ENDPOINT",
+                    "PawsAuthType": "oauth2",
+                    "PawsSecret": {"Ref": "GoogleSecret"},
+                    "PawsEndpoint": "No-Endpoint",
                     "CollectorParamString1": {
                         "Ref": "GoogleResourceIds"
                     },

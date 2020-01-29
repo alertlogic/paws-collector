@@ -24,7 +24,7 @@ class GooglestackdriverCollector extends PawsCollector {
 
     pawsInitCollectionState(event, callback) {
         // TODO: put in some more efficient catching up logic for historical logs. Stackdriver stores logs for 30 days
-        const startTs = process.env.paws_collection_start_ts ? 
+        const startTs = process.env.paws_collection_start_ts ?
                 process.env.paws_collection_start_ts :
                     moment().toISOString();
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
