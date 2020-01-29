@@ -168,20 +168,9 @@ describe('Unit Tests', function() {
             return callback(null, data);
         });
 
-        loadStub = sinon.stub(PawsCollector, 'load').callsFake(() => {
-            return new Promise(res => {
-                return res({
-                    aimsCreds:{
-                        access_key_id: 'access_key_id',
-                        secret_key: 'secret_key' 
-                    },
-                    pawsCreds: {
-                        auth_type: 'auth_type',
-                        client_id: 'client_id',
-                        secret: 'secret'
-                    }
-                });
-            });
+        AWS.mock('SSM', 'getParameter', function (params, callback) {
+            const data = new Buffer('test-secret');
+            return callback(null, {Parameter : { Value: data.toString('base64')}});
         });
 
         responseStub = sinon.stub(m_response, 'send').callsFake(
@@ -200,7 +189,8 @@ describe('Unit Tests', function() {
         restoreAlServiceStub();
         setEnvStub.restore();
         responseStub.restore();
-        loadStub.restore();
+        AWS.restore('KMS');
+        AWS.restore('SSM');
     });
     
     describe('Poll Request Tests', function() {
