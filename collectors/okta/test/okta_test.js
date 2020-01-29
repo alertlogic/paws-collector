@@ -75,8 +75,12 @@ function mockSetEnvStub() {
 }
 
 describe('Unit Tests', function() {
-
     beforeEach(function(){
+        AWS.mock('SSM', 'getParameter', function (params, callback) {
+            const data = new Buffer('test-secret');
+            return callback(null, {Parameter : { Value: data.toString('base64')}});
+        });
+
         AWS.mock('KMS', 'decrypt', function (params, callback) {
             const data = {
                     Plaintext : 'decrypted-sercret-key'
@@ -97,6 +101,8 @@ describe('Unit Tests', function() {
         restoreAlServiceStub();
         setEnvStub.restore();
         responseStub.restore();
+        AWS.restore('KMS');
+        AWS.restore('SSM');
     });
 
     describe('pawsInitCollectionState', function() {
