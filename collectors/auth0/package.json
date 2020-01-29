@@ -21,7 +21,7 @@
   "dependencies": {
     "auth0": "2.20.0",
     "@alertlogic/al-collector-js": "1.4.2",
-    "@alertlogic/paws-collector": "1.0.10",
+    "@alertlogic/paws-collector": "1.0.12",
     "async": "3.1.0",
     "debug": "4.1.1",
     "moment": "2.24.0"
