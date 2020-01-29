@@ -31,6 +31,7 @@ class GooglestackdriverCollector extends PawsCollector {
         const resourceNames = JSON.parse(process.env.paws_collector_param_string_1);
         const initialStates = resourceNames.map(resource => ({
             resource,
+            nextPage:null,
             since: startTs,
             until: endTs,
             poll_interval_sec: 1
@@ -47,33 +48,57 @@ class GooglestackdriverCollector extends PawsCollector {
         });
 
 
-        console.info(`GSTA000001 Collecting data from ${state.since} till ${state.until}`);
+        console.info(`GSTA000001 Collecting data from ${state.since} till ${state.until} for ${state.resource}`);
 
         // TODO: figure out a better way to format this. I'm pretty sure that it needs the newlines in it.
         const filter = `timestamp >= "${state.since}"
 timestamp < "${state.until}"`;
 
-        const options = {autoPaginate: true};
+        let pagesRetireved = 0;
+        const options = {autoPaginate: false};
 
-        // TODO: check out how the "autopagination" functionality works on this.
-        client.listLogEntries({filter:filter, [state.resource]}, options)
-            .then(responses => {
-                const resources = responses[0];
-                console.log(resources);
+        const paginationCallback = (result, acc = []) => {
+            console.log('getting page: ', pagesRetireved + 1, result[0].length);
+            pagesRetireved++;
+            const logs = result[0];
+            const nextPage = result[1];
+            const newAcc = [...acc, ...logs];
+            console.log('total Logs', newAcc.length);
 
-                const newState = collector._getNextCollectionState(state);
+            if(nextPage && pagesRetireved < process.env.paws_max_pages_per_invocation){
+
+                return client.listLogEntries(nextPage, options)
+                    .then(res => paginationCallback(res, newAcc));
+            } else{
+                return {logs: newAcc, nextPage};
+            }
+        };
+
+        let params = state.nextPage ?
+            state.nextPage:
+            {
+                filter,
+                pageSize: 1000,
+                resourceNames:[state.resource]
+            };
+
+        client.listLogEntries(params, options)
+            .then(paginationCallback)
+            .then(({logs, nextPage}) => {
+                const newState = collector._getNextCollectionState(state, nextPage);
                 console.info(`GSTA000002 Next collection in ${newState.poll_interval_sec} seconds`);
 
-                return callback(null, resources, newState, newState.poll_interval_sec);
+                return callback(null, logs, newState, newState.poll_interval_sec);
             })
             .catch(err => {
-                console.error(err);
+                console.error(`GSTA000003 err in collection ${err}`);
             });
     }
     
-    _getNextCollectionState(curState) {
+    _getNextCollectionState(curState, nextPage) {
         const nowMoment = moment();
         const curUntilMoment = moment(curState.until);
+        const {resource} = curState;
         
         // Check if current 'until' is in the future.
         const nextSinceTs = curUntilMoment.isAfter(nowMoment) ?
@@ -86,9 +111,11 @@ timestamp < "${state.until}"`;
                 1 : this.pollInterval;
         
         return  {
-             since: nextSinceTs,
-             until: nextUntilMoment.toISOString(),
-             poll_interval_sec: nextPollInterval
+            since: nextSinceTs,
+            nextPage,
+            resource,
+            until: nextUntilMoment.toISOString(),
+            poll_interval_sec: nextPollInterval
         };
     }
     
