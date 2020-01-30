@@ -16,7 +16,7 @@ const logging = require('@google-cloud/logging');
 
 
 const typeIdPaths = [
-    {path: ['jsonPayload', 'fileds', 'event_type', 'stringValue']},
+    {path: ['jsonPayload', 'fields', 'event_type', 'stringValue']},
     {path: ['protoPayload', 'type_url']},
     {path: ['payload']}
 ];
@@ -39,7 +39,6 @@ class GooglestackdriverCollector extends PawsCollector {
         else {
             endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
         }
-        const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
         const resourceNames = JSON.parse(process.env.paws_collector_param_string_1);
         const initialStates = resourceNames.map(resource => ({
             resource,
