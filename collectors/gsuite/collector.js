@@ -21,124 +21,158 @@ const typeIdPaths = [{ path: ["kind"] }];
 const tsPaths = [{ path: ["id", "time"] }];
 
 class GsuiteCollector extends PawsCollector {
-  constructor(context, creds) {
-    super(context, creds, "gsuite");
-  }
-
-  pawsInitCollectionState(event, callback) {
-    const startTs = process.env.paws_collection_start_ts
-      ? process.env.paws_collection_start_ts
-      : moment()
-          .subtract(5, "minutes")
-          .toISOString();
-
-    const endTs = moment(startTs)
-      .add(this.pollInterval, "seconds")
-      .toISOString();
-
-    const initialState = {
-      // TODO: define initial collection state specific to your collector.
-      // You will get this state back with each invocation
-      since: startTs,
-      until: endTs,
-      poll_interval_sec: 1
-    };
-    return callback(null, initialState, 1);
-  }
-
-  pawsGetLogs(state, callback) {
-    let collector = this;
-
-    const keysEnvVar = collector.secret;
-    if (!keysEnvVar) {
-      throw new Error("The $CREDS environment variable was not found!");
+    constructor(context, creds) {
+        super(context, creds, "gsuite");
     }
-    const keys = JSON.parse(keysEnvVar);
-    const client = auth.fromJSON(keys);
-    client.subject = process.env.paws_email_id;
-    // TODO: change this to CFT var
-    client.scopes = process.env.paws_scopes.split(",");
-    const applicationNames = process.env.paws_application_names.split(",");
-    let promises = [];
-    applicationNames.forEach(applicationName => {
-      let params = {
-        startTime: state.since,
-        endTime: state.until,
-        userKey: "all",
-        applicationName: applicationName
-      };
-      console.info(
-        `GSUI000001 Collecting data for ${applicationName} from ${state.since} till ${state.until}`
-      );
-      const promise = utils.listEvents(client, params, []);
-      promises.push(promise)
 
-    });
-    Promise.all(promises).then((collection) => {
-      let logAcc = [];
-      collection.forEach(log => logAcc.push(...log));
-      const newState = collector._getNextCollectionState(state);
-      console.info(
-        `GSUI000002 Next collection in ${newState.poll_interval_sec} seconds`
-      );
-      return callback(null, logAcc, newState, newState.poll_interval_sec);
-    })
-      .catch((error) => {
-        return callback(error);
-      });
-  }
+    pawsInitCollectionState(event, callback) {
+        const startTs = process.env.paws_collection_start_ts
+            ? process.env.paws_collection_start_ts
+            : moment()
+                .subtract(5, "minutes")
+                .toISOString();
 
-  _getNextCollectionState(curState) {
-    const nowMoment = moment();
-    const curUntilMoment = moment(curState.until);
+        const endTs = moment(startTs)
+            .add(this.pollInterval, "seconds")
+            .toISOString();
 
-    // Check if current 'until' is in the future.
-    const nextSinceTs = curUntilMoment.isAfter(nowMoment)
-      ? nowMoment.toISOString()
-      : curState.until;
-
-    const nextUntilMoment = moment(nextSinceTs).add(
-      this.pollInterval,
-      "seconds"
-    );
-    // Check if we're behind collection schedule and need to catch up.
-    const nextPollInterval =
-      nowMoment.diff(nextUntilMoment, "seconds") > this.pollInterval
-        ? 1
-        : this.pollInterval;
-
-    return {
-      // TODO: define the next collection state.
-      // This needs to be in the same format as the intial colletion state above
-      since: nextSinceTs,
-      until: nextUntilMoment.toISOString(),
-      poll_interval_sec: nextPollInterval
-    };
-  }
-
-  pawsFormatLog(msg) {
-    // TODO: double check that this message parsing fits your use case
-    const ts = parse.getMsgTs(msg, tsPaths);
-    const typeId = parse.getMsgTypeId(msg, typeIdPaths);
-
-    let formattedMsg = {
-      messageTs: ts.sec,
-      priority: 11,
-      progName: "GsuiteCollector",
-      message: JSON.stringify(msg),
-      messageType: "json/gsuite"
-    };
-
-    if (typeId !== null && typeId !== undefined) {
-      formattedMsg.messageTypeId = `${typeId}`;
+        const initialState = {
+            // TODO: define initial collection state specific to your collector.
+            // You will get this state back with each invocation
+            since: startTs,
+            until: endTs,
+            nextPage: null,
+            poll_interval_sec: 1
+        };
+        return callback(null, initialState, 1);
     }
-    if (ts.usec) {
-      formattedMsg.messageTsUs = ts.usec;
+
+    pawsGetLogs(state, callback) {
+        let collector = this;
+
+        const keysEnvVar = collector.secret;
+        if (!keysEnvVar) {
+            throw new Error("The $CREDS environment variable was not found!");
+        }
+        const keys = JSON.parse(keysEnvVar);
+        const client = auth.fromJSON(keys);
+        client.subject = process.env.paws_email_id;
+
+        client.scopes = process.env.paws_scopes.split(",");
+        const applicationNames = process.env.paws_application_names.split(",");
+        let applicationsArray = [];
+        if (state.nextPage) {
+            Object.keys(state.nextPage).forEach(key => {
+                applicationsArray.push({ name: key, nextPageToken: state.nextPage[key] });
+            });
+        }else{
+            applicationNames.forEach(applicationName => {
+                applicationsArray.push({ name: applicationName });
+            });
+        }
+        let promises = [];
+        applicationsArray.forEach(application => {
+            let params = {
+                startTime: state.since,
+                endTime: state.until,
+                userKey: "all",
+                applicationName: application.name
+            };
+            if (application.nextPageToken) {
+                params["pageToken"] = application.nextPageToken;
+            }
+            console.info(
+                `GSUI000001 Collecting data for ${application.name} from ${state.since} till ${state.until}`
+            );
+            const promise = utils.listEvents(client, params, [], process.env.paws_max_pages_per_invocation);
+            promises.push(promise)
+
+        });
+        Promise.all(promises).then((collection) => {
+            let logAcc = [];
+            let nextPagetokens = {};
+            collection.forEach(log => {
+                logAcc.push(...log.accumulator);
+                Object.assign(nextPagetokens, log.nextPageToken);
+            }
+            );
+            let newState;
+            if (Object.keys(nextPagetokens).length) {
+                newState = this._getNextCollectionStateWithNextPage(state, nextPagetokens);
+            }
+            else {
+                newState = collector._getNextCollectionState(state);
+            }
+            console.info(
+                `GSUI000002 Next collection in ${newState.poll_interval_sec} seconds`
+            );
+            return callback(null, logAcc, newState, newState.poll_interval_sec);
+        })
+            .catch((error) => {
+                return callback(error);
+            });
     }
-    return formattedMsg;
-  }
+
+    _getNextCollectionState(curState) {
+        const nowMoment = moment();
+        const curUntilMoment = moment(curState.until);
+
+        // Check if current 'until' is in the future.
+        const nextSinceTs = curUntilMoment.isAfter(nowMoment)
+            ? nowMoment.toISOString()
+            : curState.until;
+
+        const nextUntilMoment = moment(nextSinceTs).add(
+            this.pollInterval,
+            "seconds"
+        );
+        // Check if we're behind collection schedule and need to catch up.
+        const nextPollInterval =
+            nowMoment.diff(nextUntilMoment, "seconds") > this.pollInterval
+                ? 1
+                : this.pollInterval;
+
+        return {
+            // TODO: define the next collection state.
+            // This needs to be in the same format as the intial colletion state above
+            since: nextSinceTs,
+            until: nextUntilMoment.toISOString(),
+            poll_interval_sec: nextPollInterval
+        };
+    }
+
+    _getNextCollectionStateWithNextPage({ since, until }, nextPage) {
+        return {
+            since,
+            until,
+            nextPage,
+            poll_interval_sec: 1
+        }
+    }
+
+    pawsFormatLog(msg) {
+        // TODO: double check that this message parsing fits your use case
+        const ts = parse.getMsgTs(msg, tsPaths);
+        const typeId = parse.getMsgTypeId(msg, typeIdPaths);
+
+        let formattedMsg = {
+            messageTs: ts.sec,
+            priority: 11,
+            progName: "GsuiteCollector",
+            message: JSON.stringify(msg),
+            messageType: "json/gsuite"
+        };
+
+        if (typeId !== null && typeId !== undefined) {
+            formattedMsg.messageTypeId = `${typeId}`;
+        }
+        if (ts.usec) {
+            formattedMsg.messageTsUs = ts.usec;
+        }
+        return formattedMsg;
+    }
 }
 
 module.exports = {
-  GsuiteCollector: GsuiteCollector
+    GsuiteCollector: GsuiteCollector
 };
