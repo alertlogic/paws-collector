@@ -16,17 +16,29 @@ const logging = require('@google-cloud/logging');
 
 
 const typeIdPaths = [
-    // TODO: determine if there are any solid paths in JSON and Text payloads. I think these payloads are arbitrary
-    {path: ['protoPayload', 'type_url']}
+    {path: ['jsonPayload', 'fileds', 'event_type', 'stringValue']},
+    {path: ['protoPayload', 'type_url']},
+    {path: ['payload']}
 ];
 
 class GooglestackdriverCollector extends PawsCollector {
 
     pawsInitCollectionState(event, callback) {
-        // TODO: put in some more efficient catching up logic for historical logs. Stackdriver stores logs for 30 days
         const startTs = process.env.paws_collection_start_ts ?
                 process.env.paws_collection_start_ts :
                     moment().toISOString();
+        let endTs;
+
+        if(moment().diff(startTs, 'days') > 7){
+            endTs = moment().add(7, 'days').toISOString();
+        }
+        
+        if(moment().diff(startTs, 'hours') > 24){
+            endTs = moment(startTs).add(24, 'hours').toISOString();
+        }
+        else {
+            endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
+        }
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
         const resourceNames = JSON.parse(process.env.paws_collector_param_string_1);
         const initialStates = resourceNames.map(resource => ({
@@ -92,6 +104,20 @@ timestamp < "${state.until}"`;
             })
             .catch(err => {
                 console.error(`GSTA000003 err in collection ${err}`);
+                
+                // Stackdriver Logging api has some rate limits that we might run into.
+                // If we run inot a rate limit error, instead of returning the error,
+                // we return the state back to the queue with an additional second added, up to 10
+                // https://cloud.google.com/logging/quotas
+                if(err.match(/RESOURCE_EXHAUSTED/)){
+                    const nextPollInterval = state.poll_interval_sec < 10 ?
+                        state.poll_interval_sec + 1:
+                        10;
+                    const backOffState = Object.assign({}, state, {poll_interval_sec:nextPollInterval});
+
+                    return callback(null, [], backOffState, nextPollInterval);
+                }
+                return callback(err);
             });
     }
     
