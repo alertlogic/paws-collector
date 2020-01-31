@@ -108,7 +108,7 @@ Each user can create only five access keys. If a "limit exceeded" response appea
 
 # Supported PAWS Logs Collectors
 
-[OKTA Logs Collection](./README-OKTA.md)
+[OKTA Logs Collection](././collectors/okta/README-OKTA.md)
 
 # Useful Links
 
