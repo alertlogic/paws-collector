@@ -501,7 +501,6 @@
          ],
          "Properties":{
             "Description":"Alert Logic Poll based collector",
-            "FunctionName":{ "Ref":"AWS::StackName" },
             "Role":{
                "Fn::GetAtt":[
                   "CollectLambdaRole",
@@ -611,6 +610,10 @@
                 {
                     "Key": "AlertLogic",
                     "Value": "Collect"
+                },
+                {
+                    "Key":"FunctionName",
+                    "Value":{ "Ref":"AWS::StackName" }
                 }
             ]
          }
