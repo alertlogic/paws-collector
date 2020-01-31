@@ -8,18 +8,12 @@ Alert Logic OKTA Log Collector CloudFormation template.
 This procedure requires administrative permissions in AWS and your Alert Logic 
 Cloud Insight account. You also need to download the Alert Logic custom [CFT](https://github.com/alertlogic/paws-collector/blob/master/cfn/okta-collector.template).
 
-Windows systems also require PowerShell version 3.0 or later. If you have an earlier version of PowerShell, we suggest you [upgrade it](https://docs.microsoft.com/en-us/powershell/scripting/setup/installing-windows-powershell#upgrading-existing-windows-powershell) to version 3.0 or later. 
 
 # Installation
 
 Currently, we support US regions only: `us-east-1`, `us-east-2`, `us-west-1`, 
 `us-west-2`.
 
-## Enable VPC Log Group
-1. Log into AWS console.
-1. Enable AWS VPC Flow Logs by choosing *VPC -> Your VPCs -> Flow Logs*. 
-1. Click on the *Create Flow Log* button and choose a name of *CloudWatch Logs Group* which 
-will be later used as a trigger for your lambda function. 
 
 ## CFN Template
 1. Go to AWS CloudFormation 
@@ -44,5 +38,3 @@ Group. Open the newest Log Stream and verify it doesn't contain any errors.
 
 
 # Known issues
-
-

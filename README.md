@@ -3,12 +3,12 @@ Alert Logic AWS Based API Poll (PAWS) Log Collector Library.
 
 # Overview
 This repository contains the AWS  JavaScript Lambda function and CloudFormation 
-Template (CFT) for deploying a log collector in AWS which will poll 3rd party service API to collect and 
+Template (CFT) for deploying a log collector in AWS which will poll a 3rd party service API to collect and 
 forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
 
-Refer to [CF template readme](./cfn/README.md) for installation instructions.
+Refer to the [CF template readme](./cfn/README.md) for installation instructions.
 
 
 # How it works
@@ -17,13 +17,12 @@ Refer to [CF template readme](./cfn/README.md) for installation instructions.
 
 The `Updater` is a timer triggered function that runs a deployment sync operation 
 every 12 hours in order to keep the collector lambda function up to date.
-The `Updater` syncs from the Alert Logic S3 bucket where you originally deployed from.
+The `Updater` syncs from the Alert Logic S3 bucket that contained the package used for the initial deployment.
 
 ## Collection Trigger
 
-The `Collector` function is an AWS lambda function which is triggered by SQS which contains collection state message.
-During each invocation the function polls 3rd party service log API and sends retrieved data to 
-AlertLogic `Ingest` service for further processing.
+The `Collector` function is an AWS lambda function which is triggered by SQS which contains a collection state message.
+During each invocation the function polls the specified 3rd party service log API and sends retrieved data to the AlertLogic `Ingest` service for further processing.
 
 ## Checkin Trigger
 
@@ -45,19 +44,19 @@ $ cd paws-collector
 $ make deps test package
 ```
 
-## Build collector for Okta
+## Build collector for 3rd party API
 Clone this repository and build a lambda package by executing:
 ```
 $ git clone https://github.com/alertlogic/paws-collector.git
-$ cd paws-collector/collectors/okta
+$ cd paws-collector/collectors/<collector-name>
 $ make deps test package
 ```
 
-The package name is *al-okta-collector.zip*
+The package name is *al-<collector-name>-collector.zip*
 
 ## Debugging
 
-To get a debug trace, set an Node.js environment variable called DEBUG and
+To get a debug trace, set a Node.js environment variable called DEBUG and
 specify the JavaScript module/s to debug.
 
 E.g.
@@ -75,13 +74,13 @@ See [debug](https://www.npmjs.com/package/debug) for further details.
 ## Invoking locally
 
 In order to invoke lambda locally please follow the [instructions](https://docs.aws.amazon.com/lambda/latest/dg/sam-cli-requirements.html) to install AWS SAM.
-AWS SAM uses `default` credentials profile from `~/.aws/credentials`.
+AWS SAM uses the `default` credentials profile from `~/.aws/credentials`.
 
   1. Encrypt the key using aws cli:
 ```
 aws kms encrypt --key-id KMS_KEY_ID --plaintext AIMS_SECRET_KEY
 ```
-  2. Include the encrypted token, and `KmsKeyArn` that you used in Step 1 inside my SAM yaml:
+  2. Include the encrypted token, and `KmsKeyArn`, used in Step 1, inside the SAM yaml:
 ```
     KmsKeyArn: arn:aws:kms:us-east-1:xxx:key/yyy
     Environment:
