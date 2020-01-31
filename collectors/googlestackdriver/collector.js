@@ -14,6 +14,7 @@ const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const parse = require('@alertlogic/al-collector-js').Parse;
 const logging = require('@google-cloud/logging');
 
+const API_THROTTLING_ERROR = 8;
 
 const typeIdPaths = [
     {path: ['jsonPayload', 'fields', 'event_type', 'stringValue']},
@@ -46,7 +47,6 @@ class GooglestackdriverCollector extends PawsCollector {
             until: endTs,
             poll_interval_sec: 1
         }));
-        console.log('Inital states: ', initialStates);
         return callback(null, initialStates, 1);
     }
     
@@ -69,12 +69,12 @@ timestamp < "${state.until}"`;
         const options = {autoPaginate: false};
 
         const paginationCallback = (result, acc = []) => {
-            console.log('getting page: ', pagesRetireved + 1, result[0].length);
+            console.log('Getting page: ', pagesRetireved + 1, ' Logs retrieved:',result[0].length);
             pagesRetireved++;
             const logs = result[0];
             const nextPage = result[1];
             const newAcc = [...acc, ...logs];
-            console.log('total Logs', newAcc.length);
+            console.log('Total Logs', newAcc.length);
 
             if(nextPage && pagesRetireved < process.env.paws_max_pages_per_invocation){
 
@@ -108,7 +108,7 @@ timestamp < "${state.until}"`;
                 // If we run inot a rate limit error, instead of returning the error,
                 // we return the state back to the queue with an additional second added, up to 10
                 // https://cloud.google.com/logging/quotas
-                if(err.code === 8){
+                if(err.code === API_THROTTLING_ERROR){
                     const nextPollInterval = state.poll_interval_sec < 10 ?
                         state.poll_interval_sec + 1:
                         10;
