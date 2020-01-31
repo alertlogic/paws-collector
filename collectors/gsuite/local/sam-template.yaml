@@ -25,6 +25,7 @@ Resources:
           paws_application_names:   
           paws_email_id: 
           paws_type_name: "gsuite"
+          paws_max_pages_per_invocation:
           paws_api_secret: 
           collector_id:
       Runtime: nodejs10.x

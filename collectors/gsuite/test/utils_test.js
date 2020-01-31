@@ -47,8 +47,9 @@ describe('Unit Tests', function () {
             let params = {
                 token: true
             };
+            let maxPagesPerInvocation=5;
             let accumulator = [];
-            utils.listEvents(auth, params, accumulator).then(data => {     
+            utils.listEvents(auth, params, accumulator,maxPagesPerInvocation).then(data => {     
                 assert(accumulator.length == 2, "accumulator length is wrong");
                 done();
             });
@@ -61,7 +62,8 @@ describe('Unit Tests', function () {
             let auth = null;
             let params = {};
             let accumulator = [];
-            utils.listEvents(auth, params, accumulator).catch(err=>{
+            let maxPagesPerInvocation=5;
+            utils.listEvents(auth, params, accumulator,maxPagesPerInvocation).catch(err=>{
                 assert.ok(err);
                 done();
             });

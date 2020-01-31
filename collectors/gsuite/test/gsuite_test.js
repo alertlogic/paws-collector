@@ -25,7 +25,7 @@ function setAlServiceStub() {
     listEvent = sinon.stub(utils, 'listEvents').callsFake(
         function fakeFn(path) {
             return new Promise(function(resolve, reject) {
-                return resolve([gsuiteMock.LOG_EVENT]);
+                return resolve({ accumulator:[gsuiteMock.LOG_EVENT]});
             });
         });
 
