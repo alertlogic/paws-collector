@@ -30,10 +30,9 @@ class GooglestackdriverCollector extends PawsCollector {
         let endTs;
 
         if(moment().diff(startTs, 'days') > 7){
-            endTs = moment().add(7, 'days').toISOString();
+            endTs = moment(startTs).add(7, 'days').toISOString();
         }
-        
-        if(moment().diff(startTs, 'hours') > 24){
+        else if(moment().diff(startTs, 'hours') > 24){
             endTs = moment(startTs).add(24, 'hours').toISOString();
         }
         else {
@@ -47,6 +46,7 @@ class GooglestackdriverCollector extends PawsCollector {
             until: endTs,
             poll_interval_sec: 1
         }));
+        console.log('Inital states: ', initialStates);
         return callback(null, initialStates, 1);
     }
     
@@ -108,7 +108,7 @@ timestamp < "${state.until}"`;
                 // If we run inot a rate limit error, instead of returning the error,
                 // we return the state back to the queue with an additional second added, up to 10
                 // https://cloud.google.com/logging/quotas
-                if(err.match(/RESOURCE_EXHAUSTED/)){
+                if(err.code === 8){
                     const nextPollInterval = state.poll_interval_sec < 10 ?
                         state.poll_interval_sec + 1:
                         10;
@@ -130,7 +130,16 @@ timestamp < "${state.until}"`;
                 nowMoment.toISOString() :
                 curState.until;
 
-        const nextUntilMoment = moment(nextSinceTs).add(this.pollInterval, 'seconds');
+        let nextUntilMoment;
+        if(moment().diff(nextSinceTs, 'days') > 7){
+            nextUntilMoment = moment(nextSinceTs).add(7, 'days').toISOString();
+        }
+        else if(moment().diff(nextSinceTs, 'hours') > 24){
+            nextUntilMoment = moment(nextSinceTs).add(24, 'hours').toISOString();
+        }
+        else {
+            nextUntilMoment = moment(nextSinceTs).add(this.pollInterval, 'seconds').toISOString();
+        }
         // Check if we're behind collection schedule and need to catch up.
         const nextPollInterval = nowMoment.diff(nextUntilMoment, 'seconds') > this.pollInterval ?
                 1 : this.pollInterval;
@@ -139,7 +148,7 @@ timestamp < "${state.until}"`;
             since: nextSinceTs,
             nextPage,
             resource,
-            until: nextUntilMoment.toISOString(),
+            until: nextUntilMoment,
             poll_interval_sec: nextPollInterval
         };
     }
