@@ -470,19 +470,24 @@
         "DependsOn":[
          ],
          "Properties":{
-            "QueueName" : {
-             "Fn::Join": [
-               "-",
-               [
-                 {
-                   "Ref": "AWS::StackName"
-                 },
-                 "paws-collection-state"
-               ]
-             ]
-            },
             "VisibilityTimeout": 900,
-            "MessageRetentionPeriod": 1209600
+            "MessageRetentionPeriod": 1209600,
+            "Tags": [
+                {
+                    "Key": "QueueName",
+                    "Value": {
+                     "Fn::Join": [
+                       "-",
+                       [
+                         {
+                           "Ref": "AWS::StackName"
+                         },
+                         "paws-collection-state"
+                       ]
+                     ]
+                    }
+                }
+            ]
          }
       },
       "CollectLambdaFunction":{
