@@ -470,19 +470,24 @@
         "DependsOn":[
          ],
          "Properties":{
-            "QueueName" : {
-             "Fn::Join": [
-               "-",
-               [
-                 {
-                   "Ref": "AWS::StackName"
-                 },
-                 "paws-collection-state"
-               ]
-             ]
-            },
             "VisibilityTimeout": 900,
-            "MessageRetentionPeriod": 1209600
+            "MessageRetentionPeriod": 1209600,
+            "Tags": [
+                {
+                    "Key": "QueueName",
+                    "Value": {
+                     "Fn::Join": [
+                       "-",
+                       [
+                         {
+                           "Ref": "AWS::StackName"
+                         },
+                         "paws-collection-state"
+                       ]
+                     ]
+                    }
+                }
+            ]
          }
       },
       "CollectLambdaFunction":{
@@ -496,7 +501,6 @@
          ],
          "Properties":{
             "Description":"Alert Logic Poll based collector",
-            "FunctionName":{ "Ref":"AWS::StackName" },
             "Role":{
                "Fn::GetAtt":[
                   "CollectLambdaRole",
@@ -606,6 +610,10 @@
                 {
                     "Key": "AlertLogic",
                     "Value": "Collect"
+                },
+                {
+                    "Key":"FunctionName",
+                    "Value":{ "Ref":"AWS::StackName" }
                 }
             ]
          }
@@ -619,6 +627,7 @@
             "PawsPollStateQueue"
          ],
          "Properties":{
+            "BatchSize": 1,
             "EventSourceArn" : { "Fn::GetAtt" : ["PawsPollStateQueue", "Arn"] },
             "FunctionName" : { "Ref":"CollectLambdaFunction" }
          }
