@@ -627,6 +627,7 @@
             "PawsPollStateQueue"
          ],
          "Properties":{
+            "BatchSize": 1,
             "EventSourceArn" : { "Fn::GetAtt" : ["PawsPollStateQueue", "Arn"] },
             "FunctionName" : { "Ref":"CollectLambdaFunction" }
          }
