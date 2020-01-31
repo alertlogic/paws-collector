@@ -1,0 +1,30 @@
+{
+  "name": "googlestackdriver-collector",
+  "version": "0.0.1",
+  "description": "Alert Logic AWS based Googlestackdriver Log Collector",
+  "repository": {},
+  "private": true,
+  "scripts": {
+    "lint": "jshint --exclude \"./node_modules/*\" **/*.js",
+    "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=text mocha --colors"
+  },
+  "devDependencies": {
+    "aws-sdk": "*",
+    "aws-sdk-mock": "*",
+    "jshint": "^2.9.5",
+    "mocha": "^6.2.2",
+    "mocha-jenkins-reporter": "^0.4.2",
+    "nyc": "^14.1.1",
+    "rewire": "^4.0.1",
+    "sinon": "^7.5.0"
+  },
+  "dependencies": {
+    "@alertlogic/al-collector-js": "1.4.2",
+    "@alertlogic/paws-collector": "1.0.12",
+    "@google-cloud/logging": "6.0.0",
+    "async": "3.1.0",
+    "debug": "4.1.1",
+    "moment": "2.24.0"
+  },
+  "author": "Alert Logic Inc."
+}
