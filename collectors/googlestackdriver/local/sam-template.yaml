@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion : '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: Run it locally
+Resources:
+  LocalLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      KmsKeyArn: arn:aws:kms:us-east-1:352283894008:key/cdda86d5-615b-4dcc-9319-77ab34510473
+      Environment:
+        Variables:
+          AWS_LAMBDA_FUNCTION_NAME:
+          aims_secret_key:
+          aims_access_key_id:
+          al_api:
+          stack_name:
+          azollect_api:
+          ingest_api:
+          DEBUG:
+          paws_state_queue_arn:
+          paws_state_queue_url:
+          paws_poll_interval:
+          paws_api_client_id:
+          paws_api_secret:
+          google_resource_ids:
+          paws_extension:
+          collector_id:
+      Runtime: nodejs10.x
+      Handler: index.handler
+      Timeout: 60 
+      MemorySize: 1024

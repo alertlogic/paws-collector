@@ -12,6 +12,7 @@ process.env.paws_client_id = 'auth0-client-id';
 process.env.paws_api_secret = 'auth0-token';
 process.env.collector_id = 'collector-id';
 process.env.paws_poll_interval = 60;
+process.env.paws_secret_param_name = 'PAWS-SECRET-auth0';
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',

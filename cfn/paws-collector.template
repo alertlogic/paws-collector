@@ -79,16 +79,20 @@
             "Type": "String",
             "NoEcho": true
         },
+        "PawsSecretParamTier": {
+            "Description": "Tier for AWS Param store param. Change this to advanced if the size of the PAws secrets is over 4kb",
+            "Type": "String",
+            "Default": "Standard",
+            "AllowedValues": [
+                "Standard",
+                "Advanced",
+                "Intelligent-Tiering"
+            ]
+        },
         "PawsMaxPagesPerInvocation" :{
             "Description": "The maximum number of pages of content data retrieved per invocation",
             "Type": "Number",
             "Default": 10
-        },
-        "PawsCredsS3Uri": {
-            "Description": "The S3 uri where object where credentials are stored. in the for s3://<bucket>/<object-path> Only used when PawsAuthType is 's3object'",
-            "Type": "String",
-            "AllowedPattern" : "^s3:\/\/[a-z,\-,0-9]*\/[a-z,\-,\.,\_,0-9]*",
-            "Default": ""
         },
         "CollectionStartTs": {
             "Description": "Optional. Timestamp when log collection starts. For example, 2020-01-13T16:00:00Z.",
@@ -368,11 +372,10 @@
                                 "\n",
                                 "exports.handler = (event, context, callback) => {\n",
                                 "    if (event.ResourceType == 'AWS::CloudFormation::CustomResource' &&\n",
-                                "        event.RequestType == 'Create' &&\n",
-                                "        event.ResourceProperties.Plaintext.length  > 0) {\n",
+                                "        event.RequestType == 'Create') {\n",
                                 "        return encrypt(event, context);\n",
                                 "    }\n",
-                                "    return response.send(event, context, response.SUCCESS, {EncryptedText: \"\"});\n",
+                                "    return response.send(event, context, response.SUCCESS);\n",
                                 "}"
                             ]
                         ]
@@ -440,24 +443,51 @@
                 }
             }
         },
+        "PawsSecretParam": {
+            "Type": "AWS::SSM::Parameter",
+            "Properties": {
+                "Name": {"Fn::Join": [
+                    "",
+                    [
+                        "PAWS-SECRET-",
+                        {"Ref": "PawsCollectorTypeName"},
+                        "-",
+                        {"Ref": "AWS::StackName"}
+                    ]
+                ]},
+                "Type": "String",
+                "Tier": {"Ref": "PawsSecretParamTier"},
+                "Value": {
+                    "Fn::GetAtt": ["EncryptPawsSecret", "EncryptedText"]
+                },
+                "Tags": {
+                    "StackId": {"Ref": "AWS::StackId"}
+                }
+            }
+        },
       "PawsPollStateQueue":{
         "Type":"AWS::SQS::Queue",
         "DependsOn":[
          ],
          "Properties":{
-            "QueueName" : {
-             "Fn::Join": [
-               "-",
-               [
-                 {
-                   "Ref": "AWS::StackName"
-                 },
-                 "paws-collection-state"
-               ]
-             ]
-            },
             "VisibilityTimeout": 900,
-            "MessageRetentionPeriod": 1209600
+            "MessageRetentionPeriod": 1209600,
+            "Tags": [
+                {
+                    "Key": "QueueName",
+                    "Value": {
+                     "Fn::Join": [
+                       "-",
+                       [
+                         {
+                           "Ref": "AWS::StackName"
+                         },
+                         "paws-collection-state"
+                       ]
+                     ]
+                    }
+                }
+            ]
          }
       },
       "CollectLambdaFunction":{
@@ -471,7 +501,6 @@
          ],
          "Properties":{
             "Description":"Alert Logic Poll based collector",
-            "FunctionName":{ "Ref":"AWS::StackName" },
             "Role":{
                "Fn::GetAtt":[
                   "CollectLambdaRole",
@@ -554,11 +583,8 @@
                   "paws_kms_key_arn":{
                       "Fn::GetAtt": [ "LambdaKmsKey", "Arn" ]
                   },
-                  "paws_api_secret":{
-                      "Fn::GetAtt": ["EncryptPawsSecret", "EncryptedText"]
-                  },
-                  "paws_s3_object_path":{
-                      "Ref": "PawsCredsS3Uri"
+                  "paws_secret_param_name":{
+                      "Ref":"PawsSecretParam"
                   },
                   "paws_collection_start_ts":{
                       "Ref":"CollectionStartTs"
@@ -584,6 +610,10 @@
                 {
                     "Key": "AlertLogic",
                     "Value": "Collect"
+                },
+                {
+                    "Key":"FunctionName",
+                    "Value":{ "Ref":"AWS::StackName" }
                 }
             ]
          }
@@ -597,6 +627,7 @@
             "PawsPollStateQueue"
          ],
          "Properties":{
+            "BatchSize": 1,
             "EventSourceArn" : { "Fn::GetAtt" : ["PawsPollStateQueue", "Arn"] },
             "FunctionName" : { "Ref":"CollectLambdaFunction" }
          }
@@ -633,16 +664,16 @@
                   },
                   {
                       "Effect":"Allow",
-                      "Action":"s3:Get*",
+                      "Action":"ssm:GetParameter",
                       "Resource":[
-                          {
-                             "Fn::Join":["",
-                                [
-                                   "arn:aws:s3:::",
-                                   { "Fn::Select": ["1", {"Fn::Split": ["//", {"Ref": "PawsCredsS3Uri"}] } ] }
-                                ]
-                             ]
-
+                          { "Fn::Join":["", [
+                              "arn:aws:ssm:",
+                              {"Ref": "AWS::Region"},
+                              ":",
+                              {"Ref": "AWS::AccountId"},
+                              ":parameter/",
+                              {"Ref":"PawsSecretParam"}
+                            ]]
                           }
                       ]
                   },
