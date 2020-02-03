@@ -245,6 +245,30 @@ describe('Unit Tests', function() {
                 collector.handleEvent(testEvent);
             });
         });
+        
+        it('reportApiThrottling', function(done) {
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+            AWS.mock('CloudWatch', 'putMetricData', function (params, callback) {
+                return callback(null);
+            });
+            TestCollector.load().then(function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                collector.reportApiThrottling(function(error) {
+                    assert.equal(null, error);
+                    AWS.restore('KMS');
+                    done();
+                });
+            });
+        });
     });
     
     describe('Register Tests', function() {

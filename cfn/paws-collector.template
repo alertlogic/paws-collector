@@ -776,7 +776,8 @@
                      "Action":[
                         "cloudwatch:Get*",
                         "cloudwatch:Describe*",
-                        "cloudwatch:List*"
+                        "cloudwatch:List*",
+                        "cloudwatch:Put*"
                      ],
                      "Resource": "*"
                   }
