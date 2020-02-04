@@ -36,78 +36,64 @@ class GsuiteCollector extends PawsCollector {
             .add(this.pollInterval, "seconds")
             .toISOString();
 
-        const initialState = {
-            // TODO: define initial collection state specific to your collector.
-            // You will get this state back with each invocation
-            since: startTs,
-            until: endTs,
-            nextPage: null,
-            poll_interval_sec: 1
+        const applicationNames = JSON.parse(process.env.paws_collector_param_string_2);  
+        const initialStates = applicationNames.map(application => {
+            return {
+                application,
+                since: startTs,
+                until: endTs,
+                nextPage: null,
+                poll_interval_sec: 1
+            }
+        });
+        return callback(null, initialStates, 1);
+    }
+
+    pawsGetRegisterParameters(event, callback){
+        const regValues = {
+            gsuiteScope: process.env.paws_collector_param_string_1,
+            gsuiteApplicationNames: process.env.paws_collector_param_string_2
         };
-        return callback(null, initialState, 1);
+
+        callback(null, regValues);
     }
 
     pawsGetLogs(state, callback) {
         let collector = this;
-
         const keysEnvVar = collector.secret;
         if (!keysEnvVar) {
             throw new Error("The $CREDS environment variable was not found!");
         }
         const keys = JSON.parse(keysEnvVar);
         const client = auth.fromJSON(keys);
-        client.subject = process.env.paws_email_id;
+        client.subject = process.env.paws_client_id;
+        client.scopes = process.env.paws_collector_param_string_1.split(",");
+        console.info(`GSUI000001 Collecting data for ${state.application} from ${state.since} till ${state.until}`);
+        
+        let params = state.nextPage ? {
+            pageToken: state.nextPage
+        } : {};
 
-        client.scopes = process.env.paws_scopes.split(",");
-        const applicationNames = process.env.paws_application_names.split(",");
-        let applicationsArray = [];
-        if (state.nextPage) {
-            Object.keys(state.nextPage).forEach(key => {
-                applicationsArray.push({ name: key, nextPageToken: state.nextPage[key] });
-            });
-        }else{
-            applicationNames.forEach(applicationName => {
-                applicationsArray.push({ name: applicationName });
-            });
-        }
-        let promises = [];
-        applicationsArray.forEach(application => {
-            let params = {
-                startTime: state.since,
-                endTime: state.until,
-                userKey: "all",
-                applicationName: application.name
-            };
-            if (application.nextPageToken) {
-                params["pageToken"] = application.nextPageToken;
-            }
-            console.info(
-                `GSUI000001 Collecting data for ${application.name} from ${state.since} till ${state.until}`
-            );
-            const promise = utils.listEvents(client, params, [], process.env.paws_max_pages_per_invocation);
-            promises.push(promise)
-
+        Object.assign(params, {
+            startTime: state.since,
+            endTime: state.until,
+            userKey: "all",
+            applicationName: state.application
         });
-        Promise.all(promises).then((collection) => {
-            let logAcc = [];
-            let nextPagetokens = {};
-            collection.forEach(log => {
-                logAcc.push(...log.accumulator);
-                Object.assign(nextPagetokens, log.nextPageToken);
-            }
-            );
-            let newState;
-            if (Object.keys(nextPagetokens).length) {
-                newState = this._getNextCollectionStateWithNextPage(state, nextPagetokens);
-            }
-            else {
-                newState = collector._getNextCollectionState(state);
-            }
-            console.info(
-                `GSUI000002 Next collection in ${newState.poll_interval_sec} seconds`
-            );
-            return callback(null, logAcc, newState, newState.poll_interval_sec);
-        })
+        
+        utils.listEvents(client, params, [], process.env.paws_max_pages_per_invocation)
+            .then(({ accumulator, nextPage }) => {
+                let newState;
+                if (nextPage === undefined) {
+                    newState = this._getNextCollectionState(state);
+                } else {
+                    newState = this._getNextCollectionStateWithNextPage(state, nextPage);
+                }
+                console.info(
+                    `GSUI000002 Next collection in ${newState.poll_interval_sec} seconds`
+                );
+                return callback(null, accumulator, newState, newState.poll_interval_sec);
+            })
             .catch((error) => {
                 return callback(error);
             });
@@ -133,16 +119,16 @@ class GsuiteCollector extends PawsCollector {
                 : this.pollInterval;
 
         return {
-            // TODO: define the next collection state.
-            // This needs to be in the same format as the intial colletion state above
+            application: curState.application,
             since: nextSinceTs,
             until: nextUntilMoment.toISOString(),
             poll_interval_sec: nextPollInterval
         };
     }
 
-    _getNextCollectionStateWithNextPage({ since, until }, nextPage) {
+    _getNextCollectionStateWithNextPage({ application, since, until }, nextPage) {
         return {
+            application,
             since,
             until,
             nextPage,

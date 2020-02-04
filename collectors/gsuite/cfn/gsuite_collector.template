@@ -50,22 +50,19 @@
             "Type": "String",
             "Default": "ssws"
         },
-        "PawsClientId": {
-            "Description": "Client ID for oauth2 authentication type",
-            "Type": "String"
-        },
         "GsuiteClientSecret": {
-            "Description": "Gsuite Client secret",
+            "Description": "The JSON key for the Gsuite Client secret",
             "Type": "String",
             "NoEcho": true
         },
 	    "GsuiteScope": {
-            "Description": "Define Scope, if it is multiple pass as comma separated string for Gsuite",
+            "Description": "Define Scope, if it is multiple pass as comma separated string for example https://www.googleapis.com/auth/admin.reports.audit.readonly, https://www.googleapis.com/auth/admin.reports.usage.readonly",
             "Type": "String"
         },
         "GsuiteApplicationNames": {
             "Description": "Define Application name, if it is multiple pass as comma separated string for Gsuite",
-            "Type": "String"
+            "Type": "String",
+            "Default": "[\"login\", \"admin\", \"access_transparency\", \"calendar\", \"drive\", \"gplus\", \"groups\", \"groups_enterprise\", \"mobile\", \"rules\", \"token\", \"user_accounts\"]"
         },
         "GsuiteEmailId": {
             "Description": "Email ID for Gsuite",
@@ -92,17 +89,16 @@
             "AlApiEndpoint" : { "Ref":"AlApiEndpoint" },
             "AlDataResidency" : { "Ref":"AlDataResidency" },
             "PackagesBucketPrefix" : { "Ref":"PackagesBucketPrefix" },
-            "PawsCollectorTypeName" : "Gsuite",
+            "PawsCollectorTypeName" : "gsuite",
             "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
             "CollectorId" : { "Ref":"CollectorId" },
             "PollingInterval" : 60,
             "PawsEndpoint" : { "Ref":"PawsEndpoint" },
             "PawsAuthType" : { "Ref":"PawsAuthType" },
-            "PawsClientId" : "",
             "PawsSecret" : { "Ref":"GsuiteClientSecret" },
-            "PawsScope" : { "Ref":"GsuiteScope" },
-            "PawsApplicationNames" : { "Ref":"GsuiteApplicationNames" },
-            "PawsEmailId" : { "Ref":"GsuiteEmailId" },
+            "CollectorParamString1" : { "Ref":"GsuiteScope" },
+            "CollectorParamString2" : { "Ref":"GsuiteApplicationNames" },
+            "PawsClientId" : { "Ref":"GsuiteEmailId" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }
         }

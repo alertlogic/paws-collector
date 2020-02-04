@@ -3,8 +3,7 @@ const { google } = require("googleapis");
 function listEvents(auth, params, accumulator, maxPagesPerInvocation) {
     const service = google.admin({ version: "reports_v1", auth });
     let pageCount = 0;
-    let nextPageToken = {};
-    let applicationName = params.applicationName;
+    let nextPage;
     return new Promise(function (resolve, reject) {
         getGsuiteData(params);
         function getGsuiteData(params) {
@@ -19,7 +18,7 @@ function listEvents(auth, params, accumulator, maxPagesPerInvocation) {
                         getGsuiteData(params);
                     }
                     else {
-                        resolve({ accumulator, nextPageToken });
+                        resolve({ accumulator, nextPage });
                     }
 
                 }).catch(error => {
@@ -27,8 +26,8 @@ function listEvents(auth, params, accumulator, maxPagesPerInvocation) {
                 });
             }
             else {
-                    nextPageToken[applicationName]=params.pageToken ;
-                    resolve({ accumulator, nextPageToken });
+                    nextPage=params.pageToken;
+                    resolve({ accumulator, nextPage });
             }
         }
     });

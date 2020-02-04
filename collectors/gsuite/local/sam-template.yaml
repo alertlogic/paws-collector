@@ -21,12 +21,13 @@ Resources:
           paws_state_queue_url:
           paws_poll_interval:
           paws_extension:
-          paws_scopes: 
-          paws_application_names:   
-          paws_email_id: 
+          paws_collector_param_string_1:
+          paws_client_id:
+          paws_collector_param_string_2:
           paws_type_name: "gsuite"
           paws_max_pages_per_invocation:
-          paws_api_secret: 
+          paws_secret_param_name:
+          paws_api_secret:
           collector_id:
       Runtime: nodejs10.x
       Handler: index.handler
