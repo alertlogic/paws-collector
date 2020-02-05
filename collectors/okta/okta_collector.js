@@ -14,6 +14,7 @@ const okta = require('@okta/okta-sdk-nodejs');
 const parse = require('@alertlogic/al-collector-js').Parse;
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 
+const THROTTLING_ERROR_REGEXP = /rateLimit/g;
 
 const typeIdPaths = [
     { path: ['eventType'] },
@@ -43,7 +44,7 @@ class OktaCollector extends PawsCollector {
         let collector = this;
         const oktaClient = new okta.Client({
             orgUrl: process.env.paws_endpoint,
-            token: collector._pawsCreds.secret
+            token: collector.secret
         });
         console.info(`OKTA000001 Collecting data from ${state.since} till ${state.until}`);
         const collection = oktaClient.getLogs({
@@ -60,7 +61,13 @@ class OktaCollector extends PawsCollector {
             return callback(null, logAcc, newState, newState.poll_interval_sec);
         })
         .catch((error) => {
-            return callback(error);
+            if (error.message && error.message.match(THROTTLING_ERROR_REGEXP)) {
+                collector.reportApiThrottling(function() {
+                    return callback(error);
+                });
+            } else {
+                return callback(error);
+            }
         });
     }
     
