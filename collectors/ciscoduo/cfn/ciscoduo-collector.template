@@ -31,11 +31,7 @@
             "Type": "String",
             "Default": "alertlogic-collectors"
         },
-        "PawsCollectorTypeName": {
-            "Description": "A collector type name. For example, okta, auth0",
-            "Type": "String",
-            "Default": "ciscoduo"
-        },
+        
         "AlertlogicCustomerId": {
             "Description": "Optional. Alert Logic customer ID which collected data should be reported for. If not set customer ID is derived from AIMs tokens",
             "Type": "String",
@@ -46,28 +42,24 @@
             "Type": "String",
             "Default": "none"
         },
-        "PawsEndpoint": {
-            "Description": "URL to poll",
+        "CiscoDuoHost": {
+            "Description": "CiscoDuo host name. For example, api-XXXXXXXX.duosecurity.com",
             "Type": "String"
         },
-        "PawsAuthType": {
-            "Description": "Target API authentication type. Supported types: ssws, oauth2",
+        "DuoIntegrationKey": {
+            "Description": "CiscoDuo integration key",
             "Type": "String",
-            "Default": "ssws"
+            "NoEcho": true
         },
-        "PawsClientId": {
-            "Description": "Client ID for oauth2 authentication type",
-            "Type": "String"
-        },
-        "PawsSecret": {
-            "Description": "Client secret for oauth2 or secret token for ssws.",
+        "DuoSecretKey": {
+            "Description": "CiscoDuo secret key",
             "Type": "String",
             "NoEcho": true
         },
         "CollectionStartTs": {
-            "Description": "Timestamp when log collection starts. For example, 2019-11-21T16:00:00Z",
+            "Description": "Optional. Timestamp when log collection starts. For example, 2020-01-13T16:00:00Z",
             "Type": "String",
-            "Default" : "",
+            "Default": "",
             "AllowedPattern" : "(?:^\\d{4}(-\\d{2}){2}T(\\d{2}:){2}\\d{2}Z$)?"
         }
     },
@@ -90,10 +82,10 @@
             "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
             "CollectorId" : { "Ref":"CollectorId" },
             "PollingInterval" : 60,
-            "PawsEndpoint" : { "Ref":"PawsEndpoint" },
-            "PawsAuthType" : { "Ref":"PawsAuthType" },
-            "PawsClientId" : "",
-            "PawsSecret" : { "Ref":"PawsSecret" },
+            "PawsEndpoint" : { "Ref":"CiscoDuoHost" },
+            "PawsAuthType" : "oauth2",
+            "PawsClientId" : { "Ref":"DuoIntegrationKey" },
+            "PawsSecret" : { "Ref":"DuoSecretKey" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }
         }
