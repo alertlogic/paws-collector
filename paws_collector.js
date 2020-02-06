@@ -178,6 +178,33 @@ class PawsCollector extends AlAwsCollector {
         });
     };
     
+    reportApiThrottling(callback) {
+        // TODO: report collector status via Ingest/agentstatus
+        var cloudwatch = new AWS.CloudWatch({apiVersion: '2010-08-01'});
+        const params = {
+            MetricData: [
+              {
+                MetricName: 'PawsApiThrottling',
+                Dimensions: [
+                  {
+                    Name: 'CollectorType',
+                    Value: this._pawsCollectorType
+                  },
+                  {
+                    Name: 'FunctionName',
+                    Value: process.env.AWS_LAMBDA_FUNCTION_NAME
+                  }
+                ],
+                Timestamp: new Date(),
+                Unit: 'Count',
+                Value: 1
+              }
+            ],
+            Namespace: 'PawsCollectors'
+        };
+        return cloudwatch.putMetricData(params, callback);
+    };
+    
     _storeCollectionState(pawsState, privCollectorState, invocationTimeout, callback) {
         if (Array.isArray(privCollectorState)) {
             return this._storeCollectionStateArray(pawsState, privCollectorState, invocationTimeout, callback);
@@ -263,6 +290,7 @@ class PawsCollector extends AlAwsCollector {
     pawsFormatLog() {
         throw Error("not implemented pawsFormatLog()");
     };
+    
 }
 
 module.exports = {
