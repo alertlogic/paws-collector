@@ -6,10 +6,12 @@ process.env.aims_access_key_id = 'aims-key-id';
 process.env.aims_secret_key = 'aims-secret-key-encrypted';
 process.env.log_group = 'logGroupName';
 process.env.paws_state_queue_arn = "arn:aws:sqs:us-east-1:352283894008:paws-state-queue";
-process.env.paws_extension = '{{type}}';
+process.env.paws_type_name = '{{type}}';
 process.env.{{type}}_endpoint = 'https://test.alertlogic.com/';
 process.env.{{type}}_token = '{{type}}-token';
 process.env.collector_id = 'collector-id';
+process.env.paws_secret_param_name = 'PAWS-SECRET-{{type}}';
+process.env.paws_poll_interval = 60;
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',
