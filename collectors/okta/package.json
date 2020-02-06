@@ -14,6 +14,7 @@
     "jshint": "^2.9.5",
     "mocha": "^6.2.2",
     "mocha-jenkins-reporter": "^0.4.2",
+    "nock": "^10.0.6",
     "nyc": "^14.1.1",
     "rewire": "^4.0.1",
     "sinon": "^7.5.0"

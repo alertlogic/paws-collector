@@ -61,7 +61,7 @@ class OktaCollector extends PawsCollector {
             return callback(null, logAcc, newState, newState.poll_interval_sec);
         })
         .catch((error) => {
-            if (error.message && error.message.match(THROTTLING_ERROR_REGEXP)) {
+            if (this._isThrottlingError(error)) {
                 collector.reportApiThrottling(function() {
                     return callback(error);
                 });
@@ -69,6 +69,11 @@ class OktaCollector extends PawsCollector {
                 return callback(error);
             }
         });
+    }
+    
+    _isThrottlingError(error) {
+        return (error.status === 429) ||
+             (error.message && error.message.match(THROTTLING_ERROR_REGEXP));
     }
     
     _getNextCollectionState(curState) {
