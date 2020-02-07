@@ -32,6 +32,9 @@ const tsPaths = [
 ];
 
 
+// Formatted messageTypeId is equal to endpoint a log message came from
+ let messageTypeId;
+
 class CiscoduoCollector extends PawsCollector {
     constructor(context, creds) {
         super(context, creds, 'ciscoduo');
@@ -79,7 +82,8 @@ class CiscoduoCollector extends PawsCollector {
                 console.error('CDUO000003 API call returned error: ' + res.message);
                 return callback(res.message);
             } else {
-                return _handleDuoResults(res, callback);
+                messageTypeId = state.duo_endpoint;
+                return _handleDuoResults(state, res, callback);
             }
         });
     }
@@ -111,7 +115,7 @@ class CiscoduoCollector extends PawsCollector {
         return query;
     }
     
-    _handleDuoResults(res, callback) {
+    _handleDuoResults(state, res, callback) {
         let logs;
         let metadata;
         let newState;
@@ -120,28 +124,32 @@ class CiscoduoCollector extends PawsCollector {
             case DUO_ENDPOINT_AUTH:
                 logs = res.response.authlogs;
                 metadata = res.response.metadata;
+                break;
             case DUO_ENDPOINT_ADMIN:
             case DUO_ENDPOINT_TELE:
             case DUO_ENDPOINT_ENROLL:
                 logs = res.response;
                 // Assumption that the last message timestamp is a mintime for the next collection step
                 metadata = logs[logs.length-1];
+                break;
             default:
-                newState = collector._getNextCollectionState(state, metadata);
-                console.info(`CDUO000002 Next collection in ${newState.poll_interval_sec} seconds`);
-                return callback(null, logs, newState, newState.poll_interval_sec);
+                break;
         }
+        newState = collector._getNextCollectionState(state, metadata);
+        console.info(`CDUO000002 Next collection in ${newState.poll_interval_sec} seconds`);
+        return callback(null, logs, newState, newState.poll_interval_sec);
     }
     
     _getNextCollectionState(curState, metadata) {
         // There is an intentional two minute delay in new log availability in the API response.
         // Let's be safe.
         const nowMoment = moment().subtract(5, 'minutes');
+        let nextState;
         
         switch (curState.duo_endpoint) {
             case DUO_ENDPOINT_AUTH:
                 if (metadata.next_offset) {
-                    return {
+                    nextState = {
                         duo_endpoint: curState.duo_endpoint,
                         mintime: curState.mintime,
                         maxtime: curState.maxtime,
@@ -149,20 +157,21 @@ class CiscoduoCollector extends PawsCollector {
                         next_offset: metadata.next_offset.join()
                     };
                 } else {
-                    const curMaxMoment = moment(Number(curState.maxtime));
+                    const curMaxMoment = moment(parseInt(curState.maxtime));
                     const nextMinMoment = curMaxMoment.isAfter(nowMoment) ? nowMoment :
                             curMaxMoment;
                     const nextMaxMoment = nextMinMoment.clone().add(this.pollInterval, 'seconds');
                     // Check if we're behind collection schedule and need to catch up.
                     const nextPollInterval = nowMoment.diff(nextMaxMoment, 'seconds') > this.pollInterval ?
                             1 : this.pollInterval;
-                    return {
+                    nextState = {
                         duo_endpoint: curState.duo_endpoint,
                         mintime: nextMinMoment.valueOf(),
                         maxtime: nextMaxMoment.valueOf(),
                         poll_interval_sec: nextPollInterval
                    };
                 }
+                break;
             case DUO_ENDPOINT_ADMIN:
             case DUO_ENDPOINT_TELE:
             case DUO_ENDPOINT_ENROLL:
@@ -170,12 +179,15 @@ class CiscoduoCollector extends PawsCollector {
                 const nextMintime = metadata.timestamp + 1;
                 const nextPollInterval = nextMintime - curState.mintime > this.pollInterval ?
                         1 : this.pollInterval;
-                return  {
+                nextState = {
                     duo_endpoint: curState.duo_endpoint,
                     mintime: nextMintime,
                     poll_interval_sec: nextPollInterval
-               };
+                };
+                break;
         }
+        
+        return nextState;
     }
     
     pawsFormatLog(msg) {
@@ -190,9 +202,8 @@ class CiscoduoCollector extends PawsCollector {
             messageType: 'json/cisco.duo'
         };
         
-        if (typeId !== null && typeId !== undefined) {
-            formattedMsg.messageTypeId = `${typeId}`;
-        }
+        formattedMsg.messageTypeId = messageTypeId;
+
         if (ts.usec) {
             formattedMsg.messageTsUs = ts.usec;
         }

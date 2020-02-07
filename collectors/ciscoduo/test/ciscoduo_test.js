@@ -137,7 +137,6 @@ describe('Unit Tests', function() {
                 var collector = new CiscoduoCollector(ctx, creds);
                 let fmt = collector.pawsFormatLog(ciscoduoMock.AUTH_OK_RESP.response.authlogs[0]);
                 assert.equal('json/cisco.duo', fmt.messageType);
-                assert.equal('authentication', fmt.messageTypeId);
                 assert.equal(1532951962, fmt.messageTs);
                 done();
             });
@@ -159,7 +158,6 @@ describe('Unit Tests', function() {
                 var collector = new CiscoduoCollector(ctx, creds);
                 let fmt = collector.pawsFormatLog(ciscoduoMock.ADMIN_OK_RESP.response[0]);
                 assert.equal('json/cisco.duo', fmt.messageType);
-                assert.equal('admin_login_error', fmt.messageTypeId);
                 assert.equal(1446172820, fmt.messageTs);
                 done();
             });
