@@ -1,6 +1,7 @@
 const assert = require('assert');
 const sinon = require('sinon');
 const moment = require('moment');
+const nock = require('nock');
 var AWS = require('aws-sdk-mock');
 const m_response = require('cfn-response');
 const okta = require('@okta/okta-sdk-nodejs');
@@ -75,7 +76,12 @@ function mockSetEnvStub() {
 }
 
 describe('Unit Tests', function() {
+    
     beforeEach(function(){
+        if (!nock.isActive()) {
+            nock.activate();
+        }
+        
         AWS.mock('SSM', 'getParameter', function (params, callback) {
             const data = new Buffer('test-secret');
             return callback(null, {Parameter : { Value: data.toString('base64')}});
@@ -189,7 +195,7 @@ describe('Unit Tests', function() {
                 };
             });
             OktaCollector.load().then(function(creds) {
-                var collector = new OktaCollector(ctx, creds, 'okta');
+                var collector = new OktaCollector(ctx, creds);
                 const startDate = moment().subtract(1, 'days').toISOString();
                 const mockState = {
                     since: startDate,
@@ -200,6 +206,58 @@ describe('Unit Tests', function() {
                     assert.equal(logs.length, 3);
                     assert.equal(newState.since, mockState.until);
                     oktaSdkMock.restore();
+                    done();
+                });
+            });
+        });
+        
+        it('gets logs throttling', function(done) {
+            const {Client} = okta;
+            const oktaSdkMock = sinon.stub(Client.prototype, 'getLogs').callsFake(() => {
+                return {
+                    each: () => {
+                        return new Promise((res, rej) => {
+                            rej(new Error('HTTP request time exceeded okta.client.rateLimit.requestTimeout'));
+                        });
+                    }
+                };
+            });
+            OktaCollector.load().then(function(creds) {
+                var collector = new OktaCollector(ctx, creds);
+                const startDate = moment().subtract(1, 'days').toISOString();
+                const mockState = {
+                    since: startDate,
+                    until: moment().toISOString()
+                };
+                var reportSpy = sinon.spy(collector, 'reportApiThrottling');
+                
+                collector.pawsGetLogs(mockState, (err) => {
+                    assert.equal(true, reportSpy.calledOnce);
+                    oktaSdkMock.restore();
+                    done();
+                });
+            });
+        });
+        
+        it('gets logs throttling response', function(done) {
+            
+            // Okta endpoints mock
+            nock('https://test.alertlogic.com:443', {'encodedQueryParams':true})
+            .get('/api/v1/logs')
+            .query(true)
+            .times(1)
+            .reply(429);
+            OktaCollector.load().then(function(creds) {
+                var collector = new OktaCollector(ctx, creds);
+                const startDate = moment().subtract(1, 'days').toISOString();
+                const mockState = {
+                    since: startDate,
+                    until: moment().toISOString()
+                };
+                var reportSpy = sinon.spy(collector, 'reportApiThrottling');
+                
+                collector.pawsGetLogs(mockState, (err) => {
+                    assert.equal(true, reportSpy.calledOnce);
                     done();
                 });
             });
