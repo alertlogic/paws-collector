@@ -1,5 +1,5 @@
 # Ciscoduo collector
-Alert Logic Ciscoduo AWS Based API Poll (PAWS) Log Collector Library.
+Alert Logic Ciscoduo AWS Based API Poll (PAWS) Log Collector.
 
 # Overview
 This repository contains the AWS JavaScript Lambda function and CloudFormation 
@@ -8,7 +8,7 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
 
-Refer to [CF template readme](./cfn/README.md) for installation instructions.
+Refer to [CF template ](./cfn/ciscoduo-collector.template) for installation instructions.
 
 # How it works
 
@@ -88,4 +88,9 @@ make sam-local
 ```
   4. Please see `local/event.json` for the event payload used for local invocation.
 Please write your readme here
+
+## Links
+
+ - [Duo SDK](https://github.com/duosecurity/duo_api_nodejs)
+ - [Duo Admin API](https://duo.com/docs/adminapi#logs)
 
