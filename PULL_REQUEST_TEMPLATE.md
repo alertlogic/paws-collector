@@ -11,6 +11,7 @@ How it was fixed? - implementation details
 - [ ] No unnecessary code (debug logs, redundant comments, unused blocks of code, etc.)
 - [ ] Logging of main steps in the collector’s code
 - [ ] Logging of any requests that cause the collector to fail / throw an exception, with reason for failure / debugging info
+- [ ] Ensure that throttling errors are understood and and proerly handled
 - [ ] Registration/update/deregistration validated
 - [ ] Stats and status validated
 - [ ] CloudFormation template specific to setting up the collector, with documentation of any template parameters
