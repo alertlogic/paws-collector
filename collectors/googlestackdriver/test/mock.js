@@ -9,8 +9,11 @@ process.env.paws_state_queue_arn = "arn:aws:sqs:us-east-1:352283894008:paws-stat
 process.env.paws_extension = 'googlestackdriver';
 process.env.googlestackdriver_endpoint = 'https://test.alertlogic.com/';
 process.env.googlestackdriver_token = 'googlestackdriver-token';
+process.env.paws_collector_param_string_1 = '["projects/joe-is-cool", "projects/boogabooga"]';
 process.env.paws_secret_param_name = "google-driver-param-name";
 process.env.collector_id = 'collector-id';
+process.env.paws_poll_interval = 60;
+process.env.paws_max_pages_per_invocation = 2;
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',
