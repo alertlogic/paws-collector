@@ -20,6 +20,8 @@ const typeIdPaths = [{ path: ["kind"] }];
 
 const tsPaths = [{ path: ["id", "time"] }];
 
+const _0=0;
+
 class GsuiteCollector extends PawsCollector {
     constructor(context, creds) {
         super(context, creds, "gsuite");
@@ -43,6 +45,7 @@ class GsuiteCollector extends PawsCollector {
                 since: startTs,
                 until: endTs,
                 nextPage: null,
+                apiQuotaResetDate:null,
                 poll_interval_sec: 1
             }
         });
@@ -80,7 +83,11 @@ class GsuiteCollector extends PawsCollector {
             userKey: "all",
             applicationName: state.application
         });
-        
+
+        if(state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate) ){
+            console.log('API Daily Limit Exceeded. The quota will be reset at ',state.apiQuotaResetDate);
+            return callback(null, [], state, state.poll_interval_sec);
+        }
         utils.listEvents(client, params, [], process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextPage }) => {
                 let newState;
@@ -95,7 +102,19 @@ class GsuiteCollector extends PawsCollector {
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             })
             .catch((error) => {
-                return callback(error);
+                if(error.errors[_0].reason === "dailyLimitExceeded"){  
+                    const pstStartDateTime =moment().subtract(8, "hours").toISOString();
+                    const pstEndDateTime = moment(pstStartDateTime).endOf('day');
+                    const extraBufferSeconds=60;                 
+                    state.poll_interval_sec = 900;  
+                    state.apiQuotaResetDate = moment().add(pstEndDateTime.diff(pstStartDateTime, 'seconds')+extraBufferSeconds, "seconds").toISOString();
+                    console.log('API Daily Limit Exceeded. The quota will be reset at ',state.apiQuotaResetDate);
+                    return callback(null, [], state, state.poll_interval_sec);
+                }
+                else{
+                    return callback(error);
+                }
+                
             });
     }
 
@@ -108,10 +127,19 @@ class GsuiteCollector extends PawsCollector {
             ? nowMoment.toISOString()
             : curState.until;
 
-        const nextUntilMoment = moment(nextSinceTs).add(
-            this.pollInterval,
-            "seconds"
-        );
+
+        let nextUntilMoment;
+        if(nowMoment.diff(nextSinceTs, 'hours') > 24){
+            console.log('collection is more than 24 hours behind. Increasing the collection time to catch up')
+            nextUntilMoment = moment(nextSinceTs).add(24, 'hours');
+        }
+        else if(nowMoment.diff(nextSinceTs, 'hours') > 1){
+            console.log('collection is more than 1 hour behind. Increasing the collection time to catch up')
+            nextUntilMoment = moment(nextSinceTs).add(1, 'hours');
+        }
+        else{
+            nextUntilMoment = moment(nextSinceTs).add(this.pollInterval, 'seconds');
+        }    
         // Check if we're behind collection schedule and need to catch up.
         const nextPollInterval =
             nowMoment.diff(nextUntilMoment, "seconds") > this.pollInterval
@@ -122,6 +150,7 @@ class GsuiteCollector extends PawsCollector {
             application: curState.application,
             since: nextSinceTs,
             until: nextUntilMoment.toISOString(),
+            apiQuotaResetDate:null,
             poll_interval_sec: nextPollInterval
         };
     }
@@ -132,6 +161,7 @@ class GsuiteCollector extends PawsCollector {
             since,
             until,
             nextPage,
+            apiQuotaResetDate:null,
             poll_interval_sec: 1
         }
     }
