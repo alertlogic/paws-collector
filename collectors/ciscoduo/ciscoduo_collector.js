@@ -4,6 +4,8 @@
  *
  * ciscoduo class.
  *
+ * The last log message code: CDUO000004
+ * 
  * @end
  * -----------------------------------------------------------------------------
  */
@@ -133,6 +135,7 @@ class CiscoduoCollector extends PawsCollector {
                 metadata = logs[logs.length-1];
                 break;
             default:
+                return callback(`CDUO000004 Unknown DUO API endpoint ${state.duo_endpoint}`);
                 break;
         }
         newState = collector._getNextCollectionState(state, metadata);
