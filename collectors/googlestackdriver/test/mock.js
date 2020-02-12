@@ -157,16 +157,6 @@ const LOG_EVENT_PROTO_PAYLOAD = { labels: {},
      },
     payload: 'protoPayload' };
 
-const LOG_EVENT = {
-    CreationTime: new Date().toISOString(),
-    RecordType: "MockRecordType"
-};
-
-const MOCK_LOG = {
-    CreationTime: new Date().toISOString(),
-    RecordType: "MockRecordType"
-};
-
 const FUNCTION_ARN = 'arn:aws:lambda:us-east-1:352283894008:function:test-01-CollectLambdaFunction-2CWNLPPW5XO8';
 const FUNCTION_NAME = 'test-TestCollectLambdaFunction-1JNNKQIPOTEST';
 
