@@ -18,7 +18,7 @@
          * upon any API calls. This call will refresh token, without being time consuming/destructive
          */
         var orgUrl = process.env.paws_endpoint;
-        var token = String.concat("SSWS", PawsCollector._pawsCreds.secret);
+        var token = String.concat("SSWS ", PawsCollector._pawsCreds.secret);
         var options = {
             host: orgUrl,
             path: "/api/v1/users/me",

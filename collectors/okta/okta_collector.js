@@ -11,7 +11,7 @@
 
 const moment = require('moment');
 const okta = require('@okta/okta-sdk-nodejs');
-const healthChecks = require("./health_checks");
+const healthChecks = require('./health_checks');
 const parse = require('@alertlogic/al-collector-js').Parse;
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 
