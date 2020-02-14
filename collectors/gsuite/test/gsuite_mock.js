@@ -12,7 +12,11 @@ process.env.gsuite_endpoint = 'https://test.alertlogic.com/';
 process.env.gsuite_token = 'gsuite-token';
 process.env.collector_id = 'collector-id';
 process.env.paws_poll_interval = 60;
-process.env.paws_type_name= "gsuite";
+process.env.paws_type_name = "gsuite";
+process.env.paws_secret_param_name = "gsuite-param-name";
+process.env.paws_collector_param_string_1 = "gsuiteScope";
+process.env.paws_collector_param_string_2 = "[\"login\",\"admin\",\"token\"]";
+process.env.paws_max_pages_per_invocation = 2;
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',
@@ -22,43 +26,43 @@ const AIMS_TEST_CREDS = {
 const LOG_EVENT = {
     "kind": "admin#reports#activity",
     "id": {
-      "time": "2020-01-09T05:56:41.462Z",
-      "uniqueQualifier": "210793348270",
-      "applicationName": "login",
-      "customerId": "ABChsk512"
+        "time": "2020-01-09T05:56:41.462Z",
+        "uniqueQualifier": "210793348270",
+        "applicationName": "login",
+        "customerId": "ABChsk512"
     },
     "etag": "5sk1-3v2q0CvKziPNftN_ppCLuk/51234567897894561236RNOHRoa",
     "actor": {
-      "email": "name@test.com",
-      "profileId": "895123456789789456123"
+        "email": "name@test.com",
+        "profileId": "895123456789789456123"
     },
     "ipAddress": "125.255.255.1",
     "events": [
-      {
-        "type": "login",
-        "name": "login_success",
-        "parameters": [
-          {
-            "name": "login_type",
-            "value": "google_password"
-          },
-          {
-            "name": "login_challenge_method",
-            "multiValue": [
-              "password"
+        {
+            "type": "login",
+            "name": "login_success",
+            "parameters": [
+                {
+                    "name": "login_type",
+                    "value": "google_password"
+                },
+                {
+                    "name": "login_challenge_method",
+                    "multiValue": [
+                        "password"
+                    ]
+                },
+                {
+                    "name": "is_suspicious",
+                    "boolValue": false
+                }
             ]
-          },
-          {
-            "name": "is_suspicious",
-            "boolValue": false
-          }
-        ]
-      }
+        }
     ]
-  };
+};
 
-const MOCK_ACTIVITES={
-  list:()=>{}
+const MOCK_ACTIVITES = {
+    list: () => { }
 };
 
 const FUNCTION_ARN = 'arn:aws:lambda:us-east-1:352283894008:function:test-01-CollectLambdaFunction-2CWNLPPW5XO8';
