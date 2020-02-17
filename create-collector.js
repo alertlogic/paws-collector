@@ -40,7 +40,7 @@ copyFiles(templateDir, collectDir)
 console.log('populating writing cloud formation template')
 const fileContents = fs.readFileSync('collectors/template/cfn/collector.template.template', 'utf8')
 const replacedContents = populateTemplate(fileContents)
-const templatePath = collectDir + `cfn/${type}_collector.template`
+const templatePath = collectDir + `/cfn/${type}_collector.template`
 fs.writeFileSync(templatePath, replacedContents, {'encoding': 'utf8'})
 
 console.log("--------------------------------------")
