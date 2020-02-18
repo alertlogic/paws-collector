@@ -215,7 +215,6 @@ class PawsCollector extends AlAwsCollector {
     }
 
     _storeCollectionStateArray(pawsState, privCollectorStates, invocationTimeout, callback) {
-        // TODO: if 'privCollectorStates' length more than 10 split into multiple SQS messages batches (10 messages per batch)
         let collector = this;
         var sqs = new AWS.SQS({apiVersion: '2012-11-05'});
         const nextInvocationTimeout = invocationTimeout ? invocationTimeout : collector.pollInterval;
@@ -229,13 +228,30 @@ class PawsCollector extends AlAwsCollector {
             };
         });
 
-        const params = {
-            Entries: SQSMsgs,
-            QueueUrl: process.env.paws_state_queue_url
-        };
+        var promises = [];
+        for (let i = 0; i < SQSMsgs.length; i += 10) {
+            let params = {
+                Entries: SQSMsgs.slice(i, i + 10),
+                QueueUrl: process.env.paws_state_queue_url
+            };
+            let promise = new Promise((resolve, reject) => {
+                sqs.sendMessageBatch(params, (err, data) => {
+                    if(err) reject(err);
+                    resolve(data);
+                })
+            });
+            promises.push(promise);
+        }
+
         // Current state message will be removed by Lambda trigger upon successful completion
-        sqs.sendMessageBatch(params, callback);
+        Promise.all(promises)
+        .then(results => {
+            return callback(null);
+        }).catch(error => {
+            return callback(error);
+        });
     }
+
     _storeCollectionStateSingle(pawsState, privCollectorState, invocationTimeout, callback) {
         let collector = this;
         var sqs = new AWS.SQS({apiVersion: '2012-11-05'});
@@ -297,4 +313,3 @@ class PawsCollector extends AlAwsCollector {
 module.exports = {
     PawsCollector: PawsCollector
 }
-

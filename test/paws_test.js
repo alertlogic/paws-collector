@@ -131,7 +131,12 @@ class TestCollectorMultiState extends PawsCollector {
     }
     
     pawsGetLogs(state, callback) {
-        return callback(null, ['log1', 'log2'], [{state: 'new-state-1'}, {state: 'new-state-2'}], 900);
+        return callback(
+            null,
+            ['log1','log2'],
+            new Array(99).fill(0).map((e,i) => ({state: 'new-state-' + i})),
+            900
+        );
     }
     
     pawsGetRegisterParameters(event, callback) {
