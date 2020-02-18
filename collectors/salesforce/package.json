@@ -23,6 +23,8 @@
     "@alertlogic/paws-collector": "1.0.14",
     "async": "3.1.0",
     "debug": "4.1.1",
+    "jsforce": "^1.9.3",
+    "jsonwebtoken": "^8.5.1",
     "moment": "2.24.0"
   },
   "author": "Alert Logic Inc."
