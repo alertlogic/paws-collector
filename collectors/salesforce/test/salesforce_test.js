@@ -2,13 +2,36 @@ const assert = require('assert');
 const sinon = require('sinon');
 var AWS = require('aws-sdk-mock');
 const m_response = require('cfn-response');
-
 const salesforceMock = require('./salesforce_mock');
-var m_alCollector = require('@alertlogic/al-collector-js');
-var SalesforceCollector = require('../salesforce_collector').SalesforceCollector;
-const m_al_aws = require('@alertlogic/al-aws-collector-js').Util;
+var SalesforceCollector = require('../collector').SalesforceCollector;
 
+
+var responseStub = {};
 describe('Unit Tests', function() {
+
+    beforeEach(function () {
+        AWS.mock('SSM', 'getParameter', function (params, callback) {
+            const data = new Buffer('test-secret');
+            return callback(null, { Parameter: { Value: data.toString('base64') } });
+        });
+        AWS.mock('KMS', 'decrypt', function (params, callback) {
+            const data = {
+                Plaintext: '{}'
+            };
+            return callback(null, data);
+        });
+
+        responseStub = sinon.stub(m_response, 'send').callsFake(
+            function fakeFn(event, mockContext, responseStatus, responseData, physicalResourceId) {
+                mockContext.succeed();
+            });
+    });
+
+    afterEach(function () {
+        responseStub.restore();
+    });
+
+
     describe('Next state tests', function() {
         it('log format success', function(done) {
             let ctx = {
@@ -25,8 +48,7 @@ describe('Unit Tests', function() {
             SalesforceCollector.load().then(function(creds) {
                 var collector = new SalesforceCollector(ctx, creds, 'salesforce');
                 let nextState = collector._getNextCollectionState(salesforceMock.LOG_EVENT);
-                console.log('!!!', fmt);
-                // put some assertions on you next state here
+                assert.equal(nextState.poll_interval_sec, 60);
                 done();
             });
         });
@@ -48,8 +70,8 @@ describe('Unit Tests', function() {
             SalesforceCollector.load().then(function(creds) {
                 var collector = new SalesforceCollector(ctx, creds, 'salesforce');
                 let fmt = collector.pawsFormatLog(salesforceMock.LOG_EVENT);
-                console.log('!!!', fmt);
-                // put some assertions on your formatted message here
+                assert.equal(fmt.progName, 'SalesforceCollector');
+                assert.ok(fmt.messageType);
                 done();
             });
         });

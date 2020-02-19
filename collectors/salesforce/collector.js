@@ -77,10 +77,10 @@ class SalesforceCollector extends PawsCollector {
                 accessToken: ret.access_token,
                 instanceUrl: ret.instance_url
             });
+            console.info(`SALE000001 Collecting data from ${state.since} till ${state.until}`);
             let query = `SELECT Id, Name, LastLoginDate FROM User WHERE LastLoginDate > ${state.since} AND LastLoginDate < ${state.until}`
             conn.query(query, function (err, result) {
                 if (err) { return callback(err); }
-                console.info(`SALE000001 Collecting data from ${state.since} till ${state.until}`);
                 const newState = collector._getNextCollectionState(state);
                 console.info(`SALE000002 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, result.records, newState, newState.poll_interval_sec);
@@ -97,7 +97,18 @@ class SalesforceCollector extends PawsCollector {
             nowMoment.toISOString() :
             curState.until;
 
-        const nextUntilMoment = moment(nextSinceTs).add(this.pollInterval, 'seconds');
+        let nextUntilMoment;
+        if (nowMoment.diff(nextSinceTs, 'hours') > 24) {
+            console.log('collection is more than 24 hours behind. Increasing the collection time to catch up')
+            nextUntilMoment = moment(nextSinceTs).add(24, 'hours');
+        }
+        else if (nowMoment.diff(nextSinceTs, 'hours') > 1) {
+            console.log('collection is more than 1 hour behind. Increasing the collection time to catch up')
+            nextUntilMoment = moment(nextSinceTs).add(1, 'hours');
+        }
+        else {
+            nextUntilMoment = moment(nextSinceTs).add(this.pollInterval, 'seconds');
+        }
         // Check if we're behind collection schedule and need to catch up.
         const nextPollInterval = nowMoment.diff(nextUntilMoment, 'seconds') > this.pollInterval ?
             1 : this.pollInterval;

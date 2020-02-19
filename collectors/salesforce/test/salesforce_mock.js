@@ -10,15 +10,20 @@ process.env.paws_extension = 'salesforce';
 process.env.salesforce_endpoint = 'https://test.alertlogic.com/';
 process.env.salesforce_token = 'salesforce-token';
 process.env.collector_id = 'collector-id';
+process.env.paws_secret_param_name = "salesforce-param-name";
+process.env.paws_poll_interval = 60;
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',
     secret_key: 'test-secret-key'
 };
 
-const LOG_EVENT = {
-    // Here is where you fill in you mock log event
-    };
+const LOG_EVENT = { attributes:
+    { type: 'User',
+      url: '/services/data/v42.0/sobjects/User/00550000006zWUdAAM' },
+   Id: '00550000006zWUdAAM',
+   Name: 'Darrin Pryor',
+   LastLoginDate: '2020-01-27T15:22:54.000+0000' };
 
 const FUNCTION_ARN = 'arn:aws:lambda:us-east-1:352283894008:function:test-01-CollectLambdaFunction-2CWNLPPW5XO8';
 const FUNCTION_NAME = 'test-TestCollectLambdaFunction-1JNNKQIPOTEST';
