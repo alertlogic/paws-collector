@@ -26,7 +26,7 @@ const tsPaths = [
 
 
 class Auth0Collector extends PawsCollector {
-    
+
     pawsInitCollectionState(event, callback) {
         const initialState = {
             since: process.env.paws_collection_start_ts ? process.env.paws_collection_start_ts : moment().subtract(5, 'minutes').toISOString(),
@@ -34,7 +34,7 @@ class Auth0Collector extends PawsCollector {
         };
         return callback(null, initialState, 1);
     }
-    
+
     pawsGetLogs(state, callback) {
         let collector = this;
         const auth0Client = new ManagementClient({
@@ -60,25 +60,25 @@ class Auth0Collector extends PawsCollector {
             return callback(error);
         });
     }
-    
+
     _getNextCollectionState(curState, nextLogId, lastLogTs) {
         const nowMoment = moment();
         const lastLogMoment = moment(lastLogTs);
-        
+
         // Check if we're behind collection schedule and need to catch up.
         const nextPollInterval = nowMoment.diff(lastLogMoment, 'seconds') > this.pollInterval ?
                 1 : this.pollInterval;
-        
+
         return  {
             last_log_id: nextLogId,
             poll_interval_sec: nextPollInterval
         };
     }
-    
+
     pawsFormatLog(msg) {
         const ts = parse.getMsgTs(msg, tsPaths);
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
-        
+
         let formattedMsg = {
             messageTs: ts.sec,
             priority: 11,
@@ -86,7 +86,7 @@ class Auth0Collector extends PawsCollector {
             message: JSON.stringify(msg),
             messageType: 'json/auth0'
         };
-        
+
         if (typeId !== null && typeId !== undefined) {
             formattedMsg.messageTypeId = `${typeId}`;
         }

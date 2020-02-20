@@ -13,6 +13,7 @@ const moment = require('moment');
 const okta = require('@okta/okta-sdk-nodejs');
 const parse = require('@alertlogic/al-collector-js').Parse;
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
+const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 
 const THROTTLING_ERROR_REGEXP = /rateLimit/g;
 
@@ -27,9 +28,9 @@ const tsPaths = [
 
 
 class OktaCollector extends PawsCollector {
-    
+
     pawsInitCollectionState(event, callback) {
-        const startTs = process.env.paws_collection_start_ts ? 
+        const startTs = process.env.paws_collection_start_ts ?
                 process.env.paws_collection_start_ts :
                     moment().toISOString();
         const initialState = this._getNextCollectionState({
@@ -39,7 +40,7 @@ class OktaCollector extends PawsCollector {
         });
         return callback(null, initialState, initialState.poll_interval_sec);
     }
-    
+
     pawsGetLogs(state, callback) {
         let collector = this;
         const oktaClient = new okta.Client({
@@ -70,37 +71,28 @@ class OktaCollector extends PawsCollector {
             }
         });
     }
-    
+
     _isThrottlingError(error) {
         return (error.status === 429) ||
              (error.message && error.message.match(THROTTLING_ERROR_REGEXP));
     }
-    
-    _getNextCollectionState(curState) {
-        const nowMoment = moment();
-        const curUntilMoment = moment(curState.until);
-        
-        // Check if current 'until' is in the future.
-        const nextSinceTs = curUntilMoment.isAfter(nowMoment) ?
-                nowMoment.toISOString() :
-                curState.until;
 
-        const nextUntilMoment = moment(nextSinceTs).add(this.pollInterval, 'seconds');
-        // Check if we're behind collection schedule and need to catch up.
-        const nextPollInterval = nowMoment.diff(nextUntilMoment, 'seconds') > this.pollInterval ?
-                1 : this.pollInterval;
-        
+    _getNextCollectionState(curState) {
+        const untilMoment = moment(curState.until);
+
+        const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
+
         return  {
-             since: nextSinceTs,
+             since: nextSinceMoment.toISOString(),
              until: nextUntilMoment.toISOString(),
              poll_interval_sec: nextPollInterval
         };
     }
-    
+
     pawsFormatLog(msg) {
         const ts = parse.getMsgTs(msg, tsPaths);
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
-        
+
         let formattedMsg = {
             messageTs: ts.sec,
             priority: 11,
@@ -108,7 +100,7 @@ class OktaCollector extends PawsCollector {
             message: JSON.stringify(msg),
             messageType: 'json/okta'
         };
-        
+
         if (typeId !== null && typeId !== undefined) {
             formattedMsg.messageTypeId = `${typeId}`;
         }

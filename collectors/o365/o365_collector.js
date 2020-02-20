@@ -11,6 +11,7 @@
 
 const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
+const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const m_o365mgmnt = require('./lib/o365_mgmnt');
 
 const parse = require('@alertlogic/al-collector-js').Parse;
@@ -29,9 +30,9 @@ const tsPaths = [
 ];
 
 class O365Collector extends PawsCollector {
-    
+
     pawsInitCollectionState(event, callback) {
-        let startTs = process.env.paws_collection_start_ts ? 
+        let startTs = process.env.paws_collection_start_ts ?
                 process.env.paws_collection_start_ts :
                     moment().toISOString();
         let endTs;
@@ -40,7 +41,7 @@ class O365Collector extends PawsCollector {
             startTs = moment().subtract(PARTIAL_WEEK, 'days').toISOString();
             console.info("O365000004 Start timestamp is more than 7 days in the past. This is not allowed in the MS managment API. setting the start time to 7 days in the past");
         }
-        
+
         if(moment().diff(startTs, 'hours') > 24){
             endTs = moment(startTs).add(24, 'hours').toISOString();
         }
@@ -71,7 +72,7 @@ class O365Collector extends PawsCollector {
 
         callback(null, regValues);
     }
-    
+
     pawsGetLogs(state, callback) {
         let collector = this;
         console.info(`O365000001 Collecting data from ${state.since} till ${state.until} for stream ${state.stream}`);
@@ -134,35 +135,15 @@ class O365Collector extends PawsCollector {
         })
 
     }
-    
-    _getNextCollectionState(curState) {
-        const nowMoment = moment();
-        const curUntilMoment = moment(curState.until);
-        
-        // Check if current 'until' is in the future.
-        const nextSinceTs = curUntilMoment.isAfter(nowMoment) ?
-                nowMoment.toISOString() :
-                curState.until;
 
-        let nextUntilMoment;
-        if(nowMoment.diff(nextSinceTs, 'hours') > 24){
-            console.log('collection is more than 24 hours behind. Increasing the collection time to catch up')
-            nextUntilMoment = moment(nextSinceTs).add(24, 'hours');
-        }
-        else if(nowMoment.diff(nextSinceTs, 'hours') > 1){
-            console.log('collection is more than 1 hour behind. Increasing the collection time to catch up')
-            nextUntilMoment = moment(nextSinceTs).add(1, 'hours');
-        }
-        else{
-            nextUntilMoment = moment(nextSinceTs).add(this.pollInterval, 'seconds');
-        }
-        // Check if we're behind collection schedule and need to catch up.
-        const nextPollInterval = nowMoment.diff(nextUntilMoment, 'seconds') > this.pollInterval ?
-                1 : this.pollInterval;
-        
+    _getNextCollectionState(curState) {
+        const untilMoment = moment(curState.until);
+
+        const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-day-progression', untilMoment, this.pollInterval);
+
         return  {
             stream: curState.stream,
-            since: nextSinceTs,
+            since: nextSinceMoment.toISOString(),
             until: nextUntilMoment.toISOString(),
             poll_interval_sec: nextPollInterval
         };
@@ -177,11 +158,11 @@ class O365Collector extends PawsCollector {
             poll_interval_sec: 1
         }
     }
-    
+
     pawsFormatLog(msg) {
         const ts = parse.getMsgTs(msg, tsPaths);
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
-        
+
         let formattedMsg = {
             messageTs: ts.sec,
             priority: 11,
@@ -189,7 +170,7 @@ class O365Collector extends PawsCollector {
             message: JSON.stringify(msg),
             messageType: 'json/azure.o365'
         };
-        
+
         if (typeId !== null && typeId !== undefined) {
             formattedMsg.messageTypeId = `${typeId}`;
         }
