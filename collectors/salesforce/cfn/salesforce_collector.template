@@ -72,6 +72,11 @@
             "Description": "Salesforce User ID for oauth2 authentication type",
             "Type": "String"
         },
+        "SalesforceObjectNames": {
+            "Description": "Define Object name, if it is multiple pass as comma separated string",
+            "Type": "String",
+            "Default": "[\"LoginHistory\", \"LoginGeo\"]"
+        },
         "CollectionStartTs": {
             "Description": "Timestamp when log collection starts. For example, 2019-11-21T16:00:00Z",
             "Type": "String",
@@ -104,6 +109,7 @@
             "PawsSecret" : { "Ref":"SalesforceSecret" },
             "CollectorParamString1" : { "Ref":"SalesforceUserID" },
             "CollectorParamString2" : { "Ref":"SalesforceTokenURL" },
+            "CollectorParamString3" : { "Ref":"SalesforceObjectNames" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }
         }

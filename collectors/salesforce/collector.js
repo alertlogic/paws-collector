@@ -12,14 +12,15 @@
 const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const parse = require('@alertlogic/al-collector-js').Parse;
-var jsforce = require('jsforce');
+const utils = require("./utils");
 var jwt = require('jsonwebtoken');
 var request = require('request');
 
 
+
 const typeIdPaths = [{ path: ["attributes"] }];
 
-const tsPaths = [{ path: ["LastLoginDate"] }];
+let tsPaths = [];
 
 
 class SalesforceCollector extends PawsCollector {
@@ -28,16 +29,33 @@ class SalesforceCollector extends PawsCollector {
     }
 
     pawsInitCollectionState(event, callback) {
+
         const startTs = process.env.paws_collection_start_ts ?
             process.env.paws_collection_start_ts :
             moment().subtract(5, "minutes").toISOString();
+
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
-        const initialState = {
-            since: startTs,
-            until: endTs,
-            poll_interval_sec: 1
+
+        const objectNames = JSON.parse(process.env.paws_collector_param_string_3);
+        const initialStates = objectNames.map(object => {
+            return {
+                object,
+                since: startTs,
+                until: endTs,
+                poll_interval_sec: 1
+            }
+        });
+        return callback(null, initialStates, 1);
+    }
+
+    pawsGetRegisterParameters(event, callback) {
+        const regValues = {
+            salesforceUserID: process.env.paws_collector_param_string_1,
+            salesforceTokenURL: process.env.paws_collector_param_string_2,
+            salesforceObjectNames: process.env.paws_collector_param_string_3 
         };
-        return callback(null, initialState, 1);
+
+        callback(null, regValues);
     }
 
     pawsGetLogs(state, callback) {
@@ -51,7 +69,6 @@ class SalesforceCollector extends PawsCollector {
         const baseUrl = process.env.paws_endpoint;
         const tokenUrl = process.env.paws_collector_param_string_2;
 
-
         var claim = {
             iss: clientId,
             aud: baseUrl,
@@ -61,6 +78,8 @@ class SalesforceCollector extends PawsCollector {
 
         var token = jwt.sign(claim, privateKey, { algorithm: 'RS256' });
 
+        console.info(`SALE000001 Collecting data from ${state.since} till ${state.until}`);
+
         request({
             url: tokenUrl,
             method: 'POST',
@@ -68,23 +87,27 @@ class SalesforceCollector extends PawsCollector {
                 grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
                 assertion: token
             },
-        }, function (err, response, body) {
+        }, function (err, response) {
             if (err) {
                 return callback(err);
             }
-            var ret = JSON.parse(response.body)
-            var conn = new jsforce.Connection({
-                accessToken: ret.access_token,
-                instanceUrl: ret.instance_url
-            });
-            console.info(`SALE000001 Collecting data from ${state.since} till ${state.until}`);
-            let query = `SELECT Id, Name, LastLoginDate FROM User WHERE LastLoginDate > ${state.since} AND LastLoginDate < ${state.until}`
-            conn.query(query, function (err, result) {
-                if (err) { return callback(err); }
-                const newState = collector._getNextCollectionState(state);
-                console.info(`SALE000002 Next collection in ${newState.poll_interval_sec} seconds`);
-                return callback(null, result.records, newState, newState.poll_interval_sec);
-            });
+            var objectQueryDetails = utils.getObjectQuery(state);
+            if (!objectQueryDetails.query) {
+                return callback("The object name was not found!");
+            }
+
+            tsPaths = objectQueryDetails.tsPaths;
+
+            utils.getObjectLogs(response, objectQueryDetails.query, process.env.paws_max_pages_per_invocation)
+                .then((result) => {
+                    const newState = collector._getNextCollectionState(state);
+                    console.info(`SALE000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                    return callback(null, result, newState, newState.poll_interval_sec);
+                })
+                .catch((error) => {
+                    return callback(error);
+                });
+
         });
     }
 
@@ -114,8 +137,7 @@ class SalesforceCollector extends PawsCollector {
             1 : this.pollInterval;
 
         return {
-            // TODO: define the next collection state.
-            // This needs to be in the smae format as the intial colletion state above
+            object: curState.object,
             since: nextSinceTs,
             until: nextUntilMoment.toISOString(),
             poll_interval_sec: nextPollInterval
@@ -123,7 +145,7 @@ class SalesforceCollector extends PawsCollector {
     }
 
     pawsFormatLog(msg) {
-        // TODO: double check that this message parsing fits your use case
+
         const ts = parse.getMsgTs(msg, tsPaths);
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
 
