@@ -22,7 +22,7 @@ Resources:
           paws_poll_interval:
           paws_extension:
           paws_collector_param_string_1:
-          paws_client_id:
+          paws_api_client_id:
           paws_collector_param_string_2:
           paws_type_name: "gsuite"
           paws_max_pages_per_invocation:
