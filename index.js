@@ -10,5 +10,6 @@
  */
 
 module.exports = {
-    PawsCollector : require('./paws_collector').PawsCollector
+    PawsCollector : require('./paws_collector').PawsCollector,
+    calcNextCollectionInterval : require('./paws_utils').calcNextCollectionInterval
 };

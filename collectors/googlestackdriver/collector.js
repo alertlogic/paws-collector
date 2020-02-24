@@ -11,6 +11,7 @@
 
 const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
+const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const parse = require('@alertlogic/al-collector-js').Parse;
 const logging = require('@google-cloud/logging');
 
@@ -49,7 +50,7 @@ class GooglestackdriverCollector extends PawsCollector {
         }));
         return callback(null, initialStates, 1);
     }
-    
+
     pawsGetLogs(state, callback) {
         let collector = this;
 
@@ -103,7 +104,7 @@ timestamp < "${state.until}"`;
             })
             .catch(err => {
                 console.error(`GSTA000003 err in collection ${err}`);
-                
+
                 // Stackdriver Logging api has some rate limits that we might run into.
                 // If we run inot a rate limit error, instead of returning the error,
                 // we return the state back to the queue with an additional second added, up to 10
@@ -119,46 +120,29 @@ timestamp < "${state.until}"`;
                 return callback(err);
             });
     }
-    
-    _getNextCollectionState(curState, nextPage) {
-        const nowMoment = moment();
-        const curUntilMoment = moment(curState.until);
-        const {resource} = curState;
-        
-        // Check if current 'until' is in the future.
-        const nextSinceTs = curUntilMoment.isAfter(nowMoment) ?
-                nowMoment.toISOString() :
-                curState.until;
 
-        let nextUntilMoment;
-        if(moment().diff(nextSinceTs, 'days') > 7){
-            nextUntilMoment = moment(nextSinceTs).add(7, 'days').toISOString();
-        }
-        else if(moment().diff(nextSinceTs, 'hours') > 24){
-            nextUntilMoment = moment(nextSinceTs).add(24, 'hours').toISOString();
-        }
-        else {
-            nextUntilMoment = moment(nextSinceTs).add(this.pollInterval, 'seconds').toISOString();
-        }
-        // Check if we're behind collection schedule and need to catch up.
-        const nextPollInterval = nowMoment.diff(nextUntilMoment, 'seconds') > this.pollInterval ?
-                1 : this.pollInterval;
-        
+    _getNextCollectionState(curState, nextPage) {
+        const {resource} = curState;
+
+        const untilMoment = moment(curState.until);
+
+        const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('day-week-progression', untilMoment, this.pollInterval);
+
         return  {
-            since: nextSinceTs,
+            since: nextSinceMoment.toISOString(),
             nextPage,
             resource,
-            until: nextUntilMoment,
+            until: nextUntilMoment.toISOString(),
             poll_interval_sec: nextPollInterval
         };
     }
-    
+
     // TODO: probably need to actually decode hte protobuf payload on these logs
     pawsFormatLog(msg) {
         const ts = msg.timestamp ? msg.timestamp : {seconds: Date.now() / 1000};
-        
+
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
-        
+
         let formattedMsg = {
             // TODO: figure out if this TS is always a string or if they API is goofy...
             messageTs: parseInt(ts.seconds),
@@ -167,7 +151,7 @@ timestamp < "${state.until}"`;
             message: JSON.stringify(msg),
             messageType: 'json/googlestackdriver'
         };
-        
+
         if (typeId !== null && typeId !== undefined) {
             formattedMsg.messageTypeId = `${typeId}`;
         }

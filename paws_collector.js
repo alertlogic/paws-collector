@@ -14,6 +14,7 @@ const async = require('async');
 const debug = require('debug')('index');
 const AWS = require('aws-sdk');
 const fs = require('fs');
+const moment = require('moment');
 
 const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector;
 const m_packageJson = require('./package.json');
@@ -60,7 +61,7 @@ function getDecryptedPawsCredentials(credsBuffer) {
 }
 
 class PawsCollector extends AlAwsCollector {
-    
+
     static load() {
         return AlAwsCollector.load().then(function(aimsCreds) {
 
@@ -81,19 +82,19 @@ class PawsCollector extends AlAwsCollector {
         this._pawsCollectorType = process.env.paws_type_name;
         this.pollInterval = process.env.paws_poll_interval;
     };
-    
+
     get secret () {
         return this._pawsCreds.secret;
     };
-    
+
     get clientId () {
         return this._pawsCreds.client_id;
     };
-    
+
     get authType() {
         return this._pawsCreds.auth_type;
     };
-    
+
     getProperties() {
         const baseProps = super.getProperties();
         let pawsProps = {
@@ -102,11 +103,11 @@ class PawsCollector extends AlAwsCollector {
         };
         return Object.assign(pawsProps, baseProps);
     };
-    
+
     register(event) {
         let collector = this;
         let pawsRegisterProps = this.getProperties();
-        
+
         async.waterfall([
             function(asyncCallback) {
                 return collector.pawsInitCollectionState(event, asyncCallback);
@@ -127,7 +128,7 @@ class PawsCollector extends AlAwsCollector {
             }
         });
     };
-    
+
     deregister(event) {
         let collector = this;
         let pawsRegisterProps = {
@@ -136,12 +137,12 @@ class PawsCollector extends AlAwsCollector {
         let custom = collector.pawsGetRegisterParameters(event, function(err, customRegister) {
             if (err) {
                 console.warn('PAWS000102 Error during deregistration', err);
-            } 
+            }
             let registerProps = Object.assign(pawsRegisterProps, customRegister);
             return AlAwsCollector.prototype.deregister.call(collector, event, registerProps);
         });
     };
-    
+
     handleEvent(event) {
         let collector = this;
         if (event.Records) {
@@ -155,11 +156,11 @@ class PawsCollector extends AlAwsCollector {
             return super.handleEvent(event);
         }
     };
-    
+
     handlePollRequest(stateSqsMsg) {
         let collector = this;
         let pawsState = JSON.parse(stateSqsMsg.body);
-        
+
         async.waterfall([
             function(asyncCallback) {
                 return collector.pawsGetLogs(pawsState.priv_collector_state, asyncCallback);
@@ -177,7 +178,7 @@ class PawsCollector extends AlAwsCollector {
             collector.done(error);
         });
     };
-    
+
     reportApiThrottling(callback) {
         // TODO: report collector status via Ingest/agentstatus
         var cloudwatch = new AWS.CloudWatch({apiVersion: '2010-08-01'});
@@ -204,7 +205,7 @@ class PawsCollector extends AlAwsCollector {
         };
         return cloudwatch.putMetricData(params, callback);
     };
-    
+
     _storeCollectionState(pawsState, privCollectorState, invocationTimeout, callback) {
         if (Array.isArray(privCollectorState)) {
             return this._storeCollectionStateArray(pawsState, privCollectorState, invocationTimeout, callback);
@@ -212,9 +213,9 @@ class PawsCollector extends AlAwsCollector {
             return this._storeCollectionStateSingle(pawsState, privCollectorState, invocationTimeout, callback);
         }
     }
-    
+
     _storeCollectionStateArray(pawsState, privCollectorStates, invocationTimeout, callback) {
-        // TODO: if 'privCollectorStates' length more than 10 split into multiple SQS messages batches (10 messages per batch) 
+        // TODO: if 'privCollectorStates' length more than 10 split into multiple SQS messages batches (10 messages per batch)
         let collector = this;
         var sqs = new AWS.SQS({apiVersion: '2012-11-05'});
         const nextInvocationTimeout = invocationTimeout ? invocationTimeout : collector.pollInterval;
@@ -227,7 +228,7 @@ class PawsCollector extends AlAwsCollector {
                 DelaySeconds: nextInvocationTimeout
             };
         });
-        
+
         const params = {
             Entries: SQSMsgs,
             QueueUrl: process.env.paws_state_queue_url
@@ -249,48 +250,48 @@ class PawsCollector extends AlAwsCollector {
         // Current state message will be removed by Lambda trigger upon successful completion
         sqs.sendMessage(params, callback);
     };
-    
-    /** 
+
+    /**
      * @function collector callback to initialize collection state
      * @param event - collector register event coming in from CFT.
      * @param callback
      * @returns callback - (error, stateObjectOrArray, nextInvocationTimeoutSec).
-     * 
+     *
      */
     pawsInitCollectionState(event, callback) {
         throw Error("not implemented pawsInitCollectionState()");
     }
-    
-    /** 
+
+    /**
      * @function collector callback to receive logs data
      * @param state - collection state specific to a PAWS collector.
      * @param callback
      * @returns callback - (error, logsArray, stateObjectOrArray, nextInvocationTimeoutSec).
-     * 
+     *
      */
     pawsGetLogs(state, callback) {
         throw Error("not implemented pawsGetLogs()");
     };
-    
-    /** 
+
+    /**
      * @function collector callback to get specific (de)registration parameters
      * @param event - collector register event coming in from CFT during stack Create/Delete operations.
      * @param callback
      * @returns callback - (error, objectWithRegistrationProperties)
-     * 
+     *
      */
     pawsGetRegisterParameters(event, callback) {
         return callback(null, {});
     };
-    
-    /** 
+
+    /**
      * @function collector callback to format received data
      * Refer to al-collector-js.buildPayload parseCallback parameter
      */
     pawsFormatLog() {
         throw Error("not implemented pawsFormatLog()");
     };
-    
+
 }
 
 module.exports = {
