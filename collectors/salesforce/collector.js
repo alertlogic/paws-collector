@@ -78,7 +78,7 @@ class SalesforceCollector extends PawsCollector {
 
         var token = jwt.sign(claim, privateKey, { algorithm: 'RS256' });
 
-        console.info(`SALE000001 Collecting data from ${state.since} till ${state.until}`);
+        console.info(`SALE000001 Collecting data for ${state.object} from ${state.since} till ${state.until}`);
 
         request({
             url: tokenUrl,
