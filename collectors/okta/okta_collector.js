@@ -31,11 +31,9 @@ const tsPaths = [
 class OktaCollector extends PawsCollector {
 
     constructor(context, {aimsCreds, pawsCreds}){
-        super(context, 'paws',
-            AlAwsCollector.IngestTyps.LOGMSGS,
-            m_packageJson.version,
-            aimsCreds,
-            null, [healthChecks.oktaTokenHealthCheck], []);
+        super(context,
+            {aimsCreds, pawsCreds},
+            [healthChecks.oktaTokenHealthCheck], []);
     }
     
     pawsInitCollectionState(event, callback) {
