@@ -101,7 +101,7 @@ class GsuiteCollector extends PawsCollector {
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             })
             .catch((error) => {
-                if (error.errors[0].reason === "dailyLimitExceeded") {
+                if (error.errors && error.errors.length > 0 && error.errors[0].reason === "dailyLimitExceeded") {
                     // As per gsuite document daily limit quota will be reset at midnight Pacific Time (PT), 
                     // Get current PST time by subtracting 8 hours from UTC.
                     const pstCurrentDateTime = moment().subtract(8, "hours").toISOString();
