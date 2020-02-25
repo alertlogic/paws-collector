@@ -42,6 +42,7 @@ class SalesforceCollector extends PawsCollector {
                 object,
                 since: startTs,
                 until: endTs,
+                nextPage: null,
                 poll_interval_sec: 1
             }
         });
@@ -52,7 +53,7 @@ class SalesforceCollector extends PawsCollector {
         const regValues = {
             salesforceUserID: process.env.paws_collector_param_string_1,
             salesforceTokenURL: process.env.paws_collector_param_string_2,
-            salesforceObjectNames: process.env.paws_collector_param_string_3 
+            salesforceObjectNames: process.env.paws_collector_param_string_3
         };
 
         callback(null, regValues);
@@ -87,7 +88,7 @@ class SalesforceCollector extends PawsCollector {
                 grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
                 assertion: token
             },
-        }, function (err, response) {
+        }, (err, response) => {
             if (err) {
                 return callback(err);
             }
@@ -95,14 +96,17 @@ class SalesforceCollector extends PawsCollector {
             if (!objectQueryDetails.query) {
                 return callback("The object name was not found!");
             }
-
             tsPaths = objectQueryDetails.tsPaths;
-
-            utils.getObjectLogs(response, objectQueryDetails.query, process.env.paws_max_pages_per_invocation)
-                .then((result) => {
-                    const newState = collector._getNextCollectionState(state);
+            utils.getObjectLogs(response, objectQueryDetails.query,[], state.nextPage, process.env.paws_max_pages_per_invocation)
+                .then(({ accumulator, nextPage }) => {
+                    let newState;
+                    if (nextPage === undefined) {
+                        newState = this._getNextCollectionState(state);
+                    } else {
+                        newState = this._getNextCollectionStateWithNextPage(state, nextPage);
+                    }
                     console.info(`SALE000002 Next collection in ${newState.poll_interval_sec} seconds`);
-                    return callback(null, result, newState, newState.poll_interval_sec);
+                    return callback(null, accumulator, newState, newState.poll_interval_sec);
                 })
                 .catch((error) => {
                     return callback(error);
@@ -140,7 +144,18 @@ class SalesforceCollector extends PawsCollector {
             object: curState.object,
             since: nextSinceTs,
             until: nextUntilMoment.toISOString(),
+            nextPage: null,
             poll_interval_sec: nextPollInterval
+        };
+    }
+
+    _getNextCollectionStateWithNextPage({ object, since, until }, nextPage) {
+        return {
+            object,
+            since,
+            until,
+            nextPage,
+            poll_interval_sec: 1
         };
     }
 
