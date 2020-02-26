@@ -75,7 +75,7 @@
         "SalesforceObjectNames": {
             "Description": "Define Object name, if it is multiple pass as comma separated string",
             "Type": "String",
-            "Default": "[\"LoginHistory\", \"LoginGeo\"]"
+            "Default": "[\"LoginHistory\", \"EventLogFile\"]"
         },
         "CollectionStartTs": {
             "Description": "Timestamp when log collection starts. For example, 2019-11-21T16:00:00Z",

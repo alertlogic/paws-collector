@@ -16,7 +16,7 @@ function getObjectLogs(response, query, accumulator, lastPageLastId, maxPagesPer
                     instanceUrl: ret.instance_url,
                     version: "48.0"
                 });
-                let queryWithLimit = lastId ? `${query} AND Id > '${lastId}'`: query;
+                let queryWithLimit = lastId ? `${query} AND Id > '${lastId}'` : query;
                 queryWithLimit = `${queryWithLimit} ORDER BY Id ASC LIMIT ${limit}`;
                 conn.query(queryWithLimit, function (err, result) {
                     if (err) { return reject(err); }
@@ -24,7 +24,7 @@ function getObjectLogs(response, query, accumulator, lastPageLastId, maxPagesPer
                         return resolve({ accumulator, nextPage });
                     }
                     accumulator.push(...result.records);
-                    lastId = accumulator[accumulator.length-1].Id;
+                    lastId = accumulator[accumulator.length - 1].Id;
                     pageCount++;
                     return getSalesforceData();
                 });
@@ -46,7 +46,7 @@ function getObjectQuery(state) {
             tsPaths = [{ path: ["LoginTime"] }];
             break;
         case "EventLogFile":
-            query = `SELECT Id, EventType, Interval, LogFile, LogFileContentType, LogFileFieldNames, LogFileFieldTypes, LogFileLength, Sequence, LogDate FROM EventLogFile WHERE LogDate > ${state.since} AND LogDate < ${state.until}`;
+            query = `SELECT Id, EventType, Interval, LogFile, LogFileContentType, LogFileFieldNames, LogFileFieldTypes, LogFileLength, Sequence, LogDate FROM EventLogFile WHERE ( EventType = 'Login' OR EventType = 'API' OR EventType = 'Logout' ) AND LogDate > ${state.since} AND LogDate < ${state.until}`;
             tsPaths = [{ path: ["LogDate"] }];
             break;
         default:
