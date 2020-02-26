@@ -252,13 +252,9 @@ describe('Unit Tests', function() {
 
         it('sends multiple SQS batches when greater than len privCollectorStates is > 10', function(done) {
 
-            let counter = 0;
-            AWS.remock('SQS', 'sendMessageBatch', function (params, callback) {
-                let buf = Buffer(JSON.stringify({}));
-                counter++;
-                callback(null, {Body: buf});
-            });
-
+            let buf = Buffer(JSON.stringify({}));
+            let spy = sinon.spy((params, callback) => callback(null, {Body: buf}));
+            AWS.remock('SQS', 'sendMessageBatch', spy);
 
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,
@@ -280,7 +276,7 @@ describe('Unit Tests', function() {
             TestCollectorMultiState.load().then(function(creds) {
                 let collector = new TestCollectorMultiState(ctx, creds);
                 collector._storeCollectionState(initialPawsState, privCollectorStates, 0, err => {
-                    assert.equal(counter, 8);
+                    assert.equal(spy.callCount, 8);
                     done();
                 });
             });
