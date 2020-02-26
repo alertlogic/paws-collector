@@ -9,9 +9,9 @@
     "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=text mocha --colors"
   },
   "devDependencies": {
-    "aws-sdk": "*",
-    "aws-sdk-mock": "*",
-    "jshint": "^2.9.5",
+    "aws-sdk": "^2.624.0",
+    "aws-sdk-mock": "^5.0.0",
+    "jshint": "^2.11.0",
     "mocha": "^6.2.2",
     "mocha-jenkins-reporter": "^0.4.2",
     "nyc": "^14.1.1",
