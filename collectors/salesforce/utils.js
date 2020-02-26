@@ -1,11 +1,11 @@
 var jsforce = require('jsforce');
 
 
-function getObjectLogs(response, query, accumulator, nextPageOffset, maxPagesPerInvocation) {
+function getObjectLogs(response, query, accumulator, lastPageLastId, maxPagesPerInvocation) {
     let pageCount = 0;
     let nextPage;
-    let limit = 100;
-    let offset = nextPageOffset ? nextPageOffset : 0;
+    let limit = 1000;
+    let lastId = lastPageLastId ? lastPageLastId : null;
     return new Promise(function (resolve, reject) {
         getSalesforceData();
         function getSalesforceData() {
@@ -13,22 +13,24 @@ function getObjectLogs(response, query, accumulator, nextPageOffset, maxPagesPer
                 var ret = JSON.parse(response.body)
                 var conn = new jsforce.Connection({
                     accessToken: ret.access_token,
-                    instanceUrl: ret.instance_url
+                    instanceUrl: ret.instance_url,
+                    version: "48.0"
                 });
-                queryWithLimit = `${query} LIMIT ${limit} OFFSET ${offset}`;
+                let queryWithLimit = lastId ? `${query} AND Id > '${lastId}'`: query;
+                queryWithLimit = `${queryWithLimit} ORDER BY Id ASC LIMIT ${limit}`;
                 conn.query(queryWithLimit, function (err, result) {
                     if (err) { return reject(err); }
                     if (result.records.length === 0) {
                         return resolve({ accumulator, nextPage });
                     }
                     accumulator.push(...result.records);
-                    offset = offset + limit;
+                    lastId = accumulator[accumulator.length-1].Id;
                     pageCount++;
                     return getSalesforceData();
                 });
             }
             else {
-                nextPage = offset;
+                nextPage = lastId;
                 return resolve({ accumulator, nextPage });
             }
         }
@@ -44,7 +46,7 @@ function getObjectQuery(state) {
             tsPaths = [{ path: ["LoginTime"] }];
             break;
         case "EventLogFile":
-            query = `SELECT EventType, LogDate FROM EventLogFile`;
+            query = `SELECT Id, EventType, Interval, LogFile, LogFileContentType, LogFileFieldNames, LogFileFieldTypes, LogFileLength, Sequence, LogDate FROM EventLogFile WHERE LogDate > ${state.since} AND LogDate < ${state.until}`;
             tsPaths = [{ path: ["LogDate"] }];
             break;
         default:
