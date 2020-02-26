@@ -229,9 +229,10 @@ class PawsCollector extends AlAwsCollector {
         });
 
         var promises = [];
-        for (let i = 0; i < SQSMsgs.length; i += 10) {
+        const SQS_BATCH_LIMIT = 10
+        for (let i = 0; i < SQSMsgs.length; i += SQS_BATCH_LIMIT) {
             let params = {
-                Entries: SQSMsgs.slice(i, i + 10),
+                Entries: SQSMsgs.slice(i, i + SQS_BATCH_LIMIT),
                 QueueUrl: process.env.paws_state_queue_url
             };
             let promise = new Promise((resolve, reject) => {
