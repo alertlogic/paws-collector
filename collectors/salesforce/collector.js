@@ -36,7 +36,7 @@ class SalesforceCollector extends PawsCollector {
 
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
 
-        const objectNames = JSON.parse(process.env.paws_collector_param_string_3);
+        const objectNames = JSON.parse(process.env.paws_collector_param_string_2);
         const initialStates = objectNames.map(object => {
             return {
                 object,
@@ -52,8 +52,7 @@ class SalesforceCollector extends PawsCollector {
     pawsGetRegisterParameters(event, callback) {
         const regValues = {
             salesforceUserID: process.env.paws_collector_param_string_1,
-            salesforceTokenURL: process.env.paws_collector_param_string_2,
-            salesforceObjectNames: process.env.paws_collector_param_string_3
+            salesforceObjectNames: process.env.paws_collector_param_string_2
         };
 
         callback(null, regValues);
@@ -68,7 +67,7 @@ class SalesforceCollector extends PawsCollector {
         const clientId = collector.clientId;
         const salesForceUser = process.env.paws_collector_param_string_1;
         const baseUrl = process.env.paws_endpoint;
-        const tokenUrl = process.env.paws_collector_param_string_2;
+        const tokenUrl = `${baseUrl}/services/oauth2/token`;
 
         var claim = {
             iss: clientId,
@@ -97,7 +96,7 @@ class SalesforceCollector extends PawsCollector {
                 return callback("The object name was not found!");
             }
             tsPaths = objectQueryDetails.tsPaths;
-            utils.getObjectLogs(response, objectQueryDetails.query,[], state.nextPage, process.env.paws_max_pages_per_invocation)
+            utils.getObjectLogs(response, objectQueryDetails, [], state, process.env.paws_max_pages_per_invocation)
                 .then(({ accumulator, nextPage }) => {
                     let newState;
                     if (nextPage === undefined) {

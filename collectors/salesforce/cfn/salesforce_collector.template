@@ -64,10 +64,6 @@
             "Type": "String",
             "NoEcho": true
         },
-        "SalesforceTokenURL": {
-            "Description": "Salesforce full token URL",
-            "Type": "String"
-        },
         "SalesforceUserID": {
             "Description": "Salesforce User ID for oauth2 authentication type",
             "Type": "String"
@@ -75,7 +71,7 @@
         "SalesforceObjectNames": {
             "Description": "Define Object name, if it is multiple pass as comma separated string",
             "Type": "String",
-            "Default": "[\"LoginHistory\", \"EventLogFile\"]"
+            "Default": "[\"LoginHistory\", \"EventLogFile\",\"ApiEvent\", \"LoginEvent\",\"LogoutEvent\", \"LoginAsEvent\"]"
         },
         "CollectionStartTs": {
             "Description": "Timestamp when log collection starts. For example, 2019-11-21T16:00:00Z",
@@ -108,8 +104,7 @@
             "PawsClientId" : { "Ref":"SalesforceClientId" },
             "PawsSecret" : { "Ref":"SalesforceSecret" },
             "CollectorParamString1" : { "Ref":"SalesforceUserID" },
-            "CollectorParamString2" : { "Ref":"SalesforceTokenURL" },
-            "CollectorParamString3" : { "Ref":"SalesforceObjectNames" },
+            "CollectorParamString2" : { "Ref":"SalesforceObjectNames" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }
         }

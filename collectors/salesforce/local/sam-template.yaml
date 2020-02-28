@@ -26,8 +26,7 @@ Resources:
           paws_api_client_id:  
           paws_endpoint: 
           paws_collector_param_string_1:
-          paws_collector_param_string_2: 
-          paws_collector_param_string_3:
+          paws_collector_param_string_2:
           paws_max_pages_per_invocation:          
           collector_id:
       Runtime: nodejs10.x
