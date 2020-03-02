@@ -11,6 +11,7 @@
 
 const moment = require("moment");
 const PawsCollector = require("@alertlogic/paws-collector").PawsCollector;
+const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const parse = require("@alertlogic/al-collector-js").Parse;
 
 const { auth } = require("google-auth-library");
@@ -101,7 +102,7 @@ class GsuiteCollector extends PawsCollector {
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             })
             .catch((error) => {
-                if (error.errors[0].reason === "dailyLimitExceeded") {
+                if (error.errors && error.errors.length > 0 && error.errors[0].reason === "dailyLimitExceeded") {
                     // As per gsuite document daily limit quota will be reset at midnight Pacific Time (PT), 
                     // Get current PST time by subtracting 8 hours from UTC.
                     const pstCurrentDateTime = moment().subtract(8, "hours").toISOString();
@@ -123,36 +124,14 @@ class GsuiteCollector extends PawsCollector {
     }
 
     _getNextCollectionState(curState) {
-        const nowMoment = moment();
-        const curUntilMoment = moment(curState.until);
 
-        // Check if current 'until' is in the future.
-        const nextSinceTs = curUntilMoment.isAfter(nowMoment)
-            ? nowMoment.toISOString()
-            : curState.until;
+        const untilMoment = moment(curState.until);
 
-
-        let nextUntilMoment;
-        if (nowMoment.diff(nextSinceTs, 'hours') > 24) {
-            console.log('collection is more than 24 hours behind. Increasing the collection time to catch up')
-            nextUntilMoment = moment(nextSinceTs).add(24, 'hours');
-        }
-        else if (nowMoment.diff(nextSinceTs, 'hours') > 1) {
-            console.log('collection is more than 1 hour behind. Increasing the collection time to catch up')
-            nextUntilMoment = moment(nextSinceTs).add(1, 'hours');
-        }
-        else {
-            nextUntilMoment = moment(nextSinceTs).add(this.pollInterval, 'seconds');
-        }
-        // Check if we're behind collection schedule and need to catch up.
-        const nextPollInterval =
-            nowMoment.diff(nextUntilMoment, "seconds") > this.pollInterval
-                ? 1
-                : this.pollInterval;
+        const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-day-progression', untilMoment, this.pollInterval);
 
         return {
             application: curState.application,
-            since: nextSinceTs,
+            since: nextSinceMoment.toISOString(),
             until: nextUntilMoment.toISOString(),
             apiQuotaResetDate: null,
             poll_interval_sec: nextPollInterval

@@ -22,6 +22,9 @@ Resources:
           paws_state_queue_url:
           paws_poll_interval:
           paws_extension:
+          paws_secret_param_name:
+          paws_api_client_id:
+          paws_collector_param_string_1:
           paws_api_secret:
           APP_SUBSCRIPTION_ID:
           AZURE_APP_TENANT_ID:

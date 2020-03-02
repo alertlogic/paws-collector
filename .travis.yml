@@ -4,7 +4,5 @@ node_js:
   - "10"
 install:
   - make deps
-  - make -C collectors/okta deps
 script:
   - make test
-  - make -C collectors/okta test

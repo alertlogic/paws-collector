@@ -86,6 +86,10 @@ function mockSQSSendMessageBatch(returnObject) {
     });
 }
 
+function gen_state_objects(num) {
+    return new Array(num).fill(0).map((e,i) => ({state: 'new-state-' + i}));
+}
+
 class TestCollector extends PawsCollector {
     constructor(ctx, creds) {
         super(ctx, creds);
@@ -131,9 +135,9 @@ class TestCollectorMultiState extends PawsCollector {
     }
     
     pawsGetLogs(state, callback) {
-        return callback(null, ['log1', 'log2'], [{state: 'new-state-1'}, {state: 'new-state-2'}], 900);
+        return callback(null, ['log1','log2'], gen_state_objects(98), 900);
     }
-    
+
     pawsGetRegisterParameters(event, callback) {
         return callback(null, {register: 'test-param'});
     }
@@ -243,6 +247,38 @@ describe('Unit Tests', function() {
             TestCollectorMultiState.load().then(function(creds) {
                 var collector = new TestCollectorMultiState(ctx, creds);
                 collector.handleEvent(testEvent);
+            });
+        });
+
+        it('sends multiple SQS batches when greater than len privCollectorStates is > 10', function(done) {
+
+            let buf = Buffer(JSON.stringify({}));
+            let spy = sinon.spy((params, callback) => callback(null, {Body: buf}));
+            AWS.remock('SQS', 'sendMessageBatch', spy);
+
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+
+            let privCollectorStates = gen_state_objects(72);
+
+            let initialPawsState = {
+                priv_collector_state: privCollectorStates
+            };
+
+            TestCollectorMultiState.load().then(function(creds) {
+                let collector = new TestCollectorMultiState(ctx, creds);
+                collector._storeCollectionState(initialPawsState, privCollectorStates, 0, err => {
+                    assert.equal(spy.callCount, 8);
+                    done();
+                });
             });
         });
         
@@ -484,3 +520,4 @@ describe('Unit Tests', function() {
         });
     });
 });
+
