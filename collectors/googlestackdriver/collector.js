@@ -139,6 +139,8 @@ timestamp < "${state.until}"`;
 
     // TODO: probably need to actually decode hte protobuf payload on these logs
     pawsFormatLog(msg) {
+        let collector = this;
+
         const ts = msg.timestamp ? msg.timestamp : {seconds: Date.now() / 1000};
 
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
@@ -150,7 +152,7 @@ timestamp < "${state.until}"`;
             progName: 'GooglestackdriverCollector',
             message: JSON.stringify(msg),
             messageType: 'json/googlestackdriver',
-            application_id: process.env.al_application_id
+            application_id: collector.application_id
 
         };
 
