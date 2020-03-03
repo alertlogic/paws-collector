@@ -11,6 +11,10 @@
             "Type": "String",
             "NoEcho": true
         },
+        "AlApplicationId": {
+            "Description": "Alert Logic Application Id for collector logs",
+            "Type": "String"
+        },
         "AlApiEndpoint": {
             "Description": "Alert Logic API endpoint",
             "Type": "String",
@@ -550,6 +554,9 @@
                       { "Ref" : "PawsCollectorTypeName" },
                       "-collector.json"
                   ]]},
+                  "al_application_id":{
+                      "Ref":"AlApplicationId"
+                  },
                   "al_api":{
                       "Ref":"AlApiEndpoint"
                   },

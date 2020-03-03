@@ -149,7 +149,9 @@ timestamp < "${state.until}"`;
             priority: 11,
             progName: 'GooglestackdriverCollector',
             message: JSON.stringify(msg),
-            messageType: 'json/googlestackdriver'
+            messageType: 'json/googlestackdriver',
+            application_id: process.env.al_application_id
+
         };
 
         if (typeId !== null && typeId !== undefined) {

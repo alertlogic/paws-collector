@@ -168,7 +168,8 @@ class O365Collector extends PawsCollector {
             priority: 11,
             progName: 'O365Collector',
             message: JSON.stringify(msg),
-            messageType: 'json/azure.o365'
+            messageType: 'json/azure.o365',
+            application_id: process.env.al_application_id
         };
 
         if (typeId !== null && typeId !== undefined) {

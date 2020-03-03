@@ -84,7 +84,8 @@ class Auth0Collector extends PawsCollector {
             priority: 11,
             progName: 'Auth0Collector',
             message: JSON.stringify(msg),
-            messageType: 'json/auth0'
+            messageType: 'json/auth0',
+            application_id: process.env.al_application_id
         };
 
         if (typeId !== null && typeId !== undefined) {

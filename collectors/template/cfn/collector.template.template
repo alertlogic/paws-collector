@@ -11,6 +11,11 @@
             "Type": "String",
             "NoEcho": true
         },
+        "AlApplicationId": {
+            "Description": "Alert Logic Application Id for collector logs",
+            "Type": "String",
+            "Default": "collector_type"
+        },
         "AlApiEndpoint": {
             "Description": "Alert Logic API endpoint",
             "Type": "String",
@@ -83,6 +88,7 @@
           "Parameters" : {
             "AlertlogicAccessKeyId" : { "Ref":"AlertlogicAccessKeyId" },
             "AlertlogicSecretKey" : { "Ref":"AlertlogicSecretKey" },
+            "AlApplicationId" : { "Ref":"AlApplicationId" },
             "AlApiEndpoint" : { "Ref":"AlApiEndpoint" },
             "AlDataResidency" : { "Ref":"AlDataResidency" },
             "PackagesBucketPrefix" : { "Ref":"PackagesBucketPrefix" },

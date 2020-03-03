@@ -6,6 +6,11 @@
             "Description": "Alert Logic Access Key Id obtained from AIMS",
             "Type": "String"
         },
+        "AlApplicationId": {
+            "Description": "Alert Logic Application Id for collector logs",
+            "Type": "String",
+            "Default": "o365"
+        },
         "AlertlogicSecretKey": {
             "Description": "Alert Logic Secret Key returned from AIMS for the Access Key Id",
             "Type": "String",
@@ -77,6 +82,7 @@
           "Parameters" : {
             "AlertlogicAccessKeyId" : { "Ref":"AlertlogicAccessKeyId" },
             "AlertlogicSecretKey" : { "Ref":"AlertlogicSecretKey" },
+            "AlApplicationId" : { "Ref":"AlApplicationId" },
             "AlApiEndpoint" : { "Ref":"AlApiEndpoint" },
             "AlDataResidency" : { "Ref":"AlDataResidency" },
             "PackagesBucketPrefix" : { "Ref":"PackagesBucketPrefix" },

@@ -98,7 +98,8 @@ class OktaCollector extends PawsCollector {
             priority: 11,
             progName: 'OktaCollector',
             message: JSON.stringify(msg),
-            messageType: 'json/okta'
+            messageType: 'json/okta',
+            application_id: process.env.al_application_id
         };
 
         if (typeId !== null && typeId !== undefined) {

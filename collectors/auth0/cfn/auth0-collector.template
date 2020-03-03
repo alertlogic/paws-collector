@@ -20,6 +20,11 @@
                 "api.global-integration.product.dev.alertlogic.com"
             ]
         },
+        "AlApplicationId": {
+            "Description": "Alert Logic Application Id for collector logs",
+            "Type": "String",
+            "Default": "auth0"
+        },
         "AlDataResidency": {
             "Description": "Alert Logic Data Residency",
             "Type": "String",
@@ -75,6 +80,7 @@
         "Parameters" : {
           "AlertlogicAccessKeyId" : { "Ref":"AlertlogicAccessKeyId" },
           "AlertlogicSecretKey" : { "Ref":"AlertlogicSecretKey" },
+          "AlApplicationId" : { "Ref":"AlApplicationId" },
           "AlApiEndpoint" : { "Ref":"AlApiEndpoint" },
           "AlDataResidency" : { "Ref":"AlDataResidency" },
           "PackagesBucketPrefix" : { "Ref":"PackagesBucketPrefix" },

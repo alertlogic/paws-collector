@@ -158,7 +158,8 @@ class GsuiteCollector extends PawsCollector {
             priority: 11,
             progName: "GsuiteCollector",
             message: JSON.stringify(msg),
-            messageType: "json/gsuite"
+            messageType: "json/gsuite",
+            application_id: process.env.al_application_id
         };
 
         if (typeId !== null && typeId !== undefined) {
