@@ -13,3 +13,5 @@ test/ide_test.js
 **/report.xml
 **.swp
 **.swo
+
+*.DS_Store
