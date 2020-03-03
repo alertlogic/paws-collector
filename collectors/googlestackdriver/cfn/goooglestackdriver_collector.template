@@ -11,6 +11,11 @@
             "Type": "String",
             "NoEcho": true
         },
+        "AlApplicationId": {
+            "Description": "Alert Logic Application Id for collector logs",
+            "Type": "String",
+            "Default": "googlestackdriver"
+        },
         "AlApiEndpoint": {
             "Description": "Alert Logic API endpoint",
             "Type": "String",
@@ -81,6 +86,9 @@
                     },
                     "AlertlogicSecretKey": {
                         "Ref": "AlertlogicSecretKey"
+                    },
+                    "AlApplicationId": {
+                        "Ref": "AlApplicationId"
                     },
                     "AlApiEndpoint": {
                         "Ref": "AlApiEndpoint"

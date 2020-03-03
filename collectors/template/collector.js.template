@@ -76,6 +76,8 @@ class {{Type}}Collector extends PawsCollector {
     
     pawsFormatLog(msg) {
         // TODO: double check that this message parsing fits your use case
+        let collector = this;
+
         const ts = parse.getMsgTs(msg, tsPaths);
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
         
@@ -84,7 +86,8 @@ class {{Type}}Collector extends PawsCollector {
             priority: 11,
             progName: '{{Type}}Collector',
             message: JSON.stringify(msg),
-            messageType: 'json/{{type}}'
+            messageType: 'json/{{type}}',
+            application_id: collector.application_id
         };
         
         if (typeId !== null && typeId !== undefined) {

@@ -90,6 +90,8 @@ class OktaCollector extends PawsCollector {
     }
 
     pawsFormatLog(msg) {
+        let collector = this;
+
         const ts = parse.getMsgTs(msg, tsPaths);
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
 
@@ -98,7 +100,8 @@ class OktaCollector extends PawsCollector {
             priority: 11,
             progName: 'OktaCollector',
             message: JSON.stringify(msg),
-            messageType: 'json/okta'
+            messageType: 'json/okta',
+            application_id: collector.application_id
         };
 
         if (typeId !== null && typeId !== undefined) {

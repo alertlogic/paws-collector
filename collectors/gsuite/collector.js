@@ -150,6 +150,8 @@ class GsuiteCollector extends PawsCollector {
     }
 
     pawsFormatLog(msg) {
+        let collector = this;
+
         const ts = parse.getMsgTs(msg, tsPaths);
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
 
@@ -158,7 +160,8 @@ class GsuiteCollector extends PawsCollector {
             priority: 11,
             progName: "GsuiteCollector",
             message: JSON.stringify(msg),
-            messageType: "json/gsuite"
+            messageType: "json/gsuite",
+            application_id: collector.application_id
         };
 
         if (typeId !== null && typeId !== undefined) {

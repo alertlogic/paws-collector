@@ -11,6 +11,7 @@ process.env.paws_extension = 'gsuite';
 process.env.gsuite_endpoint = 'https://test.alertlogic.com/';
 process.env.gsuite_token = 'gsuite-token';
 process.env.collector_id = 'collector-id';
+process.env.al_application_id = 'gsuite';
 process.env.paws_poll_interval = 60;
 process.env.paws_type_name = "gsuite";
 process.env.paws_secret_param_name = "gsuite-param-name";

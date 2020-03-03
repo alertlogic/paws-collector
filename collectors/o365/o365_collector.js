@@ -160,6 +160,8 @@ class O365Collector extends PawsCollector {
     }
 
     pawsFormatLog(msg) {
+        let collector = this;
+
         const ts = parse.getMsgTs(msg, tsPaths);
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
 
@@ -168,7 +170,8 @@ class O365Collector extends PawsCollector {
             priority: 11,
             progName: 'O365Collector',
             message: JSON.stringify(msg),
-            messageType: 'json/azure.o365'
+            messageType: 'json/azure.o365',
+            application_id: collector.application_id
         };
 
         if (typeId !== null && typeId !== undefined) {
