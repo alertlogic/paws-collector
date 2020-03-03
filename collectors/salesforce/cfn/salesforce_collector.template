@@ -60,7 +60,7 @@
             "Type": "String"
         },
         "SalesforceSecret": {
-            "Description": "Salesforce Client secret (private key)",
+            "Description": "Salesforce Client secret (pass the private key as base64 encoded)",
             "Type": "String",
             "NoEcho": true
         },

@@ -6,6 +6,7 @@ const API_EVENT_OBJECT = 'ApiEvent';
 const LOGIN_EVENT_OBJECT = 'LoginEvent';
 const LOGOUT_EVENT_OBJECT = 'LogoutEvent';
 const LOGIN_AS_OBJECT = 'LoginAsEvent';
+
 function getObjectLogs(response, objectQueryDetails, accumulator, state, maxPagesPerInvocation) {
     let pageCount = 0;
     let nextPage;

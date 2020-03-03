@@ -43,6 +43,7 @@ class SalesforceCollector extends PawsCollector {
                 since: startTs,
                 until: endTs,
                 nextPage: null,
+                apiQuotaResetDate: null,
                 poll_interval_sec: 1
             }
         });
@@ -60,14 +61,16 @@ class SalesforceCollector extends PawsCollector {
 
     pawsGetLogs(state, callback) {
         let collector = this;
-        const privateKey = collector.secret;
-        if (!privateKey) {
+        const encodedPrivateKey = collector.secret;
+        if (!encodedPrivateKey) {
             throw new Error("The privateKey was not found!");
         }
         const clientId = collector.clientId;
         const salesForceUser = process.env.paws_collector_param_string_1;
         const baseUrl = process.env.paws_endpoint;
         const tokenUrl = `${baseUrl}/services/oauth2/token`;
+
+        const privateKey = Buffer.from(encodedPrivateKey, 'base64').toString('ascii');
 
         var claim = {
             iss: clientId,
@@ -77,6 +80,11 @@ class SalesforceCollector extends PawsCollector {
         };
 
         var token = jwt.sign(claim, privateKey, { algorithm: 'RS256' });
+
+        if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
+            console.log('API Request Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
+            return callback(null, [], state, state.poll_interval_sec);
+        }
 
         console.info(`SALE000001 Collecting data for ${state.object} from ${state.since} till ${state.until}`);
 
@@ -108,7 +116,18 @@ class SalesforceCollector extends PawsCollector {
                     return callback(null, accumulator, newState, newState.poll_interval_sec);
                 })
                 .catch((error) => {
-                    return callback(error);
+                    if (error.errorCode && error.errorCode === "REQUEST_LIMIT_EXCEEDED") {
+                        // Api will reset after next 24 hours 
+                        // Added extra 1 hours for buffer
+                        state.apiQuotaResetDate = moment().add(25, "hours").toISOString();
+                        state.poll_interval_sec = 900;
+                        console.log('API Request Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
+                        return callback(null, [], state, state.poll_interval_sec);
+                    }
+                    else {
+                        return callback(error);
+                    }
+
                 });
 
         });
@@ -144,6 +163,7 @@ class SalesforceCollector extends PawsCollector {
             since: nextSinceTs,
             until: nextUntilMoment.toISOString(),
             nextPage: null,
+            apiQuotaResetDate: null,
             poll_interval_sec: nextPollInterval
         };
     }
@@ -154,6 +174,7 @@ class SalesforceCollector extends PawsCollector {
             since,
             until,
             nextPage,
+            apiQuotaResetDate: null,
             poll_interval_sec: 1
         };
     }

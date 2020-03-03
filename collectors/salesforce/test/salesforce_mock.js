@@ -12,6 +12,11 @@ process.env.salesforce_token = 'salesforce-token';
 process.env.collector_id = 'collector-id';
 process.env.paws_secret_param_name = "salesforce-param-name";
 process.env.paws_poll_interval = 60;
+process.env.paws_type_name = "salesforce";
+process.env.paws_collector_param_string_1 = "salesforceUserID";
+process.env.paws_api_secret = 'paws-secret-key-encrypted';
+process.env.paws_collector_param_string_2 = "[\"LoginHistory\", \"EventLogFile\",\"ApiEvent\", \"LoginEvent\"]";
+process.env.paws_endpoint = "https://salesforce.com";
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',
