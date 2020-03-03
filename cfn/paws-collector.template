@@ -14,6 +14,7 @@
         "AlApplicationId": {
             "Description": "Alert Logic Application Id for collector logs",
             "Type": "String"
+            "Default": "paws"
         },
         "AlApiEndpoint": {
             "Description": "Alert Logic API endpoint",
