@@ -11,19 +11,20 @@
  'use strict';
 
  const https = require('https');
- const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
  
     function oktaTokenHealthCheck(asyncCallback){
         /* No explicit call to validate an API token, the token expires after 30 days, this 30 day timeout is refreshed 
          * upon any API calls. This call will refresh token, without being time consuming/destructive
          */
         var orgUrl = process.env.paws_endpoint;
-        var token = "SSWS " + PawsCollector._pawsCreds.secret;
+        var token = "SSWS " + this._pawsCreds.secret;
         var options = {
-            host: orgUrl,
+            host: orgUrl.replace("https://", ""),
             path: "/api/v1/users/me",
             headers: {
-                authorization: token
+                Accept: "application/json",
+                Content: "application/json",
+                Authorization: token
             }
         };
         https.get(options, (res) => {
