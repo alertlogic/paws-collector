@@ -135,7 +135,7 @@ describe('Unit Tests', function () {
                 collector.pawsGetRegisterParameters(sampleEvent, (err, regValues) => {
                     const expectedRegValues = {
                         salesforceUserID: 'salesforceUserID',
-                        salesforceObjectNames: '["LoginHistory", "EventLogFile","ApiEvent", "LoginEvent"]'
+                        salesforceObjectNames: '["LoginHistory", "EventLogFile","ApiEvent", "LoginEvent", "LogoutEvent", "LoginAsEvent"]'
                     };
                     assert.deepEqual(regValues, expectedRegValues);
                     done();
@@ -178,7 +178,7 @@ describe('Unit Tests', function () {
                 var collector = new SalesforceCollector(ctx, creds, 'salesforce');
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
-                    application: "LoginHistory",
+                    object: "LoginHistory",
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     apiQuotaResetDate: moment().add(25, 'hours'),
@@ -312,7 +312,7 @@ describe('Unit Tests', function () {
 
             const startDate = moment().subtract(5, 'minutes');
             const curState = {
-                application: "LoginHistory",
+                object: "LoginHistory",
                 since: startDate.toISOString(),
                 until: startDate.add(5, 'minutes').toISOString(),
                 poll_interval_sec: 1

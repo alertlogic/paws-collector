@@ -15,20 +15,26 @@ process.env.paws_poll_interval = 60;
 process.env.paws_type_name = "salesforce";
 process.env.paws_collector_param_string_1 = "salesforceUserID";
 process.env.paws_api_secret = 'paws-secret-key-encrypted';
-process.env.paws_collector_param_string_2 = "[\"LoginHistory\", \"EventLogFile\",\"ApiEvent\", \"LoginEvent\"]";
-process.env.paws_endpoint = "https://salesforce.com";
+process.env.paws_collector_param_string_2 = "[\"LoginHistory\", \"EventLogFile\",\"ApiEvent\", \"LoginEvent\", \"LogoutEvent\", \"LoginAsEvent\"]";
+process.env.paws_endpoint = "https://login.salesforce.com";
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',
     secret_key: 'test-secret-key'
 };
 
-const LOG_EVENT = { attributes:
-    { type: 'User',
-      url: '/services/data/v42.0/sobjects/User/00550000006zWUdAAM' },
-   Id: '00550000006zWUdAAM',
-   Name: 'Darrin Pryor',
-   LastLoginDate: '2020-01-27T15:22:54.000+0000' };
+const LOG_EVENT = {
+    attributes:
+    {
+        type: 'User',
+        url: '/services/data/v42.0/sobjects/User/00550000006zWUdAAM'
+    },
+    Id: '00550000006zWUdAAM',
+    Name: 'Darrin Pryor',
+    LastLoginDate: '2020-01-27T15:22:54.000+0000'
+};
+
+
 
 const FUNCTION_ARN = 'arn:aws:lambda:us-east-1:352283894008:function:test-01-CollectLambdaFunction-2CWNLPPW5XO8';
 const FUNCTION_NAME = 'test-TestCollectLambdaFunction-1JNNKQIPOTEST';

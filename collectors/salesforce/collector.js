@@ -81,12 +81,12 @@ class SalesforceCollector extends PawsCollector {
 
         var token = jwt.sign(claim, privateKey, { algorithm: 'RS256' });
 
+        console.info(`SALE000001 Collecting data for ${state.object} from ${state.since} till ${state.until}`);
+
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
             console.log('API Request Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
             return callback(null, [], state, state.poll_interval_sec);
         }
-
-        console.info(`SALE000001 Collecting data for ${state.object} from ${state.since} till ${state.until}`);
 
         request({
             url: tokenUrl,
