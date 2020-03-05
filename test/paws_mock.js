@@ -18,6 +18,7 @@ process.env.paws_api_secret = 'api-token';
 process.env.collector_id = 'collector-id';
 process.env.paws_secret_param_name = 'PAWS-SECRET-paws';
 process.env.paws_api_client_id = 'api-client-id';
+process.env.al_application_id = 'paws';
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',
