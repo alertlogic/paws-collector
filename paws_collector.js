@@ -83,6 +83,10 @@ class PawsCollector extends AlAwsCollector {
         this.pollInterval = process.env.paws_poll_interval;
     };
 
+    get application_id () {
+        return process.env.al_application_id;
+    };
+
     get secret () {
         return this._pawsCreds.secret;
     };

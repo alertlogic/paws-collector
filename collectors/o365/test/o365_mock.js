@@ -14,6 +14,7 @@ process.env.paws_type_name = 'o365';
 process.env.paws_endpoint = 'https://test.alertlogic.com/';
 process.env.o365_token = 'o365-token';
 process.env.collector_id = 'collector-id';
+process.env.al_application_id = 'o365';
 process.env.paws_poll_interval = 60;
 process.env.paws_max_pages_per_invocation = 2;
 
