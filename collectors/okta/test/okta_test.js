@@ -309,6 +309,7 @@ describe('Unit Tests', function() {
                 var collector = new OktaCollector(ctx, creds);
                 let fmt = collector.pawsFormatLog(oktaMock.OKTA_LOG_EVENT);
                 assert.equal(fmt.progName, 'OktaCollector');
+                assert.equal(fmt.application_id, 'okta');
                 assert.ok(fmt.messageTypeId);
                 done();
             });

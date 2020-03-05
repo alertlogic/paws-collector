@@ -81,10 +81,7 @@ class PawsCollector extends AlAwsCollector {
         this._pawsCreds = pawsCreds;
         this._pawsCollectorType = process.env.paws_type_name;
         this.pollInterval = process.env.paws_poll_interval;
-    };
-
-    get application_id () {
-        return process.env.al_application_id;
+        this.application_id = process.env.al_application_id;
     };
 
     get secret () {
@@ -171,7 +168,7 @@ class PawsCollector extends AlAwsCollector {
             },
             function(logs, privCollectorState, nextInvocationTimeout, asyncCallback) {
                 console.info('PAWS000200 Log events received ', logs.length);
-                return collector.processLog(logs, collector.pawsFormatLog, null, function(err) {
+                return collector.processLog(logs, collector.pawsFormatLog.bind(collector), null, function(err) {
                     return asyncCallback(err, privCollectorState, nextInvocationTimeout);
                 });
             },
