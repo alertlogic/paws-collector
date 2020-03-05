@@ -6,6 +6,20 @@ This repository contains the AWS JavaScript Lambda function and CloudFormation
 Template (CFT) for deploying a log collector in AWS which will poll 3rd party service API to collect and 
 forward logs to the Alert Logic CloudInsight backend services.
 
+# API Links
+LoginHistory - https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_objects_loginhistory.htm
+EventLogFile - https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_objects_eventlogfile.htm 
+LoginEvent - https://developer.salesforce.com/docs/atlas.en-us.224.0.platform_events.meta/platform_events/sforce_api_objects_loginevent.htm
+LoginGeo - https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_objects_logingeo.htm
+User - https://developer.salesforce.com/docs/atlas.en-us.object_reference.meta/object_reference/sforce_api_objects_user.htm
+ApiEvent - https://developer.salesforce.com/docs/atlas.en-us.platform_events.meta/platform_events/sforce_api_objects_apievent.htm
+LoginEvent - https://developer.salesforce.com/docs/atlas.en-us.platform_events.meta/platform_events/sforce_api_objects_loginevent.htm
+LogoutEvent - https://developer.salesforce.com/docs/atlas.en-us.platform_events.meta/platform_events/sforce_api_objects_logoutevent.htm
+LoginAsEvent - https://developer.salesforce.com/docs/atlas.en-us.platform_events.meta/platform_events/sforce_api_objects_loginasevent.htm
+
+API Throttling - https://help.magentrix.com/articles/knowledge/Error-REQUEST_LIMIT_EXCEEDED-1-5-2017 
+
+
 # Installation
 
 Refer to [CF template readme](./cfn/README.md) for installation instructions.
