@@ -19,8 +19,8 @@
     "sinon": "^7.5.0"
   },
   "dependencies": {
-    "@alertlogic/al-collector-js": "1.4.2",
-    "@alertlogic/paws-collector": "1.0.14",
+    "@alertlogic/al-collector-js": "^1.4.2",
+    "@alertlogic/paws-collector": "^1.1.0",
     "async": "3.1.0",
     "debug": "4.1.1",
     "jsforce": "^1.9.3",

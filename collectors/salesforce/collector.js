@@ -180,6 +180,7 @@ class SalesforceCollector extends PawsCollector {
     }
 
     pawsFormatLog(msg) {
+        let collector = this;
 
         const ts = parse.getMsgTs(msg, tsPaths);
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
@@ -189,7 +190,8 @@ class SalesforceCollector extends PawsCollector {
             priority: 11,
             progName: 'SalesforceCollector',
             message: JSON.stringify(msg),
-            messageType: 'json/salesforce'
+            messageType: 'json/salesforce',
+            application_id: collector.application_id
         };
 
         if (typeId !== null && typeId !== undefined) {

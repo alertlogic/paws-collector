@@ -46,6 +46,11 @@
             "Type": "String",
             "Default": "none"
         },
+        "AlApplicationId": {
+            "Description": "Alert Logic Application Id for collector logs",
+            "Type": "String",
+            "Default": "salesforce"
+        },
         "SalesforceEndpoint": {
             "Description": "Salesforce Base URL",
             "Type": "String"
@@ -92,6 +97,7 @@
           "Parameters" : {
             "AlertlogicAccessKeyId" : { "Ref":"AlertlogicAccessKeyId" },
             "AlertlogicSecretKey" : { "Ref":"AlertlogicSecretKey" },
+            "AlApplicationId" : { "Ref":"AlApplicationId" },
             "AlApiEndpoint" : { "Ref":"AlApiEndpoint" },
             "AlDataResidency" : { "Ref":"AlDataResidency" },
             "PackagesBucketPrefix" : { "Ref":"PackagesBucketPrefix" },

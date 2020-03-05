@@ -10,6 +10,7 @@ process.env.paws_extension = 'salesforce';
 process.env.salesforce_endpoint = 'https://test.alertlogic.com/';
 process.env.salesforce_token = 'salesforce-token';
 process.env.collector_id = 'collector-id';
+process.env.al_application_id = 'salesforce';
 process.env.paws_secret_param_name = "salesforce-param-name";
 process.env.paws_poll_interval = 60;
 process.env.paws_type_name = "salesforce";
