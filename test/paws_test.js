@@ -108,12 +108,15 @@ class TestCollector extends PawsCollector {
     }
     
     pawsFormatLog(msg) {
+        const collector = this;
+        
         let formattedMsg = {
             messageTs: 12345678,
             priority: 11,
             progName: 'OktaCollector',
             message: JSON.stringify(msg),
-            messageType: 'json/aws.test'
+            messageType: 'json/aws.test',
+            applicationId: collector.application_id
         };
         return formattedMsg;
     }
@@ -143,13 +146,17 @@ class TestCollectorMultiState extends PawsCollector {
     }
     
     pawsFormatLog(msg) {
+        const collector = this;
+        
         let formattedMsg = {
             messageTs: 12345678,
             priority: 11,
             progName: 'OktaCollectorArrayState',
             message: JSON.stringify({test: 'message'}),
-            messageType: 'json/aws.test'
+            messageType: 'json/aws.test',
+            applicationId: collector.application_id
         };
+        
         return formattedMsg;
     }
 }
@@ -360,12 +367,14 @@ describe('Unit Tests', function() {
                 priority: 11,
                 progName: 'OktaCollector',
                 message: '"test"',
-                messageType: 'json/aws.test'
+                messageType: 'json/aws.test',
+                applicationId: 'paws'
             };
             
-            PawsCollector.load().then((creds) => {
-            const collector = new TestCollector(ctx, creds);
-            const returned = collector.pawsFormatLog("test");
+            TestCollector.load().then((creds) => {
+            let collector = new TestCollector(ctx, creds);
+            let bindFormat = collector.pawsFormatLog.bind(collector);
+            const returned = bindFormat("test");
             assert.deepEqual(returned, formattedMsg);
             done();
             });
