@@ -300,14 +300,40 @@ describe('Unit Tests', function() {
                     done();
                 }
             };
-            AWS.mock('CloudWatch', 'putMetricData', function (params, callback) {
-                return callback(null);
-            });
+            let putMetricDataSpy = sinon.spy((params, callback) => callback());
+            AWS.mock('CloudWatch', 'putMetricData', putMetricDataSpy);
             TestCollector.load().then(function(creds) {
                 var collector = new TestCollector(ctx, creds);
                 collector.reportApiThrottling(function(error) {
                     assert.equal(null, error);
+                    assert.equal(putMetricDataSpy.callCount, 1);
                     AWS.restore('KMS');
+                    AWS.restore('CloudWatch');
+                    done();
+                });
+            });
+        });
+        
+        it('reportCollectionDelay', function(done) {
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+            let putMetricDataSpy = sinon.spy((params, callback) => callback());
+            AWS.mock('CloudWatch', 'putMetricData', putMetricDataSpy);
+            TestCollector.load().then(function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                collector.reportCollectionDelay('2020-01-26T12:08:31.316Z', function(error) {
+                    assert.equal(null, error);
+                    assert.equal(putMetricDataSpy.callCount, 1);
+                    AWS.restore('KMS');
+                    AWS.restore('CloudWatch');
                     done();
                 });
             });
