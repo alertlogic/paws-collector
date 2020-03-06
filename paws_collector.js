@@ -177,6 +177,22 @@ class PawsCollector extends AlAwsCollector {
                 });
             },
             function(privCollectorState, nextInvocationTimeout, asyncCallback) {
+                // Try to find last collected message ts in collector private state.
+                const lastCollectedTs = 
+                    privCollectorState.last_collected_ts ? privCollectorState.last_collected_ts :
+                    privCollectorState.since ? privCollectorState.since :
+                    privCollectorState.until ? privCollectorState.until :
+                    null;
+                
+                if (lastCollectedTs) {
+                    collector.reportCollectionDelay(lastCollectedTs, () => {
+                        return asyncCallback(null, privCollectorState, nextInvocationTimeout);
+                    });
+                } else {
+                    return asyncCallback(null, privCollectorState, nextInvocationTimeout);
+                }
+            },
+            function(privCollectorState, nextInvocationTimeout, asyncCallback) {
                 return collector._storeCollectionState(pawsState, privCollectorState, nextInvocationTimeout, asyncCallback);
             }
         ], function(error) {
@@ -204,6 +220,37 @@ class PawsCollector extends AlAwsCollector {
                 Timestamp: new Date(),
                 Unit: 'Count',
                 Value: 1
+              }
+            ],
+            Namespace: 'PawsCollectors'
+        };
+        return cloudwatch.putMetricData(params, callback);
+    };
+    
+    reportCollectionDelay(lastCollectedTs, callback) {
+        const nowMoment = moment();
+        const lastCollectedMoment = moment(lastCollectedTs);
+        const delayDuration = moment.duration(nowMoment.diff(lastCollectedMoment));
+        const collectionDelaySec = Math.floor(delayDuration.asSeconds());
+        
+        var cloudwatch = new AWS.CloudWatch({apiVersion: '2010-08-01'});
+        const params = {
+            MetricData: [
+              {
+                MetricName: 'CollectionDelay',
+                Dimensions: [
+                  {
+                    Name: 'CollectorType',
+                    Value: this._pawsCollectorType
+                  },
+                  {
+                    Name: 'FunctionName',
+                    Value: process.env.AWS_LAMBDA_FUNCTION_NAME
+                  }
+                ],
+                Timestamp: new Date(),
+                Unit: 'Seconds',
+                Value: collectionDelaySec
               }
             ],
             Namespace: 'PawsCollectors'
