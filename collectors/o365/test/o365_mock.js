@@ -8,6 +8,7 @@ process.env.paws_api_client_id = 'a-client-id';
 process.env.paws_api_secret = 'paws-secret-key-encrypted';
 process.env.log_group = 'logGroupName';
 process.env.paws_state_queue_arn = "arn:aws:sqs:us-east-1:352283894008:paws-state-queue";
+process.env.paws_secret_param_name =  "joe-o365-test-param";
 process.env.paws_collector_param_string_1 = '79ca7c9d-83ce-498f-952f-4c03b56ab573';
 process.env.paws_collector_param_string_2 = '["Audit.AzureActiveDirectory", "Audit.Exchange", "Audit.SharePoint", "Audit.General"]';
 process.env.paws_type_name = 'o365';
