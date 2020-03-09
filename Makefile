@@ -16,6 +16,10 @@ compile: deps
 test: compile
 	npm run test
 	
+test-all: compile
+	npm run test
+	./run-all-tests.sh
+	
 package: test package.zip
 
 package.zip: node_modules/ *.js package.json
