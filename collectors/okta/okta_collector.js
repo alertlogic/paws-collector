@@ -95,6 +95,9 @@ class OktaCollector extends PawsCollector {
         const ts = parse.getMsgTs(msg, tsPaths);
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
 
+        // TODO remove this when okta filter this field out
+        delete msg.client.apiToken;
+
         let formattedMsg = {
             messageTs: ts.sec,
             priority: 11,
