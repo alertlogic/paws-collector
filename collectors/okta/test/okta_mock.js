@@ -25,10 +25,17 @@ const OKTA_LOG_EVENT = {
       "client": {
         "zone": "OFF_NETWORK",
         "device": "Unknown",
+        "apiToken": "PrivateToken",
         "userAgent": {
           "os": "Unknown",
           "browser": "UNKNOWN",
           "rawUserAgent": "UNKNOWN-DOWNLOAD"
+        },
+        "http": {
+            "defaultHeaders": {
+                "Authorization": "SSWS PrivateToken",
+                "User-Agent": "Mozilla Firefox 1.1.1"
+            }
         },
         "ipAddress": "12.97.85.90"
       },

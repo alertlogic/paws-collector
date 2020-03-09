@@ -97,6 +97,8 @@ class OktaCollector extends PawsCollector {
     pawsFormatLog(msg) {
         let collector = this;
 
+        console.log("message = ", msg);
+
         const ts = parse.getMsgTs(msg, tsPaths);
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
 
@@ -131,6 +133,7 @@ class OktaCollector extends PawsCollector {
             return this.redactValue(properties.slice(1), obj[properties[0]])
         } else {
             obj[properties[0]] = undefined
+            console.log("object", obj)
             return true
         }
     }

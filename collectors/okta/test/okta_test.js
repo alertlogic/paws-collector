@@ -210,7 +210,7 @@ describe('Unit Tests', function() {
                 });
             });
         });
-        
+
         it('gets logs throttling', function(done) {
             const {Client} = okta;
             const oktaSdkMock = sinon.stub(Client.prototype, 'getLogs').callsFake(() => {
@@ -309,6 +309,49 @@ describe('Unit Tests', function() {
                 var collector = new OktaCollector(ctx, creds);
                 let fmt = collector.pawsFormatLog(oktaMock.OKTA_LOG_EVENT);
                 assert.equal(fmt.progName, 'OktaCollector');
+                assert.ok(fmt.messageTypeId);
+                done();
+            });
+        });
+
+        it('redacts sensitive fields', function(done) {
+            let ctx = {
+                invokedFunctionArn : oktaMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+
+            OktaCollector.load().then(function(creds) {
+                var collector = new OktaCollector(ctx, creds);
+                let fmt = collector.pawsFormatLog(oktaMock.OKTA_LOG_EVENT);
+                let msg = JSON.parse(fmt.message);
+                assert.equal(msg.client.apiToken, undefined);
+                assert.equal(msg.client.http.defaultHeaders.Authorization, undefined);
+                assert.ok(fmt.messageTypeId);
+                done();
+            });
+        });
+
+        it('formats message if sensitive fields not present', function(done) {
+            let ctx = {
+                invokedFunctionArn : oktaMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+
+            OktaCollector.load().then(function(creds) {
+                var collector = new OktaCollector(ctx, creds);
+                let fmt = collector.pawsFormatLog({eventType: "value"});
                 assert.ok(fmt.messageTypeId);
                 done();
             });
