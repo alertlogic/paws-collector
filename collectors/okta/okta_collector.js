@@ -126,12 +126,10 @@ class OktaCollector extends PawsCollector {
 
         if (properties.length > 1) {
             if (!obj.hasOwnProperty(properties[0]))
-                return true
-
+                return
             return this.redactValue(properties.slice(1), obj[properties[0]])
         } else {
             obj[properties[0]] = undefined
-            return true
         }
     }
 }
