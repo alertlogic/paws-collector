@@ -26,6 +26,11 @@ const tsPaths = [
     { path: ['published'] }
 ];
 
+const sensitiveFields = [
+    "client.apiToken",
+    "client.http.defaultHeaders.Authorization"
+];
+
 
 class OktaCollector extends PawsCollector {
 
@@ -95,6 +100,9 @@ class OktaCollector extends PawsCollector {
         const ts = parse.getMsgTs(msg, tsPaths);
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
 
+        // TODO remove this when okta updates api
+        sensitiveFields.forEach((path) => this.redactValue(path, msg));
+
         let formattedMsg = {
             messageTs: ts.sec,
             priority: 11,
@@ -111,6 +119,18 @@ class OktaCollector extends PawsCollector {
             formattedMsg.messageTsUs = ts.usec;
         }
         return formattedMsg;
+    }
+
+    redactValue(propertyPath, obj) {
+        let properties = Array.isArray(propertyPath) ? propertyPath : propertyPath.split(".")
+
+        if (properties.length > 1) {
+            if (!obj.hasOwnProperty(properties[0]))
+                return
+            return this.redactValue(properties.slice(1), obj[properties[0]])
+        } else {
+            obj[properties[0]] = undefined
+        }
     }
 }
 
