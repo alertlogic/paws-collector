@@ -299,7 +299,7 @@ class PawsCollector extends AlAwsCollector {
         // Current state message will be removed by Lambda trigger upon successful completion
         Promise.all(promises)
         .then(results => {
-            return callback(null);
+            return callback(null, results);
         }).catch(error => {
             return callback(error);
         });
