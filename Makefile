@@ -18,7 +18,12 @@ test: compile
 	
 test-all: compile
 	npm run test
-	./run-all-tests.sh
+	dirs=$(find collectors/ -type d -maxdepth 1)
+	echo $dirs
+	for d in $dirs
+	do
+	    ( cd "$d" && echo "\n**********\n\nrunning tests for $d\n\n************\n\n" && npm run test )
+	done
 	
 package: test package.zip
 
