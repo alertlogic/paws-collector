@@ -23,6 +23,7 @@ test-all: compile
 	    echo "\n************\n\nrunning tests for $$d\n\n************\n\n"; \
 	    make -C $$d test; \
 	done || exit 1;
+	@echo "Tests complete..."
 	
 package: test package.zip
 
