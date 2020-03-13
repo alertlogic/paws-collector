@@ -2,6 +2,7 @@ AWS_LAMBDA_S3_BUCKET ?= alertlogic-collectors
 AWS_LAMBDA_PAWS_FUNCTION_NAME ?= alertlogic-paws-collector
 AWS_LAMBDA_PAWS_PACKAGE_NAME ?= al-paws-collector.zip
 AWS_CFN_TEMPLATE_PATH ?= ./cfn/paws-collector.template
+COLLECTOR_DIRS ?= $(shell find collectors/ -type d -maxdepth 1)
 
 .PHONY: test
 
@@ -18,12 +19,11 @@ test: compile
 	
 test-all: compile
 	npm run test
-	dirs=$(find collectors/ -type d -maxdepth 1)
-	echo $dirs
-	for d in $dirs
-	do
-	    ( cd "$d" && echo "\n**********\n\nrunning tests for $d\n\n************\n\n" && npm run test )
-	done
+	@for d in $(COLLECTOR_DIRS); do \
+	    echo "\n**********\n\nrunning tests for $$d\n\n************\n\n"; \
+	    echo $(shell pwd); \
+	    cd $(shell pwd)/$$d && npm run test; \
+	done;
 	
 package: test package.zip
 
