@@ -21,9 +21,6 @@ let tsPaths = [];
 
 
 class CarbonblackCollector extends PawsCollector {
-    constructor(context, creds) {
-        super(context, creds, 'carbonblack');
-    }
 
     pawsInitCollectionState(event, callback) {
         const startTs = process.env.paws_collection_start_ts ?
@@ -44,6 +41,15 @@ class CarbonblackCollector extends PawsCollector {
 
     }
 
+    pawsGetRegisterParameters(event, callback) {
+        const regValues = {
+            carbonblackAPINames: process.env.paws_collector_param_string_1,
+            carbonblackOrgKey: process.env.paws_collector_param_string_2
+        };
+
+        callback(null, regValues);
+    }
+
     pawsGetLogs(state, callback) {
 
         let collector = this;
@@ -61,7 +67,7 @@ class CarbonblackCollector extends PawsCollector {
         if (!apiDetails.url) {
             return callback("The API name was not found!");
         }
-        
+
         typeIdPaths = apiDetails.typeIdPaths;
         tsPaths = apiDetails.tsPaths;
 
@@ -130,7 +136,6 @@ class CarbonblackCollector extends PawsCollector {
     }
 
     pawsFormatLog(msg) {
-        // TODO: double check that this message parsing fits your use case
         let collector = this;
 
         const ts = parse.getMsgTs(msg, tsPaths);
