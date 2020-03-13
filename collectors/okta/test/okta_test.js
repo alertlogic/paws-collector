@@ -357,4 +357,26 @@ describe('Unit Tests', function() {
             });
         });
     });
+    describe('Health Check Tests', function() {
+        it('token validation check success', function(done) {
+            let ctx = {
+                invokedFunctionArn : oktaMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+            
+            OktaCollector.load().then(function(creds) {
+                var collector = new OktaCollector(ctx, creds);
+                let fmt = collector.pawsFormatLog(oktaMock.OKTA_LOG_EVENT);
+                assert.equal(fmt.progName, 'OktaCollector');
+                assert.ok(fmt.messageTypeId);
+                done();
+            });
+        });
+    });
 });

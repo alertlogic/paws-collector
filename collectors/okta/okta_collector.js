@@ -11,6 +11,7 @@
 
 const moment = require('moment');
 const okta = require('@okta/okta-sdk-nodejs');
+const healthChecks = require('./health_checks');
 const parse = require('@alertlogic/al-collector-js').Parse;
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
@@ -34,6 +35,12 @@ const sensitiveFields = [
 
 class OktaCollector extends PawsCollector {
 
+    constructor(context, {aimsCreds, pawsCreds}){
+        super(context,
+            {aimsCreds, pawsCreds},
+            [healthChecks.oktaTokenHealthCheck], []);
+    }
+    
     pawsInitCollectionState(event, callback) {
         const startTs = process.env.paws_collection_start_ts ?
                 process.env.paws_collection_start_ts :
