@@ -114,6 +114,11 @@ describe('O365 Collector Tests', function() {
             return callback(null, data);
         });
 
+        AWS.mock('SSM', 'getParameter', function (params, callback) {
+            const data = new Buffer('test-secret');
+            return callback(null, {Parameter : { Value: data.toString('base64')}});
+        });
+
         responseStub = sinon.stub(m_response, 'send').callsFake(
             function fakeFn(event, mockContext, responseStatus, responseData, physicalResourceId) {
                 mockContext.succeed();
@@ -127,6 +132,8 @@ describe('O365 Collector Tests', function() {
         restoreAlServiceStub();
         setEnvStub.restore();
         responseStub.restore();
+        AWS.restore('KMS');
+        AWS.restore('SSM');
     });
     
     describe('pawsInitCollectionState', function() {
