@@ -155,6 +155,7 @@ describe('O365 Collector Tests', function() {
                         assert.equal(state.since, startDate, "Dates are not equal");
                         assert.notEqual(moment(state.until).diff(state.since, 'hours'), 24);
                     });
+                    assert.equal(1,2);
                     done();
                 });
             });
