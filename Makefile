@@ -19,10 +19,10 @@ test: compile
 	
 test-all: compile
 	npm run test
-	@for d in $(COLLECTOR_DIRS); do \
+	for d in $(COLLECTOR_DIRS); do \
 	    echo "\n************\n\nrunning tests for $$d\n\n************\n\n"; \
 	    cd $(shell pwd)/$$d && npm install && npm run test; \
-	done;
+	done || exit 1;
 	
 package: test package.zip
 
