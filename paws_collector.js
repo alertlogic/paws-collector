@@ -71,12 +71,12 @@ class PawsCollector extends AlAwsCollector {
         });
     }
 
-    constructor(context, {aimsCreds, pawsCreds}) {
+    constructor(context, {aimsCreds, pawsCreds}, healthChecks, statsChecks) {
         super(context, 'paws',
               AlAwsCollector.IngestTypes.LOGMSGS,
               m_packageJson.version,
               aimsCreds,
-              null, [], []);
+              null, healthChecks, statsChecks);
         console.info('PAWS000100 Loading collector', process.env.paws_type_name);
         this._pawsCreds = pawsCreds;
         this._pawsCollectorType = process.env.paws_type_name;
@@ -99,6 +99,10 @@ class PawsCollector extends AlAwsCollector {
     get authType() {
         return this._pawsCreds.auth_type;
     };
+    
+    get pawsCollectorType() {
+        return this._pawsCollectorType;
+    }
 
     getProperties() {
         const baseProps = super.getProperties();
@@ -109,6 +113,10 @@ class PawsCollector extends AlAwsCollector {
         return Object.assign(pawsProps, baseProps);
     };
 
+    prepareErrorStatus(errorString, streamName = 'error') {
+        return super.prepareErrorStatus(errorString, streamName, this.pawsCollectorType);
+    }
+    
     register(event) {
         let collector = this;
         let pawsRegisterProps = this.getProperties();
