@@ -52,7 +52,7 @@
             "Default": "none"
         },
         "CarbonblackEndpoint": {
-            "Description": "Carbon Black API URL. For example, https://api-url.conferdeploy.net",
+            "Description": "Carbon Black API URL. For example, api-url.conferdeploy.net (without Https protocol)",
             "Type": "String"
         },
         "PawsAuthType": {

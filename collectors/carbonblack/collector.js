@@ -62,7 +62,7 @@ class CarbonblackCollector extends PawsCollector {
         const clientId = collector.clientId;
         const apiEndpoint = process.env.paws_endpoint;
         const orgKey = process.env.paws_collector_param_string_2;
-        const apiDetails = utils.getAPIDetails(state, apiEndpoint, orgKey);
+        const apiDetails = utils.getAPIDetails(state, orgKey);
 
         if (!apiDetails.url) {
             return callback("The API name was not found!");
@@ -73,7 +73,7 @@ class CarbonblackCollector extends PawsCollector {
 
         console.info(`CABL000001 Collecting data for ${state.apiName} from ${state.since} till ${state.until}`);
 
-        utils.getAPILogs(apiDetails, [], state, clientSecret, clientId, process.env.paws_max_pages_per_invocation)
+        utils.getAPILogs(apiDetails, [], apiEndpoint, state, clientSecret, clientId, process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextPage }) => {
                 let newState;
                 if (nextPage === undefined) {

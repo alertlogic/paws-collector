@@ -1,4 +1,4 @@
-var request = require('request');
+const RestServiceClient = require('@alertlogic/al-collector-js/al_util').RestServiceClient;
 
 const Audit_Log_Events = 'AuditLogEvents';
 const Search_Alerts = 'SearchAlerts';
@@ -6,36 +6,30 @@ const Search_Alerts_CB_Analytics = 'SearchAlertsCBAnalytics';
 const Search_Alerts_Vmware = 'SearchAlertsVmware';
 const Search_Alerts_Watchlist = 'SearchAlertsWatchlist';
 
-function getAPILogs(apiDetails, accumulator, state, clientSecret, clientId, maxPagesPerInvocation) {
+function getAPILogs(apiDetails, accumulator, apiEndpoint, state, clientSecret, clientId, maxPagesPerInvocation) {
     let nextPage;
+    let restServiceClient = new RestServiceClient(apiEndpoint);
     if (apiDetails.method === "GET") {
         return new Promise(function (resolve, reject) {
-            request({
-                url: apiDetails.url,
-                method: apiDetails.method,
+            restServiceClient.get(apiDetails.url, {
                 headers: {
                     'X-Auth-Token': `${clientSecret}/${clientId}`
-                },
-            }, (err, response) => {
-                if (err) {
-                    return reject(err);
                 }
-                response.body = JSON.parse(response.body);
-                if (response.body.notifications === undefined || response.body.notifications === null) {
-                    return reject(response.body.message);
-                }
-                if (response.body.notifications.length === 0) {
+            }).then(response => {
+                if (response.notifications.length === 0) {
                     return resolve({ accumulator, nextPage });
                 }
-                accumulator.push(...response.body.notifications);
+                accumulator.push(...response.notifications);
                 return resolve({ accumulator, nextPage });
-            });
 
+            }).catch(err => {
+                return reject(err);
+            });
         });
     }
     else {
         let pageCount = 0;
-        let limit = 1;
+        let limit = 500;
         let offset = state.nextPage ? state.nextPage : 1;
         apiDetails.requestBody.rows = limit;
         apiDetails.requestBody.start = offset;
@@ -43,28 +37,22 @@ function getAPILogs(apiDetails, accumulator, state, clientSecret, clientId, maxP
             getCarbonBlackData();
             function getCarbonBlackData() {
                 if (pageCount < maxPagesPerInvocation) {
-                    request({
-                        url: apiDetails.url,
-                        method: apiDetails.method,
+                    restServiceClient.post(apiDetails.url, {
                         headers: {
                             'X-Auth-Token': `${clientSecret}/${clientId}`
                         },
                         json: apiDetails.requestBody
-                    }, (err, response) => {
-                        if (err) {
-                            return reject(err);
-                        }
-                        if (response.body.results === undefined || response.body.results === null) {
-                            return reject(response.body.message);
-                        }
-                        if (response.body.results.length === 0) {
+                    }).then(response => {
+                        if (response.results.length === 0) {
                             return resolve({ accumulator, nextPage });
                         }
-                        accumulator.push(...response.body.results);
+                        accumulator.push(...response.results);
                         offset = offset + limit;
                         apiDetails.requestBody.start = offset;
                         pageCount++;
                         return getCarbonBlackData();
+                    }).catch(err => {
+                        return reject(err);
                     });
                 }
                 else {
@@ -77,7 +65,7 @@ function getAPILogs(apiDetails, accumulator, state, clientSecret, clientId, maxP
 
 }
 
-function getAPIDetails(state, apiEndpoint, orgKey) {
+function getAPIDetails(state, orgKey) {
     let url = "";
     let method = "GET";
     let requestBody = "";
@@ -85,12 +73,12 @@ function getAPIDetails(state, apiEndpoint, orgKey) {
     let tsPaths = [];
     switch (state.apiName) {
         case Audit_Log_Events:
-            url = `${apiEndpoint}/integrationServices/v3/auditlogs`;
+            url = `/integrationServices/v3/auditlogs`;
             typeIdPaths = [{ path: ["eventId"] }];
             tsPaths = [{ path: ["eventTime"] }];
             break;
         case Search_Alerts:
-            url = `${apiEndpoint}/appservices/v6/orgs/${orgKey}/alerts/_search`;
+            url = `/appservices/v6/orgs/${orgKey}/alerts/_search`;
             typeIdPaths = [{ path: ["id"] }];
             tsPaths = [{ path: ["last_update_time"] }];
             method = "POST";
@@ -106,7 +94,7 @@ function getAPIDetails(state, apiEndpoint, orgKey) {
             };
             break;
         case Search_Alerts_CB_Analytics:
-            url = `${apiEndpoint}/appservices/v6/orgs/${orgKey}/alerts/cbanalytics/_search`;
+            url = `/appservices/v6/orgs/${orgKey}/alerts/cbanalytics/_search`;
             typeIdPaths = [{ path: ["id"] }];
             tsPaths = [{ path: ["last_update_time"] }];
             method = "POST";
@@ -122,7 +110,7 @@ function getAPIDetails(state, apiEndpoint, orgKey) {
             };
             break;
         case Search_Alerts_Vmware:
-            url = `${apiEndpoint}/appservices/v6/orgs/${orgKey}/alerts/vmware/_search`;
+            url = `/appservices/v6/orgs/${orgKey}/alerts/vmware/_search`;
             typeIdPaths = [{ path: ["id"] }];
             tsPaths = [{ path: ["last_update_time"] }];
             method = "POST";
@@ -138,7 +126,7 @@ function getAPIDetails(state, apiEndpoint, orgKey) {
             };
             break;
         case Search_Alerts_Watchlist:
-            url = `${apiEndpoint}/appservices/v6/orgs/${orgKey}/alerts/watchlist/_search`;
+            url = `/appservices/v6/orgs/${orgKey}/alerts/watchlist/_search`;
             typeIdPaths = [{ path: ["id"] }];
             tsPaths = [{ path: ["last_update_time"] }];
             method = "POST";
