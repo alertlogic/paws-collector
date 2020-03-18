@@ -113,7 +113,7 @@ class PawsCollector extends AlAwsCollector {
         return Object.assign(pawsProps, baseProps);
     };
 
-    prepareErrorStatus(errorString, streamName = 'error') {
+    prepareErrorStatus(errorString, streamName = 'none') {
         return super.prepareErrorStatus(errorString, streamName, this.pawsCollectorType);
     }
     
