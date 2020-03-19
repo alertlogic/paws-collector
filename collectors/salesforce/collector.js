@@ -14,7 +14,7 @@ const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const parse = require('@alertlogic/al-collector-js').Parse;
 const utils = require("./utils");
 var jwt = require('jsonwebtoken');
-var request = require('request');
+const RestServiceClient = require('@alertlogic/al-collector-js/al_util').RestServiceClient;
 
 
 
@@ -68,7 +68,7 @@ class SalesforceCollector extends PawsCollector {
         const clientId = collector.clientId;
         const salesForceUser = process.env.paws_collector_param_string_1;
         const baseUrl = process.env.paws_endpoint;
-        const tokenUrl = `${baseUrl}/services/oauth2/token`;
+        const tokenUrl = `/services/oauth2/token`;
 
         const privateKey = Buffer.from(encodedPrivateKey, 'base64').toString('ascii');
 
@@ -88,17 +88,14 @@ class SalesforceCollector extends PawsCollector {
             return callback(null, [], state, state.poll_interval_sec);
         }
 
-        request({
-            url: tokenUrl,
-            method: 'POST',
+        let restServiceClient = new RestServiceClient(baseUrl);
+
+        restServiceClient.post(tokenUrl, {
             form: {
                 grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
                 assertion: token
-            },
-        }, (err, response) => {
-            if (err) {
-                return callback(err);
             }
+        }).then(response => {
             var objectQueryDetails = utils.getObjectQuery(state);
             if (!objectQueryDetails.query) {
                 return callback("The object name was not found!");
@@ -130,6 +127,8 @@ class SalesforceCollector extends PawsCollector {
 
                 });
 
+        }).catch(err => {
+            return callback(err);
         });
     }
 

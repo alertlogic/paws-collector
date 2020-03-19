@@ -13,6 +13,7 @@ Resources:
           aims_secret_key:
           aims_access_key_id:
           al_api:
+          al_application_id:
           stack_name:
           azollect_api:
           ingest_api:

@@ -7,7 +7,7 @@ var SalesforceCollector = require('../collector').SalesforceCollector;
 const moment = require('moment');
 const utils = require("../utils");
 var jwt = require('jsonwebtoken');
-var request = require('request');
+const RestServiceClient = require('@alertlogic/al-collector-js/al_util').RestServiceClient;
 
 
 var responseStub = {};
@@ -21,7 +21,12 @@ function setAlServiceStub() {
             return {};
         });
 
-    requestPost = sinon.stub(request, 'post').returns(salesforceMock.LOG_EVENT);
+    requestPost = sinon.stub(RestServiceClient.prototype, 'post').callsFake(
+        function fakeFn(path, extraOptions) {
+            return new Promise(function (resolve, reject) {
+                return resolve(salesforceMock.LOG_EVENT);
+            });
+        });
 
     getObjectLogs = sinon.stub(utils, 'getObjectLogs').callsFake(
         function fakeFn(response, objectQueryDetails, accumulator, state, maxPagesPerInvocation) {
