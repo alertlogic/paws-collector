@@ -95,7 +95,7 @@
             "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
             "CollectorId" : { "Ref":"CollectorId" },
             "PollingInterval" : 60,
-            "PawsEndpoint": "https://oauth2.googleapis.com",
+            "PawsEndpoint": "https://www.googleapis.com",
             "PawsAuthType" : { "Ref":"PawsAuthType" },
             "PawsSecret" : { "Ref":"GsuiteClientSecret" },
             "CollectorParamString1" : { "Ref":"GsuiteScope" },
