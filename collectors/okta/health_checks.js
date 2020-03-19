@@ -8,36 +8,37 @@
  * -----------------------------------------------------------------------------
  */
 
- 'use strict';
+'use strict';
 
- const https = require('https');
+const https = require('https');
+const health = require('@alertlogic/al-aws-collector-js').Health;
+const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClient;
  
-    function oktaTokenHealthCheck(asyncCallback){
-        /* No explicit call to validate an API token, the token expires after 30 days, this 30 day timeout is refreshed 
-         * upon any API calls. This call will refresh token, without being time consuming/destructive
-         */
-        var orgUrl = process.env.paws_endpoint;
-        var token = "SSWS " + this._pawsCreds.secret;
-        var options = {
-            host: orgUrl.replace("https://", ""),
-            path: "/api/v1/users/me",
-            headers: {
-                Accept: "application/json",
-                Content: "application/json",
-                Authorization: token
-            }
-        };
-        https.get(options, (res) => {
-          res.on('end', () => {
-                asyncCallback(null);
-          });
-      
-        }).on('error', (e) => {
-            var err = e.message;
-            asyncCallback(`OKTA000003 Failed to validate auth token for ${orgUrl} due to error ${err}`);
-      });
-    }
-    
+/* 
+* No explicit call to validate an API token, the token expires after 30 days, this 30 day timeout is refreshed 
+* upon any API calls. This call will refresh token, without being time consuming/destructive
+*/
+function oktaTokenHealthCheck(callback){
+    const hostname = process.env.paws_endpoint.replace(/^https:\/\/|\/$/g, '');
+    const token = 'SSWS ' + this.secret;
+    const options = {
+        headers: {
+            Accept: 'application/json',
+            Content: 'application/json',
+            Authorization: token
+        }
+    };
+    let cli = new RestServiceClient(hostname);
+    cli.get('/api/v1/users/me', options)
+    .then((resp) => {
+        return callback();
+    })
+    .catch((e) => {
+        const err = health.errorMsg('OKTA000003', `Failed to validate auth token for ${hostname} due to error ${e.message}`);
+        return callback(err);
+    });
+}
+
 module.exports = {
     oktaTokenHealthCheck
 };
