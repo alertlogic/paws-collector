@@ -46,10 +46,6 @@
             "Type": "String",
             "Default": "none"
         },
-        "PawsEndpoint": {
-            "Description": "URL to poll",
-            "Type": "String"
-        },
         "PawsAuthType": {
             "Description": "Target API authentication type. Supported types: ssws, oauth2",
             "Type": "String",
@@ -60,7 +56,7 @@
             "Type": "String",
             "NoEcho": true
         },
-	    "GsuiteScope": {
+        "GsuiteScope": {
             "Description": "Define Scope, if it is multiple pass as comma separated string for example https://www.googleapis.com/auth/admin.reports.audit.readonly, https://www.googleapis.com/auth/admin.reports.usage.readonly",
             "Type": "String"
         },
@@ -99,7 +95,7 @@
             "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
             "CollectorId" : { "Ref":"CollectorId" },
             "PollingInterval" : 60,
-            "PawsEndpoint" : { "Ref":"PawsEndpoint" },
+            "PawsEndpoint": "https://www.googleapis.com",
             "PawsAuthType" : { "Ref":"PawsAuthType" },
             "PawsSecret" : { "Ref":"GsuiteClientSecret" },
             "CollectorParamString1" : { "Ref":"GsuiteScope" },
