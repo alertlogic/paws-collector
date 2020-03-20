@@ -71,7 +71,7 @@ class PawsCollector extends AlAwsCollector {
         });
     }
 
-    constructor(context, {aimsCreds, pawsCreds}, healthChecks, statsChecks) {
+    constructor(context, {aimsCreds, pawsCreds}, healthChecks = [], statsChecks = []) {
         super(context, 'paws',
               AlAwsCollector.IngestTypes.LOGMSGS,
               m_packageJson.version,
