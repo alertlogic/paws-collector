@@ -52,7 +52,7 @@
             "Default": "salesforce"
         },
         "SalesforceEndpoint": {
-            "Description": "Salesforce Base URL. For example, login.salesforce.com (without Https protocol)",
+            "Description": "Salesforce Base URL. For example, https://login.salesforce.com",
             "Type": "String"
         },
         "PawsAuthType": {

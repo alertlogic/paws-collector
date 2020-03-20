@@ -67,7 +67,7 @@ class SalesforceCollector extends PawsCollector {
         }
         const clientId = collector.clientId;
         const salesForceUser = process.env.paws_collector_param_string_1;
-        const baseUrl = process.env.paws_endpoint;
+        const baseUrl = process.env.paws_endpoint.replace(/^https:\/\/|\/$/g, '');
         const tokenUrl = `/services/oauth2/token`;
 
         const privateKey = Buffer.from(encodedPrivateKey, 'base64').toString('ascii');
