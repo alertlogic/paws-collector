@@ -14,7 +14,7 @@ const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const parse = require('@alertlogic/al-collector-js').Parse;
 const utils = require("./utils");
 var jwt = require('jsonwebtoken');
-const RestServiceClient = require('@alertlogic/al-collector-js/al_util').RestServiceClient;
+const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClient;
 
 
 
