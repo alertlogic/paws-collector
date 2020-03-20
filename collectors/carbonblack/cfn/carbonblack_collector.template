@@ -61,13 +61,15 @@
             "Default": "ssws"
         },
         "CarbonblackClientId": {
-            "Description": "Carbon Black Client ID for oauth2 authentication type",
-            "Type": "String"
+            "Description": "Carbon Black Client ID. (For Audit Log event use API access level And For Search Request Use Custome View All access level) Both API ID's are required",
+            "Type": "String",
+            "Default" : "{ \"auditLogEvent\": { \"APIID\": \"YOUR_AUDIT_LOG_EVENT_API_ID\" }, \"searchRequest\": { \"APIID\": \"YOUR_SEARCH_REQUEST_API_ID\" } }"
         },
         "CarbonblackSecret": {
-            "Description": "Carbon Black Client secret for oauth2 or secret token for ssws.",
+            "Description": "Carbon Black Client secret. (For Audit Log event use API access level And For Search Request Use Custome View All access level) Both secret keys are required",
             "Type": "String",
-            "NoEcho": true
+            "NoEcho": true,
+            "Default" : "{ \"auditLogEvent\": { \"APISecretKey\": \"YOUR_AUDIT_LOG_EVENT_API_SECRET_KEY\" }, \"searchRequest\": { \"APISecretKey\": \"YOUR_SEARCH_REQUEST_API_SECRET_KEY\" } }"
         },
         "CarbonblackOrgKey": {
             "Description": "Carbon Black ORG key for oauth2 authentication type",

@@ -54,13 +54,17 @@ class CarbonblackCollector extends PawsCollector {
 
         let collector = this;
 
-        let clientSecret = collector.secret;
+        const clientSecret = JSON.parse(collector.secret);
         if (!clientSecret) {
             return callback("The Client Secret was not found!");
         }
-
-        const clientId = collector.clientId;
-        const apiEndpoint = process.env.paws_endpoint;
+        
+        const clientId = JSON.parse(collector.clientId);
+        if (!clientId) {
+            return callback("The Client ID was not found!");
+        }
+        
+        const apiEndpoint = process.env.paws_endpoint.replace(/^https:\/\/|\/$/g, '');
         const orgKey = process.env.paws_collector_param_string_2;
         const apiDetails = utils.getAPIDetails(state, orgKey);
 

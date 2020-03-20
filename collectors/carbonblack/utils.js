@@ -1,4 +1,4 @@
-const RestServiceClient = require('@alertlogic/al-collector-js/al_util').RestServiceClient;
+const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClient;
 
 const Audit_Log_Events = 'AuditLogEvents';
 const Search_Alerts = 'SearchAlerts';
@@ -13,7 +13,7 @@ function getAPILogs(apiDetails, accumulator, apiEndpoint, state, clientSecret, c
         return new Promise(function (resolve, reject) {
             restServiceClient.get(apiDetails.url, {
                 headers: {
-                    'X-Auth-Token': `${clientSecret}/${clientId}`
+                    'X-Auth-Token': `${clientSecret.auditLogEvent.APISecretKey}/${clientId.auditLogEvent.APIID}`
                 }
             }).then(response => {
                 if (response.notifications.length === 0) {
@@ -39,7 +39,7 @@ function getAPILogs(apiDetails, accumulator, apiEndpoint, state, clientSecret, c
                 if (pageCount < maxPagesPerInvocation) {
                     restServiceClient.post(apiDetails.url, {
                         headers: {
-                            'X-Auth-Token': `${clientSecret}/${clientId}`
+                            'X-Auth-Token': `${clientSecret.searchRequest.APISecretKey}/${clientId.searchRequest.APIID}`
                         },
                         json: apiDetails.requestBody
                     }).then(response => {

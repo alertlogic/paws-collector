@@ -2,7 +2,7 @@ const utils = require("../utils");
 const assert = require('assert');
 const sinon = require('sinon');
 const moment = require('moment');
-const RestServiceClient = require('@alertlogic/al-collector-js/al_util').RestServiceClient;
+const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClient;
 const carbonblackMock = require('./carbonblack_mock');
 
 var alserviceStub = {};
