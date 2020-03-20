@@ -10,7 +10,6 @@
 
 'use strict';
 
-const https = require('https');
 const health = require('@alertlogic/al-aws-collector-js').Health;
 const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClient;
  
