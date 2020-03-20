@@ -7,7 +7,7 @@ var SalesforceCollector = require('../collector').SalesforceCollector;
 const moment = require('moment');
 const utils = require("../utils");
 var jwt = require('jsonwebtoken');
-const RestServiceClient = require('@alertlogic/al-collector-js/al_util').RestServiceClient;
+const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClient;
 
 
 var responseStub = {};
