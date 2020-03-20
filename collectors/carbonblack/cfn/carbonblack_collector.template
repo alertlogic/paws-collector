@@ -52,7 +52,7 @@
             "Default": "none"
         },
         "CarbonblackEndpoint": {
-            "Description": "Carbon Black API URL. For example, api-url.conferdeploy.net (without Https protocol)",
+            "Description": "Carbon Black API URL. For example, https://api-url.conferdeploy.net",
             "Type": "String"
         },
         "PawsAuthType": {
@@ -63,13 +63,12 @@
         "CarbonblackClientId": {
             "Description": "Carbon Black Client ID. (For Audit Log event use API access level And For Search Request Use Custome View All access level) Both API ID's are required",
             "Type": "String",
-            "Default" : "{ \"auditLogEvent\": { \"APIID\": \"YOUR_AUDIT_LOG_EVENT_API_ID\" }, \"searchRequest\": { \"APIID\": \"YOUR_SEARCH_REQUEST_API_ID\" } }"
+            "Default" : "{ \"auditLogEventApiId\": \"YOUR_AUDIT_LOG_EVENT_API_ID\", \"searchRequestApiId\": \"YOUR_SEARCH_REQUEST_API_ID\" }"
         },
         "CarbonblackSecret": {
-            "Description": "Carbon Black Client secret. (For Audit Log event use API access level And For Search Request Use Custome View All access level) Both secret keys are required",
+            "Description": "Carbon Black Client secret. (For Audit Log event use API access level And For Search Request Use Custome View All access level) Both secret keys are required. JSON String format { \"auditLogEventApiSecretKey\": \"YOUR_AUDIT_LOG_EVENT_API_SECRET_KEY\", \"searchRequestApiSecretKey\": \"YOUR_SEARCH_REQUEST_API_SECRET_KEY\" } ",
             "Type": "String",
-            "NoEcho": true,
-            "Default" : "{ \"auditLogEvent\": { \"APISecretKey\": \"YOUR_AUDIT_LOG_EVENT_API_SECRET_KEY\" }, \"searchRequest\": { \"APISecretKey\": \"YOUR_SEARCH_REQUEST_API_SECRET_KEY\" } }"
+            "NoEcho": true
         },
         "CarbonblackOrgKey": {
             "Description": "Carbon Black ORG key for oauth2 authentication type",
@@ -109,7 +108,7 @@
             "PollingInterval" : 60,
             "PawsEndpoint" : { "Ref":"CarbonblackEndpoint" },
             "PawsAuthType" : { "Ref":"PawsAuthType" },
-            "PawsClientId" : "{ "Ref":"CarbonblackClientId" }",
+            "PawsClientId" : { "Ref":"CarbonblackClientId" },
             "PawsSecret" : { "Ref":"CarbonblackSecret" },
             "CollectorParamString1" : { "Ref":"CarbonblackAPINames" },
             "CollectorParamString2" : { "Ref":"CarbonblackOrgKey" },
