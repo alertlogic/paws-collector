@@ -16,10 +16,9 @@ function getObjectLogs(response, objectQueryDetails, accumulator, state, maxPage
         getSalesforceData();
         function getSalesforceData() {
             if (pageCount < maxPagesPerInvocation) {
-                var ret = JSON.parse(response.body)
                 var conn = new jsforce.Connection({
-                    accessToken: ret.access_token,
-                    instanceUrl: ret.instance_url,
+                    accessToken: response.access_token,
+                    instanceUrl: response.instance_url,
                     version: "48.0"
                 });
                 let queryWithLimit = "";
