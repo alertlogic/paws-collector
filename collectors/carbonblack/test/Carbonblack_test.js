@@ -80,7 +80,6 @@ describe('Unit Tests', function () {
 
                 collector.pawsInitCollectionState(null, (err, initialStates, nextPoll) => {
                     initialStates.forEach((state) => {
-                        assert.equal(state.since, startDate, "Dates are not equal");
                         assert.notEqual(moment(state.until).diff(state.since, 'hours'), 24);
                     });
                     done();
@@ -181,7 +180,7 @@ describe('Unit Tests', function () {
             CarbonblackCollector.load().then(function (creds) {
                 var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
                 const newState = collector._getNextCollectionState(curState);
-                assert.equal(moment(newState.until).diff(newState.since, 'hours'), 24);
+                assert.equal(moment(newState.until).diff(newState.since, 'seconds'), 60);
                 assert.equal(newState.poll_interval_sec, 1);
                 done();
             });
@@ -198,7 +197,7 @@ describe('Unit Tests', function () {
             CarbonblackCollector.load().then(function (creds) {
                 var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
                 const newState = collector._getNextCollectionState(curState);
-                assert.equal(moment(newState.until).diff(newState.since, 'hours'), 1);
+                assert.equal(moment(newState.until).diff(newState.since, 'seconds'), 60);
                 assert.equal(newState.poll_interval_sec, 1);
                 done();
             });
