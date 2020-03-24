@@ -24,12 +24,22 @@ let tsPaths = [];
 class CarbonblackCollector extends PawsCollector {
 
     pawsInitCollectionState(event, callback) {
-        const startTs = process.env.paws_collection_start_ts ?
-            process.env.paws_collection_start_ts :
-            moment().toISOString();
-        const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
+
         const apiNames = JSON.parse(process.env.paws_collector_param_string_1);
         const initialStates = apiNames.map(apiName => {
+            let startTs = "";
+            let endTs = "";
+            if (apiName === "AuditLogEvents") {
+                startTs = moment().toISOString();
+                endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
+            }
+            else {
+                startTs = process.env.paws_collection_start_ts ?
+                    process.env.paws_collection_start_ts :
+                    moment().toISOString();
+                endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
+
+            }
             return {
                 apiName,
                 since: startTs,
