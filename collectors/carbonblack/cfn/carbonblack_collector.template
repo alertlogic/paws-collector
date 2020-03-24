@@ -75,9 +75,9 @@
             "Type": "String"
         },
         "CarbonblackAPINames": {
-            "Description": "Define API names, if it is multiple pass as comma separated string",
+            "Description": "Define API names. Please pass JSON formatted list",
             "Type": "String",
-            "Default": "[\"AuditLogEvents\", \"SearchAlerts\",\"SearchAlertsCBAnalytics\", \"SearchAlertsVmware\",\"SearchAlertsWatchlist\"]"
+            "Default": "[\"AuditLogEvents\", \"SearchAlerts\", \"SearchAlertsCBAnalytics\", \"SearchAlertsVmware\", \"SearchAlertsWatchlist\"]"
         },
         "CollectionStartTs": {
             "Description": "Timestamp when log collection starts. For example, 2019-11-21T16:00:00Z",

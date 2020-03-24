@@ -11,6 +11,7 @@
 
 const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
+const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const parse = require('@alertlogic/al-collector-js').Parse;
 const utils = require("./utils");
 
@@ -58,12 +59,12 @@ class CarbonblackCollector extends PawsCollector {
         if (!clientSecret) {
             return callback("The Client Secret was not found!");
         }
-        
+
         const clientId = JSON.parse(collector.clientId);
         if (!clientId) {
             return callback("The Client ID was not found!");
         }
-        
+
         const apiEndpoint = process.env.paws_endpoint.replace(/^https:\/\/|\/$/g, '');
         const orgKey = process.env.paws_collector_param_string_2;
         const apiDetails = utils.getAPIDetails(state, orgKey);
@@ -96,33 +97,14 @@ class CarbonblackCollector extends PawsCollector {
     }
 
     _getNextCollectionState(curState) {
-        const nowMoment = moment();
-        const curUntilMoment = moment(curState.until);
 
-        // Check if current 'until' is in the future.
-        const nextSinceTs = curUntilMoment.isAfter(nowMoment) ?
-            nowMoment.toISOString() :
-            curState.until;
+        const untilMoment = moment(curState.until);
 
-        let nextUntilMoment;
-        if (nowMoment.diff(nextSinceTs, 'hours') > 24) {
-            console.log('collection is more than 24 hours behind. Increasing the collection time to catch up')
-            nextUntilMoment = moment(nextSinceTs).add(24, 'hours');
-        }
-        else if (nowMoment.diff(nextSinceTs, 'hours') > 1) {
-            console.log('collection is more than 1 hour behind. Increasing the collection time to catch up')
-            nextUntilMoment = moment(nextSinceTs).add(1, 'hours');
-        }
-        else {
-            nextUntilMoment = moment(nextSinceTs).add(this.pollInterval, 'seconds');
-        }
-        // Check if we're behind collection schedule and need to catch up.
-        const nextPollInterval = nowMoment.diff(nextUntilMoment, 'seconds') > this.pollInterval ?
-            1 : this.pollInterval;
+        const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-day-progression', untilMoment, this.pollInterval);
 
         return {
             apiName: curState.apiName,
-            since: nextSinceTs,
+            since: nextSinceMoment.toISOString(),
             until: nextUntilMoment.toISOString(),
             nextPage: null,
             poll_interval_sec: nextPollInterval
