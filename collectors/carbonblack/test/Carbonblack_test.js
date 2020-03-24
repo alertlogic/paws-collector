@@ -80,7 +80,7 @@ describe('Unit Tests', function () {
 
                 collector.pawsInitCollectionState(null, (err, initialStates, nextPoll) => {
                     initialStates.forEach((state) => {
-                        assert.notEqual(moment(state.until).diff(state.since, 'hours'), 24);
+                        assert.equal(moment(state.until).diff(state.since, 'seconds'), 60);
                     });
                     done();
                 });
@@ -94,7 +94,7 @@ describe('Unit Tests', function () {
 
                 collector.pawsInitCollectionState(null, (err, initialStates, nextPoll) => {
                     initialStates.forEach((state) => {
-                        assert.notEqual(moment(state.until).diff(state.since, 'hours'), 24);
+                        assert.equal(moment(state.until).diff(state.since, 'seconds'), 60);
                     });
                     done();
                 });
