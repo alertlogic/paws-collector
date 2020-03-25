@@ -117,7 +117,7 @@ describe('Unit Tests', function () {
                 const sampleEvent = { ResourceProperties: { StackName: 'a-stack-name' } };
                 collector.pawsGetRegisterParameters(sampleEvent, (err, regValues) => {
                     const expectedRegValues = {
-                        gsuiteScope: 'gsuiteScope',
+                        gsuiteScope: '["gsuiteScope"]',
                         gsuiteApplicationNames: '["login","admin","token"]'
                     };
                     assert.deepEqual(regValues, expectedRegValues);
