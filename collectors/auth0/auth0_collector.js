@@ -39,7 +39,7 @@ class Auth0Collector extends PawsCollector {
 
     pawsGetLogs(state, callback) {
         let collector = this;
-        const hostname = process.env.paws_endpoint.toLowerCase().replace(HOSTNAME_REGEXP, '');
+        const hostname = process.env.paws_endpoint.replace(HOSTNAME_REGEXP, '');
         const auth0Client = new ManagementClient({
             domain: hostname,
             clientId: collector.clientId,
