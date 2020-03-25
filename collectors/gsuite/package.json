@@ -1,6 +1,6 @@
 {
     "name": "gsuite-collector",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "Alert Logic AWS based Gsuite Log Collector",
     "repository": {},
     "private": true,
