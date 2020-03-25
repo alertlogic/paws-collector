@@ -24,7 +24,7 @@ const tsPaths = [
     { path: ['date'] }
 ];
 
-const HOSTNAME_REGEXP = /^http[s]*:\/\/|\/$/g;
+const HOSTNAME_REGEXP = /^[HhTtPpSs]*:\/\/|\/$/g;
 
 
 class Auth0Collector extends PawsCollector {
