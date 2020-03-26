@@ -65,12 +65,12 @@ class CarbonblackCollector extends PawsCollector {
 
         let collector = this;
 
-        const clientSecret = JSON.parse(collector.secret);
+        const clientSecret = collector.secret;
         if (!clientSecret) {
             return callback("The Client Secret was not found!");
         }
 
-        const clientId = JSON.parse(collector.clientId);
+        const clientId = collector.clientId;
         if (!clientId) {
             return callback("The Client ID was not found!");
         }

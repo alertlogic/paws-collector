@@ -13,7 +13,7 @@ function getAPILogs(apiDetails, accumulator, apiEndpoint, state, clientSecret, c
         return new Promise(function (resolve, reject) {
             restServiceClient.get(apiDetails.url, {
                 headers: {
-                    'X-Auth-Token': `${clientSecret.auditLogEventApiSecretKey}/${clientId.auditLogEventApiId}`
+                    'X-Auth-Token': `${clientSecret}/${clientId}`
                 }
             }).then(response => {
                 if (response.notifications.length === 0) {
@@ -39,7 +39,7 @@ function getAPILogs(apiDetails, accumulator, apiEndpoint, state, clientSecret, c
                 if (pageCount < maxPagesPerInvocation) {
                     restServiceClient.post(apiDetails.url, {
                         headers: {
-                            'X-Auth-Token': `${clientSecret.searchRequestApiSecretKey}/${clientId.searchRequestApiId}`
+                            'X-Auth-Token': `${clientSecret}/${clientId}`
                         },
                         json: apiDetails.requestBody
                     }).then(response => {
