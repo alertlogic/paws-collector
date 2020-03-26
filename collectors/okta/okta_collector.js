@@ -11,10 +11,12 @@
 
 const moment = require('moment');
 const okta = require('@okta/okta-sdk-nodejs');
-const healthChecks = require('./health_checks');
 const parse = require('@alertlogic/al-collector-js').Parse;
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
+
+const packageJson = require('./package.json');
+const healthChecks = require('./health_checks');
 
 const THROTTLING_ERROR_REGEXP = /rateLimit/g;
 
@@ -37,7 +39,7 @@ class OktaCollector extends PawsCollector {
 
     constructor(context, {aimsCreds, pawsCreds}){
         super(context,
-            {aimsCreds, pawsCreds},
+            {aimsCreds, pawsCreds}, packageJson.version,
             [healthChecks.oktaTokenHealthCheck], []);
     }
     
