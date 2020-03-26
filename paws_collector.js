@@ -17,7 +17,7 @@ const fs = require('fs');
 const moment = require('moment');
 
 const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector;
-const m_packageJson = require('./package.json');
+const packageJson = require('./package.json');
 
 const CREDS_FILE_PATH = '/tmp/paws_creds.json';
 var PAWS_DECRYPTED_CREDS = null;
@@ -71,10 +71,11 @@ class PawsCollector extends AlAwsCollector {
         });
     }
 
-    constructor(context, {aimsCreds, pawsCreds}, healthChecks = [], statsChecks = []) {
+    constructor(context, {aimsCreds, pawsCreds}, childVersion, healthChecks = [], statsChecks = []) {
+        const version = childVersion ? childVersion : packageJson.version;
         super(context, 'paws',
               AlAwsCollector.IngestTypes.LOGMSGS,
-              m_packageJson.version,
+              version,
               aimsCreds,
               null, healthChecks, statsChecks);
         console.info('PAWS000100 Loading collector', process.env.paws_type_name);
