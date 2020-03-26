@@ -24,6 +24,8 @@ const tsPaths = [
     { path: ['date'] }
 ];
 
+const HOSTNAME_REGEXP = /^[htps]*:\/\/|\/$/gi;
+
 
 class Auth0Collector extends PawsCollector {
 
@@ -37,8 +39,9 @@ class Auth0Collector extends PawsCollector {
 
     pawsGetLogs(state, callback) {
         let collector = this;
+        const hostname = process.env.paws_endpoint.replace(HOSTNAME_REGEXP, '');
         const auth0Client = new ManagementClient({
-            domain: process.env.paws_endpoint,
+            domain: hostname,
             clientId: collector.clientId,
             clientSecret: collector.secret,
             scope: 'read:logs'

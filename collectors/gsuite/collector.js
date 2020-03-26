@@ -70,7 +70,7 @@ class GsuiteCollector extends PawsCollector {
         const keys = JSON.parse(keysEnvVar);
         const client = auth.fromJSON(keys);
         client.subject = collector.clientId;
-        client.scopes = process.env.paws_collector_param_string_1.split(",");
+        client.scopes = JSON.parse(process.env.paws_collector_param_string_1);
         console.info(`GSUI000001 Collecting data for ${state.application} from ${state.since} till ${state.until}`);
 
         let params = state.nextPage ? {
