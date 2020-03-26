@@ -37,9 +37,9 @@ const sensitiveFields = [
 
 class OktaCollector extends PawsCollector {
 
-    constructor(context, {aimsCreds, pawsCreds}){
+    constructor(context, creds){
         super(context,
-            {aimsCreds, pawsCreds}, packageJson.version,
+            creds, packageJson.version,
             [healthChecks.oktaTokenHealthCheck], []);
     }
     
