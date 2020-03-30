@@ -224,8 +224,8 @@ describe('Unit Tests', function () {
             CarbonblackCollector.load().then(function (creds) {
                 var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
                 let nextState = collector._getNextCollectionStateWithNextPage(curState, nextPage);
-                assert.ok(nextState.since);
-                assert.equal(nextState.since, curState.since);
+                assert.ok(nextState.nextPage);
+                assert.equal(nextState.nextPage, nextPage);
                 done();
             });
         });

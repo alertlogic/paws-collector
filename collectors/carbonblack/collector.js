@@ -14,6 +14,7 @@ const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const parse = require('@alertlogic/al-collector-js').Parse;
 const utils = require("./utils");
+const packageJson = require('./package.json');
 
 
 let typeIdPaths = [];
@@ -22,6 +23,10 @@ let tsPaths = [];
 
 
 class CarbonblackCollector extends PawsCollector {
+
+    constructor(context, creds) {
+        super(context, creds, packageJson.version);
+    }
 
     pawsInitCollectionState(event, callback) {
 
