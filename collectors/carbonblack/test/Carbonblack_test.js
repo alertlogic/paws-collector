@@ -72,7 +72,7 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
-        it('get inital state less than 7 days in the past', function (done) {
+        it('Paws Init Collection State Success', function (done) {
             CarbonblackCollector.load().then(function (creds) {
                 var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
                 const startDate = moment().subtract(1, 'days').toISOString();
@@ -86,21 +86,6 @@ describe('Unit Tests', function () {
                 });
             });
         });
-        it('get inital state less than 24 hours in the past', function (done) {
-            CarbonblackCollector.load().then(function (creds) {
-                var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
-                const startDate = moment().subtract(12, 'hours').toISOString();
-                process.env.paws_collection_start_ts = startDate;
-
-                collector.pawsInitCollectionState(null, (err, initialStates, nextPoll) => {
-                    initialStates.forEach((state) => {
-                        assert.equal(moment(state.until).diff(state.since, 'seconds'), 60);
-                    });
-                    done();
-                });
-            });
-        });
-
     });
 
     describe('Paws Get Register Parameters', function () {
@@ -162,79 +147,34 @@ describe('Unit Tests', function () {
         });
     });
 
-    describe('Next state tests', function () {
-        let ctx = {
-            invokedFunctionArn: carbonblackMock.FUNCTION_ARN,
-            fail: function (error) {
-                assert.fail(error);
-            },
-            succeed: function () { }
-        };
-        it('get next state if more than 24 hours in the past', function (done) {
-            const startDate = moment().subtract(10, 'days');
-            const curState = {
-                since: startDate.toISOString(),
-                until: startDate.add(5, 'days').toISOString(),
-                poll_interval_sec: 1
+    describe('Next state test', function () {
+        it('Next state test success', function(done) {
+            let ctx = {
+                invokedFunctionArn : carbonblackMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
             };
-            CarbonblackCollector.load().then(function (creds) {
+            
+            CarbonblackCollector.load().then(function(creds) {
                 var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
-                const newState = collector._getNextCollectionState(curState);
-                assert.equal(moment(newState.until).diff(newState.since, 'seconds'), 60);
-                assert.equal(newState.poll_interval_sec, 1);
-                done();
-            });
-        });
-
-
-        it('get next state if more than 1 hours in the past', function (done) {
-            const startDate = moment().subtract(5, 'hours');
-            const curState = {
-                since: startDate.toISOString(),
-                until: startDate.add(3, 'hours').toISOString(),
-                poll_interval_sec: 1
-            };
-            CarbonblackCollector.load().then(function (creds) {
-                var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
-                const newState = collector._getNextCollectionState(curState);
-                assert.equal(moment(newState.until).diff(newState.since, 'seconds'), 60);
-                assert.equal(newState.poll_interval_sec, 1);
-                done();
-            });
-        });
-
-
-        it('get next state if less than 1 hour in the past but more than the polling interval', function (done) {
-            const startDate = moment().subtract(20, 'minutes');
-            CarbonblackCollector.load().then(function (creds) {
-                var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
+                const startDate = moment();
                 const curState = {
                     since: startDate.toISOString(),
                     until: startDate.add(collector.pollInterval, 'seconds').toISOString(),
                     poll_interval_sec: 1
                 };
-                const newState = collector._getNextCollectionState(curState);
-                assert.equal(moment(newState.until).diff(newState.since, 'seconds'), collector.pollInterval);
-                assert.equal(newState.poll_interval_sec, 1);
+                let nextState = collector._getNextCollectionState(curState);
+                assert.equal(moment(nextState.until).diff(nextState.since, 'seconds'), collector.pollInterval);
+                assert.equal(nextState.poll_interval_sec, collector.pollInterval);
                 done();
             });
         });
 
-        it('get next state if within polling interval', function (done) {
-            CarbonblackCollector.load().then(function (creds) {
-                var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
-                const startDate = moment().subtract(collector.pollInterval * 2, 'seconds');
-                const curState = {
-                    since: startDate.toISOString(),
-                    until: startDate.add(collector.pollInterval, 'seconds').toISOString(),
-                    poll_interval_sec: 1
-                };
-                const newState = collector._getNextCollectionState(curState);
-                assert.equal(moment(newState.until).diff(newState.since, 'seconds'), collector.pollInterval);
-                assert.equal(newState.poll_interval_sec, collector.pollInterval);
-                done();
-            });
-        });
     });
 
     describe('Format Tests', function () {
