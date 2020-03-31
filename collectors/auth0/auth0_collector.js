@@ -14,7 +14,7 @@ const request = require('request');
 const parse = require('@alertlogic/al-collector-js').Parse;
 const ManagementClient = require('auth0').ManagementClient;
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
-
+const packageJson = require('./package.json');
 
 const typeIdPaths = [
     { path: ['type'] }
@@ -29,6 +29,10 @@ const HOSTNAME_REGEXP = /^[htps]*:\/\/|\/$/gi;
 
 class Auth0Collector extends PawsCollector {
 
+    constructor(context, creds){
+        super(context, creds, packageJson.version);
+    }
+    
     pawsInitCollectionState(event, callback) {
         const initialState = {
             since: process.env.paws_collection_start_ts ? process.env.paws_collection_start_ts : moment().subtract(5, 'minutes').toISOString(),
