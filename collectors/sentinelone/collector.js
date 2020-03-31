@@ -12,6 +12,7 @@
 const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const parse = require('@alertlogic/al-collector-js').Parse;
+const utils = require("./utils");
 
 
 const typeIdPaths = [
@@ -27,11 +28,11 @@ class SentineloneCollector extends PawsCollector {
     constructor(context, creds) {
         super(context, creds, 'sentinelone');
     }
-    
+
     pawsInitCollectionState(event, callback) {
-        const startTs = process.env.paws_collection_start_ts ? 
-                process.env.paws_collection_start_ts :
-                    moment().toISOString();
+        const startTs = process.env.paws_collection_start_ts ?
+            process.env.paws_collection_start_ts :
+            moment().toISOString();
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
         const initialState = {
             // TODO: define initial collection state specific to your collector.
@@ -42,45 +43,66 @@ class SentineloneCollector extends PawsCollector {
         };
         return callback(null, initialState, 1);
     }
-    
+
     pawsGetLogs(state, callback) {
         let collector = this;
+        const clientSecret = collector.secret;
+        if (!clientSecret) {
+            return callback("The Client Secret was not found!");
+        }
+
+        const clientId = collector.clientId;
+        if (!clientId) {
+            return callback("The Client ID was not found!");
+        }
+
+        const baseUrl = process.env.paws_endpoint.replace(/^https:\/\/|\/$/g, '');
+        const tokenUrl = `/web/api/v2.0/users/login`;
+
         console.info(`SONE000001 Collecting data from ${state.since} till ${state.until}`);
-        const newState = collector._getNextCollectionState(state);
-        console.info(`SONE000002 Next collection in ${newState.poll_interval_sec} seconds`);
-        return callback(null, [], newState, newState.poll_interval_sec);
+
+        utils.authentication(baseUrl, tokenUrl, clientId, clientSecret)
+            .then((token) => {
+                console.log(token);
+                const newState = collector._getNextCollectionState(state);
+                console.info(`SONE000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                return callback(null, [], newState, newState.poll_interval_sec);
+            })
+            .catch((error) => {
+                return callback(error);
+            });
     }
-    
+
     _getNextCollectionState(curState) {
         const nowMoment = moment();
         const curUntilMoment = moment(curState.until);
-        
+
         // Check if current 'until' is in the future.
         const nextSinceTs = curUntilMoment.isAfter(nowMoment) ?
-                nowMoment.toISOString() :
-                curState.until;
+            nowMoment.toISOString() :
+            curState.until;
 
         const nextUntilMoment = moment(nextSinceTs).add(this.pollInterval, 'seconds');
         // Check if we're behind collection schedule and need to catch up.
         const nextPollInterval = nowMoment.diff(nextUntilMoment, 'seconds') > this.pollInterval ?
-                1 : this.pollInterval;
-        
-        return  {
+            1 : this.pollInterval;
+
+        return {
             // TODO: define the next collection state.
             // This needs to be in the smae format as the intial colletion state above
-             since: nextSinceTs,
-             until: nextUntilMoment.toISOString(),
-             poll_interval_sec: nextPollInterval
+            since: nextSinceTs,
+            until: nextUntilMoment.toISOString(),
+            poll_interval_sec: nextPollInterval
         };
     }
-    
+
     pawsFormatLog(msg) {
         // TODO: double check that this message parsing fits your use case
         let collector = this;
 
         const ts = parse.getMsgTs(msg, tsPaths);
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
-        
+
         let formattedMsg = {
             messageTs: ts.sec,
             priority: 11,
@@ -89,7 +111,7 @@ class SentineloneCollector extends PawsCollector {
             messageType: 'json/sentinelone',
             application_id: collector.application_id
         };
-        
+
         if (typeId !== null && typeId !== undefined) {
             formattedMsg.messageTypeId = `${typeId}`;
         }
