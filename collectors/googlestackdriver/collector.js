@@ -14,6 +14,7 @@ const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const parse = require('@alertlogic/al-collector-js').Parse;
 const logging = require('@google-cloud/logging');
+const packageJson = require('./package.json');
 
 const API_THROTTLING_ERROR = 8;
 
@@ -25,6 +26,10 @@ const typeIdPaths = [
 
 class GooglestackdriverCollector extends PawsCollector {
 
+    constructor(context, creds){
+        super(context, creds, packageJson.version);
+    }
+    
     pawsInitCollectionState(event, callback) {
         const startTs = process.env.paws_collection_start_ts ?
                 process.env.paws_collection_start_ts :
