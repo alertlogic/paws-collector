@@ -26,7 +26,7 @@ const tsPaths = [
 
 class {{Type}}Collector extends PawsCollector {
     constructor(context, creds) {
-        super(context, creds, '{{type}}');
+        super(context, creds, packageJson.version);
     }
     
     pawsInitCollectionState(event, callback) {

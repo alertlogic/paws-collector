@@ -13,6 +13,7 @@ const moment = require("moment");
 const PawsCollector = require("@alertlogic/paws-collector").PawsCollector;
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const parse = require("@alertlogic/al-collector-js").Parse;
+const packageJson = require('./package.json');
 
 const { auth } = require("google-auth-library");
 const utils = require("./utils");
@@ -23,8 +24,9 @@ const tsPaths = [{ path: ["id", "time"] }];
 
 
 class GsuiteCollector extends PawsCollector {
+    
     constructor(context, creds) {
-        super(context, creds, "gsuite");
+        super(context, creds, packageJson.version);
     }
 
     pawsInitCollectionState(event, callback) {
