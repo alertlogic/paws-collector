@@ -15,6 +15,7 @@ const parse = require('@alertlogic/al-collector-js').Parse;
 const utils = require("./utils");
 var jwt = require('jsonwebtoken');
 const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClient;
+const packageJson = require('./package.json');
 
 
 
@@ -25,7 +26,7 @@ let tsPaths = [];
 
 class SalesforceCollector extends PawsCollector {
     constructor(context, creds) {
-        super(context, creds, 'salesforce');
+        super(context, creds, packageJson.version);
     }
 
     pawsInitCollectionState(event, callback) {
