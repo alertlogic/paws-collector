@@ -65,7 +65,7 @@ class SentineloneCollector extends PawsCollector {
         Object.assign(params, {
             createdAt__gte: state.since,
             createdAt__lt: state.until,
-            limit: 10
+            limit: 100
         });
 
         utils.authentication(baseUrl, tokenUrl, clientId, clientSecret)
