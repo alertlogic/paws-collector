@@ -349,7 +349,7 @@ describe('Unit Tests', function() {
                     done();
                 });
             });
-        })
+        });
         it('reportCollectionDelay', function(done) {
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,
