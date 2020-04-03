@@ -22,7 +22,7 @@ test: compile
 package: test package.zip
 
 package.zip: node_modules/ *.js package.json
-	zip -r $(AWS_LAMBDA_PACKAGE_NAME) $^
+	zip -r $(AWS_LAMBDA_PACKAGE_NAME) $^ > /dev/null
 
 deploy:
 	aws lambda update-function-code --function-name $(AWS_LAMBDA_FUNCTION_NAME) --zip-file fileb://$(AWS_LAMBDA_PACKAGE_NAME)
