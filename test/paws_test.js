@@ -313,7 +313,43 @@ describe('Unit Tests', function() {
                 });
             });
         });
-        
+
+        it('sets the secret param properly', (done) => {
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+
+            AWS.restore('KMS');
+
+            let putParameterSpy = sinon.spy((params, callback) => callback(null, {Version: 2, Tier:'Standard'}));
+            AWS.mock('SSM', 'putParameter', putParameterSpy);
+
+            AWS.mock('KMS', 'encrypt', function (params, callback) {
+                const data = {
+                    CiphertextBlob : params.Plaintext
+                };
+                return callback(null, data);
+            });
+
+            TestCollector.load().then(function(creds) {
+                const collector = new TestCollector(ctx, creds);
+                const secretValue = 'a-secret';
+                const base64 = new Buffer(secretValue).toString('base64');
+                collector.setSecret(secretValue).then(() => {
+                    assert.equal(putParameterSpy.getCall(0).args[0].Value, base64);
+                    AWS.restore('KMS');
+                    AWS.restore('SSM');
+                    done();
+                });
+            });
+        })
         it('reportCollectionDelay', function(done) {
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,

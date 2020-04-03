@@ -117,7 +117,42 @@ class PawsCollector extends AlAwsCollector {
     prepareErrorStatus(errorString, streamName = 'none') {
         return super.prepareErrorStatus(errorString, streamName, this.pawsCollectorType);
     }
-    
+
+    setSecret(secretValue){
+        const encryptPromise = new Promise((resolve, reject) => {
+            const kms = new AWS.KMS();
+            const params = {
+                KeyId: process.env.paws_kms_key_arn,
+                Plaintext: secretValue
+            };
+            kms.encrypt(params, function(err, data) {
+                if (err) {
+                    return reject(err, err.stack);
+                }
+                const base64 = new Buffer(data.CiphertextBlob).toString('base64');
+                return resolve(base64);
+            });
+        });
+
+        return encryptPromise.then((base64) => {
+            return new Promise((resolve, reject) => {
+                var ssm = new AWS.SSM();
+                var params = {
+                    Name: process.env.paws_secret_param_name,
+                    Type: 'String',
+                    Value: base64
+                };
+                ssm.putParameter(params, function(err, data) {
+                    if (err) return reject(err, err.stack);
+                    else     return resolve(data);
+                });
+            }).catch(err => {
+                console.error('PAWS000300 Error setting new secret', err);
+                return err;
+            });
+        })
+    }
+
     register(event) {
         let collector = this;
         let pawsRegisterProps = this.getProperties();
@@ -134,7 +169,7 @@ class PawsCollector extends AlAwsCollector {
             }
         ], function(err, customRegister) {
             if (err) {
-                console.err('PAWS000101 Error during registration', err);
+                console.error('PAWS000101 Error during registration', err);
                 return collector.done(err);
             } else {
                 let registerProps = Object.assign(pawsRegisterProps, customRegister);
