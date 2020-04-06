@@ -118,7 +118,7 @@ class PawsCollector extends AlAwsCollector {
         return super.prepareErrorStatus(errorString, streamName, this.pawsCollectorType);
     }
 
-    setSecret(secretValue){
+    setPawsSecret(secretValue){
         const encryptPromise = new Promise((resolve, reject) => {
             const kms = new AWS.KMS();
             const params = {
