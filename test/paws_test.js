@@ -342,7 +342,7 @@ describe('Unit Tests', function() {
                 const collector = new TestCollector(ctx, creds);
                 const secretValue = 'a-secret';
                 const base64 = new Buffer(secretValue).toString('base64');
-                collector.setSecret(secretValue).then(() => {
+                collector.setPawsSecret(secretValue).then(() => {
                     assert.equal(putParameterSpy.getCall(0).args[0].Value, base64);
                     AWS.restore('KMS');
                     AWS.restore('SSM');
