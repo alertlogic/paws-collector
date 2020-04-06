@@ -672,7 +672,10 @@
                   },
                   {
                       "Effect":"Allow",
-                      "Action":"ssm:GetParameter",
+                      "Action":[
+                          "ssm:GetParameter",
+                          "ssm:PutParameter"
+                      ],
                       "Resource":[
                           { "Fn::Join":["", [
                               "arn:aws:ssm:",
