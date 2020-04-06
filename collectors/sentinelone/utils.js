@@ -1,23 +1,6 @@
 const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClient;
 const querystring = require('querystring');
 
-function authentication(baseUrl, tokenUrl, clientId, clientSecret) {
-    let restServiceClient = new RestServiceClient(baseUrl);
-    return new Promise(function (resolve, reject) {
-        return restServiceClient.post(tokenUrl, {
-            json: {
-                "username": clientId,
-                "remember_me": "true",
-                "password": clientSecret
-            }
-        }).then(response => {
-            resolve(response.data.token);
-        }).catch(err => {
-            reject(err);
-        });
-    });
-}
-
 function getAPILogs(baseUrl, token, params, accumulator, maxPagesPerInvocation) {
     let pageCount = 0;
     let nextPage;
@@ -30,7 +13,7 @@ function getAPILogs(baseUrl, token, params, accumulator, maxPagesPerInvocation) 
             if (pageCount < maxPagesPerInvocation) {
                 return restServiceClient.get(`/web/api/v2.0/activities?${querystring.stringify(params)}`, {
                     headers: {
-                        "Authorization": `Token ${token}`
+                        "Authorization": `ApiToken ${token}`
                     }
                 }).then(response => {
                     pageCount++;
@@ -57,6 +40,5 @@ function getAPILogs(baseUrl, token, params, accumulator, maxPagesPerInvocation) 
 }
 
 module.exports = {
-    authentication: authentication,
     getAPILogs: getAPILogs
 };

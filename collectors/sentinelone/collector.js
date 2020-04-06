@@ -15,6 +15,7 @@ const parse = require('@alertlogic/al-collector-js').Parse;
 const utils = require("./utils");
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const packageJson = require('./package.json');
+const healthChecks = require('./health_checks');
 
 
 const typeIdPaths = [{ path: ['id'] }];
@@ -24,7 +25,7 @@ const tsPaths = [{ path: ['createdAt'] }];
 
 class SentineloneCollector extends PawsCollector {
     constructor(context, creds) {
-        super(context, creds, packageJson.version);
+        super(context, creds, packageJson.version, [healthChecks.sentinelOneTokenHealthCheck], []);
     }
 
     pawsInitCollectionState(event, callback) {
@@ -48,13 +49,7 @@ class SentineloneCollector extends PawsCollector {
             return callback("The Client Secret was not found!");
         }
 
-        const clientId = collector.clientId;
-        if (!clientId) {
-            return callback("The Client ID was not found!");
-        }
-
         const baseUrl = process.env.paws_endpoint.replace(/^https:\/\/|\/$/g, '');
-        const tokenUrl = `/web/api/v2.0/users/login`;
 
         console.info(`SONE000001 Collecting data from ${state.since} till ${state.until}`);
 
@@ -68,25 +63,20 @@ class SentineloneCollector extends PawsCollector {
             limit: 100
         });
 
-        utils.authentication(baseUrl, tokenUrl, clientId, clientSecret)
-            .then((token) => {
-                utils.getAPILogs(baseUrl, token, params, [], process.env.paws_max_pages_per_invocation)
-                    .then(({ accumulator, nextPage }) => {
-                        let newState;
-                        if (nextPage === undefined) {
-                            newState = this._getNextCollectionState(state);
-                        } else {
-                            newState = this._getNextCollectionStateWithNextPage(state, nextPage);
-                        }
-                        console.info(`SONE000002 Next collection in ${newState.poll_interval_sec} seconds`);
-                        return callback(null, accumulator, newState, newState.poll_interval_sec);
-                    }).catch((error) => {
-                        return callback(error);
-                    });
-            })
-            .catch((error) => {
+        utils.getAPILogs(baseUrl, clientSecret, params, [], process.env.paws_max_pages_per_invocation)
+            .then(({ accumulator, nextPage }) => {
+                let newState;
+                if (nextPage === undefined) {
+                    newState = this._getNextCollectionState(state);
+                } else {
+                    newState = this._getNextCollectionStateWithNextPage(state, nextPage);
+                }
+                console.info(`SONE000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                return callback(null, accumulator, newState, newState.poll_interval_sec);
+            }).catch((error) => {
                 return callback(error);
             });
+
     }
 
     _getNextCollectionState(curState) {

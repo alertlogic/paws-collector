@@ -6,25 +6,11 @@ const sentineloneMock = require('./sentinelone_mock');
 var SentineloneCollector = require('../collector').SentineloneCollector;
 const moment = require('moment');
 const utils = require("../utils");
+const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClient;
 
 
 var responseStub = {};
-let authentication;
-let getAPILogs;
-
-function setAlServiceStub() {
-    authentication = sinon.stub(utils, 'authentication').callsFake(
-        function fakeFn(baseUrl, tokenUrl, clientId, clientSecret) {
-            return new Promise(function (resolve, reject) {
-                return resolve("token");
-            });
-        });
-
-}
-
-function restoreAlServiceStub() {
-    authentication.restore();
-}
+let getAPILogs, alserviceStuPost;
 
 describe('Unit Tests', function () {
     beforeEach(function () {
@@ -43,11 +29,9 @@ describe('Unit Tests', function () {
             function fakeFn(event, mockContext, responseStatus, responseData, physicalResourceId) {
                 mockContext.succeed();
             });
-        setAlServiceStub();
     });
 
     afterEach(function () {
-        restoreAlServiceStub();
         responseStub.restore();
     });
 
@@ -212,6 +196,41 @@ describe('Unit Tests', function () {
                 assert.equal(nextState.nextPage, nextPage);
                 done();
             });
+        });
+    });
+
+    describe('Health Check Tests', function () {
+        it('token validation check success', function (done) {
+            const sentineloneHealth = require('../health_checks');
+            alserviceStuPost = sinon.stub(RestServiceClient.prototype, 'post').callsFake(
+                function fakeFn() {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ data: { expiresAt: moment().add(5, 'days').toISOString() } });
+                    });
+                });
+
+            sentineloneHealth.sentinelOneTokenHealthCheck(function (err) {
+                assert.equal(null, err);
+                alserviceStuPost.restore();
+                done();
+            });
+
+        });
+        it('token expire check success', function (done) {
+            const sentineloneHealth = require('../health_checks');
+            alserviceStuPost = sinon.stub(RestServiceClient.prototype, 'post').callsFake(
+                function fakeFn() {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ data: { expiresAt: moment().subtract(2, 'days').toISOString() } });
+                    });
+                });
+
+            sentineloneHealth.sentinelOneTokenHealthCheck(function (err) {
+                assert.equal(null, err);
+                alserviceStuPost.restore();
+                done();
+            });
+
         });
     });
 });

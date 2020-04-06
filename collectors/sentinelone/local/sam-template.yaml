@@ -24,7 +24,6 @@ Resources:
           paws_secret_param_name:
           paws_endpoint:
           paws_api_secret:
-          paws_api_client_id:
           paws_max_pages_per_invocation:      
           collector_id:
       Runtime: nodejs10.x

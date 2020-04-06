@@ -48,30 +48,6 @@ describe('Unit Tests', function () {
             });
         });
     });
-
-    describe('Get token', function () {
-        it('Get token success', function (done) {
-            alserviceStub.post = sinon.stub(RestServiceClient.prototype, 'post').callsFake(
-                function fakeFn() {
-                    return new Promise(function (resolve, reject) {
-                        assert.equal(tokenUrl, 'tokenUrl');
-                        assert.equal(apiEndpoint, process.env.paws_endpoint);
-                        assert.equal(clientId, process.env.paws_api_client_id);
-                        assert.equal(clientSecret, process.env.paws_api_secret);
-                        return resolve({ data: "token" });
-                    });
-                });
-            const apiEndpoint = process.env.paws_endpoint;
-            const tokenUrl = "tokenUrl";
-            const clientSecret = process.env.paws_api_secret;
-            const clientId = process.env.paws_api_client_id;
-
-            utils.authentication(apiEndpoint, tokenUrl, clientId, clientSecret).then(data => {
-                alserviceStub.post.restore();
-                done();
-            });
-        });
-    });
 });
 
 

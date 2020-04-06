@@ -14,7 +14,6 @@ process.env.al_application_id = 'application_id';
 process.env.paws_secret_param_name = "sentinelone-param-name";
 process.env.paws_poll_interval = 60;
 process.env.paws_type_name = "sentinelone";
-process.env.paws_api_client_id = "client_id";
 process.env.paws_api_secret = "secret";
 process.env.paws_endpoint = "https://sentinelone.com";
 
