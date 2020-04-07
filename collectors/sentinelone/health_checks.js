@@ -30,7 +30,7 @@ function sentinelOneTokenHealthCheck(callback) {
             }
         }
     }).then((response) => {
-        const expiresAt = moment(response.data.expiresAt).subtract(1, 'days').toISOString();
+        const expiresAt = moment(response.data.expiresAt).subtract(1, 'days');
         if (moment().isBefore(expiresAt)) {
             return callback();
         }

@@ -203,8 +203,9 @@ describe('Unit Tests', function () {
         it('token validation check success', function (done) {
             const sentineloneHealth = require('../health_checks');
             alserviceStuPost = sinon.stub(RestServiceClient.prototype, 'post').callsFake(
-                function fakeFn() {
+                function fakeFn(path, extraOptions) {
                     return new Promise(function (resolve, reject) {
+                        assert.notEqual(path, '/web/api/v2.0/users/generate-api-token');
                         return resolve({ data: { expiresAt: moment().add(5, 'days').toISOString() } });
                     });
                 });
@@ -218,19 +219,38 @@ describe('Unit Tests', function () {
         });
         it('token expire check success', function (done) {
             const sentineloneHealth = require('../health_checks');
+            let responseArray = [];
             alserviceStuPost = sinon.stub(RestServiceClient.prototype, 'post').callsFake(
-                function fakeFn() {
+                function fakeFn(path, extraOptions) {
                     return new Promise(function (resolve, reject) {
-                        return resolve({ data: { expiresAt: moment().subtract(2, 'days').toISOString() } });
+                        var response = null;
+                        switch (path) {
+                            case '/web/api/v2.0/users/api-token-details':
+                                response = { data: { expiresAt: moment().subtract(2, 'days').toISOString() } };
+                                responseArray.push(response);
+                                break;
+                            case '/web/api/v2.0/users/generate-api-token':
+                                response = { data: { token: "token" } };
+                                responseArray.push(response);
+                                break;
+                            default:
+                                break;
+                        }
+                        return resolve(response);
                     });
                 });
 
-            sentineloneHealth.sentinelOneTokenHealthCheck(function (err) {
+            let targetObject = {
+                setPawsSecret(token) {
+                    return Promise.resolve('success');
+                }
+            };
+            sentineloneHealth.sentinelOneTokenHealthCheck.bind(targetObject)(function (err) {
+                assert(responseArray.length == 2, "Response Array length is wrong");
                 assert.equal(null, err);
                 alserviceStuPost.restore();
                 done();
             });
-
         });
     });
 });

@@ -51,16 +51,12 @@
             "Type": "String",
             "Default": "none"
         },
-        "PawsEndpoint": {
-            "Description": "URL to poll",
-            "Type": "String"
-        },
-        "SentinelOneClientId": {
-            "Description": "SentinelOne Client ID(username) for oauth2 authentication type",
+        "SentinelOneEndpoint": {
+            "Description": "URL to poll. For example, https://my-mgmt.sentinelone.com",
             "Type": "String"
         },
         "SentinelOneSecret": {
-            "Description": "SentinelOne Client secret(password) for oauth2.",
+            "Description": "SentinelOne Client secret.",
             "Type": "String",
             "NoEcho": true
         },
@@ -92,8 +88,8 @@
             "CollectorId" : { "Ref":"CollectorId" },
             "PollingInterval" : 60,
             "PawsEndpoint" : { "Ref":"PawsEndpoint" },
-            "PawsAuthType" : "oauth2",
-            "PawsClientId" : { "Ref":"SentinelOneClientId" },
+            "PawsAuthType" : "ssws",
+            "PawsClientId" : "",
             "PawsSecret" : { "Ref":"SentinelOneSecret" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }
