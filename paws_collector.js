@@ -140,6 +140,7 @@ class PawsCollector extends AlAwsCollector {
                 var params = {
                     Name: process.env.paws_secret_param_name,
                     Type: 'String',
+                    Overwrite: true,
                     Value: base64
                 };
                 ssm.putParameter(params, function(err, data) {
