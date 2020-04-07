@@ -65,6 +65,15 @@ See [debug](https://www.npmjs.com/package/debug) for further details.
 
 ## Invoking locally
 
+Generating an API Token from the WebUI:
+
+```
+1. In your Management Console, click Settings > USERS.
+2. Click on your username.
+4. Popup window will open > API Token, click Generate. If you see Revoke and Regenerate, you already have a token. If you revoke or regenerate it, scripts that use that token will not work. There is no confirmation. Revoke removes the token authorization. Regenerate revokes the token and generates a new token. If you click Generate or Regenerate, a message shows the token string and the date that the token expires.
+5. Click DOWNLOAD.
+```
+
 In order to invoke lambda locally please follow the [instructions](https://docs.aws.amazon.com/lambda/latest/dg/sam-cli-requirements.html) to install AWS SAM.
 AWS SAM uses `default` credentials profile from `~/.aws/credentials`.
 
