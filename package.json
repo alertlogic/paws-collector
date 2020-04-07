@@ -31,7 +31,7 @@
     "yargs": "^15.0.2"
   },
   "dependencies": {
-    "@alertlogic/al-aws-collector-js": "alertlogic/al-aws-collector-js#periodic_register",
+    "@alertlogic/al-aws-collector-js": "3.0.2",
     "async": "3.1.0",
     "debug": "4.1.1",
     "moment": "2.24.0"
