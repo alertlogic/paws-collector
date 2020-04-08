@@ -87,7 +87,7 @@
             "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
             "CollectorId" : { "Ref":"CollectorId" },
             "PollingInterval" : 60,
-            "PawsEndpoint" : { "Ref":"PawsEndpoint" },
+            "PawsEndpoint" : { "Ref":"SentinelOneEndpoint" },
             "PawsAuthType" : "ssws",
             "PawsClientId" : "",
             "PawsSecret" : { "Ref":"SentinelOneSecret" },
