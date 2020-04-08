@@ -1,0 +1,48 @@
+version: 1.0
+service_name: paws-collector
+
+stages:
+    -
+        name: PR Test
+        when:
+            - pull_request
+            - pull_request:
+                trigger_phrase: test it
+        image: node:12
+        compute_size: small
+        commands:
+            - make test
+
+    -
+        name: Master Push - Publish
+        when:
+            - push: ['master']
+        image: node:12
+        compute_size: small
+        commands:
+            - |
+              set -ex
+              #git config --global --add url."git@github.com:".insteadOf "https://github.com/"
+  
+              echo //registry.npmjs.org/:_authToken=$NPM_TOKEN > .npmrc
+              npm whoami
+              
+              PKGNAME=$(node -e 'console.log(require("./package.json").name)')
+              PKGVERSION=$(node -e 'console.log(require("./package.json").version)')
+              V_VERSION=v$PKGVERSION
+              WORDCOUNT=$(npm view "${PKGNAME}@${PKGVERSION}" | wc -c)
+              
+              git tag -a $V_VERSION -m "$PKGNAME release $V_VERSION" HEAD
+              
+              npm install
+              
+              if [ "$WORDCOUNT" -eq 0 ]; then
+                 echo "PUBLISHING $PKGNAME $PKGVERSION"
+                 npm run lint
+                 git push origin $V_VERSION
+                 npm publish --access public
+              else
+                 echo "NOT PUBLISHING $PKGNAME $PKGVERSION"
+              fi
+            - echo done
+            
