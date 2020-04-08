@@ -211,6 +211,7 @@ describe('Unit Tests', function () {
                 });
 
             sentineloneHealth.sentinelOneTokenHealthCheck(function (err) {
+                assert.equal(alserviceStuPost.callCount, 1);
                 assert.equal(null, err);
                 alserviceStuPost.restore();
                 done();
@@ -219,7 +220,6 @@ describe('Unit Tests', function () {
         });
         it('token expire check success', function (done) {
             const sentineloneHealth = require('../health_checks');
-            let responseArray = [];
             alserviceStuPost = sinon.stub(RestServiceClient.prototype, 'post').callsFake(
                 function fakeFn(path, extraOptions) {
                     return new Promise(function (resolve, reject) {
@@ -227,11 +227,9 @@ describe('Unit Tests', function () {
                         switch (path) {
                             case '/web/api/v2.0/users/api-token-details':
                                 response = { data: { expiresAt: moment().subtract(2, 'days').toISOString() } };
-                                responseArray.push(response);
                                 break;
                             case '/web/api/v2.0/users/generate-api-token':
                                 response = { data: { token: "token" } };
-                                responseArray.push(response);
                                 break;
                             default:
                                 break;
@@ -246,7 +244,7 @@ describe('Unit Tests', function () {
                 }
             };
             sentineloneHealth.sentinelOneTokenHealthCheck.bind(targetObject)(function (err) {
-                assert(responseArray.length == 2, "Response Array length is wrong");
+                assert.equal(alserviceStuPost.callCount, 2);
                 assert.equal(null, err);
                 alserviceStuPost.restore();
                 done();
