@@ -21,6 +21,7 @@ const packageJson = require('./package.json');
 
 const CREDS_FILE_PATH = '/tmp/paws_creds.json';
 var PAWS_DECRYPTED_CREDS = null;
+const DOMAIN_REGEXP = /^[htps]*:\/\/|\/$/gi;
 
 function getPawsParamStoreParam(){
     return new Promise((resolve, reject) => {
@@ -73,6 +74,7 @@ class PawsCollector extends AlAwsCollector {
 
     constructor(context, {aimsCreds, pawsCreds}, childVersion, healthChecks = [], statsChecks = []) {
         const version = childVersion ? childVersion : packageJson.version;
+        const endpointDomain = process.env.paws_endpoint.replace(DOMAIN_REGEXP, '');
         super(context, 'paws',
               AlAwsCollector.IngestTypes.LOGMSGS,
               version,
@@ -83,6 +85,9 @@ class PawsCollector extends AlAwsCollector {
         this._pawsCollectorType = process.env.paws_type_name;
         this.pollInterval = process.env.paws_poll_interval;
         this.applicationId = process.env.al_application_id;
+        this._pawsEndpoint = process.env.paws_endpoint
+        this._pawsDomainEndpoint = endpointDomain;
+        this._pawsHttpsEndpoint = 'https://' + endpointDomain;
     };
 
     get application_id () {
@@ -103,7 +108,19 @@ class PawsCollector extends AlAwsCollector {
     
     get pawsCollectorType() {
         return this._pawsCollectorType;
-    }
+    };
+    
+    get pawsEndpoint() {
+        return this._pawsEndpoint;
+    };
+
+    get pawsDomainEndpoint() {
+        return this._pawsDomainEndpoint;
+    };
+    
+    get pawsHttpsEndpoint() {
+        return this._pawsHttpsEndpoint;
+    };
 
     getProperties() {
         const baseProps = super.getProperties();
@@ -154,32 +171,39 @@ class PawsCollector extends AlAwsCollector {
         })
     }
 
-    register(event) {
+    registerPawsCollector(event, callback) {
         let collector = this;
         let pawsRegisterProps = this.getProperties();
+        collector.pawsGetRegisterParameters(event, function(err, customRegister) {
+            if (err) {
+                console.err('PAWS000101 Error during registration', err);
+                return callback(err);
+            } else {
+                let registerProps = Object.assign(pawsRegisterProps, customRegister);
+                AlAwsCollector.prototype.register.call(collector, event, registerProps, callback);
+                
+            }
+        });
+    }
+    
+    register(event, customUnused, callback) {
+        let collector = this;
 
         async.waterfall([
             function(asyncCallback) {
+                collector.registerPawsCollector(event, asyncCallback);
+            },
+            function(regResp, asyncCallback) {
                 return collector.pawsInitCollectionState(event, asyncCallback);
             },
             function(state, nextInvocationTimeout, asyncCallback) {
                 return collector._storeCollectionState({}, state, nextInvocationTimeout, asyncCallback);
-            },
-            function(sqsResponse, asyncCallback) {
-                return collector.pawsGetRegisterParameters(event, asyncCallback);
             }
-        ], function(err, customRegister) {
-            if (err) {
-                console.error('PAWS000101 Error during registration', err);
-                return collector.done(err);
-            } else {
-                let registerProps = Object.assign(pawsRegisterProps, customRegister);
-                return AlAwsCollector.prototype.register.call(collector, event, registerProps);
-            }
-        });
+        ],
+        callback);
     };
-
-    deregister(event) {
+    
+    deregister(event, customUnused, callback) {
         let collector = this;
         let pawsRegisterProps = {
             pawsCollectorType : collector._pawsCollectorType
@@ -189,7 +213,7 @@ class PawsCollector extends AlAwsCollector {
                 console.warn('PAWS000102 Error during deregistration', err);
             }
             let registerProps = Object.assign(pawsRegisterProps, customRegister);
-            return AlAwsCollector.prototype.deregister.call(collector, event, registerProps);
+            return AlAwsCollector.prototype.deregister.call(collector, event, registerProps, callback);
         });
     };
 
@@ -206,12 +230,19 @@ class PawsCollector extends AlAwsCollector {
             return super.handleEvent(event);
         }
     };
-
+    
     handlePollRequest(stateSqsMsg) {
         let collector = this;
         let pawsState = JSON.parse(stateSqsMsg.body);
 
         async.waterfall([
+            function(asyncCallback) {
+                if (!collector.registered) {
+                    return asyncCallback('PAWS000103 Collection attempt for unregistrered collector');
+                } else {
+                    return asyncCallback();
+                }
+            },
             function(asyncCallback) {
                 return collector.pawsGetLogs(pawsState.priv_collector_state, asyncCallback);
             },
@@ -389,7 +420,7 @@ class PawsCollector extends AlAwsCollector {
 
     /**
      * @function collector callback to get specific (de)registration parameters
-     * @param event - collector register event coming in from CFT during stack Create/Delete operations.
+     * @param event - optional, collector register event coming in from CFT during stack Create/Delete operations.
      * @param callback
      * @returns callback - (error, objectWithRegistrationProperties)
      *
