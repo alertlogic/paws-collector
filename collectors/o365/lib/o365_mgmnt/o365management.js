@@ -86,6 +86,93 @@ class O365Management extends msRestAzure.AzureServiceClient {
         }
     }
     
+    listSubscriptions(options) {
+        let client = this;
+        // Construct URL
+        let baseUrl = this.baseUri;
+        let tenantId = this.officeTenantId;
+        let publisherId = this.publisherId;
+        let requestUrl = baseUrl + (baseUrl.endsWith('/') ? '' : '/') +
+            'api/v1.0/' + encodeURIComponent(tenantId) +
+            '/activity/feed/subscriptions/list';
+        let queryParameters = [];
+        queryParameters.push('PublisherIdentifier=' + encodeURIComponent(publisherId));
+        if (queryParameters.length > 0) {
+            requestUrl += '?' + queryParameters.join('&');
+        }
+    
+        const httpOptions = {};
+        if (!this.generateClientRequestId) {
+            httpOptions.disableClientRequestId = true;
+        }
+
+        // Create HTTP transport objects
+        let httpRequest = new msWebResource(httpOptions);
+        httpRequest.method = 'GET';
+        httpRequest.url = requestUrl;
+        // Set Headers
+        if (this.acceptLanguage !== undefined && this.acceptLanguage !== null) {
+            httpRequest.headers.set('accept-language', this.acceptLanguage);
+        }
+        if(options) {
+            for(let headerName in options.customHeaders) {
+                if (options.customHeaders.hasOwnProperty(headerName)) {
+                    httpRequest.headers.set(headerName, options.customHeaders[headerName]);
+                }
+            }
+        }
+        httpRequest.headers.set('Content-Type', 'application/json; charset=utf-8');
+        httpRequest.body = null;
+        // Request Handler
+        const handler = this.requestHandler(httpRequest);
+        // Send Request
+        return client.sendRequest(httpRequest).then(handler);
+    }
+    
+    startSubscription(contentType, options) {
+        let client = this;
+        // Construct URL
+        let baseUrl = this.baseUri;
+        let tenantId = this.officeTenantId;
+        let publisherId = this.publisherId;
+        let requestUrl = baseUrl + (baseUrl.endsWith('/') ? '' : '/') +
+            'api/v1.0/' + encodeURIComponent(tenantId) +
+            '/activity/feed/subscriptions/start';
+        let queryParameters = [];
+        queryParameters.push('contentType=' + encodeURIComponent(contentType));
+        queryParameters.push('PublisherIdentifier=' + encodeURIComponent(publisherId));
+        if (queryParameters.length > 0) {
+            requestUrl += '?' + queryParameters.join('&');
+        }
+    
+        const httpOptions = {};
+        if (!this.generateClientRequestId) {
+            httpOptions.disableClientRequestId = true;
+        }
+
+        // Create HTTP transport objects
+        let httpRequest = new msWebResource(httpOptions);
+        httpRequest.method = 'POST';
+        httpRequest.url = requestUrl;
+        // Set Headers
+        if (this.acceptLanguage !== undefined && this.acceptLanguage !== null) {
+            httpRequest.headers.set('accept-language', this.acceptLanguage);
+        }
+        if(options) {
+            for(let headerName in options.customHeaders) {
+                if (options.customHeaders.hasOwnProperty(headerName)) {
+                    httpRequest.headers.set(headerName, options.customHeaders[headerName]);
+                }
+            }
+        }
+        httpRequest.headers.set('Content-Type', 'application/json; charset=utf-8');
+        httpRequest.body = null;
+        // Request Handler
+        const handler = this.requestHandler(httpRequest);
+        // Send Request
+        return client.sendRequest(httpRequest).then(handler);
+    }
+    
     subscriptionsContent(contentType, startTs, endTs, options) {
         let client = this;
         // Construct URL
