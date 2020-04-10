@@ -24,7 +24,7 @@ function checkO365Subscriptions(callback){
     return listSubscriptions()
         .then(filterSubscriptions)
         .then(filteredStreams => {
-            if(filteredStreams.lenght > 0){
+            if(filteredStreams.length > 0){
                 console.log(`O365000101: Starting subscriptions for streams ${filteredStreams.join(', ')}`);
             } else{
                 console.log(`O365000102: No streams need restarted.`);
@@ -38,12 +38,11 @@ function checkO365Subscriptions(callback){
 
 function filterSubscriptions(result){
     const subscriptionsList = result.parsedBody;
-    console.log(subscriptionsList);
     const streams = JSON.parse(process.env.paws_collector_param_string_2);
     return streams.filter(stream => {
-        return subscriptionsList.some(sub => {
+        return !subscriptionsList.some(sub => {
             return sub.contentType === stream &&
-                sub.status !== 'enabled';
+                sub.status === 'enabled';
         });
     });
 }
