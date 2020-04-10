@@ -10,7 +10,6 @@
 
 'use strict';
 
-const health = require('@alertlogic/al-aws-collector-js').Health;
 const {
     listSubscriptions,
     startSubscription
@@ -25,9 +24,9 @@ function checkO365Subscriptions(callback){
         .then(filterSubscriptions)
         .then(filteredStreams => {
             if(filteredStreams.length > 0){
-                console.log(`O365000101: Starting subscriptions for streams ${filteredStreams.join(', ')}`);
+                console.info(`O365000101: Starting subscriptions for streams ${filteredStreams.join(', ')}`);
             } else{
-                console.log(`O365000102: No streams need restarted.`);
+                console.info(`O365000102: No streams need restarted.`);
             }
             const streamPromises = filteredStreams.map(stream => startSubscription(stream));
             return Promise.all(streamPromises);
