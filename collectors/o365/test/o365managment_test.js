@@ -87,6 +87,136 @@ describe('O365 managment tests', function() {
         });
     });
 
+    describe('startSubscription', () => {
+        let sendRequestStub;
+
+        it('formats the request object corectly', (done) => {
+            sendRequestStub = sinon.stub(O365Management.prototype, 'sendRequest').callsFake(
+                function fakeFn(request) {
+                    return new Promise(function(resolve, reject) {
+                        const mockRes = {
+                            headers: {
+                                get(key){
+                                    return 'some-header-value';
+                                }
+                            },
+                            parsedBody: [{foo: "bar"}],
+                            bodyAsText: '[{"foo": "bar"}]',
+                            status: 200
+                        };
+
+                        assert.equal(request.method, 'POST');
+                        assert.notEqual(request.headers.headersArray(), 0);
+                        return resolve(mockRes);
+                    });
+                });
+
+            const managementInstance = createManagmentInstance();
+            managementInstance.startSubscription('AFAkeStream', {}).then(() => {
+                sendRequestStub.restore();
+                done();
+            });
+        });
+
+        it('sets custom headers correctly', (done) => {
+            sendRequestStub = sinon.stub(O365Management.prototype, 'sendRequest').callsFake(
+                function fakeFn(request) {
+                    return new Promise(function(resolve, reject) {
+                        const mockRes = {
+                            headers: {
+                                get(key){
+                                    return 'some-header-value';
+                                }
+                            },
+                            parsedBody: [{foo: "bar"}],
+                            bodyAsText: '[{"foo": "bar"}]',
+                            status: 200
+                        };
+
+                        assert.equal(request.headers.contains('foo'), true);
+                        assert.equal(request.headers.get('foo'), 'bar');
+                        return resolve(mockRes);
+                    });
+                });
+
+            const managementInstance = createManagmentInstance();
+            const options = {
+                customHeaders:{
+                    foo: "bar"
+                }
+            };
+            managementInstance.startSubscription('AFAkeStream', options).then(() => {
+                sendRequestStub.restore();
+                done();
+            });
+        });
+    });
+
+    describe('listSubscriptions', () => {
+        let sendRequestStub;
+
+        it('formats the request object corectly', (done) => {
+            sendRequestStub = sinon.stub(O365Management.prototype, 'sendRequest').callsFake(
+                function fakeFn(request) {
+                    return new Promise(function(resolve, reject) {
+                        const mockRes = {
+                            headers: {
+                                get(key){
+                                    return 'some-header-value';
+                                }
+                            },
+                            parsedBody: [{foo: "bar"}],
+                            bodyAsText: '[{"foo": "bar"}]',
+                            status: 200
+                        };
+
+                        assert.equal(request.method, 'GET');
+                        assert.notEqual(request.headers.headersArray(), 0);
+                        return resolve(mockRes);
+                    });
+                });
+
+            const managementInstance = createManagmentInstance();
+            managementInstance.listSubscriptions({}).then(() => {
+                sendRequestStub.restore();
+                done();
+            });
+        });
+
+        it('sets custom headers correctly', (done) => {
+            sendRequestStub = sinon.stub(O365Management.prototype, 'sendRequest').callsFake(
+                function fakeFn(request) {
+                    return new Promise(function(resolve, reject) {
+                        const mockRes = {
+                            headers: {
+                                get(key){
+                                    return 'some-header-value';
+                                }
+                            },
+                            parsedBody: [{foo: "bar"}],
+                            bodyAsText: '[{"foo": "bar"}]',
+                            status: 200
+                        };
+
+                        assert.equal(request.headers.contains('foo'), true);
+                        assert.equal(request.headers.get('foo'), 'bar');
+                        return resolve(mockRes);
+                    });
+                });
+
+            const managementInstance = createManagmentInstance();
+            const options = {
+                customHeaders:{
+                    foo: "bar"
+                }
+            };
+            managementInstance.listSubscriptions(options).then(() => {
+                sendRequestStub.restore();
+                done();
+            });
+        });
+    });
+
     describe('subscriptionsContent', () => {
         let sendRequestStub;
 

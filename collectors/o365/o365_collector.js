@@ -13,6 +13,7 @@ const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const m_o365mgmnt = require('./lib/o365_mgmnt');
+const { checkO365Subscriptions } = require('./healthcheck');
 const packageJson = require('./package.json');
 
 const parse = require('@alertlogic/al-collector-js').Parse;
@@ -33,7 +34,7 @@ const tsPaths = [
 class O365Collector extends PawsCollector {
 
     constructor(context, creds) {
-        super(context, creds, packageJson.version);
+        super(context, creds, packageJson.version, [checkO365Subscriptions], []);
     }
     
     pawsInitCollectionState(event, callback) {
@@ -66,7 +67,9 @@ class O365Collector extends PawsCollector {
             }
         });
 
-        return callback(null, initialStates, 1);
+        return checkO365Subscriptions((err) => {
+            return callback(err, initialStates, 1);
+        });
     }
 
     pawsGetRegisterParameters(event, callback){

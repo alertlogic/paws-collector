@@ -31,16 +31,48 @@ function getO365ManagmentClient(){
 }
 
 /**
+ * @summary Office 365 Management API subscription/list.
+ *
+ * Office 365 Management API subscription/content.
+ * {@link https://docs.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-reference#list-current-subscriptions Reference.}
+ * 
+ * @returns {Promise}
+ *
+ */
+var _listSubscriptions = function() {
+    return getO365ManagmentClient().then((client) => {
+        return client.listSubscriptions(null)
+    });
+};
+
+/**
+ * @summary Office 365 Management API subscription/.
+ *
+ * Office 365 Management API subscription/content.
+ * {@link https://docs.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-reference#start-a-subscription Reference.}
+ * 
+ * @param {string} contentType - Offices 365 management API activity content types: 
+ * Audit.AzureActiveDirectory, Audit.Exchange, Audit.SharePoint, Audit.General, DLP.All
+ *
+ * @returns {Promise}
+ *
+ */
+var _startSubscription = function(contentType) {
+    return getO365ManagmentClient().then((client) => {
+        return client.startSubscription(contentType, null)
+    });
+};
+
+/**
  * @summary Office 365 Management API subscription/content.
  *
  * Office 365 Management API subscription/content.
  * {@link https://msdn.microsoft.com/office-365/office-365-management-activity-api-reference#list-available-content Reference.}
- * 
+ *
  * @param {string} contentType - Offices 365 management API activity content types: 
  * Audit.AzureActiveDirectory, Audit.Exchange, Audit.SharePoint, Audit.General, DLP.All
  * @param {timestamp} startTs - Optional datetimes (UTC) indicating the time range of content to return.
  * @param {timestamp} endTs - Optional datetimes (UTC) indicating the time range of content to return.
- * @param {function} callback - The callback.
  *
  * @returns {Promise}
  *
@@ -58,7 +90,6 @@ var _subscriptionsContent = function(contentType, startTs, endTs) {
  * {@link https://msdn.microsoft.com/office-365/office-365-management-activity-api-reference#retrieving-content Reference.}
  *
  * @param {string} contentUri - content URI specified in notification or subscriptions/content API call results.
- * @param {function} callback - The callback.
  *
  * @returns {Promise}
  *
@@ -71,6 +102,8 @@ var _getPreFormedUrl = function(contentUri) {
 
 
 module.exports = {
+    listSubscriptions: _listSubscriptions,
+    startSubscription: _startSubscription,
     subscriptionsContent : _subscriptionsContent,
     getPreFormedUrl : _getPreFormedUrl
 };
