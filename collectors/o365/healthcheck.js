@@ -10,17 +10,14 @@
 
 'use strict';
 
-const {
-    listSubscriptions,
-    startSubscription
-} = require('./lib/o365_mgmnt');
+const o365_mgmnt = require('./lib/o365_mgmnt');
 
 /*
  * Checks the subscriptions against the configured content type. Starts the subscriptions if th
  */
 
 function checkO365Subscriptions(callback){
-    return listSubscriptions()
+    return o365_mgmnt.listSubscriptions()
         .then(filterSubscriptions)
         .then(filteredStreams => {
             if(filteredStreams.length > 0){
@@ -28,7 +25,7 @@ function checkO365Subscriptions(callback){
             } else{
                 console.info(`O365000102: No streams need restarted.`);
             }
-            const streamPromises = filteredStreams.map(stream => startSubscription(stream));
+            const streamPromises = filteredStreams.map(stream => o365_mgmnt.startSubscription(stream));
             return Promise.all(streamPromises);
         })
         .then(res => callback(null))

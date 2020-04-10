@@ -7,7 +7,7 @@ const m_response = require('cfn-response');
 const o365Mock = require('./o365_mock');
 var m_alCollector = require('@alertlogic/al-collector-js');
 const m_o365mgmnt = require('../lib/o365_mgmnt');
-const healthcheck = require('../healthcheck.js');
+const { checkO365Subscriptions } = require('../healthcheck.js');
 var O365Collector = require('../o365_collector').O365Collector;
 const m_al_aws = require('@alertlogic/al-aws-collector-js').Util;
 
@@ -88,7 +88,7 @@ function setO365MangementStub() {
         function fakeFn(stream, extraOptions) {
             return new Promise(function(resolve, reject) {
                 var result = {
-                        contentType: 'Audit.Exchange',
+                        contentType: stream,
                         status: 'enabled',
                         webhook: null
                     };
@@ -181,7 +181,7 @@ describe('O365 Collector Tests', function() {
             setO365MangementStub();
             const tempStreams = process.env.paws_collector_param_string_2;
             process.env.paws_collector_param_string_2 = "[\"Audit.Exchange\", \"Audit.General\"]";
-            healthcheck.checkO365Subscriptions((err) => {
+            checkO365Subscriptions((err) => {
                 assert.equal(err, null);
                 assert.equal(startSubscriptionStub.called, false);
                 restoreO365ManagemntStub();
@@ -194,7 +194,7 @@ describe('O365 Collector Tests', function() {
             setO365MangementStub();
             const tempStreams = process.env.paws_collector_param_string_2;
             process.env.paws_collector_param_string_2 = "[\"Audit.Exchange\", \"Audit.Sharepoint\", \"Audit.General\"]";
-            healthcheck.checkO365Subscriptions((err) => {
+            checkO365Subscriptions((err) => {
                 assert.equal(err, null);
                 assert.equal(startSubscriptionStub.called, true);
                 restoreO365ManagemntStub();
