@@ -206,7 +206,7 @@ describe('Unit Tests', function () {
                 function fakeFn(path, extraOptions) {
                     return new Promise(function (resolve, reject) {
                         assert.notEqual(path, '/web/api/v2.0/users/generate-api-token');
-                        return resolve({ data: { expiresAt: moment().add(5, 'days').toISOString() } });
+                        return resolve({ data: { expiresAt: moment().add(6, 'months').toISOString() } });
                     });
                 });
 
