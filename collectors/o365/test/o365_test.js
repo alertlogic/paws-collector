@@ -7,6 +7,7 @@ const m_response = require('cfn-response');
 const o365Mock = require('./o365_mock');
 var m_alCollector = require('@alertlogic/al-collector-js');
 const m_o365mgmnt = require('../lib/o365_mgmnt');
+const { checkO365Subscriptions } = require('../healthcheck.js');
 var O365Collector = require('../o365_collector').O365Collector;
 const m_al_aws = require('@alertlogic/al-aws-collector-js').Util;
 
@@ -15,6 +16,8 @@ var alserviceStub = {};
 var responseStub = {};
 var setEnvStub = {};
 var subscriptionsContentStub;
+var listSubscriptionsStub;
+var startSubscriptionStub;
 var getPreFormedUrlStub;
 
 function setAlServiceStub() {
@@ -60,6 +63,41 @@ function restoreAlServiceStub() {
 }
 
 function setO365MangementStub() {
+    listSubscriptionsStub = sinon.stub(m_o365mgmnt, 'listSubscriptions').callsFake(
+        function fakeFn(extraOptions) {
+            return new Promise(function(resolve, reject) {
+                var result = [
+                    {
+                        contentType: 'Audit.Exchange',
+                        status: 'enabled',
+                        webhook: null
+                    },
+                    {
+                        contentType: 'Audit.General',
+                        status: 'enabled',
+                        webhook: null
+                    }
+                ];
+                return resolve({
+                    nextPageUri: undefined,
+                    parsedBody: result
+                });
+            });
+        });
+    startSubscriptionStub = sinon.stub(m_o365mgmnt, 'startSubscription').callsFake(
+        function fakeFn(stream, extraOptions) {
+            return new Promise(function(resolve, reject) {
+                var result = {
+                        contentType: stream,
+                        status: 'enabled',
+                        webhook: null
+                    };
+                return resolve({
+                    nextPageUri: undefined,
+                    parsedBody: result
+                });
+            });
+        });
     subscriptionsContentStub = sinon.stub(m_o365mgmnt, 'subscriptionsContent').callsFake(
         function fakeFn(path, extraOptions) {
             return new Promise(function(resolve, reject) {
@@ -84,6 +122,8 @@ function setO365MangementStub() {
 }
 
 function restoreO365ManagemntStub() {
+    listSubscriptionsStub.restore();
+    startSubscriptionStub.restore();
     subscriptionsContentStub.restore();
     getPreFormedUrlStub.restore();
 }
@@ -135,7 +175,35 @@ describe('O365 Collector Tests', function() {
         AWS.restore('KMS');
         AWS.restore('SSM');
     });
-    
+
+    describe('healthcheck', function() {
+        it('does not start subscriptions when streams are enabled', function(done) {
+            setO365MangementStub();
+            const tempStreams = process.env.paws_collector_param_string_2;
+            process.env.paws_collector_param_string_2 = "[\"Audit.Exchange\", \"Audit.General\"]";
+            checkO365Subscriptions((err) => {
+                assert.equal(err, null);
+                assert.equal(startSubscriptionStub.called, false);
+                restoreO365ManagemntStub();
+                process.env.paws_collector_param_string_2 = tempStreams;
+                done();
+            });
+        });
+
+        it('starts subscriptions when streams are not enabled', function(done) {
+            setO365MangementStub();
+            const tempStreams = process.env.paws_collector_param_string_2;
+            process.env.paws_collector_param_string_2 = "[\"Audit.Exchange\", \"Audit.Sharepoint\", \"Audit.General\"]";
+            checkO365Subscriptions((err) => {
+                assert.equal(err, null);
+                assert.equal(startSubscriptionStub.called, true);
+                restoreO365ManagemntStub();
+                process.env.paws_collector_param_string_2 = tempStreams;
+                done();
+            });
+        });
+    });
+
     describe('pawsInitCollectionState', function() {
         let ctx = {
             invokedFunctionArn : o365Mock.FUNCTION_ARN,
