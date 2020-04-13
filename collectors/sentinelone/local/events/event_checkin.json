@@ -1,0 +1,7 @@
+{
+    "RequestType": "ScheduledEvent",
+    "Type": "Checkin",
+    "StackName": "some-stack",
+    "AwsAccountId": "8675309",
+    "Region" : "us-east-1"
+}
