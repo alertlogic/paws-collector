@@ -13,7 +13,8 @@ const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const parse = require('@alertlogic/al-collector-js').Parse;
 const packageJson = require('./package.json');
-
+const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
+const utils = require("./utils");
 
 const typeIdPaths = [
     // enter your type paths in the form { path: ['myKey'] }
@@ -28,60 +29,78 @@ class CiscoampCollector extends PawsCollector {
     constructor(context, creds) {
         super(context, creds, packageJson.version);
     }
-    
+
     pawsInitCollectionState(event, callback) {
-        const startTs = process.env.paws_collection_start_ts ? 
-                process.env.paws_collection_start_ts :
-                    moment().toISOString();
+        const startTs = process.env.paws_collection_start_ts ?
+            process.env.paws_collection_start_ts :
+            moment().toISOString();
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
-        const initialState = {
-            // TODO: define initial collection state specific to your collector.
-            // You will get this state back with each invocation
+
+        const resourceNames = JSON.parse(process.env.paws_collector_param_string_1);
+        const initialStates = resourceNames.map(resource => ({
+            resource,
             since: startTs,
             until: endTs,
             poll_interval_sec: 1
-        };
-        return callback(null, initialState, 1);
+        }));
+        return callback(null, initialStates, 1);
     }
-    
+
+    pawsGetRegisterParameters(event, callback) {
+        const regValues = {
+            ciscoampResources: process.env.paws_collector_param_string_1
+        };
+
+        callback(null, regValues);
+    }
+
     pawsGetLogs(state, callback) {
         let collector = this;
+
+        const clientSecret = collector.secret;
+        if (!clientSecret) {
+            return callback("The Client Secret was not found!");
+        }
+        const clientId = collector.clientId;
+        if (!clientId) {
+            return callback("The Client ID was not found!");
+        }
+
+        const baseUrl = process.env.paws_endpoint.replace(/^https:\/\/|\/$/g, '');
+        const base64EncodedString = Buffer.from(`${clientId}:${clientSecret}`, 'ascii').toString("base64");
+
+        var resourceDetails = utils.getAPIDetails(state);
+        if (!resourceDetails.url) {
+            return callback("The resource name was not found!");
+        }
+
+
         console.info(`CAMP000001 Collecting data from ${state.since} till ${state.until}`);
         const newState = collector._getNextCollectionState(state);
         console.info(`CAMP000002 Next collection in ${newState.poll_interval_sec} seconds`);
         return callback(null, [], newState, newState.poll_interval_sec);
     }
-    
-    _getNextCollectionState(curState) {
-        const nowMoment = moment();
-        const curUntilMoment = moment(curState.until);
-        
-        // Check if current 'until' is in the future.
-        const nextSinceTs = curUntilMoment.isAfter(nowMoment) ?
-                nowMoment.toISOString() :
-                curState.until;
 
-        const nextUntilMoment = moment(nextSinceTs).add(this.pollInterval, 'seconds');
-        // Check if we're behind collection schedule and need to catch up.
-        const nextPollInterval = nowMoment.diff(nextUntilMoment, 'seconds') > this.pollInterval ?
-                1 : this.pollInterval;
-        
-        return  {
-            // TODO: define the next collection state.
-            // This needs to be in the smae format as the intial colletion state above
-             since: nextSinceTs,
-             until: nextUntilMoment.toISOString(),
-             poll_interval_sec: nextPollInterval
+    _getNextCollectionState(curState) {
+
+        const untilMoment = moment(curState.until);
+
+        const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
+
+        return {
+            resource: curState.resource,
+            since: nextSinceMoment.toISOString(),
+            until: nextUntilMoment.toISOString(),
+            poll_interval_sec: nextPollInterval
         };
     }
-    
+
     pawsFormatLog(msg) {
-        // TODO: double check that this message parsing fits your use case
         let collector = this;
 
         const ts = parse.getMsgTs(msg, tsPaths);
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
-        
+
         let formattedMsg = {
             messageTs: ts.sec,
             priority: 11,
@@ -90,7 +109,7 @@ class CiscoampCollector extends PawsCollector {
             messageType: 'json/ciscoamp',
             application_id: collector.application_id
         };
-        
+
         if (typeId !== null && typeId !== undefined) {
             formattedMsg.messageTypeId = `${typeId}`;
         }
