@@ -1,5 +1,6 @@
 const assert = require('assert');
 const sinon = require('sinon');
+const url = require('url');
 const {O365Management} = require('../lib/o365_mgmnt/o365management');
 const msRest = require('@azure/ms-rest-js');
 const {ApplicationTokenCredentials} = require('@azure/ms-rest-nodeauth');
@@ -284,6 +285,62 @@ describe('O365 managment tests', function() {
 
     describe('getPreFormedUrl', () => {
         let sendRequestStub;
+
+        it('appends query strings to urls without existing query strings properly', (done) => {
+            sendRequestStub = sinon.stub(O365Management.prototype, 'sendRequest').callsFake(
+                function fakeFn(request) {
+                    return new Promise(function(resolve, reject) {
+                        const mockRes = {
+                            headers: {
+                                get(key){
+                                    return 'some-header-value';
+                                }
+                            },
+                            parsedBody: [{foo: "bar"}],
+                            bodyAsText: '[{"foo": "bar"}]',
+                            status: 200
+                        };
+
+                        const queryKeys = Object.keys(url.parse(request.url, true).query);
+                        assert.equal(queryKeys.length, 1);
+                        return resolve(mockRes);
+                    });
+                });
+
+            const managementInstance = createManagmentInstance();
+            managementInstance.getPreFormedUrl('https://www.joeiscool.com', {}).then(() => {
+                sendRequestStub.restore();
+                done();
+            });
+        });
+
+        it('appends query strings to urls with existing query strings properly', (done) => {
+            sendRequestStub = sinon.stub(O365Management.prototype, 'sendRequest').callsFake(
+                function fakeFn(request) {
+                    return new Promise(function(resolve, reject) {
+                        const mockRes = {
+                            headers: {
+                                get(key){
+                                    return 'some-header-value';
+                                }
+                            },
+                            parsedBody: [{foo: "bar"}],
+                            bodyAsText: '[{"foo": "bar"}]',
+                            status: 200
+                        };
+
+                        const queryKeys = Object.keys(url.parse(request.url, true).query);
+                        assert.equal(queryKeys.length, 3);
+                        return resolve(mockRes);
+                    });
+                });
+
+            const managementInstance = createManagmentInstance();
+            managementInstance.getPreFormedUrl('https://www.joeiscool.com?foo=bar&stuff=junk', {}).then(() => {
+                sendRequestStub.restore();
+                done();
+            });
+        });
 
         it('formats the request object corectly', (done) => {
             sendRequestStub = sinon.stub(O365Management.prototype, 'sendRequest').callsFake(
