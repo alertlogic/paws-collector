@@ -301,8 +301,10 @@ describe('O365 managment tests', function() {
                             status: 200
                         };
 
-                        const queryKeys = Object.keys(url.parse(request.url, true).query);
+                        const query = url.parse(request.url,true).query;
+                        const queryKeys = Object.keys(query);
                         assert.equal(queryKeys.length, 1);
+                        assert.equal(query.PublisherIdentifier, '79ca7c9d-83ce-498f-952f-4c03b56ab573');
                         return resolve(mockRes);
                     });
                 });
@@ -329,8 +331,12 @@ describe('O365 managment tests', function() {
                             status: 200
                         };
 
-                        const queryKeys = Object.keys(url.parse(request.url, true).query);
+                        const query = url.parse(request.url,true).query;
+                        const queryKeys = Object.keys(query);
                         assert.equal(queryKeys.length, 3);
+                        assert.equal(query.PublisherIdentifier, '79ca7c9d-83ce-498f-952f-4c03b56ab573');
+                        assert.equal(query.foo, 'bar');
+                        assert.equal(query.stuff, 'junk');
                         return resolve(mockRes);
                     });
                 });
