@@ -11,6 +11,13 @@ process.env.ciscoamp_endpoint = 'https://test.alertlogic.com/';
 process.env.ciscoamp_token = 'ciscoamp-token';
 process.env.collector_id = 'collector-id';
 process.env.al_application_id = 'application_id';
+process.env.paws_secret_param_name = "ciscoamp-param-name";
+process.env.paws_poll_interval = 60;
+process.env.paws_type_name = "ciscoamp";
+process.env.paws_api_secret = "secret";
+process.env.paws_api_client_id = "client_id";
+process.env.paws_endpoint = "https://ciscoamp.com";
+process.env.paws_collector_param_string_1 = "[\"AuditLogs\",\"Events\"]";
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',
@@ -18,8 +25,18 @@ const AIMS_TEST_CREDS = {
 };
 
 const LOG_EVENT = {
-    // Here is where you fill in you mock log event
-    };
+    "event": "create",
+    "audit_log_type": "Group",
+    "audit_log_id": "b72fd5c0-1ec8-4b7a-b5aa-a500e64635f4",
+    "audit_log_user": "16db5cf986eec6f44422",
+    "created_at": "2020-02-18T09:17:36Z",
+    "old_attributes": {
+      "name": null
+    },
+    "new_attributes": {
+      "name": "aOnRlCTc"
+    }
+  };
 
 const FUNCTION_ARN = 'arn:aws:lambda:us-east-1:352283894008:function:test-01-CollectLambdaFunction-2CWNLPPW5XO8';
 const FUNCTION_NAME = 'test-TestCollectLambdaFunction-1JNNKQIPOTEST';
