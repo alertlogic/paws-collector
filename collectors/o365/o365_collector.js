@@ -89,7 +89,12 @@ class O365Collector extends PawsCollector {
             const newStart = moment().subtract(PARTIAL_WEEK, 'days');
             state.since = newStart.toISOString();
             state.until = newStart.add(1, 'hours').toISOString();
-            console.warn(`O365000005 Start timestamp is more than 7 days in the past. This is not allowed in the MS managment API. setting the start time to 7 days in the past. Now collecting data from ${state.since} till ${state.until} for stream ${state.stream}`);
+            console.warn(
+                "O365000005 Start timestamp is more than 7 days in the past. ",
+                "This is not allowed in the MS managment API. ",
+                "Setting the start time to 7 days in the past. ",
+                `Now collecting data from ${state.since} till ${state.until} for stream ${state.stream}`
+            );
         }
 
         let pageCount = 0;
