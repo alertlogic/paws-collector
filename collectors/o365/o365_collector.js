@@ -84,6 +84,14 @@ class O365Collector extends PawsCollector {
     pawsGetLogs(state, callback) {
         let collector = this;
         console.info(`O365000001 Collecting data from ${state.since} till ${state.until} for stream ${state.stream}`);
+
+        if(moment().diff(state.since, 'days') > 7){
+            const newStart = moment().subtract(PARTIAL_WEEK, 'days');
+            state.since = newStart.toISOString();
+            state.until = newStart.add(24, 'hours').toISOString();
+            console.info(`O365000005 Start timestamp is more than 7 days in the past. This is not allowed in the MS managment API. setting the start time to 7 days in the past. Now collecting data from ${state.since} till ${state.until} for stream ${state.stream}`);
+        }
+
         let pageCount = 0;
 
         // Page aggregation handler
