@@ -56,17 +56,18 @@
             "Type": "String"
         },
         "CarbonblackClientId": {
-            "Description": "Carbon Black Client ID for oauth2 authentication type.",
+            "Description": "Carbon Black Client ID for authentication.",
             "Type": "String"
         },
         "CarbonblackSecret": {
-            "Description": "Carbon Black Client secret for oauth2.",
+            "Description": "Carbon Black Client secret for authentication.",
             "Type": "String",
             "NoEcho": true
         },
         "CarbonblackOrgKey": {
-            "Description": "Carbon Black ORG key for oauth2 authentication type",
-            "Type": "String"
+            "Description": "Optional. Carbon Black organisation key, used for collection of CB Defense alerts",
+            "Type": "String",
+            "Default": ""
         },
         "CarbonblackAPINames": {
             "Description": "Define API names. Please pass JSON formatted list. Possible values are [\"AuditLogEvents\", \"SearchAlerts\", \"SearchAlertsCBAnalytics\", \"SearchAlertsVmware\", \"SearchAlertsWatchlist\"]",
