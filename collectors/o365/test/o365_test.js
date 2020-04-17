@@ -368,7 +368,7 @@ describe('O365 Collector Tests', function() {
 
                     assert.equal(callArgs[0], curState.stream);
                     assert.equal(moment().diff(callArgs[1], 'days'), 7);
-                    assert.equal(moment(callArgs[2]).diff(callArgs[1], 'days'), 1);
+                    assert.equal(moment(callArgs[2]).diff(callArgs[1], 'hours'), 1);
                     restoreO365ManagemntStub();
                     done();
                 });
