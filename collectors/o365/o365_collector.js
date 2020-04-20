@@ -24,11 +24,11 @@ const parse = require('@alertlogic/al-collector-js').Parse;
 const PARTIAL_WEEK = 6.99;
 
 const typeIdPaths = [
-   { path: ['CreationTime'] }
+    { path: ['RecordType'] }
 ];
 
 const tsPaths = [
-    { path: ['RecordType'] }
+    { path: ['CreationTime'] }
 ];
 
 class O365Collector extends PawsCollector {
