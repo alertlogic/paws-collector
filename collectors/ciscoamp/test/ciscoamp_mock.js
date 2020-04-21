@@ -17,7 +17,6 @@ process.env.paws_type_name = "ciscoamp";
 process.env.paws_api_secret = "secret";
 process.env.paws_api_client_id = "client_id";
 process.env.paws_endpoint = "https://ciscoamp.com";
-process.env.paws_collector_param_string_1 = "[\"AuditLogs\",\"Events\"]";
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',
@@ -25,18 +24,30 @@ const AIMS_TEST_CREDS = {
 };
 
 const LOG_EVENT = {
-    "event": "create",
-    "audit_log_type": "Group",
-    "audit_log_id": "b72fd5c0-1ec8-4b7a-b5aa-a500e64635f4",
-    "audit_log_user": "16db5cf986eec6f44422",
-    "created_at": "2020-02-18T09:17:36Z",
-    "old_attributes": {
-      "name": null
+    event: 'create',
+    audit_log_type: 'Computer',
+    audit_log_id: 'b72fd5c0-1ec8-4b7a-b5aa-a500e64635f4',
+    audit_log_user: '16db5cf986eec6f44422',
+    created_at: '2020-04-20T05:30:18Z',
+    old_attributes:
+    {
+        name: null,
+        desc: null,
+        hostname: null,
+        group_id: null,
+        operating_system_id: null
     },
-    "new_attributes": {
-      "name": "aOnRlCTc"
+    new_attributes:
+    {
+        name: 'Demo_AMP_Intel',
+        desc: 'Computer populated with demo data',
+        hostname: 'Demo_AMP_Intel',
+        group_id: 609190,
+        operating_system_id: 21810
     }
-  };
+};
+
+
 
 const FUNCTION_ARN = 'arn:aws:lambda:us-east-1:352283894008:function:test-01-CollectLambdaFunction-2CWNLPPW5XO8';
 const FUNCTION_NAME = 'test-TestCollectLambdaFunction-1JNNKQIPOTEST';

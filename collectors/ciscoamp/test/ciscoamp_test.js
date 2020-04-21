@@ -9,7 +9,7 @@ const utils = require("../utils");
 
 
 var responseStub = {};
-let getAPIDetails;
+let getAPILogs;
 
 describe('Unit Tests', function () {
     beforeEach(function () {
@@ -48,37 +48,8 @@ describe('Unit Tests', function () {
                 const startDate = moment().subtract(1, 'days').toISOString();
                 process.env.paws_collection_start_ts = startDate;
 
-                collector.pawsInitCollectionState(null, (err, initialStates, nextPoll) => {
-                    initialStates.forEach((state) => {
-                        assert.equal(moment(state.until).diff(state.since, 'seconds'), 60);
-                    });
-                    done();
-                });
-            });
-        });
-    });
-
-    describe('Paws Get Register Parameters', function () {
-        it('Paws Get Register Parameters Success', function (done) {
-            let ctx = {
-                invokedFunctionArn: ciscoampMock.FUNCTION_ARN,
-                fail: function (error) {
-                    assert.fail(error);
-                    done();
-                },
-                succeed: function () {
-                    done();
-                }
-            };
-
-            CiscoampCollector.load().then(function (creds) {
-                var collector = new CiscoampCollector(ctx, creds, 'ciscoamp');
-                const sampleEvent = { ResourceProperties: { StackName: 'a-stack-name' } };
-                collector.pawsGetRegisterParameters(sampleEvent, (err, regValues) => {
-                    const expectedRegValues = {
-                        ciscoampResources: '[\"AuditLogs\",\"Events\"]',
-                    };
-                    assert.deepEqual(regValues, expectedRegValues);
+                collector.pawsInitCollectionState(null, (err, initialState, nextPoll) => {
+                    assert.equal(moment(initialState.until).diff(initialState.since, 'seconds'), 60);
                     done();
                 });
             });
@@ -94,26 +65,52 @@ describe('Unit Tests', function () {
             succeed: function () { }
         };
         it('Paws Get Logs Success', function (done) {
-            getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
-                function fakeFn(state) {
-                    return {
-                        url: "api_url"
-                    };
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ accumulator: [ciscoampMock.LOG_EVENT, ciscoampMock.LOG_EVENT] });
+                    });
                 });
             CiscoampCollector.load().then(function (creds) {
                 var collector = new CiscoampCollector(ctx, creds, 'ciscoamp');
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
-                    resource: "AuditLogs",
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     nextPage: null,
                     poll_interval_sec: 1
                 };
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(logs.length, 0);
+                    assert.equal(logs.length, 2);
                     assert.equal(newState.poll_interval_sec, 1);
-                    getAPIDetails.restore();
+                    assert.ok(logs[0].audit_log_id);
+                    getAPILogs.restore();
+                    done();
+                });
+
+            });
+        });
+        it('Paws Get Logs with nextPage Success', function (done) {
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ accumulator: [ciscoampMock.LOG_EVENT, ciscoampMock.LOG_EVENT], nextPage: "nextPage" });
+                    });
+                });
+            CiscoampCollector.load().then(function (creds) {
+                var collector = new CiscoampCollector(ctx, creds, 'ciscoamp');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    nextPage: "nextPageUrl",
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(logs.length, 2);
+                    assert.equal(newState.poll_interval_sec, 1);
+                    assert.ok(logs[0].audit_log_id);
+                    getAPILogs.restore();
                     done();
                 });
 
@@ -138,7 +135,6 @@ describe('Unit Tests', function () {
                 var collector = new CiscoampCollector(ctx, creds, 'ciscoamp');
                 const startDate = moment();
                 const curState = {
-                    resource: "AuditLogs",
                     since: startDate.toISOString(),
                     until: startDate.add(collector.pollInterval, 'seconds').toISOString(),
                     poll_interval_sec: 1
@@ -173,4 +169,35 @@ describe('Unit Tests', function () {
             });
         });
     });
+
+    describe('NextCollectionStateWithNextPage', function () {
+        it('Get Next Collection State With NextPage Success', function (done) {
+            let ctx = {
+                invokedFunctionArn: ciscoampMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            const startDate = moment().subtract(5, 'minutes');
+            const curState = {
+                since: startDate.toISOString(),
+                until: startDate.add(5, 'minutes').toISOString(),
+                poll_interval_sec: 1
+            };
+            const nextPage = "nextPageUrl";
+            CiscoampCollector.load().then(function (creds) {
+                var collector = new CiscoampCollector(ctx, creds, 'ciscoamp');
+                let nextState = collector._getNextCollectionStateWithNextPage(curState, nextPage);
+                assert.ok(nextState.nextPage);
+                assert.equal(nextState.nextPage, nextPage);
+                done();
+            });
+        });
+    });
+
 });
