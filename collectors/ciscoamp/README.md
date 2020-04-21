@@ -65,6 +65,14 @@ See [debug](https://www.npmjs.com/package/debug) for further details.
 
 ## Invoking locally
 
+Generating Client ID and API Key:
+
+```
+Log in to your AMP for Endpoints Console.
+Go to Accounts > Business Settings.
+Click Configure API Credentials under Features to generate the Client ID and secure API Key.
+```
+
 In order to invoke lambda locally please follow the [instructions](https://docs.aws.amazon.com/lambda/latest/dg/sam-cli-requirements.html) to install AWS SAM.
 AWS SAM uses `default` credentials profile from `~/.aws/credentials`.
 
