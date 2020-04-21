@@ -7,6 +7,7 @@
  * @end
  * -----------------------------------------------------------------------------
  */
+const url = require('url');
  
 const msRest = require('@azure/ms-rest-js');
 const msRestAzure = require('@azure/ms-rest-azure-js');
@@ -227,7 +228,10 @@ class O365Management extends msRestAzure.AzureServiceClient {
         let queryParameters = [];
         queryParameters.push('PublisherIdentifier=' + encodeURIComponent(publisherId));
         if (queryParameters.length > 0) {
-            requestUrl += '?' + queryParameters.join('&');
+            // check if pre formed url already has a query string
+            const queryKeys = Object.keys(url.parse(requestUrl, true).query);
+            const joinChar = queryKeys.length > 0 ? '&' : '?';
+            requestUrl += joinChar + queryParameters.join('&');
         }
 
         const httpOptions = {};

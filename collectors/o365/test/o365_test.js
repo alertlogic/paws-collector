@@ -351,6 +351,56 @@ describe('O365 Collector Tests', function() {
             succeed : function() {}
         };
 
+        it('Updates a stale state', function(done) {
+            setO365MangementStub();
+            O365Collector.load().then(function(creds) {
+                var collector = new O365Collector(ctx, creds, 'o365');
+                const startDate = moment().subtract(10, 'days');
+                const curState = {
+                    stream: "FakeStream",
+                    since: startDate.toISOString(),
+                    until: startDate.add(1, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
+                    const callArgs = subscriptionsContentStub.getCall(0).args;
+
+                    assert.equal(callArgs[0], curState.stream);
+                    assert.equal(moment().diff(callArgs[1], 'days'), 7);
+                    assert.equal(moment(callArgs[2]).diff(callArgs[1], 'hours'), 1);
+                    restoreO365ManagemntStub();
+                    done();
+                });
+            });
+        });
+
+        it('Updates a stale state', function(done) {
+            setO365MangementStub();
+            O365Collector.load().then(function(creds) {
+                var collector = new O365Collector(ctx, creds, 'o365');
+                const startDate = moment().subtract(10, 'days');
+                const curState = {
+                    stream: "FakeStream",
+                    since: startDate.toISOString(),
+                    until: startDate.add(1, 'days').toISOString(),
+                    nextPage: 'https://www.joecantprogram.com?nextpagetoken=8675309',
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
+                    const callArgs = subscriptionsContentStub.getCall(0).args;
+
+                    assert.equal(callArgs[0], curState.stream);
+                    assert.equal(moment().diff(callArgs[1], 'days'), 7);
+                    assert.equal(moment(callArgs[2]).diff(callArgs[1], 'hours'), 1);
+                    assert.equal(getPreFormedUrlStub.calledWith(curState.nextPage), false);
+                    restoreO365ManagemntStub();
+                    done();
+                });
+            });
+        });
+
         it('Get Logs Sunny', function(done) {
             setO365MangementStub();
             O365Collector.load().then(function(creds) {
@@ -372,6 +422,7 @@ describe('O365 Collector Tests', function() {
                 });
             });
         });
+
         it('Get Logs Cloudy', function(done) {
             subscriptionsContentStub = sinon.stub(m_o365mgmnt, 'subscriptionsContent').callsFake(
                 function fakeFn(path, extraOptions) {

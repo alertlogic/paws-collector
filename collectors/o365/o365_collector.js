@@ -19,16 +19,16 @@ const packageJson = require('./package.json');
 const parse = require('@alertlogic/al-collector-js').Parse;
 
 // Subtracting less than 7 days to avoid weird race conditions with the azure api...
-// Missing about 9 seconds of historical logs shouldn't be too bad.
+// Missing about 2 hours of historical logs shouldn't be too bad.
 // If you get an error form the o365 managment api about your date range being more than 7 days in the past, you should remove some 9s from this number.
-const PARTIAL_WEEK = 6.9999;
+const PARTIAL_WEEK = 6.99;
 
 const typeIdPaths = [
-   { path: ['CreationTime'] }
+    { path: ['RecordType'] }
 ];
 
 const tsPaths = [
-    { path: ['RecordType'] }
+    { path: ['CreationTime'] }
 ];
 
 class O365Collector extends PawsCollector {
@@ -84,6 +84,21 @@ class O365Collector extends PawsCollector {
     pawsGetLogs(state, callback) {
         let collector = this;
         console.info(`O365000001 Collecting data from ${state.since} till ${state.until} for stream ${state.stream}`);
+
+        if(moment().diff(state.since, 'days', true) > 7){
+            const newStart = moment().subtract(PARTIAL_WEEK, 'days');
+            state.since = newStart.toISOString();
+            state.until = newStart.add(1, 'hours').toISOString();
+            // remove next page token if the state is out of date as well.
+            state.nextPage = null;
+            console.warn(
+                "O365000005 Start timestamp is more than 7 days in the past. ",
+                "This is not allowed in the MS managment API. ",
+                "Setting the start time to 7 days in the past. ",
+                `Now collecting data from ${state.since} till ${state.until} for stream ${state.stream}`
+            );
+        }
+
         let pageCount = 0;
 
         // Page aggregation handler
