@@ -49,12 +49,12 @@ function getAPIDetails(state) {
 
     switch (state.resource) {
         case Audit_Logs:
-            url = `/v1/audit_logs?start_time=${state.since}&end_time=${state.until}&limit=5`;
+            url = `/v1/audit_logs?start_time=${state.since}&end_time=${state.until}`;
             typeIdPaths = [{ path: ["audit_log_id"] }];
             tsPaths = [{ path: ["created_at"] }];
             break;
         case Events:
-            url = `/v1/events?start_date=${state.since}&limit=5`;
+            url = `/v1/events?start_date=${state.since}`;
             typeIdPaths = [{ path: ["id"] }];
             tsPaths = [{ path: ["date"] }];
             break;
