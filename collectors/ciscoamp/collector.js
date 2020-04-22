@@ -16,10 +16,11 @@ const packageJson = require('./package.json');
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const utils = require("./utils");
 
-const typeIdPaths = [{ path: ['audit_log_id'] }];
+let typeIdPaths = [];
 
-const tsPaths = [{ path: ['created_at'] }];
+let tsPaths = [];
 
+const Events = 'Events';
 
 class CiscoampCollector extends PawsCollector {
     constructor(context, creds) {
@@ -32,13 +33,22 @@ class CiscoampCollector extends PawsCollector {
             moment().toISOString();
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
 
-        const initialState = {
+        const resourceNames = JSON.parse(process.env.paws_collector_param_string_1);
+        const initialStates = resourceNames.map(resource => ({
+            resource,
             since: startTs,
             until: endTs,
             nextPage: null,
             poll_interval_sec: 1
+        }));
+        return callback(null, initialStates, 1);
+    }
+
+    pawsGetRegisterParameters(event, callback) {
+        const regValues = {
+            ciscoampResourceNames: process.env.paws_collector_param_string_1
         };
-        return callback(null, initialState, 1);
+        callback(null, regValues);
     }
 
     pawsGetLogs(state, callback) {
@@ -56,7 +66,15 @@ class CiscoampCollector extends PawsCollector {
         const baseUrl = process.env.paws_endpoint.replace(/^https:\/\/|\/$/g, '');
         const base64EncodedString = Buffer.from(`${clientId}:${clientSecret}`, 'ascii').toString("base64");
 
-        let apiUrl = state.nextPage ? state.nextPage : `/v1/audit_logs?start_time=${state.since}&end_time=${state.until}`;
+        var resourceDetails = utils.getAPIDetails(state);
+        if (!resourceDetails.url) {
+            return callback("The resource name was not found!");
+        }
+
+        typeIdPaths = resourceDetails.typeIdPaths;
+        tsPaths = resourceDetails.tsPaths;
+
+        let apiUrl = state.nextPage ? state.nextPage : resourceDetails.url;
 
         console.info(`CAMP000001 Collecting data from ${state.since} till ${state.until}`);
 
@@ -77,11 +95,16 @@ class CiscoampCollector extends PawsCollector {
 
     _getNextCollectionState(curState) {
 
+        if (curState.resource === Events) {
+            curState.until = moment();
+        }
+
         const untilMoment = moment(curState.until);
 
         const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
 
         return {
+            resource: curState.resource,
             since: nextSinceMoment.toISOString(),
             until: nextUntilMoment.toISOString(),
             nextPage: null,
@@ -89,8 +112,9 @@ class CiscoampCollector extends PawsCollector {
         };
     }
 
-    _getNextCollectionStateWithNextPage({ since, until }, nextPage) {
+    _getNextCollectionStateWithNextPage({ resource, since, until }, nextPage) {
         return {
+            resource,
             since,
             until,
             nextPage,

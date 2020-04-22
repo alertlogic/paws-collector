@@ -17,6 +17,7 @@ process.env.paws_type_name = "ciscoamp";
 process.env.paws_api_secret = "secret";
 process.env.paws_api_client_id = "client_id";
 process.env.paws_endpoint = "https://ciscoamp.com";
+process.env.paws_collector_param_string_1 = "[\"AuditLogs\",\"Events\"]";
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',

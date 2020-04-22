@@ -64,6 +64,11 @@
             "Type": "String",
             "NoEcho": true
         },
+        "CiscoampResourceNames": {
+            "Description": "Define Resource names. Please pass JSON formatted list.",
+            "Type": "String",
+            "Default": "[\"AuditLogs\",\"Events\"]"
+        },
         "CollectionStartTs": {
             "Description": "Timestamp when log collection starts. For example, 2019-11-21T16:00:00Z",
             "Type": "String",
@@ -95,6 +100,7 @@
             "PawsAuthType" : "oauth2",
             "PawsClientId" : { "Ref":"CiscoampClientId" },
             "PawsSecret" : { "Ref":"CiscoampSecret" },
+            "CollectorParamString1" : { "Ref":"CiscoampResourceNames" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }
         }

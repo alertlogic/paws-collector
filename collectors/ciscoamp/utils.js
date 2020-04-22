@@ -1,6 +1,9 @@
 const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClient;
 var url = require("url");
 
+const Audit_Logs = 'AuditLogs';
+const Events = 'Events';
+
 function getAPILogs(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvocation) {
     let pageCount = 0;
     let nextPage;
@@ -39,6 +42,34 @@ function getAPILogs(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvo
     });
 }
 
+function getAPIDetails(state) {
+    let url = "";
+    let typeIdPaths = [];
+    let tsPaths = [];
+
+    switch (state.resource) {
+        case Audit_Logs:
+            url = `/v1/audit_logs?start_time=${state.since}&end_time=${state.until}&limit=5`;
+            typeIdPaths = [{ path: ["audit_log_id"] }];
+            tsPaths = [{ path: ["created_at"] }];
+            break;
+        case Events:
+            url = `/v1/events?start_date=${state.since}&limit=5`;
+            typeIdPaths = [{ path: ["id"] }];
+            tsPaths = [{ path: ["date"] }];
+            break;
+        default:
+            url = null;
+    }
+
+    return {
+        url,
+        typeIdPaths,
+        tsPaths
+    };
+}
+
 module.exports = {
-    getAPILogs: getAPILogs
+    getAPILogs: getAPILogs,
+    getAPIDetails: getAPIDetails
 };
