@@ -39,6 +39,7 @@ class CiscoampCollector extends PawsCollector {
             since: startTs,
             until: endTs,
             nextPage: null,
+            apiQuotaResetDate: null,
             poll_interval_sec: 1
         }));
         return callback(null, initialStates, 1);
@@ -78,8 +79,23 @@ class CiscoampCollector extends PawsCollector {
 
         console.info(`CAMP000001 Collecting data from ${state.since} till ${state.until}`);
 
+        if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
+            console.log('API hourly Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
+            state.poll_interval_sec = 900;
+            return callback(null, [], state, state.poll_interval_sec);
+        }
+
         utils.getAPILogs(baseUrl, base64EncodedString, apiUrl, [], process.env.paws_max_pages_per_invocation)
-            .then(({ accumulator, nextPage }) => {
+            .then(({ accumulator, nextPage, resetSeconds }) => {
+                if (resetSeconds) {
+                    const extraBufferSeconds = 60;
+                    resetSeconds = resetSeconds + extraBufferSeconds;
+                    state.apiQuotaResetDate = moment().add(resetSeconds, "seconds").toISOString();
+                    console.log('API hourly Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
+                }
+                else {
+                    state.apiQuotaResetDate = null;
+                }
                 let newState;
                 if (nextPage === undefined) {
                     newState = this._getNextCollectionState(state);
@@ -108,16 +124,18 @@ class CiscoampCollector extends PawsCollector {
             since: nextSinceMoment.toISOString(),
             until: nextUntilMoment.toISOString(),
             nextPage: null,
+            apiQuotaResetDate: curState.apiQuotaResetDate,
             poll_interval_sec: nextPollInterval
         };
     }
 
-    _getNextCollectionStateWithNextPage({ resource, since, until }, nextPage) {
+    _getNextCollectionStateWithNextPage({ resource, since, until, apiQuotaResetDate }, nextPage) {
         return {
             resource,
             since,
             until,
             nextPage,
+            apiQuotaResetDate,
             poll_interval_sec: 1
         };
     }

@@ -7,6 +7,7 @@ const Events = 'Events';
 function getAPILogs(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvocation) {
     let pageCount = 0;
     let nextPage;
+    let resetSeconds = null;
 
     let restServiceClient = new RestServiceClient(baseUrl);
 
@@ -17,18 +18,22 @@ function getAPILogs(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvo
                 return restServiceClient.get(apiUrl, {
                     headers: {
                         "authorization": `Basic ${authorization}`
-                    }
-                }).then(response => {
+                    },
+                    resolveWithFullResponse: true
+                }).then(({ headers, body }) => {
                     pageCount++;
-                    if (response.data) {
-                        accumulator.push(...response.data);
+                    if (parseInt(headers['x-ratelimit-remaining']) < 200) {
+                        resetSeconds = parseInt(headers['x-ratelimit-reset']);
                     }
-                    if (response.metadata.links.next) {
-                        apiUrl = url.parse(response.metadata.links.next).path;
+                    if (body.data) {
+                        accumulator.push(...body.data);
+                    }
+                    if (body.metadata.links.next) {
+                        apiUrl = url.parse(body.metadata.links.next).path;
                         getData();
                     }
                     else {
-                        resolve({ accumulator, nextPage });
+                        resolve({ accumulator, nextPage, resetSeconds });
                     }
                 }).catch(err => {
                     reject(err);
@@ -36,7 +41,7 @@ function getAPILogs(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvo
             }
             else {
                 nextPage = apiUrl;
-                resolve({ accumulator, nextPage });
+                resolve({ accumulator, nextPage, resetSeconds });
             }
         }
     });

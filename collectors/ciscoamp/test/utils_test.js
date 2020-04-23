@@ -13,7 +13,7 @@ describe('Unit Tests', function () {
             alserviceStub.get = sinon.stub(RestServiceClient.prototype, 'get').callsFake(
                 function fakeFn() {
                     return new Promise(function (resolve, reject) {
-                        return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: {} } });
+                        return resolve({ headers: { 'x-ratelimit-remaining': 2000, 'x-ratelimit-reset': 3000 }, body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: {} } } });
                     });
                 });
             let maxPagesPerInvocation = 5;
@@ -34,7 +34,7 @@ describe('Unit Tests', function () {
             alserviceStub.get = sinon.stub(RestServiceClient.prototype, 'get').callsFake(
                 function fakeFn() {
                     return new Promise(function (resolve, reject) {
-                        return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { next: "nextPageUrl" } } });
+                        return resolve({ headers: { 'x-ratelimit-remaining': 199, 'x-ratelimit-reset': 3000 }, body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { next: "nextPageUrl" } } } });
                     });
                 });
             let maxPagesPerInvocation = 5;

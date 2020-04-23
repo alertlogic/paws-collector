@@ -116,6 +116,7 @@ describe('Unit Tests', function () {
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     nextPage: null,
+                    apiQuotaResetDate: null,
                     poll_interval_sec: 1
                 };
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
@@ -133,7 +134,7 @@ describe('Unit Tests', function () {
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
-                        return resolve({ accumulator: [ciscoampMock.LOG_EVENT, ciscoampMock.LOG_EVENT], nextPage: "nextPage" });
+                        return resolve({ accumulator: [ciscoampMock.LOG_EVENT, ciscoampMock.LOG_EVENT], nextPage: "nextPage", resetSeconds: 1000 });
                     });
                 });
             getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
@@ -152,14 +153,37 @@ describe('Unit Tests', function () {
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     nextPage: "nextPageUrl",
+                    apiQuotaResetDate: null,
                     poll_interval_sec: 1
                 };
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
                     assert.equal(logs.length, 2);
                     assert.equal(newState.poll_interval_sec, 1);
+                    assert.notEqual(newState.apiQuotaResetDate, null);
                     assert.ok(logs[0].audit_log_id);
                     getAPILogs.restore();
                     getAPIDetails.restore();
+                    done();
+                });
+
+            });
+        });
+        it('Paws Get Logs with API Quota Reset Date', function (done) {
+            CiscoampCollector.load().then(function (creds) {
+                var collector = new CiscoampCollector(ctx, creds, 'ciscoamp');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    resource: "AuditLogs",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    nextPage: "nextPageUrl",
+                    apiQuotaResetDate: moment().add(1000, 'seconds').toISOString(),
+                    poll_interval_sec: 900
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(logs.length, 0);
+                    assert.equal(newState.poll_interval_sec, 900);
                     done();
                 });
 
@@ -187,6 +211,7 @@ describe('Unit Tests', function () {
                     resource: "Events",
                     since: startDate.toISOString(),
                     until: startDate.add(collector.pollInterval, 'seconds').toISOString(),
+                    apiQuotaResetDate: null,
                     poll_interval_sec: 1
                 };
                 let nextState = collector._getNextCollectionState(curState);
@@ -238,6 +263,7 @@ describe('Unit Tests', function () {
                 resource: "AuditLogs",
                 since: startDate.toISOString(),
                 until: startDate.add(5, 'minutes').toISOString(),
+                apiQuotaResetDate: null,
                 poll_interval_sec: 1
             };
             const nextPage = "nextPageUrl";
