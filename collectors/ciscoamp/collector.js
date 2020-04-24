@@ -77,7 +77,7 @@ class CiscoampCollector extends PawsCollector {
 
         let apiUrl = state.nextPage ? state.nextPage : resourceDetails.url;
 
-        console.info(`CAMP000001 Collecting data from ${state.since} till ${state.until}`);
+        console.info(`CAMP000001 Collecting data for ${state.resource} from ${state.since} till ${state.until}`);
 
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
             console.log('API hourly Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
