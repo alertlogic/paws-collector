@@ -13,15 +13,23 @@ describe('Unit Tests', function () {
             alserviceStub.get = sinon.stub(RestServiceClient.prototype, 'get').callsFake(
                 function fakeFn() {
                     return new Promise(function (resolve, reject) {
-                        return resolve({ headers: { 'x-ratelimit-remaining': 2000, 'x-ratelimit-reset': 3000 }, body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: {} } } });
+                        return resolve({ headers: { 'x-ratelimit-remaining': 2000, 'x-ratelimit-reset': 3000 }, body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: {}, results: { total: 100 } } } });
                     });
                 });
             let maxPagesPerInvocation = 5;
             let accumulator = [];
             let authorization = "authorization";
             let apiUrl = "apiUrl";
+            const startDate = moment().subtract(5, 'days');
+            let state = {
+                resource: "Events",
+                since: startDate.toISOString(),
+                until: startDate.add(5, 'days').toISOString(),
+                totalLogsCount: 0,
+                poll_interval_sec: 1
+            };
             const baseUrl = process.env.paws_endpoint;
-            utils.getAPILogs(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvocation).then(data => {
+            utils.getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPagesPerInvocation).then(data => {
                 assert(accumulator.length == 1, "accumulator length is wrong");
                 alserviceStub.get.restore();
                 done();
@@ -34,16 +42,53 @@ describe('Unit Tests', function () {
             alserviceStub.get = sinon.stub(RestServiceClient.prototype, 'get').callsFake(
                 function fakeFn() {
                     return new Promise(function (resolve, reject) {
-                        return resolve({ headers: { 'x-ratelimit-remaining': 199, 'x-ratelimit-reset': 3000 }, body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { next: "nextPageUrl" } } } });
+                        return resolve({ headers: { 'x-ratelimit-remaining': 199, 'x-ratelimit-reset': 3000 }, body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { next: "nextPageUrl" }, results: { total: 100 } } } });
                     });
                 });
             let maxPagesPerInvocation = 5;
             let accumulator = [];
             let authorization = "authorization";
             let apiUrl = "apiUrl";
+            const startDate = moment().subtract(5, 'days');
+            let state = {
+                resource: "Events",
+                since: startDate.toISOString(),
+                until: startDate.add(5, 'days').toISOString(),
+                totalLogsCount: 0,
+                poll_interval_sec: 1
+            };
             const baseUrl = process.env.paws_endpoint;
-            utils.getAPILogs(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvocation).then(data => {
+            utils.getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPagesPerInvocation).then(data => {
                 assert(accumulator.length == 5, "accumulator length is wrong");
+                alserviceStub.get.restore();
+                done();
+            });
+        });
+    });
+
+    describe('Get API Logs with discard condition', function () {
+        it('Get API Logs with discard condition', function (done) {
+            alserviceStub.get = sinon.stub(RestServiceClient.prototype, 'get').callsFake(
+                function fakeFn() {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ headers: { 'x-ratelimit-remaining': 199, 'x-ratelimit-reset': 3000 }, body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { next: "nextPageUrl" }, results: { total: 100 } } } });
+                    });
+                });
+            let maxPagesPerInvocation = 5;
+            let accumulator = [];
+            let authorization = "authorization";
+            let apiUrl = "apiUrl";
+            const startDate = moment().subtract(5, 'days');
+            let state = {
+                resource: "Events",
+                since: startDate.toISOString(),
+                until: startDate.add(5, 'days').toISOString(),
+                totalLogsCount: 50,
+                poll_interval_sec: 1
+            };
+            const baseUrl = process.env.paws_endpoint;
+            utils.getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPagesPerInvocation).then(data => {
+                assert(accumulator.length == 0, "accumulator length is wrong");
                 alserviceStub.get.restore();
                 done();
             });
@@ -60,6 +105,7 @@ describe('Unit Tests', function () {
                     resource: resource,
                     since: startDate.toISOString(),
                     until: startDate.add(5, 'minutes').toISOString(),
+                    totalLogsCount: 0,
                     poll_interval_sec: 1
                 };
                 const APIDetails = utils.getAPIDetails(state);
@@ -75,6 +121,7 @@ describe('Unit Tests', function () {
                 resource: "resource",
                 since: startDate.toISOString(),
                 until: startDate.add(5, 'minutes').toISOString(),
+                totalLogsCount: 0,
                 poll_interval_sec: 1
             };
             const APIDetails = utils.getAPIDetails(state);

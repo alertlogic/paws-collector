@@ -117,6 +117,7 @@ describe('Unit Tests', function () {
                     until: startDate.add(2, 'days').toISOString(),
                     nextPage: null,
                     apiQuotaResetDate: null,
+                    totalLogsCount: 0,
                     poll_interval_sec: 1
                 };
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
@@ -154,6 +155,7 @@ describe('Unit Tests', function () {
                     until: startDate.add(2, 'days').toISOString(),
                     nextPage: "nextPageUrl",
                     apiQuotaResetDate: null,
+                    totalLogsCount: 0,
                     poll_interval_sec: 1
                 };
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
@@ -161,6 +163,81 @@ describe('Unit Tests', function () {
                     assert.equal(newState.poll_interval_sec, 1);
                     assert.notEqual(newState.apiQuotaResetDate, null);
                     assert.ok(logs[0].audit_log_id);
+                    getAPILogs.restore();
+                    getAPIDetails.restore();
+                    done();
+                });
+
+            });
+        });
+        it('Paws Get Logs Success with Events discard Flag True', function (done) {
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ accumulator: [], nextPage: null, resetSeconds: null, totalLogsCount: 100, discardFlag: true });
+                    });
+                });
+            getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
+                function fakeFn(state) {
+                    return {
+                        url: "api_url",
+                        typeIdPaths: [{ path: ["id"] }],
+                        tsPaths: [{ path: ["date"] }]
+                    };
+                });
+            CiscoampCollector.load().then(function (creds) {
+                var collector = new CiscoampCollector(ctx, creds, 'ciscoamp');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    resource: "Events",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    nextPage: null,
+                    apiQuotaResetDate: null,
+                    totalLogsCount: 0,
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(logs.length, 0);
+                    assert.equal(newState.poll_interval_sec, 1);
+                    getAPILogs.restore();
+                    getAPIDetails.restore();
+                    done();
+                });
+
+            });
+        });
+        it('Paws Get Logs Success with Events with Events discard Flag True and nextPage value is not null', function (done) {
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ accumulator: [], nextPage: "/v1/events?start_date=2020-04-01T00%3A00%3A00Z&limit=2&offset=4", resetSeconds: null, totalLogsCount: 100, discardFlag: true });
+                    });
+                });
+            getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
+                function fakeFn(state) {
+                    return {
+                        url: "api_url",
+                        typeIdPaths: [{ path: ["id"] }],
+                        tsPaths: [{ path: ["date"] }]
+                    };
+                });
+            CiscoampCollector.load().then(function (creds) {
+                var collector = new CiscoampCollector(ctx, creds, 'ciscoamp');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    resource: "Events",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    nextPage: "/v1/events?start_date=2020-04-01T00%3A00%3A00Z&limit=2&offset=2",
+                    apiQuotaResetDate: null,
+                    totalLogsCount: 50,
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(logs.length, 0);
+                    assert.equal(newState.nextPage, "/v1/events?start_date=2020-04-01T00:00:00Z&limit=2&offset=52");
+                    assert.equal(newState.poll_interval_sec, 1);
                     getAPILogs.restore();
                     getAPIDetails.restore();
                     done();
@@ -178,6 +255,7 @@ describe('Unit Tests', function () {
                     until: startDate.add(2, 'days').toISOString(),
                     nextPage: "nextPageUrl",
                     apiQuotaResetDate: moment().add(1000, 'seconds').toISOString(),
+                    totalLogsCount: 0,
                     poll_interval_sec: 900
                 };
 
@@ -212,6 +290,7 @@ describe('Unit Tests', function () {
                     since: startDate.toISOString(),
                     until: startDate.add(collector.pollInterval, 'seconds').toISOString(),
                     apiQuotaResetDate: null,
+                    totalLogsCount: 0,
                     poll_interval_sec: 1
                 };
                 let nextState = collector._getNextCollectionState(curState);
@@ -267,11 +346,13 @@ describe('Unit Tests', function () {
                 poll_interval_sec: 1
             };
             const nextPage = "nextPageUrl";
+            const totalLogsCount = "10";
             CiscoampCollector.load().then(function (creds) {
                 var collector = new CiscoampCollector(ctx, creds, 'ciscoamp');
-                let nextState = collector._getNextCollectionStateWithNextPage(curState, nextPage);
+                let nextState = collector._getNextCollectionStateWithNextPage(curState, nextPage, totalLogsCount);
                 assert.ok(nextState.nextPage);
                 assert.equal(nextState.nextPage, nextPage);
+                assert.equal(nextState.totalLogsCount, totalLogsCount);
                 done();
             });
         });

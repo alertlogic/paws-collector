@@ -15,6 +15,7 @@ const parse = require('@alertlogic/al-collector-js').Parse;
 const packageJson = require('./package.json');
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const utils = require("./utils");
+const querystring = require('querystring');
 
 let typeIdPaths = [];
 
@@ -40,6 +41,7 @@ class CiscoampCollector extends PawsCollector {
             until: endTs,
             nextPage: null,
             apiQuotaResetDate: null,
+            totalLogsCount: 0,
             poll_interval_sec: 1
         }));
         return callback(null, initialStates, 1);
@@ -67,6 +69,11 @@ class CiscoampCollector extends PawsCollector {
         const baseUrl = process.env.paws_endpoint.replace(/^https:\/\/|\/$/g, '');
         const base64EncodedString = Buffer.from(`${clientId}:${clientSecret}`, 'ascii').toString("base64");
 
+        if (state.resource === Events && state.totalLogsCount === 0 && state.nextPage === null) {
+            //Events API first call(Date time)
+            state.until = moment().toISOString();
+        }
+
         var resourceDetails = utils.getAPIDetails(state);
         if (!resourceDetails.url) {
             return callback("The resource name was not found!");
@@ -85,8 +92,8 @@ class CiscoampCollector extends PawsCollector {
             return callback(null, [], state, state.poll_interval_sec);
         }
 
-        utils.getAPILogs(baseUrl, base64EncodedString, apiUrl, [], process.env.paws_max_pages_per_invocation)
-            .then(({ accumulator, nextPage, resetSeconds }) => {
+        utils.getAPILogs(baseUrl, base64EncodedString, apiUrl, state, [], process.env.paws_max_pages_per_invocation)
+            .then(({ accumulator, nextPage, resetSeconds, totalLogsCount, discardFlag }) => {
                 if (resetSeconds) {
                     const extraBufferSeconds = 60;
                     resetSeconds = resetSeconds + extraBufferSeconds;
@@ -96,11 +103,32 @@ class CiscoampCollector extends PawsCollector {
                 else {
                     state.apiQuotaResetDate = null;
                 }
+                if (discardFlag && state.resource === Events) {
+
+                    if (state.totalLogsCount === 0) {
+                        return callback(null, accumulator, state, state.poll_interval_sec);
+                    }
+                    const searchParams = querystring.parse(state.nextPage);
+                    let offset = searchParams.offset;
+
+                    offset = (parseInt(totalLogsCount) - parseInt(state.totalLogsCount)) + parseInt(offset);
+                    searchParams.offset = offset;
+
+                    let newOffsetURL = "";
+                    Object.entries(searchParams).forEach(([key, value]) => {
+                        newOffsetURL = newOffsetURL + (newOffsetURL === "" ? `${key}=${value}` : `&${key}=${value}`);
+                    });
+
+                    state.totalLogsCount = totalLogsCount;
+                    state.nextPage = newOffsetURL;
+
+                    return callback(null, accumulator, state, state.poll_interval_sec);
+                }
                 let newState;
                 if (nextPage === undefined) {
                     newState = this._getNextCollectionState(state);
                 } else {
-                    newState = this._getNextCollectionStateWithNextPage(state, nextPage);
+                    newState = this._getNextCollectionStateWithNextPage(state, nextPage, totalLogsCount);
                 }
                 console.info(`CAMP000002 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
@@ -110,10 +138,6 @@ class CiscoampCollector extends PawsCollector {
     }
 
     _getNextCollectionState(curState) {
-
-        if (curState.resource === Events) {
-            curState.until = moment();
-        }
 
         const untilMoment = moment(curState.until);
 
@@ -125,17 +149,19 @@ class CiscoampCollector extends PawsCollector {
             until: nextUntilMoment.toISOString(),
             nextPage: null,
             apiQuotaResetDate: curState.apiQuotaResetDate,
+            totalLogsCount: 0,
             poll_interval_sec: nextPollInterval
         };
     }
 
-    _getNextCollectionStateWithNextPage({ resource, since, until, apiQuotaResetDate }, nextPage) {
+    _getNextCollectionStateWithNextPage({ resource, since, until, apiQuotaResetDate }, nextPage, totalLogsCount) {
         return {
             resource,
             since,
             until,
             nextPage,
             apiQuotaResetDate,
+            totalLogsCount,
             poll_interval_sec: 1
         };
     }

@@ -4,10 +4,12 @@ var url = require("url");
 const Audit_Logs = 'AuditLogs';
 const Events = 'Events';
 
-function getAPILogs(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvocation) {
+function getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPagesPerInvocation) {
     let pageCount = 0;
     let nextPage;
     let resetSeconds = null;
+    let totalLogsCount = state.totalLogsCount;
+    let discardFlag = false;
 
     let restServiceClient = new RestServiceClient(baseUrl);
 
@@ -25,15 +27,26 @@ function getAPILogs(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvo
                     if (parseInt(headers['x-ratelimit-remaining']) < 200) {
                         resetSeconds = parseInt(headers['x-ratelimit-reset']);
                     }
-                    if (body.data) {
-                        accumulator.push(...body.data);
-                    }
-                    if (body.metadata.links.next) {
-                        apiUrl = url.parse(body.metadata.links.next).path;
-                        getData();
+                    if (state.resource === Events && totalLogsCount !== 0 && totalLogsCount !== body.metadata.results.total) {
+                        discardFlag = true;
+                        totalLogsCount = body.metadata.results.total;
+                        resolve({ accumulator: [], nextPage, resetSeconds, totalLogsCount, discardFlag });
                     }
                     else {
-                        resolve({ accumulator, nextPage, resetSeconds });
+                        if (state.resource === Events && totalLogsCount === 0) {
+                            //This condition works when first time call 
+                            totalLogsCount = body.metadata.results.total;
+                        }
+                        if (body.data) {
+                            accumulator.push(...body.data);
+                        }
+                        if (body.metadata.links.next) {
+                            apiUrl = url.parse(body.metadata.links.next).path;
+                            getData();
+                        }
+                        else {
+                            resolve({ accumulator, nextPage, resetSeconds, totalLogsCount, discardFlag });
+                        }
                     }
                 }).catch(err => {
                     reject(err);
@@ -41,7 +54,7 @@ function getAPILogs(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvo
             }
             else {
                 nextPage = apiUrl;
-                resolve({ accumulator, nextPage, resetSeconds });
+                resolve({ accumulator, nextPage, resetSeconds, totalLogsCount, discardFlag });
             }
         }
     });
