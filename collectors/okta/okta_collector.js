@@ -73,6 +73,7 @@ class OktaCollector extends PawsCollector {
         .then(() => {
             const newState = collector._getNextCollectionState(state);
             console.info(`OKTA000002 Next collection in ${newState.poll_interval_sec} seconds`);
+            this.reportDDMetric('logs_collected', logAcc.length);
             return callback(null, logAcc, newState, newState.poll_interval_sec);
         })
         .catch((error) => {

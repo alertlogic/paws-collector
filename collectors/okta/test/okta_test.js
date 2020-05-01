@@ -359,6 +359,17 @@ describe('Unit Tests', function() {
     });
     describe('Health Check Tests', function() {
         it('token validation check success', function(done) {
+            let ctx = {
+                invokedFunctionArn : oktaMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+
             const oktaHealth = require('../health_checks');
             // Okta endpoints mock
             nock('https://test.alertlogic.com:443', {'encodedQueryParams':true})
@@ -367,13 +378,27 @@ describe('Unit Tests', function() {
             .times(1)
             .reply(200);
             
-            oktaHealth.oktaTokenHealthCheck(function(err) {
-                assert.equal(null, err);
-                done();
+            OktaCollector.load().then(function(creds) {
+                var collector = new OktaCollector(ctx, creds);
+                oktaHealth.oktaTokenHealthCheck.apply(collector)(function(err) {
+                    assert.equal(null, err);
+                    done();
+                });
             });
             
         });
         it('token validation check fail', function(done) {
+            let ctx = {
+                invokedFunctionArn : oktaMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+
             const oktaHealth = require('../health_checks');
             // Okta endpoints mock
             nock('https://test.alertlogic.com:443', {'encodedQueryParams':true})
@@ -391,9 +416,12 @@ describe('Unit Tests', function() {
                     code: 'OKTA000003',
                     details: 'Failed to validate auth token for test.alertlogic.com due to error 401 - {"errorCode":"E0000011","errorSummary":"Invalid token provided","errorLink":"E0000011","errorId":"testid","errorCauses":[]}' };
 
-            oktaHealth.oktaTokenHealthCheck(function(err) {
-                assert.deepEqual(err, expectedError);
-                done();
+            OktaCollector.load().then(function(creds) {
+                var collector = new OktaCollector(ctx, creds);
+                oktaHealth.oktaTokenHealthCheck.apply(collector)(function(err) {
+                    assert.deepEqual(err, expectedError);
+                    done();
+                });
             });
             
         });
