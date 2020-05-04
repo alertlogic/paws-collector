@@ -95,7 +95,7 @@
             "PawsCollectorTypeName" : "ciscoamp",
             "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
             "CollectorId" : { "Ref":"CollectorId" },
-            "PollingInterval" : 60,
+            "PollingInterval" : 600,
             "PawsEndpoint" : { "Ref":"CiscoampEndpoint" },
             "PawsAuthType" : "oauth2",
             "PawsClientId" : { "Ref":"CiscoampClientId" },

@@ -87,7 +87,7 @@ class CiscoampCollector extends PawsCollector {
         console.info(`CAMP000001 Collecting data for ${state.resource} from ${state.since} till ${state.until}`);
 
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
-            console.log('API hourly Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
+            console.log('CAMP000002 API hourly Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
             state.poll_interval_sec = 900;
             return callback(null, [], state, state.poll_interval_sec);
         }
@@ -98,7 +98,7 @@ class CiscoampCollector extends PawsCollector {
                     const extraBufferSeconds = 60;
                     resetSeconds = resetSeconds + extraBufferSeconds;
                     state.apiQuotaResetDate = moment().add(resetSeconds, "seconds").toISOString();
-                    console.log('API hourly Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
+                    console.log('CAMP000003 API hourly Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
                 }
                 else {
                     state.apiQuotaResetDate = null;
@@ -130,7 +130,7 @@ class CiscoampCollector extends PawsCollector {
                 } else {
                     newState = this._getNextCollectionStateWithNextPage(state, nextPage, totalLogsCount);
                 }
-                console.info(`CAMP000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                console.info(`CAMP000004 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             }).catch((error) => {
                 return callback(error);
