@@ -1,6 +1,6 @@
 # paws-collector
 
-[![Build Status](https://secure.travis-ci.org/alertlogic/al-aws-collector-js.png?branch=master)](http://travis-ci.org/alertlogic/al-aws-collector-js) ![ALPS build](https://ci.pipelineservices.alertlogic.com/v1/badges/alertlogic/paws-collector/master)
+[![Build Status](https://secure.travis-ci.org/alertlogic/al-aws-collector-js.png?branch=master)](http://travis-ci.org/alertlogic/al-aws-collector-js) ![ALPS build](https://ci.pipelineservices.alertlogic.com/v1/badges/alertlogic/paws-collector/master?github=true)
 
 Alert Logic AWS Based API Poll (PAWS) Log Collector Library.
 
