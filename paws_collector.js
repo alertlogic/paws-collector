@@ -15,7 +15,7 @@ const debug = require('debug')('index');
 const AWS = require('aws-sdk');
 const fs = require('fs');
 const moment = require('moment');
-const ddLambda = require("datadog-lambda-js");
+const ddLambda = require('datadog-lambda-js');
 
 const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector;
 const packageJson = require('./package.json');

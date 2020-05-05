@@ -2,7 +2,7 @@ const assert = require('assert');
 const sinon = require('sinon');
 var AWS = require('aws-sdk-mock');
 const m_response = require('cfn-response');
-const ddLambda = require("datadog-lambda-js");
+const ddLambda = require('datadog-lambda-js');
 
 const pawsMock = require('./paws_mock');
 var m_alCollector = require('@alertlogic/al-collector-js');
@@ -225,8 +225,8 @@ describe('Unit Tests', function() {
                 assert(ddLambdaSendMetricStub.calledWith('paws_okta.test_metric'));
                 done();
             });
-        })
-    })
+        });
+    });
     describe('Poll Request Tests', function() {
         it('poll request success, single state', function(done) {
             let ctx = {
