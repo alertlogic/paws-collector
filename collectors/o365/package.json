@@ -24,7 +24,6 @@
     "@azure/ms-rest-js": "2.0.4",
     "@azure/ms-rest-azure-js": "2.0.1",
     "@azure/ms-rest-nodeauth": "2.0.5",
-    "datadog-lambda-js": "2.23.0",
     "async": "3.1.0",
     "debug": "4.1.1",
     "moment": "2.24.0"
