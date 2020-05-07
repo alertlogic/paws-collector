@@ -565,6 +565,12 @@
                       { "Ref" : "PawsCollectorTypeName" },
                       "-collector.json"
                   ]]},
+                  "DD_API_KEY": {
+                      "Ref": "DatadogApiKey"
+                  },
+                  "DD_KMS_API_KEY": {
+                      "Ref": "DatadogKMSKey"
+                  },
                   "al_application_id":{
                       "Ref":"AlApplicationId"
                   },
@@ -615,12 +621,6 @@
                   },
                   "paws_max_pages_per_invocation": {
                     "Ref":"PawsMaxPagesPerInvocation"
-                  },
-                  "DD_API_KEY": {
-                      "Ref": "DatadogApiKey"
-                  },
-                  "DD_KMS_API_KEY": {
-                      "Ref": "DatadogKMSKey"
                   },
                   "paws_collector_param_string_1": {
                     "Ref": "CollectorParamString1"
