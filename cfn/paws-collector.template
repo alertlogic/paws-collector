@@ -2,6 +2,16 @@
     "AWSTemplateFormatVersion": "2010-09-09",
     "Description": "Alert Logic template for creating a Poll based log collector",
     "Parameters": {
+        "DatadogApiKey" :{
+            "Description": "API Key for DataDog Metric collection. Use this OR DatadogKMSKey",
+            "Type": "String",
+            "Default": ""
+        },
+        "DatadogKMSKey" :{
+            "Description": "KMS ID for DataDog API Key. Use this OR DatadogApiKey",
+            "Type": "String",
+            "Default": ""
+        },
         "AlertlogicAccessKeyId": {
             "Description": "Alert Logic Access Key Id obtained from AIMS",
             "Type": "String"
@@ -555,6 +565,12 @@
                       { "Ref" : "PawsCollectorTypeName" },
                       "-collector.json"
                   ]]},
+                  "DD_API_KEY": {
+                      "Ref": "DatadogApiKey"
+                  },
+                  "DD_KMS_API_KEY": {
+                      "Ref": "DatadogKMSKey"
+                  },
                   "al_application_id":{
                       "Ref":"AlApplicationId"
                   },
