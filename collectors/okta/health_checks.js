@@ -30,12 +30,10 @@ function oktaTokenHealthCheck(callback){
     let cli = new RestServiceClient(hostname);
     cli.get('/api/v1/users/me', options)
     .then((resp) => {
-        this.reportDDMetric('valid_token', true);
         return callback();
     })
     .catch((e) => {
         const err = health.errorMsg('OKTA000003', `Failed to validate auth token for ${hostname} due to error ${e.message}`);
-        this.reportDDMetric('valid_token', false);
         return callback(err);
     });
 }
