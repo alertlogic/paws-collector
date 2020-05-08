@@ -15,6 +15,7 @@ const debug = require('debug')('index');
 const AWS = require('aws-sdk');
 const fs = require('fs');
 const moment = require('moment');
+const ddLambda = require('datadog-lambda-js');
 
 const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector;
 const packageJson = require('./package.json');
@@ -72,6 +73,15 @@ class PawsCollector extends AlAwsCollector {
         });
     }
 
+    // we can do whatever conditional handler wrapping here
+    static makeHandler(handlerFunc) {
+        if(process.env.DD_API_KEY || process.env.DD_KMS_API_KEY){
+            return ddLambda.datadog(handlerFunc);
+        } else {
+            return handlerFunc;
+        }
+    }
+
     constructor(context, {aimsCreds, pawsCreds}, childVersion, healthChecks = [], statsChecks = []) {
         const version = childVersion ? childVersion : packageJson.version;
         const endpointDomain = process.env.paws_endpoint.replace(DOMAIN_REGEXP, '');
@@ -121,6 +131,20 @@ class PawsCollector extends AlAwsCollector {
     get pawsHttpsEndpoint() {
         return this._pawsHttpsEndpoint;
     };
+
+    reportDDMetric(name, value, tags = []) {
+        const baseTags = [
+            // some more tags here?
+            `paws_platform:${this.pawsCollectorType}`,
+            `collectorId:${this.applicationId}`
+        ];
+
+        ddLambda.sendDistributionMetric(
+            `paws_${this.pawsCollectorType}.${name}`,
+            value,
+            ...baseTags.concat(tags)
+        );
+    }
 
     getProperties() {
         const baseProps = super.getProperties();
@@ -300,6 +324,7 @@ class PawsCollector extends AlAwsCollector {
             ],
             Namespace: 'PawsCollectors'
         };
+        this.reportDDMetric('api_throttling', 1)
         return cloudwatch.putMetricData(params, callback);
     };
     
@@ -331,6 +356,7 @@ class PawsCollector extends AlAwsCollector {
             ],
             Namespace: 'PawsCollectors'
         };
+        this.reportDDMetric('collection_delay', collectionDelaySec);
         return cloudwatch.putMetricData(params, callback);
     };
 
