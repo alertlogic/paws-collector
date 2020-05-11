@@ -12,10 +12,10 @@ const debug = require('debug') ('index');
 
 const GooglestackdriverCollector = require('./collector').GooglestackdriverCollector;
 
-exports.handler = function(event, context) {
+exports.handler = GooglestackdriverCollector.makeHandler(function(event, context) {
     debug('input event: ', event);
     GooglestackdriverCollector.load().then(function(creds) {
         var googlestackdriverc = new GooglestackdriverCollector(context, creds);
         googlestackdriverc.handleEvent(event);
     });
-};
+});

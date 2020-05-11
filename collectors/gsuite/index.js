@@ -12,10 +12,10 @@ const debug = require('debug') ('index');
 
 const GsuiteCollector = require('./collector').GsuiteCollector;
 
-exports.handler = function(event, context) {
+exports.handler = GsuiteCollector.makeHandler(function(event, context) {
     debug('input event: ', event);
     GsuiteCollector.load().then(function(creds) {
         var gsuitec = new GsuiteCollector(context, creds);
         gsuitec.handleEvent(event);
     });
-};
+});

@@ -12,10 +12,10 @@ const debug = require('debug') ('index');
 
 const Auth0Collector = require('./auth0_collector').Auth0Collector;
 
-exports.handler = function(event, context) {
+exports.handler = Auth0Collector.makeHandler(function(event, context) {
     debug('input event: ', event);
     Auth0Collector.load().then(function(creds) {
         var auth0c = new Auth0Collector(context, creds);
         auth0c.handleEvent(event);
     });
-};
+});
