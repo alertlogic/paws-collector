@@ -1,7 +1,7 @@
 function getAPILogs(auth0Client, state, accumulator, maxPagesPerInvocation) {
     let pageCount = 0;
 
-    let params = state.last_log_id ? { from: state.last_log_id } : { q: "date=[" + state.since + " TO *]", sort: "date:1" };
+    let params = state.last_log_id ? { from: state.last_log_id, take:100 } : { q: "date=[" + state.since + " TO *]", per_page:100, sort: "date:1" };
     let nextLogId = state.last_log_id ? state.last_log_id : null;
     let lastLogTs = null;
 
@@ -17,7 +17,7 @@ function getAPILogs(auth0Client, state, accumulator, maxPagesPerInvocation) {
                             accumulator.push(...logAcc);
                             nextLogId = logAcc[logAcc.length - 1].log_id;
                             lastLogTs = logAcc[logAcc.length - 1].date;
-                            params = { from: nextLogId };
+                            params = { from: nextLogId, take:100 };
                             getData(params);
                         }
                         else {
