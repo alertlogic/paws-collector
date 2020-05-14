@@ -12,10 +12,10 @@ const debug = require('debug') ('index');
 
 const {{Type}}Collector = require('./collector').{{Type}}Collector;
 
-exports.handler = function(event, context) {
+exports.handler = {{Type}}Collector.makeHandler(function(event, context) {
     debug('input event: ', event);
     {{Type}}Collector.load().then(function(creds) {
         var {{type}}c = new {{Type}}Collector(context, creds);
         {{type}}c.handleEvent(event);
     });
-};
+});

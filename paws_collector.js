@@ -94,14 +94,9 @@ class PawsCollector extends AlAwsCollector {
         this._pawsCreds = pawsCreds;
         this._pawsCollectorType = process.env.paws_type_name;
         this.pollInterval = process.env.paws_poll_interval;
-        this.applicationId = process.env.al_application_id;
         this._pawsEndpoint = process.env.paws_endpoint
         this._pawsDomainEndpoint = endpointDomain;
         this._pawsHttpsEndpoint = 'https://' + endpointDomain;
-    };
-
-    get application_id () {
-        return this.applicationId;
     };
 
     get secret () {
@@ -136,7 +131,7 @@ class PawsCollector extends AlAwsCollector {
         const baseTags = [
             // some more tags here?
             `paws_platform:${this.pawsCollectorType}`,
-            `collectorId:${this.applicationId}`
+            `applicationId:${this.applicationId}`
         ];
 
         ddLambda.sendDistributionMetric(
