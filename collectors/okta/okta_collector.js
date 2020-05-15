@@ -58,7 +58,7 @@ class OktaCollector extends PawsCollector {
     pawsGetLogs(state, callback) {
         let collector = this;
         const oktaClient = new okta.Client({
-            orgUrl: process.env.paws_endpoint,
+            orgUrl: collector.pawsHttpsEndpoint,
             token: collector.secret
         });
         console.info(`OKTA000001 Collecting data from ${state.since} till ${state.until}`);
