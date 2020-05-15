@@ -1,4 +1,5 @@
 process.env.AWS_REGION = 'us-east-1';
+process.env.DD_API_KEY = 'a-dd-key';
 process.env.AWS_LAMBDA_FUNCTION_NAME = 'test-function-name';
 process.env.al_api = 'api.global-services.global.alertlogic.com';
 process.env.ingest_api = 'ingest.global-services.global.alertlogic.com';

@@ -128,10 +128,19 @@ class PawsCollector extends AlAwsCollector {
     };
 
     reportDDMetric(name, value, tags = []) {
+        // check if the API key is present. This will be a good proxy for if the handler is working
+        if (!process.env.DD_API_KEY){
+            return
+        }
+
+        // Distinguish between integration and prod collectors 
+        const stackName = process.env.al_api === "api.global-integration.product.dev.alertlogic.com" ? "integration" : "cd-us-production";
+
         const baseTags = [
             // some more tags here?
             `paws_platform:${this.pawsCollectorType}`,
-            `applicationId:${this.applicationId}`
+            `applicationId:${this.applicationId}`,
+            `base-stack-name:${stackName}`
         ];
 
         ddLambda.sendDistributionMetric(
