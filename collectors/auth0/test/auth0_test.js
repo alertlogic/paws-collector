@@ -212,6 +212,7 @@ describe('Unit Tests', function () {
                 let lastLogTs = startDate.toISOString();
                 let nextState = collector._getNextCollectionState(curState, nextLogId, lastLogTs);
                 assert.equal(nextState.last_log_id, 'nextLogId');
+                assert.equal(nextState.last_collected_ts, lastLogTs);
                 assert.equal(nextState.poll_interval_sec, collector.pollInterval);
                 done();
             });

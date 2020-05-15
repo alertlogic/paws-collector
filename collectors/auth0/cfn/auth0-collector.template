@@ -87,7 +87,7 @@
           "PawsCollectorTypeName" : "auth0",
           "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
           "CollectorId" : { "Ref":"CollectorId" },
-          "PollingInterval" : 600,
+          "PollingInterval" : 60,
           "PawsEndpoint" : { "Ref":"Auth0Domain" },
           "PawsAuthType" : "oauth2",
           "PawsClientId" : { "Ref":"Auth0ClientId" },
