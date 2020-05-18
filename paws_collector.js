@@ -133,14 +133,11 @@ class PawsCollector extends AlAwsCollector {
             return
         }
 
-        // Distinguish between integration and prod collectors 
-        const stackName = process.env.al_api === "api.global-integration.product.dev.alertlogic.com" ? "integration" : "cd-us-production";
-
         const baseTags = [
             // some more tags here?
             `paws_platform:${this.pawsCollectorType}`,
             `applicationId:${this.applicationId}`,
-            `base-stack-name:${stackName}`
+            `aws_account:${this._awsAccountId}`
         ];
 
         ddLambda.sendDistributionMetric(
