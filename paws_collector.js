@@ -134,7 +134,6 @@ class PawsCollector extends AlAwsCollector {
         }
 
         const baseTags = [
-            // some more tags here?
             `paws_platform:${this.pawsCollectorType}`,
             `applicationId:${this.applicationId}`,
             `aws_account:${this._awsAccountId}`
