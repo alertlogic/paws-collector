@@ -38,7 +38,7 @@ function updatePackageJson(folder, fileName, updateVersion = true) {
         return
     }
 
-    package.dependencies['@alertlogic/paws-collector'] = `^${process.argv[2]}`;
+    package.dependencies['@alertlogic/paws-collector'] = `^${newPawsVersion}`;
 
     if(updateVersion){
         const version = package.version.split('.').map(e => parseInt(e))
