@@ -13,7 +13,7 @@ if (process.argv[2] && !process.argv[2].match(semverRegex)){
 }
 
 // the current version derived from the package.json
-const currentPaws = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+const currentPaws = JSON.parse(fs.readFileSync('package.json', 'utf8')).version;
 
 // this is the version we will update the collectors to.
 // If it is not explicitly set, then we'll grab the current version from the main package.json
