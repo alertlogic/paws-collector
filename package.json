@@ -17,6 +17,7 @@
     "lint": "jshint --exclude \"./node_modules/*\" **/*.js",
     "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=cobertura mocha --colors",
     "create-collector": "node create-collector.js",
+    "bump-paws-version": "node update-paws-version.js",
     "rel": "npm publish --access=public"
   },
   "devDependencies": {
