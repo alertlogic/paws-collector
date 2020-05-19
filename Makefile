@@ -33,7 +33,7 @@ publish:
 	npm run rel
 
 update-collector-versions:
-	npm run bump-collector-versions "$VERSION"
+	npm run bump-collector-versions $(VERSION)
 
 deploy:
 	aws lambda update-function-code --function-name $(AWS_LAMBDA_PAWS_FUNCTION_NAME) --zip-file fileb://$(AWS_LAMBDA_PAWS_PACKAGE_NAME)
