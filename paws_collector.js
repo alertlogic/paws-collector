@@ -128,10 +128,15 @@ class PawsCollector extends AlAwsCollector {
     };
 
     reportDDMetric(name, value, tags = []) {
+        // check if the API key is present. This will be a good proxy for if the handler is working
+        if (!process.env.DD_API_KEY){
+            return
+        }
+
         const baseTags = [
-            // some more tags here?
             `paws_platform:${this.pawsCollectorType}`,
-            `applicationId:${this.applicationId}`
+            `applicationId:${this.applicationId}`,
+            `aws_account:${this.aws_account_id}`
         ];
 
         ddLambda.sendDistributionMetric(
