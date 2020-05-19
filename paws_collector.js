@@ -136,7 +136,7 @@ class PawsCollector extends AlAwsCollector {
         const baseTags = [
             `paws_platform:${this.pawsCollectorType}`,
             `applicationId:${this.applicationId}`,
-            `aws_account:${this._awsAccountId}`
+            `aws_account:${this.aws_account_id}`
         ];
 
         ddLambda.sendDistributionMetric(
