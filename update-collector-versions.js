@@ -1,5 +1,10 @@
 const fs = require('fs');
 
+// usage
+if (!process.argv[2]){
+    console.log("node update-paws-version.js <paws-version>");
+}
+
 // check if arg is a semver.
 if (!process.argv[2].match(/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/)){
     console.log("Please provide valid semver version. i.e 1.0.0")
