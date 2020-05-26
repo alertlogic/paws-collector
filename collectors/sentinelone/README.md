@@ -24,7 +24,7 @@ Single Sign-On Web System token (SSWS).
 
 ## 3. CloudFormation Template (CFT) 
 
-Refer to [CF template readme](./cfn/README.md) for installation instructions.
+Refer to [CF template readme](./cfn/README-SENTINELONE.md) for installation instructions.
 
 # How it works
 
