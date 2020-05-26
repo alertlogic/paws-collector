@@ -36,7 +36,7 @@ For all Search Request API use access level (custom) and custom access level (Vi
 
 ## 3. CloudFormation Template (CFT)
 
-Refer to [CF template readme](./cfn/README.md) for installation instructions.
+Refer to [CF template readme](./cfn/README-CARBONBLACK.md) for installation instructions.
 
 # How it works
 
