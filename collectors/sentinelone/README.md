@@ -8,11 +8,11 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
 
-## Auth Type Required
+## 1. Auth Type Required
 
 Single Sign-On Web System token (SSWS).
 
-## Generating an API Token from the WebUI:
+## 2. How to obtain an API Token
 
 ```
 1. In your Management Console, click Settings > USERS.
@@ -22,25 +22,25 @@ Single Sign-On Web System token (SSWS).
 ```
 ![ScreenShot](./docs/sentinelone_credentials.jpg)
 
-## CloudFormation Template (CFT) 
+## 3. CloudFormation Template (CFT) 
 
 Refer to [CF template readme](./cfn/README.md) for installation instructions.
 
 # How it works
 
-## Update Trigger
+## 1. Update Trigger
 
 The `Updater` is a timer triggered function that runs a deployment sync operation 
 every 12 hours in order to keep the collector lambda function up to date.
 The `Updater` syncs from the Alert Logic S3 bucket where you originally deployed from.
 
-## Collection Trigger
+## 2. Collection Trigger
 
 The `Collector` function is an AWS lambda function which is triggered by SQS which contains collection state message.
 During each invocation the function polls 3rd party service log API and sends retrieved data to 
 AlertLogic `Ingest` service for further processing.
 
-## Checkin Trigger
+## 3. Checkin Trigger
 
 The `Checkin` Scheduled Event trigger is used to report the health and status of 
 the Alert Logic AWS lambda collector to the `Azcollect` back-end service based on 
@@ -49,12 +49,12 @@ an AWS Scheduled Event that occurs every 15 minutes.
 
 # Development
 
-## Creating New Collector Types
+## 1. Creating New Collector Types
 run `npm run create-collector <<name>> <<version>> <<console log info prefix>>` to create a skeleton collector in the `collectors` folder.
 
 example `npm run create-collector sentinelone 1.0.0 SONE`
 
-## Build collector
+## 2. Build collector
 Clone this repository and build a lambda package by executing:
 ```
 $ git clone https://github.com/alertlogic/paws-collector.git
@@ -64,7 +64,7 @@ $ make deps test package
 
 The package name is *al-sentinelone-collector.zip*
 
-## Debugging
+## 3. Debugging
 
 To get a debug trace, set an Node.js environment variable called DEBUG and
 specify the JavaScript module/s to debug.
@@ -81,7 +81,7 @@ console) for a collector AWS Lambda function, with value "index" or "\*".
 
 See [debug](https://www.npmjs.com/package/debug) for further details.
 
-## Invoking locally
+## 4. Invoking locally
 
 In order to invoke lambda locally please follow the [instructions](https://docs.aws.amazon.com/lambda/latest/dg/sam-cli-requirements.html) to install AWS SAM.
 AWS SAM uses `default` credentials profile from `~/.aws/credentials`.
