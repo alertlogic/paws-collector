@@ -8,7 +8,7 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
 
-## 1. Auth Type Required
+### 1. Auth Type Required
 
 OAuth 2.0 is a protocol that allows a user to grant limited access to their resources on one site, to another site, without having to expose their credentials.To get access to the protected resources OAuth 2.0 uses Access Tokens. An Access Token is a string representing the granted permissions.
 
