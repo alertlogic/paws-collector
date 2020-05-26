@@ -63,6 +63,28 @@ console) for a collector AWS Lambda function, with value "index" or "\*".
 
 See [debug](https://www.npmjs.com/package/debug) for further details.
 
+## Auth Type Required
+
+OAuth 2.0 is a protocol that allows a user to grant limited access to their resources on one site, to another site, without having to expose their credentials.To get access to the protected resources OAuth 2.0 uses Access Tokens. An Access Token is a string representing the granted permissions.
+
+## How to obtain an API Secret Key and API ID
+
+[Authentication](https://developer.carbonblack.com/reference/carbon-black-cloud/authentication/)
+
+```
+Log into your Carbon Black Cloud Organization.
+Navigate to Settings > API Keys.
+Click “Add API Key”.
+Configure Name, Access Level, etc.
+Obtain your API Secret Key and API ID pair.
+```
+
+[AuditLogEvents](https://developer.carbonblack.com/reference/carbon-black-cloud/cb-defense/latest/rest-api/)
+For Audit Log Events API use access level - API
+
+[SearchRequest](https://developer.carbonblack.com/reference/carbon-black-cloud/platform/latest/alerts-api/)
+For all Search Request API use access level (custom) > custom access level (View All)
+
 ## Invoking locally
 
 In order to invoke lambda locally please follow the [instructions](https://docs.aws.amazon.com/lambda/latest/dg/sam-cli-requirements.html) to install AWS SAM.
