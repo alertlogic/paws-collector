@@ -16,13 +16,11 @@ OAuth 2.0 is a protocol that allows a user to grant limited access to their reso
 
 [Authentication](https://developer.carbonblack.com/reference/carbon-black-cloud/authentication/)
 
-```
-Log into your Carbon Black Cloud Organization.
-Navigate to Settings > API Keys.
-Click “Add API Key”.
-Configure Name, Access Level, etc.
-Obtain your API Secret Key and API ID pair.
-```
+    1. Log into your Carbon Black Cloud Organization.
+    2. Navigate to Settings > API Keys.
+    3. Click “Add API Key”.
+    4. Configure Name, Access Level, etc.
+    5. Obtain your API Secret Key and API ID pair.
 
 [AuditLogEvents](https://developer.carbonblack.com/reference/carbon-black-cloud/cb-defense/latest/rest-api/)
 For Audit Log Events API use access level - API
