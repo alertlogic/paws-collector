@@ -8,6 +8,22 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
 
+## Auth Type Required
+
+Single Sign-On Web System token (SSWS).
+
+## Generating an API Token from the WebUI:
+
+```
+1. In your Management Console, click Settings > USERS.
+2. Click on your username.
+4. Popup window will open > API Token, click Generate. If you see Revoke and Regenerate, you already have a token. If you revoke or regenerate it, scripts that use that token will not work. There is no confirmation. Revoke removes the token authorization. Regenerate revokes the token and generates a new token. If you click Generate or Regenerate, a message shows the token string and the date that the token expires.
+5. Click DOWNLOAD.
+```
+![ScreenShot](./docs/sentinelone_credentials.jpg)
+
+## CloudFormation Template (CFT) 
+
 Refer to [CF template readme](./cfn/README.md) for installation instructions.
 
 # How it works
@@ -64,20 +80,6 @@ Or set an environment variable called "DEBUG" in your AWS stack (using the AWS
 console) for a collector AWS Lambda function, with value "index" or "\*".
 
 See [debug](https://www.npmjs.com/package/debug) for further details.
-
-## Auth Type Required
-
-Single Sign-On Web System token (SSWS).
-
-## Generating an API Token from the WebUI:
-
-```
-1. In your Management Console, click Settings > USERS.
-2. Click on your username.
-4. Popup window will open > API Token, click Generate. If you see Revoke and Regenerate, you already have a token. If you revoke or regenerate it, scripts that use that token will not work. There is no confirmation. Revoke removes the token authorization. Regenerate revokes the token and generates a new token. If you click Generate or Regenerate, a message shows the token string and the date that the token expires.
-5. Click DOWNLOAD.
-```
-![ScreenShot](./docs/sentinelone_credentials.jpg)
 
 ## Invoking locally
 
