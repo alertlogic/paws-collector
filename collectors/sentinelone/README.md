@@ -75,6 +75,7 @@ Single Sign-On Web System token (SSWS).
 4. Popup window will open > API Token, click Generate. If you see Revoke and Regenerate, you already have a token. If you revoke or regenerate it, scripts that use that token will not work. There is no confirmation. Revoke removes the token authorization. Regenerate revokes the token and generates a new token. If you click Generate or Regenerate, a message shows the token string and the date that the token expires.
 5. Click DOWNLOAD.
 ```
+![ScreenShot](./docs/sentinelone_credentials.jpg)
 
 ## Invoking locally
 
