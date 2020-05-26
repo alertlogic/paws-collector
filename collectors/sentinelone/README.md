@@ -8,11 +8,7 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
 
-### 1. Auth Type Required
-
-Single Sign-On Web System token (SSWS).
-
-### 2. How to obtain an API Token
+### 1. How to obtain an API Token
 
 1. In your Management Console, click Settings > USERS.
 2. Click on your username.
@@ -21,7 +17,7 @@ Single Sign-On Web System token (SSWS).
 
 ![ScreenShot](./docs/sentinelone_credentials.jpg)
 
-### 3. CloudFormation Template (CFT) 
+### 2. CloudFormation Template (CFT) 
 
 Refer to [CF template readme](./cfn/README-SENTINELONE.md) for installation instructions.
 

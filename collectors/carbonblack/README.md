@@ -8,11 +8,7 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
 
-### 1. Auth Type Required
-
-OAuth 2.0 is a protocol that allows a user to grant limited access to their resources on one site, to another site, without having to expose their credentials.To get access to the protected resources OAuth 2.0 uses Access Tokens. An Access Token is a string representing the granted permissions.
-
-### 2. How to obtain an API Secret Key and API ID
+### 1. How to obtain an API Secret Key and API ID
 
 [Authentication](https://developer.carbonblack.com/reference/carbon-black-cloud/authentication/)
 
@@ -32,7 +28,7 @@ For all Search Request API use access level (custom) and custom access level (Vi
 
 ![ScreenShot](./docs/carbonblack_credentials_custom.png)
 
-### 3. CloudFormation Template (CFT)
+### 2. CloudFormation Template (CFT)
 
 Refer to [CF template readme](./cfn/README-CARBONBLACK.md) for installation instructions.
 
