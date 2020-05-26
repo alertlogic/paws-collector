@@ -34,7 +34,9 @@ an AWS Scheduled Event that occurs every 15 minutes.
 # Development
 
 ## Creating New Collector Types
-run `npm run create-collector <<name>> <<version>>` to create a skeleton collector in the `collectors` folder.
+run `npm run create-collector <<name>> <<version>> <<console log info prefix>>` to create a skeleton collector in the `collectors` folder.
+
+example `npm run create-collector carbonblack 1.0.0 CABL`
 
 ## Build collector
 Clone this repository and build a lambda package by executing:
