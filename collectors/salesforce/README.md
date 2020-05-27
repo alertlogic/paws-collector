@@ -18,10 +18,10 @@ Before these steps ensure a digital certificate is generated.
     - Click the permission set you want to grant access to
     - Click 'System Permissions'
     - Check the following checkboxes:
-        Apex REST Services 
-        API Enabled 
-        View Event Log Files 
-        Manage Users (Required for LoginHistory objects only to view associated geo-data)
+        - [x] Apex REST Services 
+        - [x] API Enabled 
+        - [x] View Event Log Files 
+        - [x] Manage Users (Required for LoginHistory objects only to view associated geo-data)
 
 2. Create a Client App  
     - Click the cog in the top right, then click Setup
