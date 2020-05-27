@@ -9,16 +9,36 @@ forward logs to the Alert Logic CloudInsight backend services.
 # Installation
 
 ### 1. How to obtain an API Secret Key and API ID
+Before these steps ensure a digital certificate is generated. 
 
-1. Click the cog in the top right of the Salesforce console, then click Setup
-![ScreenShot](./docs/salesforce_img1.png)
-2. In 'Administration', expand the Users tab and click Profiles.
-![ScreenShot](./docs/salesforce_img2.png)
-3. Click the profile you want to grant access to
-4. Click 'System Permissions'
-![ScreenShot](./docs/salesforce_img3.png)
-5. Check the 'API Enabled' checkbox
-![ScreenShot](./docs/salesforce_img4.png)
+1. Configure a Permission Set
+    - Click the cog in the top right of the Salesforce console, then click Setup
+      ![ScreenShot](./docs/salesforce_img1.png)
+    - In `Administration`, expand the Users tab and click Permission Sets.
+    - Click the permission set you want to grant access to
+    - Click 'System Permissions'
+    - Check the following checkboxes:
+        Apex REST Services 
+        API Enabled 
+        View Event Log Files 
+        Manage Users (Required for LoginHistory objects only to view associated geo-data)
+
+2. Create a Client App  
+    - Click the cog in the top right, then click Setup
+    - In the sidebar, click Apps > click App Manager
+    - Click ‘New Connected App’
+    - In the Basic Information section, fill in the required fields
+    - In the API section, check ‘Enable OAuth Settings’, check ‘Enable for Device Flow’ and enter a call-back URL.
+      ![ScreenShot](./docs/salesforce_img2.png)
+    - Check the ‘Use Digital Signatures’ checkbox and click Choose File and upload the server.crt file that contains your digital certificate.
+    - Add ‘Perform requests on your behalf at any time’ and ‘Access and manage your data’ in the selected OAuth scopes
+      ![ScreenShot](./docs/salesforce_img3.png)
+    - Cick ‘Save’ at the bottom
+    - Click Manage.
+    - Click Edit Policies.
+    - In the OAuth Policies section, select Admin approved users are pre-authorized for Permitted Users, and click OK.
+    - Click Save.
+    - Click Manage Profiles and then click Manage Permission Sets. Select the previously created permission set.   
 
 ### 2. API Object List
 [LoginHistory](https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_objects_loginhistory.htm),
