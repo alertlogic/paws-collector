@@ -10,10 +10,10 @@ Template (CFT) for deploying a log collector in AWS which will poll 3rd party se
 ### 1. How to obtain an API Secret Key and API ID
 
 1. In the APIs section of the Auth0 dashboard, click Create API.
-![ScreenShot](./docs/auth0_1.png)
 2. Provide a name and an identifier for your API, for example, https://quickstarts/api. You will use the identifier as an audience later, when you are configuring the Access Token verification. Leave the Signing Algorithm as RS256.
 ![ScreenShot](./docs/auth0_2.png)
-3. Permissions let you define how resources can be accessed on behalf of the user with a given access token. You can define allowed permissions in the Permissions tab of the Auth0 Dashboard's APIs section.
+3. Permissions let you define how resources can be accessed on behalf of the user with a given access token. For example, you might choose to grant read access to the messages resource if users have the manager access level, and a write access to that resource if they have the administrator access level.
+You can define allowed permissions in the Permissions tab of the Auth0 Dashboard's APIs section.
 ![ScreenShot](./docs/auth0_3.png)
 
 
