@@ -15,7 +15,7 @@ Template (CFT) for deploying a log collector in AWS which will poll 3rd party se
 3. Permissions let you define how resources can be accessed on behalf of the user with a given access token. For example, you might choose to grant read access to the messages resource if users have the manager access level, and a write access to that resource if they have the administrator access level.
 You can define allowed permissions in the Permissions tab of the Auth0 Dashboard's APIs section.
 ![ScreenShot](./docs/auth0_3.png)
-
+4. On the Applications page of the Auth0 Dashboard, locate your Application and click its name to view the available settings. The generated client ID and client secret are found here.
 
 
 ### 2. CloudFormation Template (CFT)
