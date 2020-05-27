@@ -25,6 +25,7 @@ For Audit Log Events API use access level - API
 
 [SearchRequest](https://developer.carbonblack.com/reference/carbon-black-cloud/platform/latest/alerts-api/)
 For all Search Request API use access level (custom) and custom access level (View All)
+This access level is used for collecting Alerts.
 
 ![ScreenShot](./docs/carbonblack_credentials_custom.png)
 
