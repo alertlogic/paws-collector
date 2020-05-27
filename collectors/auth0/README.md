@@ -20,7 +20,7 @@ You can define allowed permissions in the Permissions tab of the Auth0 Dashboard
 
 ### 2. CloudFormation Template (CFT)
 
-Refer to [CF template readme](./cfn/README.md) for installation instructions.
+Refer to [CF template readme](./cfn/README-AUTH0.md) for installation instructions.
 
 # How it works
 
