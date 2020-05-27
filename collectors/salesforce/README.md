@@ -8,7 +8,7 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
 
-### 1. How to obtain an API Secret Key and API ID
+### 1. Attach JWT to Salesforce
 Before these steps ensure a digital certificate is generated. 
 
 1. Configure a Permission Set
