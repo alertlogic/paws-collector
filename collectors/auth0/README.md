@@ -1,37 +1,26 @@
-# Carbonblack collector
-Alert Logic Carbonblack AWS Based API Poll (PAWS) Log Collector Library.
+# Auth0 collector
+Alert Logic Auth0 AWS Based API Poll (PAWS) Log Collector Library.
 
 # Overview
 This repository contains the AWS JavaScript Lambda function and CloudFormation 
-Template (CFT) for deploying a log collector in AWS which will poll 3rd party service API to collect and 
-forward logs to the Alert Logic CloudInsight backend services.
+Template (CFT) for deploying a log collector in AWS which will poll 3rd party service API to collect and forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
 
 ### 1. How to obtain an API Secret Key and API ID
 
-[Authentication](https://developer.carbonblack.com/reference/carbon-black-cloud/authentication/)
+1. In the APIs section of the Auth0 dashboard, click Create API.
+2. Provide a name and an identifier for your API, for example, https://quickstarts/api. You will use the identifier as an audience later, when you are configuring the Access Token verification. Leave the Signing Algorithm as RS256.
+![ScreenShot](./docs/auth0_2.png)
+3. Permissions let you define how resources can be accessed on behalf of the user with a given access token. For example, you might choose to grant read access to the messages resource if users have the manager access level, and a write access to that resource if they have the administrator access level.
+You can define allowed permissions in the Permissions tab of the Auth0 Dashboard's APIs section.
+![ScreenShot](./docs/auth0_3.png)
+4. On the Applications page of the Auth0 Dashboard, locate your Application and click its name to view the available settings. The generated client ID and client secret are found here.
 
-1. Log into your Carbon Black Cloud Organization.
-2. Navigate to Settings > API Keys.
-3. Click “Add API Key”.
-4. Configure Name, Access Level, etc.
-5. Obtain your API Secret Key and API ID pair.
-
-[AuditLogEvents](https://developer.carbonblack.com/reference/carbon-black-cloud/cb-defense/latest/rest-api/)
-For Audit Log Events API use access level - API
-
-![ScreenShot](./docs/carbonblack_credentials_api.png)
-
-[SearchRequest](https://developer.carbonblack.com/reference/carbon-black-cloud/platform/latest/alerts-api/)
-For all Search Request API use access level (custom) and custom access level (View All)
-This access level is used for collecting Alerts.
-
-![ScreenShot](./docs/carbonblack_credentials_custom.png)
 
 ### 2. CloudFormation Template (CFT)
 
-Refer to [CF template readme](./cfn/README-CARBONBLACK.md) for installation instructions.
+Refer to [CF template readme](./cfn/README-AUTH0.md) for installation instructions.
 
 # How it works
 
@@ -59,17 +48,17 @@ an AWS Scheduled Event that occurs every 15 minutes.
 ### 1. Creating New Collector Types
 run `npm run create-collector <<name>> <<version>> <<console log info prefix>>` to create a skeleton collector in the `collectors` folder.
 
-example `npm run create-collector carbonblack 1.0.0 CABL`
+example `npm run create-collector auth0 1.0.0 AUTZ`
 
 ### 2. Build collector
 Clone this repository and build a lambda package by executing:
 ```
 $ git clone https://github.com/alertlogic/paws-collector.git
-$ cd paws-collector/collectors/carbonblack
+$ cd paws-collector/collectors/auth0
 $ make deps test package
 ```
 
-The package name is *al-carbonblack-collector.zip*
+The package name is *al-auth0-collector.zip*
 
 ### 3. Debugging
 
@@ -87,7 +76,6 @@ Or set an environment variable called "DEBUG" in your AWS stack (using the AWS
 console) for a collector AWS Lambda function, with value "index" or "\*".
 
 See [debug](https://www.npmjs.com/package/debug) for further details.
-
 
 ### 4. Invoking locally
 

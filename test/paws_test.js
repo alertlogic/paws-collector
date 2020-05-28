@@ -2,6 +2,7 @@ const assert = require('assert');
 const sinon = require('sinon');
 var AWS = require('aws-sdk-mock');
 const m_response = require('cfn-response');
+const ddLambda = require('datadog-lambda-js');
 
 const pawsMock = require('./paws_mock');
 var m_alCollector = require('@alertlogic/al-collector-js');
@@ -202,6 +203,30 @@ describe('Unit Tests', function() {
         AWS.restore('SSM');
     });
     
+    describe('Send DD metric Tests', function(){
+        it('sends DD metric', function(done){
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+            
+            const ddLambdaSendMetricStub = sinon.stub(ddLambda, 'sendDistributionMetric').callsFake(() => true);
+
+            TestCollector.load().then(function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                collector.reportDDMetric('test_metric', 2);
+
+                assert(ddLambdaSendMetricStub.calledWith('paws_okta.test_metric'));
+                done();
+            });
+        });
+    });
     describe('Poll Request Tests', function() {
         it('poll request success, single state', function(done) {
             let ctx = {

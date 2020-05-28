@@ -12,10 +12,10 @@ const debug = require('debug') ('index');
 
 const SalesforceCollector = require('./collector').SalesforceCollector;
 
-exports.handler = function(event, context) {
+exports.handler = SalesforceCollector.makeHandler(function(event, context) {
     debug('input event: ', event);
     SalesforceCollector.load().then(function(creds) {
         var salesforcec = new SalesforceCollector(context, creds);
         salesforcec.handleEvent(event);
     });
-};
+});

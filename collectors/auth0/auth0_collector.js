@@ -15,6 +15,7 @@ const parse = require('@alertlogic/al-collector-js').Parse;
 const ManagementClient = require('auth0').ManagementClient;
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const packageJson = require('./package.json');
+const utils = require("./utils");
 
 const typeIdPaths = [
     { path: ['type'] }
@@ -29,7 +30,7 @@ const HOSTNAME_REGEXP = /^[htps]*:\/\/|\/$/gi;
 
 class Auth0Collector extends PawsCollector {
 
-    constructor(context, creds){
+    constructor(context, creds) {
         super(context, creds, packageJson.version);
     }
     
@@ -43,29 +44,21 @@ class Auth0Collector extends PawsCollector {
 
     pawsGetLogs(state, callback) {
         let collector = this;
-        const hostname = process.env.paws_endpoint.replace(HOSTNAME_REGEXP, '');
+        const hostname = collector.pawsDomainEndpoint;
         const auth0Client = new ManagementClient({
             domain: hostname,
             clientId: collector.clientId,
             clientSecret: collector.secret,
             scope: 'read:logs'
         });
-        let params = state.last_log_id ? {from: state.last_log_id} : {q: "date=[" + state.since + " TO *]", sort: "date:1"};
-        const collection = auth0Client.getLogs(params);
-        let logAcc = [];
-        collection.each(log => {
-            logAcc.push(log);
-        })
-        .then(() => {
-            const nextLogId = (logAcc.length > 0) ? logAcc[logAcc.length-1].log_id : state.last_log_id;
-            const lastLogTs = (logAcc.length > 0) ? logAcc[logAcc.length-1].date : null;
-            const newState = collector._getNextCollectionState(state, nextLogId, lastLogTs);
-            console.info(`AUTZ000002 Next collection in ${newState.poll_interval_sec} seconds`);
-            return callback(null, logAcc, newState, newState.poll_interval_sec);
-        })
-        .catch((error) => {
-            return callback(error);
-        });
+        utils.getAPILogs(auth0Client, state, [], process.env.paws_max_pages_per_invocation)
+            .then(({ accumulator, nextLogId, lastLogTs }) => {
+                const newState = collector._getNextCollectionState(state, nextLogId, lastLogTs);
+                console.info(`AUTZ000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                return callback(null, accumulator, newState, newState.poll_interval_sec);
+            }).catch((error) => {
+                return callback(error);
+            });
     }
 
     _getNextCollectionState(curState, nextLogId, lastLogTs) {
@@ -76,8 +69,17 @@ class Auth0Collector extends PawsCollector {
         const nextPollInterval = nowMoment.diff(lastLogMoment, 'seconds') > this.pollInterval ?
                 1 : this.pollInterval;
 
-        return  {
+        if (nextLogId === null) {
+            //If collector initial call and get empty logs then this condition will work
+            return {
+                since: curState.since,
+                poll_interval_sec: 1
+            };
+        }
+
+        return {
             last_log_id: nextLogId,
+            last_collected_ts: lastLogTs,
             poll_interval_sec: nextPollInterval
         };
     }
