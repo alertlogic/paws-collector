@@ -13,11 +13,11 @@ forward logs to the Alert Logic CloudInsight backend services.
 [Authentication](https://api-docs.amp.cisco.com/api_resources?api_host=api.amp.cisco.com&api_version=v1)
 
 1. Log in to your AMP for Endpoints Console.
-2. Go to Accounts > API Credentials.
+2. Go to Accounts > API Credentials.<br />
 ![ScreenShot](./docs/Ciscoamp_img1.png)
-3. Click on `New API Credential`.
+3. Click on `New API Credential`.<br />
 ![ScreenShot](./docs/Ciscoamp_img2.png)
-4. Popup window will open > Set your Application name with Scope `Read-only` and Click on Create. button.
+4. Popup window will open > Set your Application name with Scope `Read-only` and Click on Create. button.<br />
 ![ScreenShot](./docs/Ciscoamp_img3.png)
 
 ### 2. API Object List 
