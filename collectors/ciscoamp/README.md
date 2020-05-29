@@ -8,23 +8,41 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
 
+### 1. How to obtain an API Client ID and API Key
+
+[Authentication](https://api-docs.amp.cisco.com/api_resources?api_host=api.amp.cisco.com&api_version=v1)
+
+1. Log in to your AMP for Endpoints Console.
+2. Go to Accounts > API Credentials.
+   ![ScreenShot](./docs/Ciscoamp_img1.png)
+3. Click on `New API Credential`.
+   ![ScreenShot](./docs/Ciscoamp_img2.png)
+4. Popup window will open > Set your Application name with Scope `Read-only` and Click on Create. button.
+   ![ScreenShot](./docs/Ciscoamp_img3.png)
+
+### 2. API Object List 
+[AuditLogs](https://api-docs.amp.cisco.com/api_actions/details?api_action=GET+%2Fv1%2Faudit_logs&api_host=api.amp.cisco.com&api_resource=AuditLog&api_version=v1),
+[Events](https://api-docs.amp.cisco.com/api_actions/details?api_action=GET+%2Fv1%2Fevents&api_host=api.amp.cisco.com&api_resource=Event&api_version=v1)  
+
+### 3. CloudFormation Template (CFT)
+
 Refer to [CF template readme](./cfn/README.md) for installation instructions.
 
 # How it works
 
-## Update Trigger
+### 1. Update Trigger
 
 The `Updater` is a timer triggered function that runs a deployment sync operation 
 every 12 hours in order to keep the collector lambda function up to date.
 The `Updater` syncs from the Alert Logic S3 bucket where you originally deployed from.
 
-## Collection Trigger
+### 2. Collection Trigger
 
 The `Collector` function is an AWS lambda function which is triggered by SQS which contains collection state message.
 During each invocation the function polls 3rd party service log API and sends retrieved data to 
 AlertLogic `Ingest` service for further processing.
 
-## Checkin Trigger
+### 3. Checkin Trigger
 
 The `Checkin` Scheduled Event trigger is used to report the health and status of 
 the Alert Logic AWS lambda collector to the `Azcollect` back-end service based on 
@@ -33,10 +51,12 @@ an AWS Scheduled Event that occurs every 15 minutes.
 
 # Development
 
-## Creating New Collector Types
-run `npm run create-collector <<name>> <<version>>` to create a skeleton collector in the `collectors` folder.
+### 1. Creating New Collector Types
+run `npm run create-collector <<name>> <<version>> <<console log info prefix>>` to create a skeleton collector in the `collectors` folder.
 
-## Build collector
+example `npm run create-collector ciscoamp 1.0.0 CAMP`
+
+### 2. Build collector
 Clone this repository and build a lambda package by executing:
 ```
 $ git clone https://github.com/alertlogic/paws-collector.git
@@ -46,7 +66,7 @@ $ make deps test package
 
 The package name is *al-ciscoamp-collector.zip*
 
-## Debugging
+### 3. Debugging
 
 To get a debug trace, set an Node.js environment variable called DEBUG and
 specify the JavaScript module/s to debug.
@@ -63,15 +83,7 @@ console) for a collector AWS Lambda function, with value "index" or "\*".
 
 See [debug](https://www.npmjs.com/package/debug) for further details.
 
-## Invoking locally
-
-Generating Client ID and API Key:
-
-```
-Log in to your AMP for Endpoints Console.
-Go to Accounts > Business Settings.
-Click Configure API Credentials under Features to generate the Client ID and secure API Key.
-```
+### 4. Invoking locally
 
 In order to invoke lambda locally please follow the [instructions](https://docs.aws.amazon.com/lambda/latest/dg/sam-cli-requirements.html) to install AWS SAM.
 AWS SAM uses `default` credentials profile from `~/.aws/credentials`.
