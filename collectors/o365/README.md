@@ -3,6 +3,11 @@
 Alert Logic Office365 AWS Based API Poll (PAWS) Log Collector Library.
 
 # Overview
+
+The instructions in this document are for a new setup of the Microsoft Office 365 log collector.
+If you need to reference instructions or information for the older setup of the log collector,
+see [Set Up Collection of Microsoft Office 365 Logs](https://docs.alertlogic.com/prepare/office365-log-collector.htm).
+
 This repository contains the AWS JavaScript Lambda function and CloudFormation 
 Template (CFT) for deploying a log collector in AWS which will poll 3rd party service API to collect and 
 forward logs to the Alert Logic CloudInsight backend services.
