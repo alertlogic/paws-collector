@@ -19,14 +19,13 @@ function getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvoca
                         return reject(res.message);
                     } else {
                         if (Authentication === state.object) {
-                            if (res.response.authlogs > 0) {
+                            if (res.response.authlogs.length > 0) {
                                 accumulator.push(...res.response.authlogs);
                             }
                             if (res.response.metadata.next_offset) {
-                                objectDetails.query = {
-                                    next_offset: res.response.metadata.next_offset,
-                                    limit: 1000
-                                };
+                                Object.assign(objectDetails.query, {
+                                    next_offset: res.response.metadata.next_offset.join()
+                                });
                                 getData();
                             }
                             else {
@@ -69,23 +68,21 @@ function getAPIDetails(state) {
         mintime: state.mintime
     };;
 
-
     switch (state.object) {
         case Authentication:
             url = `/admin/v2/logs/authentication`;
-            typeIdPaths = [];
-            if (state.nextPage) {
-                query = {
-                    next_offset: state.nextPage,
-                    limit: 1000
-                };
-            } else {
-                query = {
-                    mintime: state.mintime,
-                    maxtime: state.maxtime,
-                    limit: 1000
-                };
-            }
+            typeIdPaths = [{ path: ['txid'] }];
+
+            query = state.nextPage ? {
+                next_offset: state.nextPage
+            } : {};
+
+            Object.assign(query, {
+                mintime: state.mintime,
+                maxtime: state.maxtime,
+                limit: 1000
+            });
+
             break;
         case Administrator:
             url = `/admin/v1/logs/administrator`;

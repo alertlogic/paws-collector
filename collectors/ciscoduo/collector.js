@@ -90,17 +90,14 @@ class CiscoduoCollector extends PawsCollector {
 
         utils.getAPILogs(client, objectDetails, state, [], process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextPage }) => {
-                console.log(accumulator.length);
-                console.log(nextPage);
                 let newState;
                 if (nextPage === undefined) {
                     newState = this._getNextCollectionState(state);
                 } else {
                     newState = this._getNextCollectionStateWithNextPage(state, nextPage);
                 }
-                console.log(newState);
                 console.info(`CDUO000002 Next collection in ${newState.poll_interval_sec} seconds`);
-                return callback(null, [], newState, newState.poll_interval_sec);
+                return callback(null, accumulator, newState, newState.poll_interval_sec);
             }).catch((error) => {
                 return callback(error);
             });
