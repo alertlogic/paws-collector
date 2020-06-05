@@ -51,15 +51,15 @@
             "Type": "String",
             "Default": "none"
         },
-        "CiscoduoPawsEndpoint": {
+        "CiscoduoEndpoint": {
             "Description": "Cisco Duo API hostname.",
             "Type": "String"
         },
-        "CiscoduoPawsClientId": {
+        "CiscoduoClientId": {
             "Description": "Cisco Duo Integration key for authentication.",
             "Type": "String"
         },
-        "CiscoduoPawsSecret": {
+        "CiscoduoSecret": {
             "Description": "Cisco Duo Secret key for authentication.",
             "Type": "String",
             "NoEcho": true
@@ -96,10 +96,10 @@
             "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
             "CollectorId" : { "Ref":"CollectorId" },
             "PollingInterval" : 60,
-            "PawsEndpoint" : { "Ref":"CiscoduoPawsEndpoint" },
+            "PawsEndpoint" : { "Ref":"CiscoduoEndpoint" },
             "PawsAuthType" : "oauth2",
-            "PawsClientId" : { "Ref":"CiscoduoPawsClientId" },
-            "PawsSecret" : { "Ref":"CiscoduoPawsSecret" },
+            "PawsClientId" : { "Ref":"CiscoduoClientId" },
+            "PawsSecret" : { "Ref":"CiscoduoSecret" },
             "CollectorParamString1" : { "Ref":"CiscoduoObjectNames" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }
