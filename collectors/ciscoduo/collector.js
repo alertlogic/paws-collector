@@ -57,6 +57,13 @@ class CiscoduoCollector extends PawsCollector {
         return callback(null, initialStates, 1);
     }
 
+    pawsGetRegisterParameters(event, callback) {
+        const regValues = {
+            ciscoduoObjectNames: process.env.paws_collector_param_string_1
+        };
+        callback(null, regValues);
+    }
+
     pawsGetLogs(state, callback) {
         let collector = this;
 
@@ -107,7 +114,7 @@ class CiscoduoCollector extends PawsCollector {
 
         if (curState.object === Authentication) {
 
-            const untilMoment = moment(curState.until);
+            const untilMoment = moment(parseInt(curState.maxtime));
 
             const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
 

@@ -66,7 +66,7 @@ function getAPIDetails(state) {
     let method = "GET";
     let query = {
         mintime: state.mintime
-    };;
+    };
 
     switch (state.object) {
         case Authentication:
