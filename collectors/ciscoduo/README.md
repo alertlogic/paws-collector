@@ -12,8 +12,8 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 1. Sign up for a Duo account.
 2. Contact Duo Support to request Admin API access.
-3. Log in to the Duo Admin Panel and navigate to Applications.
-![ScreenShot](./docs/Ciscoduo_img1.png)
+3. Log in to the Duo Admin Panel and navigate to Applications.<br />
+![ScreenShot](./docs/Ciscoduo_img1.png)<br />
 4. Click Protect an Application and locate the entry for Admin API in the applications list. Click Protect to the far-right to configure the application and get your integration key, secret key, and API hostname. You'll need this information to complete your setup. See Protecting Applications for more information about protecting applications in Duo and additional application options.
 ![ScreenShot](./docs/Ciscoduo_img2.png)
 5. Determine what permissions you want to grant to this Admin API application:
