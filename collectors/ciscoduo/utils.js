@@ -94,7 +94,7 @@ function getAPIDetails(state) {
             break;
         case OfflineEnrollment:
             url = `/admin/v1/logs/offline_enrollment`;
-            typeIdPaths = [];
+            typeIdPaths = [{ path: ['action'] }];
             break;
         default:
             url = null;
