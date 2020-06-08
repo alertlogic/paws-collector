@@ -67,7 +67,7 @@
         "CiscoduoObjectNames": {
             "Description": "Define Object names. Please pass JSON formatted list.",
             "Type": "String",
-            "Default": "[\"Authentication\", \"Administrator\",\"Telephony\", \"OfflineEnrollment\"]"
+            "Default": "[\"Authentication\", \"Administrator\", \"Telephony\", \"OfflineEnrollment\"]"
         },
         "CollectionStartTs": {
             "Description": "Timestamp when log collection starts. For example, 2019-11-21T16:00:00Z",
