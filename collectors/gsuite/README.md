@@ -20,7 +20,7 @@ forward logs to the Alert Logic CloudInsight backend services.
 ### 2. Google Cloud platform Setup
 
 1. how to create a Google Cloud project [Link](https://console.cloud.google.com/home/dashboard)<br />
-   - Click the top left dropdown menu, then New Project
+   - Click the top left dropdown menu, then New Project <br />
    Note: Preferably create the cloud project with the same user as created in the previous section.
 2. Enable ‘Admin API’ [Link](https://console.cloud.google.com/apis/library/admin.googleapis.com)
 3. Create a service account [Link](https://developers.google.com/identity/protocols/OAuth2ServiceAccount#creatinganaccount)<br />
