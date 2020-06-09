@@ -12,21 +12,25 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 ### 1. G Suite Setup
 
-1. Create a Custom admin role. [Link](https://support.google.com/a/answer/1219251?hl=en&ref_topic=4514341)
-2. This admin role should have ‘Reports’ privilege.
-3. Create an admin user and assign him the role created above.
+1. Create a Custom admin role. [Link](https://support.google.com/a/answer/2406043)
+2. Create a custom admin role with the 'Reports' privilege assigned
+3. Create an admin user, assigning the previously created role
 4. Enable API access for G Suite. [Link](https://support.google.com/a/answer/60757?authuser=3)
 
 ### 2. Google Cloud platform Setup
 
-1. Create a google cloud project [Link](https://console.cloud.google.com/home/dashboard)<br />
+1. how to create a Google Cloud project [Link](https://console.cloud.google.com/home/dashboard)<br />
+   - Click the top left dropdown menu, then New Project
    Note: Preferably create the cloud project with the same user as created in the previous section.
 2. Enable ‘Admin API’ [Link](https://console.cloud.google.com/apis/library/admin.googleapis.com)
 3. Create a service account [Link](https://developers.google.com/identity/protocols/OAuth2ServiceAccount#creatinganaccount)<br />
    Note: Preferably download the JSON creds file.
 4. Delegating domain-wide authority to the service account [Link](https://developers.google.com/identity/protocols/OAuth2ServiceAccount#delegatingauthority)<br />
-   Note: In Step 6 add scope as : https://www.googleapis.com/auth/admin.reports.audit.readonly
-5. Add app [Link](https://support.google.com/a/answer/45690?hl=en)    
+   Note: In Step 4 add scope as : https://www.googleapis.com/auth/admin.reports.audit.readonly
+5. - At the top right, click Add Services. 
+   - Find the Add Services link at the top right
+   - Below the subscription you want to add, click Add It Now.
+   - Follow the on-screen instructions to add the service to your organization's Google Account [Link](https://support.google.com/a/answer/45690?hl=en)    
 
 ### 3. CloudFormation Template (CFT)   
 
