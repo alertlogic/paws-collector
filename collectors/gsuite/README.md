@@ -19,12 +19,12 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 ### 2. Google Cloud platform Setup
 
-1. Create a google cloud project [Link](https://console.cloud.google.com/home/dashboard)
+1. Create a google cloud project [Link](https://console.cloud.google.com/home/dashboard)<br />
    Note: Preferably create the cloud project with the same user as created in the previous section.
 2. Enable ‘Admin API’ [Link](https://console.cloud.google.com/apis/library/admin.googleapis.com)
-3. Create a service account [Link](https://developers.google.com/identity/protocols/OAuth2ServiceAccount#creatinganaccount)
+3. Create a service account [Link](https://developers.google.com/identity/protocols/OAuth2ServiceAccount#creatinganaccount)<br />
    Note: Preferably download the JSON creds file.
-4. Delegating domain-wide authority to the service account [Link](https://developers.google.com/identity/protocols/OAuth2ServiceAccount#delegatingauthority)
+4. Delegating domain-wide authority to the service account [Link](https://developers.google.com/identity/protocols/OAuth2ServiceAccount#delegatingauthority)<br />
    Note: In Step 6 add scope as : https://www.googleapis.com/auth/admin.reports.audit.readonly
 5. Add app [Link](https://support.google.com/a/answer/45690?hl=en)    
 
