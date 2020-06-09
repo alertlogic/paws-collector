@@ -19,7 +19,14 @@ forward logs to the Alert Logic CloudInsight backend services.
 5. Determine what permissions you want to grant to this Admin API application:
 ![ScreenShot](./docs/Ciscoduo_img3.png)
 
-### 2. CloudFormation Template (CFT)
+### 2. API Object List
+
+[Authentication](https://duo.com/docs/adminapi#authentication-logs),
+[Administrator](https://duo.com/docs/adminapi#administrator-logs),
+[Telephony](https://duo.com/docs/adminapi#telephony-logs),
+[OfflineEnrollment](https://duo.com/docs/adminapi#offline-enrollment-logs)
+
+### 3. CloudFormation Template (CFT)
 
 Refer to [CF template readme](./cfn/README-CISCODUO.md) for installation instructions.
 

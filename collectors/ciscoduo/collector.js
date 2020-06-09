@@ -152,6 +152,7 @@ class CiscoduoCollector extends PawsCollector {
                 poll_interval_sec: 1
             };
         } else {
+            //There is no next page concept for this API, So Setting up the next state mintime using the last log (Unix timestamp + 1).
             return {
                 object: curState.object,
                 mintime: nextPage,
