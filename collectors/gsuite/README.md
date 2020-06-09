@@ -11,15 +11,14 @@ forward logs to the Alert Logic CloudInsight backend services.
 # Installation
 
 ### 1. G Suite Setup
-
-1. Create a Custom admin role. [Link](https://support.google.com/a/answer/2406043)
-2. Create a custom admin role with the 'Reports' privilege assigned
-3. Create an admin user, assigning the previously created role
-4. Enable API access for G Suite. [Link](https://support.google.com/a/answer/60757?authuser=3)
+ 
+1. Create a custom admin role with the 'Reports' privilege assigned. [Link](https://support.google.com/a/answer/2406043)
+2. Create an admin user, assigning the previously created role
+3. Enable API access for G Suite. [Link](https://support.google.com/a/answer/60757?authuser=3)
 
 ### 2. Google Cloud platform Setup
 
-1. how to create a Google Cloud project [Link](https://console.cloud.google.com/home/dashboard)<br />
+1. Create a Google Cloud project [Link](https://console.cloud.google.com/home/dashboard)<br />
    - Click the top left dropdown menu, then New Project <br />
    Note: Preferably create the cloud project with the same user as created in the previous section.
 2. Enable ‘Admin API’ [Link](https://console.cloud.google.com/apis/library/admin.googleapis.com)
