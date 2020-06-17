@@ -25,6 +25,8 @@ ln -sf ${SRC_SAM_TEMPLATE} ${RUN_DIR}/${SAM_TEMPLATE_NAME}
 ln -sf ${SRC_ENV_FILE} ${RUN_DIR}/${ENV_FILE_NAME}
 ln -sf ${SRC_EVENT_FILE} ${RUN_DIR}/${EVENT_FILE_NAME}
 cd ${RUN_DIR} && \
+# --docker-network host \ added this for accessing Host localhost from docker container.
+# if you are using mac then pass endpoint as a docker.for.mac.localhost
 sam local invoke \
     --env-vars ${ENV_FILE_NAME} \
     --docker-network host \

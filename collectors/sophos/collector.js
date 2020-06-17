@@ -60,8 +60,9 @@ class SophosCollector extends PawsCollector {
         console.info(`SOPH000001 Collecting data from ${state.since} till ${state.until}`);
 
         utils.authenticate(hostName, clientId, clientSecret).then((token) => {
+            // while runing on live api server pass getTenantIdAndDataRegion hostname value "api.central.sophos.com"
             utils.getTenantIdAndDataRegion(hostName, token).then((response) => {
-                console.log(response.apiHosts.dataRegion);
+                // while runing on live api server pass getAPILogs hostname value response.apiHosts.dataRegion
                 utils.getAPILogs(hostName, token, response.id, state, [], process.env.paws_max_pages_per_invocation)
                     .then(({ accumulator, nextPage }) => {
                         let newState;
@@ -70,7 +71,6 @@ class SophosCollector extends PawsCollector {
                         } else {
                             newState = this._getNextCollectionStateWithNextPage(state, nextPage);
                         }
-                        console.log(accumulator);
                         console.info(`SOPH000002 Next collection in ${newState.poll_interval_sec} seconds`);
                         return callback(null, accumulator, newState, newState.poll_interval_sec);
                     }).catch((error) => {
