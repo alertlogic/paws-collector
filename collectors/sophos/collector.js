@@ -63,7 +63,9 @@ class SophosCollector extends PawsCollector {
             // while runing on live api server pass getTenantIdAndDataRegion hostname value "api.central.sophos.com"
             utils.getTenantIdAndDataRegion(hostName, token).then((response) => {
                 // while runing on live api server pass getAPILogs hostname value response.apiHosts.dataRegion
-                utils.getAPILogs(hostName, token, response.id, state, [], process.env.paws_max_pages_per_invocation)
+                //const apiHostsURL = response.apiHosts.dataRegion.replace(/^https:\/\/|\/$/g, '');
+                const apiHostsURL = hostName;
+                utils.getAPILogs(apiHostsURL, token, response.id, state, [], process.env.paws_max_pages_per_invocation)
                     .then(({ accumulator, nextPage }) => {
                         let newState;
                         if (nextPage === undefined) {
