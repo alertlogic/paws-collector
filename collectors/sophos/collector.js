@@ -51,7 +51,7 @@ class SophosCollector extends PawsCollector {
         if (!clientId) {
             return callback("The Client ID was not found!");
         }
-
+        //while runing on live api server pass end point value "https://id.sophos.com"
         const hostName = collector.pawsDomainEndpoint;
         if (!hostName) {
             return callback("The Host Name was not found!");

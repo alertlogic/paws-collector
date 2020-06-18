@@ -4,7 +4,7 @@ Content-Type: application/json; charset=utf-8
 {
    "pages": {
         "fromKey": "<from-key>",
-        "nextKey": "",
+        "nextKey": "nextKey",
         "size": 50,
         "maxSize": 100
     }, 

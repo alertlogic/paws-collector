@@ -51,21 +51,17 @@
             "Type": "String",
             "Default": "none"
         },
-        "PawsEndpoint": {
-            "Description": "URL to poll",
-            "Type": "String"
-        },
-        "PawsAuthType": {
-            "Description": "Target API authentication type. Supported types: ssws, oauth2",
+        "SophosEndpoint": {
+            "Description": "Sophos end point URL.",
             "Type": "String",
-            "Default": "ssws"
+            "Default": "https://id.sophos.com"
         },
-        "PawsClientId": {
-            "Description": "Client ID for oauth2 authentication type",
+        "SophosClientId": {
+            "Description": "Sophos Client Id for authentication.",
             "Type": "String"
         },
-        "PawsSecret": {
-            "Description": "Client secret for oauth2 or secret token for ssws.",
+        "SophosSecret": {
+            "Description": "Sophos Secret key for authentication.",
             "Type": "String",
             "NoEcho": true
         },
@@ -96,10 +92,10 @@
             "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
             "CollectorId" : { "Ref":"CollectorId" },
             "PollingInterval" : 60,
-            "PawsEndpoint" : { "Ref":"PawsEndpoint" },
-            "PawsAuthType" : { "Ref":"PawsAuthType" },
-            "PawsClientId" : "",
-            "PawsSecret" : { "Ref":"PawsSecret" },
+            "PawsEndpoint" : { "Ref":"SophosEndpoint" },
+            "PawsAuthType" : "oauth2",
+            "PawsClientId" : { "Ref":"SophosClientId" },
+            "PawsSecret" : { "Ref":"SophosSecret" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }
         }
