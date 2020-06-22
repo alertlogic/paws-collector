@@ -1,0 +1,63 @@
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{
+   "pages": {
+        "fromKey": "<from-key>",
+        "nextKey": "nextKey",
+        "size": 50,
+        "maxSize": 100
+    }, 
+   "items":[
+      {
+         "id":"1E623A9B-A54D-432A-A514-02FEDDC080B5",
+         "description":"Controlled application blocked: Quake (Game)",
+         "type":"Event::Endpoint::Application::Blocked",
+         "groupKey":"APPLICATION_CONTROL",
+         "severity":"medium",
+         "category":"applicationControl",
+         "product":"endpoint",
+         "tenant":{
+            "id":"26AE6B83-088F-4708-8103-BAA4E76B1048"
+         },
+         "managedAgent":{
+            "id":"6B64BFA4-A773-487B-B44F-8D635609A79A",
+            "type":"computer"
+         },
+         "person":{
+            "id":"4CC323EE-6D93-4CC5-AD3E-7AF5DC3B1AB9"
+         },
+         "raisedAt":"2020-05-30T13:49:11.000Z",
+         "allowedActions":[
+            "acknowledge",
+            "authPua",
+            "contactSupport"
+         ]
+      },
+      {
+         "id":"1E623A9B-A54D-432A-A514-02FEDDC080B5",
+         "description":"Controlled application blocked: Quake (Game)",
+         "type":"Event::Endpoint::Application::Blocked",
+         "groupKey":"APPLICATION_CONTROL",
+         "severity":"medium",
+         "category":"applicationControl",
+         "product":"endpoint",
+         "tenant":{
+            "id":"26AE6B83-088F-4708-8103-BAA4E76B1048"
+         },
+         "managedAgent":{
+            "id":"6B64BFA4-A773-487B-B44F-8D635609A79A",
+            "type":"computer"
+         },
+         "person":{
+            "id":"4CC323EE-6D93-4CC5-AD3E-7AF5DC3B1AB9"
+         },
+         "raisedAt":"2020-05-30T10:49:11.000Z",
+         "allowedActions":[
+            "acknowledge",
+            "authPua",
+            "contactSupport"
+         ]
+      }
+   ]
+}
