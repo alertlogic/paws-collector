@@ -12,7 +12,7 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 1. Sign in to Sophos Central Admin. Go to https://central.sophos.com/manage. Click 'Global Settings' and then click the "API Credentials" link. <br /><br />
 ![ScreenShot](./docs/sophos_img1.png)<br />
-2. Click on "API Credential".<br /><br />
+2. Click on "Add Credential".<br /><br />
 ![ScreenShot](./docs/sophos_img2.png)<br />
 3. Supply a name for your credential set and a description, then click 'Add'.<br /><br />
 ![ScreenShot](./docs/sophos_img3.png)<br />
