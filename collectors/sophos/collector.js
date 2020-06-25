@@ -20,6 +20,9 @@ const typeIdPaths = [{ path: ['id'] }];
 
 const tsPaths = [{ path: ["raisedAt"] }];
 
+//Sophos base endpoints. These appear to be universal per the docs
+const SOPHOS_AUTH_BASE_URL = "id.sophos.com";
+const SOPHOS_API_BASE_URL = "api.central.sophos.com";
 
 class SophosCollector extends PawsCollector {
     constructor(context, creds) {
@@ -59,12 +62,10 @@ class SophosCollector extends PawsCollector {
 
         console.info(`SOPH000001 Collecting data from ${state.since} till ${state.until}`);
 
-        utils.authenticate(hostName, clientId, clientSecret).then((token) => {
+        utils.authenticate(SOPHOS_AUTH_BASE_URL, clientId, clientSecret).then((token) => {
             // while runing on live api server pass getTenantIdAndDataRegion hostname value "api.central.sophos.com"
-            utils.getTenantIdAndDataRegion(hostName, token).then((response) => {
-                // while runing on live api server pass getAPILogs hostname value response.apiHosts.dataRegion
-                //const apiHostsURL = response.apiHosts.dataRegion.replace(/^https:\/\/|\/$/g, '');
-                const apiHostsURL = hostName;
+            utils.getTenantIdAndDataRegion(SOPHOS_API_BASE_URL, token).then((response) => {
+                const apiHostsURL = response.apiHosts.dataRegion.replace(/^https:\/\/|\/$/g, '');
                 utils.getAPILogs(apiHostsURL, token, response.id, state, [], process.env.paws_max_pages_per_invocation)
                     .then(({ accumulator, nextPage }) => {
                         let newState;
@@ -136,4 +137,4 @@ class SophosCollector extends PawsCollector {
 
 module.exports = {
     SophosCollector: SophosCollector
-}
+};
