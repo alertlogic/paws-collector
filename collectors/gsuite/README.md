@@ -10,23 +10,46 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
 
-Refer to [CF template readme](./cfn/README.md) for installation instructions.
+### 1. G Suite Setup
+ 
+1. Create a custom admin role with the 'Reports' privilege assigned. [Link](https://support.google.com/a/answer/2406043)
+2. Create an admin user, assigning the previously created role
+3. Enable API access for G Suite. [Link](https://support.google.com/a/answer/60757?authuser=3)
+
+### 2. Google Cloud platform Setup
+
+1. Create a Google Cloud project [Link](https://console.cloud.google.com/home/dashboard)<br />
+   - Click the top left dropdown menu, then New Project <br />
+   Note: Preferably create the cloud project with the same user as created in the previous section.
+2. Enable ‘Admin API’ [Link](https://console.cloud.google.com/apis/library/admin.googleapis.com)
+3. Create a service account [Link](https://developers.google.com/identity/protocols/OAuth2ServiceAccount#creatinganaccount)<br />
+   Note: Preferably download the JSON creds file.
+4. Delegating domain-wide authority to the service account [Link](https://developers.google.com/identity/protocols/OAuth2ServiceAccount#delegatingauthority)<br />
+   Note: In Step 4 add scope as : https://www.googleapis.com/auth/admin.reports.audit.readonly
+5. - At the top right, click Add Services. 
+   - Find the Add Services link at the top right
+   - Below the subscription you want to add, click Add It Now.
+   - Follow the on-screen instructions to add the service to your organization's Google Account [Link](https://support.google.com/a/answer/45690?hl=en)    
+
+### 3. CloudFormation Template (CFT)   
+
+Refer to [CF template readme](./cfn/README-GSUITE.md) for installation instructions.
 
 # How it works
 
-## Update Trigger
+### 1. Update Trigger
 
 The `Updater` is a timer triggered function that runs a deployment sync operation
 every 12 hours in order to keep the collector lambda function up to date.
 The `Updater` syncs from the Alert Logic S3 bucket where you originally deployed from.
 
-## Collection Trigger
+### 2. Collection Trigger
 
 The `Collector` function is an AWS lambda function which is triggered by SQS which contains collection state message.
 During each invocation the function polls 3rd party service log API and sends retrieved data to
 AlertLogic `Ingest` service for further processing.
 
-## Checkin Trigger
+### 3. Checkin Trigger
 
 The `Checkin` Scheduled Event trigger is used to report the health and status of
 the Alert Logic AWS lambda collector to the `Azcollect` back-end service based on
@@ -34,11 +57,13 @@ an AWS Scheduled Event that occurs every 15 minutes.
 
 # Development
 
-## Creating New Collector Types
+### 1. Creating New Collector Types
 
-run `npm run create-collector <<name>> <<version>> <<logging indentifier>>` to create a skeleton collector in the `collectors` folder.
+run `npm run create-collector <<name>> <<version>> <<console log info prefix>>` to create a skeleton collector in the `collectors` folder.
 
-## Build collector
+example `npm run create-collector gsuite 1.0.0 GSUI`
+
+### 2. Build collector
 
 Clone this repository and build a lambda package by executing:
 
@@ -50,7 +75,7 @@ $ make deps test package
 
 The package name is _al-gsuite-collector.zip_
 
-## Debugging
+### 3. Debugging
 
 To get a debug trace, set an Node.js environment variable called DEBUG and
 specify the JavaScript module/s to debug.
@@ -67,7 +92,7 @@ console) for a collector AWS Lambda function, with value "index" or "\*".
 
 See [debug](https://www.npmjs.com/package/debug) for further details.
 
-## Invoking locally
+### 4. Invoking locally
 
 In order to invoke lambda locally please follow the [instructions](https://docs.aws.amazon.com/lambda/latest/dg/sam-cli-requirements.html) to install AWS SAM.
 AWS SAM uses `default` credentials profile from `~/.aws/credentials`.
@@ -91,37 +116,3 @@ AWS SAM uses `default` credentials profile from `~/.aws/credentials`.
    ```
 4. Please see `local/event.json` for the event payload used for local invocation.
    Please write your readme here
-
-## Prerequisites
-
-### G Suite Setup
-
-1. Create a Custom admin role. [Learn more](https://support.google.com/a/answer/1219251?hl=en&ref_topic=4514341)
-2. This admin role should have ‘Reports’ privilege.
-3. Create an admin user and assign him the role created above.
-4. Enable API access for G Suite
-   [https://support.google.com/a/answer/60757?authuser=3](https://support.google.com/a/answer/60757?authuser=3)
-
-### Google Cloud platform Setup
-
-1. Create a google cloud project
-   [https://console.cloud.google.com/home/dashboard](https://console.cloud.google.com/home/dashboard)
-   Note: Preferably create the cloud project with the same user as created in the previous section.
-2. Enable ‘Admin API’
-   [https://console.cloud.google.com/apis/library/admin.googleapis.com](https://console.cloud.google.com/apis/library/admin.googleapis.com)
-3. Create a service account
-   [https://developers.google.com/identity/protocols/OAuth2ServiceAccount#creatinganaccount](https://developers.google.com/identity/protocols/OAuth2ServiceAccount#creatinganaccount)
-   Note: Preferably download the JSON creds file.
-4. Delegating domain-wide authority to the service account
-   [https://developers.google.com/identity/protocols/OAuth2ServiceAccount#delegatingauthority](https://developers.google.com/identity/protocols/OAuth2ServiceAccount#delegatingauthority)
-   Note: In Step 6 add scope as : https://www.googleapis.com/auth/admin.reports.audit.readonly
-
-### Setting up the Environment
-
-1. Set `$ export CREDS=$(cat /credential/file/from/previous/step.json)`
-2. Set `$ export EMAIL_ID="<replace with email set in first step>"`
-3. Set `$ export APPLICATION_NAMES="login,admin"`
-4. Then run
-   ```shell
-   $ node cli_gsuite.js --paws_creds=$CREDS --paws_email_id=$EMAIL_ID --paws_scopes=$SCOPE --paws_application_names=$APPLICATION_NAMES
-   ```
