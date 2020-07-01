@@ -1,0 +1,13 @@
+{
+    "method": "POST",
+    "url": "https://id.sophos.com/api/v2/oauth2/token",
+    "headers": {
+        "Accept": "*/*",
+        "Content-Type": "application/x-www-form-urlencoded"
+    },
+    "body": "grant_type=client_credentials&client_id={{paws_client_id}}&client_secret={{paws_secret}}&scope=token",
+    "expect": {
+        "response": 200,
+        "body": "ANY"
+    }
+}
