@@ -29,6 +29,16 @@ This access level is used for collecting Alerts.
 
 ![ScreenShot](./docs/carbonblack_credentials_custom.png)
 
+API URLs required for CarbonBlack collector
+
+| Environment (Region)   | URL                                  |
+|------------------------|--------------------------------------|
+| Prod01 (N Am)          | https://api.confer.net               |
+| Prod02 (N Am)          | https://api5.conferdeploy.net        |
+| Prod05 (N Am)          | https://api-prod05.conferdeploy.net  |
+| Prod06 (EU)            | https://api-prod06.conferdeploy.net  |
+| ProdNRT (Asia Pacific) | https://api-prodnrt.conferdeploy.net |
+
 ### 2. CloudFormation Template (CFT)
 
 Refer to [CF template readme](./cfn/README-CARBONBLACK.md) for installation instructions.
@@ -114,4 +124,3 @@ make sam-local
 ```
   4. Please see `local/event.json` for the event payload used for local invocation.
 Please write your readme here
-
