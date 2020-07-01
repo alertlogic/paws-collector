@@ -6,19 +6,19 @@ function getAPILogs(baseUrl, token, tenant_Id, state, accumulator, maxPagesPerIn
     let pageCount = 0;
     let nextPage;
 
-    let params = {
+    let startParams = {
         "from": state.since,
         "to": state.until
     };
 
-    params = state.nextPage ? Object.assign(params, {
+    startParams = state.nextPage ? Object.assign(startParams, {
         pageFromKey: state.nextPage
-    }) : params;
+    }) : startParams;
 
     let restServiceClient = new RestServiceClient(baseUrl);
 
     return new Promise(function (resolve, reject) {
-        getData(params);
+        getData(startParams);
         function getData(params) {
             if (pageCount < maxPagesPerInvocation) {
                 return restServiceClient.get(`/common/v1/alerts?${querystring.stringify(params)}`, {
