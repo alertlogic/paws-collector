@@ -33,8 +33,8 @@ In the Office 365 portal, you must register a new Office 365 web application to 
 
 1. On the main panel under the new application, select `View API Permissions`, and then click `+ Add`.
 1. Locate the `Office 365 Management APIs`, and then click `Select`.
-1. In `Application permissions`, expand then select `ActivityFeed.Read`, `ActivityFeed.ReadDlp`, `ActivityReports.Read`(both), `ServiceHealth.Read`, and `ThreatIntelligence.Read`(both). 
-1. Click `Select`, and then click `Done`. 
+1. In `Application permissions`, expand then select `ActivityFeed.Read`, `ActivityFeed.ReadDlp`, and `ServiceHealth.Read`.
+1. Click `Select`, and then click `Done`.
 1. Click `Grant Permissions`, and then click `Yes`. 
 **Note:** Only the Active Directory tenant administrator can grant permissions to an Azure Active Directory application.
 1. On the `Settings` panel for the application, select `Certificated & Secrets`.
