@@ -8,17 +8,17 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
 
+### Generate Google API key
+1. In the Google Cloud Console, open the sidebar and in the *IAM & Admin* dropdown, select *Service Accounts*.
+2. Select *Create Service Account* at the top of the list.
+3. Enter a service account name and a service account description (optional) and click *Create*.
+4. From the Role list, select *Logging*, then *Private Log Viewer* and click *Continue*.
+5. Grant any user permissions, if desired, and click *Done*.
+6. Click the *Actions* menu beside the newly created service account and select *Create Key*.
+7. Select *JSON* and click *Create*. The key will be downloaded to your computer as a JSON file.
+
+### CloudFormation Template (CFT)
 Refer to [CF template readme](./cfn/README.md) for installation instructions.
-
-## Generate Google API key file
-1. In the Google Cloud Console, go to the Create service account key page.
-2. From the Service account list, select New service account.
-3. In the Service account name field, enter a name.
-4. From the Role list, select Project > Owner.
-
-Note: The Role field authorizes your service account to access resources. You can view and change this field later by using the Cloud Console. If you are developing a production app, specify more granular permissions than Project > Owner. For more information, see granting roles to service accounts.
-
-5. Click Create. A JSON file that contains your key downloads to your computer.
 
 # How it works
 
@@ -98,4 +98,3 @@ make sam-local
 ```
   4. Please see `local/event.json` for the event payload used for local invocation.
 Please write your readme here
-
