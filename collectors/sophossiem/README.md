@@ -10,12 +10,12 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 ### 1. How to obtain token
 
-1. In Sophos Central Admin, go to Global Settings > API Token Management.
+1. In Sophos Central Admin, go to Global Settings > API Token Management.<br />
 ![ScreenShot](./docs/img1.png)<br />
-2. To create a new token, click Add token from the top-right corner of the screen.
-3. Select a token name and click Save. The API Token Summary for this token is displayed.
+2. To create a new token, click Add token from the top-right corner of the screen.<br />
+3. Select a token name and click Save. The API Token Summary for this token is displayed.<br />
 ![ScreenShot](./docs/img2.png)<br />
-4. Click Copy to copy your API Access URL + Headers from the API Token Summary section into your clipboard.
+4. Click Copy to copy your API Access URL + Headers from the API Token Summary section into your clipboard.<br />
 ![ScreenShot](./docs/img3.png)<br />
 
 ### 2. CloudFormation Template (CFT)
