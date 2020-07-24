@@ -13,75 +13,103 @@ const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const parse = require('@alertlogic/al-collector-js').Parse;
 const packageJson = require('./package.json');
+const utils = require("./utils");
 
 
-const typeIdPaths = [
-    // enter your type paths in the form { path: ['myKey'] }
-];
+const typeIdPaths = [{ path: ['id'] }];
 
-const tsPaths = [
-    // enter your timestamp paths in the form { path: ['myKey'] }
-];
+const tsPaths = [{ path: ['created_at'] }];
 
 
 class SophossiemCollector extends PawsCollector {
     constructor(context, creds) {
         super(context, creds, packageJson.version);
     }
-    
+
     pawsInitCollectionState(event, callback) {
-        const startTs = process.env.paws_collection_start_ts ? 
-                process.env.paws_collection_start_ts :
-                    moment().toISOString();
-        const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
-        const initialState = {
-            // TODO: define initial collection state specific to your collector.
-            // You will get this state back with each invocation
-            since: startTs,
-            until: endTs,
-            poll_interval_sec: 1
-        };
-        return callback(null, initialState, 1);
+        const startTs = process.env.paws_collection_start_ts ?
+            process.env.paws_collection_start_ts :
+            moment().toISOString();
+
+        //From date must be within last 24 hours
+        let from_date_UNIX;
+        if (moment().diff(startTs, 'hours') < 24) {
+            from_date_UNIX = moment(startTs).unix();
+        }
+        else {
+            from_date_UNIX = moment().subtract(23, 'hours').unix();
+        }
+
+        const objectNames = JSON.parse(process.env.paws_collector_param_string_1);
+        const initialStates = objectNames.map(objectName => {
+            return {
+                objectName,
+                from_date: from_date_UNIX,
+                poll_interval_sec: 1
+            }
+        });
+
+        return callback(null, initialStates, 1);
     }
-    
+
     pawsGetLogs(state, callback) {
         let collector = this;
-        console.info(`SIEM000001 Collecting data from ${state.since} till ${state.until}`);
-        const newState = collector._getNextCollectionState(state);
-        console.info(`SIEM000002 Next collection in ${newState.poll_interval_sec} seconds`);
-        return callback(null, [], newState, newState.poll_interval_sec);
-    }
-    
-    _getNextCollectionState(curState) {
-        const nowMoment = moment();
-        const curUntilMoment = moment(curState.until);
-        
-        // Check if current 'until' is in the future.
-        const nextSinceTs = curUntilMoment.isAfter(nowMoment) ?
-                nowMoment.toISOString() :
-                curState.until;
 
-        const nextUntilMoment = moment(nextSinceTs).add(this.pollInterval, 'seconds');
-        // Check if we're behind collection schedule and need to catch up.
-        const nextPollInterval = nowMoment.diff(nextUntilMoment, 'seconds') > this.pollInterval ?
-                1 : this.pollInterval;
+        const clientSecret = collector.secret;
+        if (!clientSecret) {
+            return callback("The Authorization token was not found!");
+        }
+
+        const x_api_key = collector.clientId;
+        if (!x_api_key) {
+            return callback("The x-api-key was not found!");
+        }
+
+        const headers = {
+            "x-api-key": x_api_key,
+            "Authorization": clientSecret
+        };
+
+        const APIHostName = collector.pawsDomainEndpoint;
+        if (!APIHostName) {
+            return callback("The Host Name was not found!");
+        }
+
+        console.info(`SIEM000001 Collecting data for ${state.objectName}`);
+
+        utils.getAPILogs(APIHostName, headers, state, [], process.env.paws_max_pages_per_invocation)
+            .then(({ accumulator, nextPage, has_more }) => {
+                const newState = collector._getNextCollectionState(state, nextPage, has_more);
+                console.info(`SIEM000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                return callback(null, [], newState, newState.poll_interval_sec);
+            }).catch((error) => {
+                return callback(error);
+            });
+    }
+
+    _getNextCollectionState(curState, nextPage, has_more) {
+        let nextPollInterval;
+
+        if (has_more) {
+            nextPollInterval = 1;
+        }
+        else {
+            nextPollInterval = this.pollInterval;
+        }
         
-        return  {
-            // TODO: define the next collection state.
-            // This needs to be in the smae format as the intial colletion state above
-             since: nextSinceTs,
-             until: nextUntilMoment.toISOString(),
-             poll_interval_sec: nextPollInterval
+        return {
+            objectName: curState.objectName,
+            nextPage: nextPage,
+            poll_interval_sec: nextPollInterval
         };
     }
-    
+
     pawsFormatLog(msg) {
-        // TODO: double check that this message parsing fits your use case
         let collector = this;
 
         const ts = parse.getMsgTs(msg, tsPaths);
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
-        
+
         let formattedMsg = {
             messageTs: ts.sec,
             priority: 11,
@@ -90,7 +118,7 @@ class SophossiemCollector extends PawsCollector {
             messageType: 'json/sophossiem',
             application_id: collector.application_id
         };
-        
+
         if (typeId !== null && typeId !== undefined) {
             formattedMsg.messageTypeId = `${typeId}`;
         }
