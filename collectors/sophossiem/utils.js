@@ -11,7 +11,7 @@ function getAPILogs(BaseAPIURL, headers, state, accumulator, maxPagesPerInvocati
     let has_more = false;
     let APIURL;
 
-    let startParams = state.nextPage ? { cursor: state.nextPage, limit:10 } : { from_date: state.from_date, limit:10 };
+    let startParams = state.nextPage ? { cursor: state.nextPage, limit: 1000 } : { from_date: state.from_date, limit: 1000 };
 
     let restServiceClient = new RestServiceClient(BaseAPIURL);
 
@@ -36,7 +36,7 @@ function getAPILogs(BaseAPIURL, headers, state, accumulator, maxPagesPerInvocati
                         accumulator.push(...response.items);
                     }
                     if (response.has_more) {
-                        params = { cursor: response.next_cursor, limit:10 };
+                        params = { cursor: response.next_cursor, limit: 1000 };
                         getData(params);
                     }
                     else {

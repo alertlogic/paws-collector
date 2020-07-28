@@ -32,24 +32,31 @@ class SophossiemCollector extends PawsCollector {
             moment().toISOString();
 
         //From date must be within last 24 hours
-        let from_date_UNIX;
+        let from_date_unix;
         if (moment().diff(startTs, 'hours') < 24) {
-            from_date_UNIX = moment(startTs).unix();
+            from_date_unix = moment(startTs).unix();
         }
         else {
-            from_date_UNIX = moment().subtract(23, 'hours').unix();
+            from_date_unix = moment().subtract(23, 'hours').unix();
         }
 
         const objectNames = JSON.parse(process.env.paws_collector_param_string_1);
         const initialStates = objectNames.map(objectName => {
             return {
                 objectName,
-                from_date: from_date_UNIX,
+                from_date: from_date_unix,
                 poll_interval_sec: 1
             }
         });
 
         return callback(null, initialStates, 1);
+    }
+
+    pawsGetRegisterParameters(event, callback) {
+        const regValues = {
+            sophossiemObjectNames: process.env.paws_collector_param_string_1
+        };
+        callback(null, regValues);
     }
 
     pawsGetLogs(state, callback) {
@@ -81,7 +88,7 @@ class SophossiemCollector extends PawsCollector {
             .then(({ accumulator, nextPage, has_more }) => {
                 const newState = collector._getNextCollectionState(state, nextPage, has_more);
                 console.info(`SIEM000002 Next collection in ${newState.poll_interval_sec} seconds`);
-                return callback(null, [], newState, newState.poll_interval_sec);
+                return callback(null, accumulator, newState, newState.poll_interval_sec);
             }).catch((error) => {
                 return callback(error);
             });
@@ -96,7 +103,7 @@ class SophossiemCollector extends PawsCollector {
         else {
             nextPollInterval = this.pollInterval;
         }
-        
+
         return {
             objectName: curState.objectName,
             nextPage: nextPage,
