@@ -50,6 +50,7 @@ describe('Unit Tests', function () {
                     initialStates.forEach((state) => {
                         assert.equal(state.poll_interval_sec, 1);
                         assert.ok(state.from_date);
+                        assert(moment().diff(moment(moment.unix(parseInt(state.from_date)).format("YYYY-MM-DDTHH:mm:ssZ")), 'hours') < 24 ,"From date must be within last 24 hours");
                     });
                     done();
                 });
@@ -65,6 +66,7 @@ describe('Unit Tests', function () {
                     initialStates.forEach((state) => {
                         assert.equal(state.poll_interval_sec, 1);
                         assert.ok(state.from_date);
+                        assert(moment().diff(moment(moment.unix(parseInt(state.from_date)).format("YYYY-MM-DDTHH:mm:ssZ")), 'hours') < 24 ,"From date must be within last 24 hours");     
                     });
                     done();
                 });
