@@ -16,6 +16,7 @@ var responseStub = {};
 var setEnvStub = {};
 
 var decryptStub = {};
+var ssmStub = {};
 
 function setAlServiceStub() {
     alserviceStub.get = sinon.stub(m_alCollector.AlServiceC.prototype, 'get').callsFake(
@@ -168,7 +169,6 @@ class TestCollectorMultiState extends PawsCollector {
 describe('Unit Tests', function() {
     beforeEach(function(){
         decryptStub = sinon.stub().callsFake(function (params, callback) {
-            console.log(params);
             const data = {
                     Plaintext : 'decrypted-sercret-key'
                 };
@@ -184,10 +184,12 @@ describe('Unit Tests', function() {
             return callback(null, data);
         });
 
-        AWS.mock('SSM', 'getParameter', function (params, callback) {
+        ssmStub = sinon.stub().callsFake(function (params, callback) {
             const data = Buffer.from('test-secret');
             return callback(null, {Parameter : { Value: data.toString('base64')}});
         });
+
+        AWS.mock('SSM', 'getParameter', ssmStub);
 
         responseStub = sinon.stub(m_response, 'send').callsFake(
             function fakeFn(event, mockContext, responseStatus, responseData, physicalResourceId) {
@@ -219,6 +221,7 @@ describe('Unit Tests', function() {
             TestCollector.load().then(function(creds) {
                 const testCred = Buffer.from('alwaysdrinkyourovaltine', 'base64');
                 assert.equal(Buffer.compare(testCred, decryptStub.args[1][0].CiphertextBlob), 0);
+                assert.equal(ssmStub.notCalled, true);
                 done();
             });
         });
