@@ -20,19 +20,28 @@ const ddLambda = require('datadog-lambda-js');
 const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector;
 const packageJson = require('./package.json');
 
-const CREDS_FILE_PATH = '/tmp/paws_creds.json';
+const CREDS_FILE_PATH = '/tmp/paws_creds';
 var PAWS_DECRYPTED_CREDS = null;
 const DOMAIN_REGEXP = /^[htps]*:\/\/|\/$/gi;
 
 function getPawsParamStoreParam(){
     return new Promise((resolve, reject) => {
+        if(fs.existsSync(CREDS_FILE_PATH)){
+            return resolve(fs.readFileSync(CREDS_FILE_PATH));
+        }
         var ssm = new AWS.SSM();
         var params = {
             Name: process.env.paws_secret_param_name
         };
-        ssm.getParameter(params, function(err, {Parameter:{Value}}) {
-            if (err) reject(err, err.stack);
-            else     resolve(Buffer.from(Value, 'base64'));
+        ssm.getParameter(params, function(err, res) {
+            if(err){
+                reject(err, err.stack);
+            } else{
+                const {Parameter:{Value}} = res;
+                const data = Buffer.from(Value, 'base64');
+                fs.writeFileSync(CREDS_FILE_PATH, data, 'base64');
+                resolve(data);
+            }
         });
     });
 }
