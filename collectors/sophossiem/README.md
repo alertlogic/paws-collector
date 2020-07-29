@@ -20,7 +20,7 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 ### 2. CloudFormation Template (CFT)
 
-Refer to [CF template readme](./cfn/README.md) for installation instructions.
+Refer to [CF template readme](./cfn/README-SOPHOSSIEM.md) for installation instructions.
 
 # How it works
 
