@@ -54,7 +54,7 @@ class SophossiemCollector extends PawsCollector {
 
     pawsGetRegisterParameters(event, callback) {
         const regValues = {
-            sophossiemObjectNames: process.env.paws_collector_param_string_1
+            sophosSiemObjectNames: process.env.paws_collector_param_string_1
         };
         callback(null, regValues);
     }

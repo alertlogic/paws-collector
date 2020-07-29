@@ -90,7 +90,7 @@ describe('Unit Tests', function () {
                 const sampleEvent = { ResourceProperties: { StackName: 'a-stack-name' } };
                 collector.pawsGetRegisterParameters(sampleEvent, (err, regValues) => {
                     const expectedRegValues = {
-                        sophossiemObjectNames: "[\"Events\", \"Alerts\"]",
+                        sophosSiemObjectNames: "[\"Events\", \"Alerts\"]",
                     };
                     assert.deepEqual(regValues, expectedRegValues);
                     done();

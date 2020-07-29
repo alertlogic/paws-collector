@@ -51,23 +51,23 @@
             "Type": "String",
             "Default": "none"
         },
-        "PawsEndpoint": {
-            "Description": "URL to poll",
+        "SophosSiemEndpoint": {
+            "Description": "Sophos Siem end point API access URL.",
             "Type": "String"
         },
-        "PawsAuthType": {
-            "Description": "Target API authentication type. Supported types: ssws, oauth2",
-            "Type": "String",
-            "Default": "ssws"
-        },
-        "PawsClientId": {
-            "Description": "Client ID for oauth2 authentication type",
+        "SophosSiemXAPIKey": {
+            "Description": "Sophos Siem x-api-key for authentication.",
             "Type": "String"
         },
-        "PawsSecret": {
-            "Description": "Client secret for oauth2 or secret token for ssws.",
+        "SophosSiemAuthorizationToken": {
+            "Description": "Sophos Siem Authorization token for authentication. eg `Basic token_value`",
             "Type": "String",
             "NoEcho": true
+        },
+        "SophosSiemObjectNames": {
+            "Description": "Define object names. Please pass JSON formatted list.",
+            "Type": "String",
+            "Default": "[\"Events\", \"Alerts\"]"
         },
         "CollectionStartTs": {
             "Description": "Timestamp when log collection starts. For example, 2019-11-21T16:00:00Z",
@@ -96,10 +96,11 @@
             "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
             "CollectorId" : { "Ref":"CollectorId" },
             "PollingInterval" : 60,
-            "PawsEndpoint" : { "Ref":"PawsEndpoint" },
-            "PawsAuthType" : { "Ref":"PawsAuthType" },
-            "PawsClientId" : "",
-            "PawsSecret" : { "Ref":"PawsSecret" },
+            "PawsEndpoint" : { "Ref":"SophosSiemEndpoint" },
+            "PawsAuthType" : "oauth2",
+            "PawsClientId" : { "Ref":"SophosSiemXAPIKey" },
+            "PawsSecret" : { "Ref":"SophosSiemAuthorizationToken" },
+            "CollectorParamString1" : { "Ref":"SophosSiemObjectNames" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }
         }
