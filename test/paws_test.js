@@ -1,3 +1,4 @@
+const fs = require('fs');
 const assert = require('assert');
 const sinon = require('sinon');
 var AWS = require('aws-sdk-mock');
@@ -13,6 +14,9 @@ const m_al_aws = require('@alertlogic/al-aws-collector-js').Util;
 var alserviceStub = {};
 var responseStub = {};
 var setEnvStub = {};
+
+var decryptStub = {};
+var ssmStub = {};
 
 function setAlServiceStub() {
     alserviceStub.get = sinon.stub(m_alCollector.AlServiceC.prototype, 'get').callsFake(
@@ -164,12 +168,14 @@ class TestCollectorMultiState extends PawsCollector {
 
 describe('Unit Tests', function() {
     beforeEach(function(){
-        AWS.mock('KMS', 'decrypt', function (params, callback) {
+        decryptStub = sinon.stub().callsFake(function (params, callback) {
             const data = {
                     Plaintext : 'decrypted-sercret-key'
                 };
             return callback(null, data);
         });
+
+        AWS.mock('KMS', 'decrypt', decryptStub);
 
         AWS.mock('KMS', 'encrypt', function (params, callback) {
             const data = {
@@ -178,10 +184,12 @@ describe('Unit Tests', function() {
             return callback(null, data);
         });
 
-        AWS.mock('SSM', 'getParameter', function (params, callback) {
-            const data = new Buffer('test-secret');
+        ssmStub = sinon.stub().callsFake(function (params, callback) {
+            const data = Buffer.from('test-secret');
             return callback(null, {Parameter : { Value: data.toString('base64')}});
         });
+
+        AWS.mock('SSM', 'getParameter', ssmStub);
 
         responseStub = sinon.stub(m_response, 'send').callsFake(
             function fakeFn(event, mockContext, responseStatus, responseData, physicalResourceId) {
@@ -196,6 +204,9 @@ describe('Unit Tests', function() {
     });
 
     afterEach(function(){
+        if(fs.existsSync('/tmp/paws_creds')){
+            fs.unlinkSync('/tmp/paws_creds');
+        }
         restoreAlServiceStub();
         setEnvStub.restore();
         responseStub.restore();
@@ -203,6 +214,26 @@ describe('Unit Tests', function() {
         AWS.restore('SSM');
     });
     
+    describe('Credential file caching tests', function(){
+        const TMP_CREDS_PATH = '/tmp/paws_creds';
+        it('Gets a cached file correctly', function(done){
+            fs.writeFileSync(TMP_CREDS_PATH, 'alwaysdrinkyourovaltine', 'base64');
+            TestCollector.load().then(function(creds) {
+                const testCred = Buffer.from('alwaysdrinkyourovaltine', 'base64');
+                assert.equal(Buffer.compare(testCred, decryptStub.args[1][0].CiphertextBlob), 0);
+                assert.equal(ssmStub.notCalled, true);
+                done();
+            });
+        });
+        it('Caches the file correctly', function(done){
+            TestCollector.load().then(function(creds) {
+                const testCred = Buffer.from('test-secret').toString('base64');
+                assert.equal(fs.existsSync(TMP_CREDS_PATH), true);
+                assert.equal(fs.readFileSync(TMP_CREDS_PATH, 'base64'), testCred);
+                done();
+            });
+        });
+    });
     describe('Send DD metric Tests', function(){
         it('sends DD metric', function(done){
             let ctx = {
