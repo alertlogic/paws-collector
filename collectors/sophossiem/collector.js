@@ -82,7 +82,9 @@ class SophossiemCollector extends PawsCollector {
             return callback("The Host Name was not found!");
         }
 
-        console.info(`SIEM000001 Collecting data for ${state.objectName}`);
+        let messageString = state.nextPage ? collector.decodebase64string(state.nextPage) : `from ${moment.unix(parseInt(state.from_date)).format("YYYY-MM-DDTHH:mm:ssZ")}`;
+
+        console.info(`SIEM000001 Collecting data for ${state.objectName} ${messageString}`);
 
         utils.getAPILogs(APIHostName, headers, state, [], process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextPage, has_more }) => {
@@ -109,6 +111,19 @@ class SophossiemCollector extends PawsCollector {
             nextPage: nextPage,
             poll_interval_sec: nextPollInterval
         };
+    }
+
+    decodebase64string(nextPage) {
+
+        const regex = /((-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(\.[0-9]+)?(Z))/g;
+        let base64String = Buffer.from(nextPage, 'base64').toString('utf-8');
+        const found = base64String.match(regex);
+        let messageString = "";
+        if (found) {
+            messageString = found.length == 2 ? `from ${found[0]} till ${found[1]}` : `from ${found[0]}`;
+        }
+
+        return messageString;
     }
 
     pawsFormatLog(msg) {
