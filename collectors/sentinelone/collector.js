@@ -83,7 +83,7 @@ class SentineloneCollector extends PawsCollector {
 
         const untilMoment = moment(curState.until);
 
-        const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
+        const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-day-progression', untilMoment, this.pollInterval);
 
         return {
             since: nextSinceMoment.toISOString(),
@@ -129,4 +129,4 @@ class SentineloneCollector extends PawsCollector {
 
 module.exports = {
     SentineloneCollector: SentineloneCollector
-}
+};
