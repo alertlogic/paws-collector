@@ -3,7 +3,7 @@ Alert Logic Sophossiem AWS Based API Poll (PAWS) Log Collector Library.
 
 # Overview
 This repository contains the AWS JavaScript Lambda function and CloudFormation 
-Template (CFT) for deploying a log collector in AWS which will poll 3rd party service API to collect and 
+Template (CFT) for deploying a log collector in AWS which will poll Sophos SIEM (alert, event)  service API to collect and 
 forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation

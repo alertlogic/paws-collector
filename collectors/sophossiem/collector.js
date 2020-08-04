@@ -104,19 +104,28 @@ class SophossiemCollector extends PawsCollector {
 
     _getNextCollectionState(curState, nextPage, has_more) {
         let nextPollInterval;
+        if (nextPage) {
+            if (has_more) {
+                nextPollInterval = 1;
+            }
+            else {
+                nextPollInterval = this.pollInterval;
+            }
 
-        if (has_more) {
-            nextPollInterval = 1;
+            return {
+                objectName: curState.objectName,
+                nextPage: nextPage,
+                poll_interval_sec: nextPollInterval
+            };
         }
         else {
-            nextPollInterval = this.pollInterval;
+            // This condition works if next page getting null or undefined
+            return {
+                objectName: curState.objectName,
+                from_date: moment().unix(),
+                poll_interval_sec: 1
+            };
         }
-
-        return {
-            objectName: curState.objectName,
-            nextPage: nextPage,
-            poll_interval_sec: nextPollInterval
-        };
     }
 
     decodebase64string(nextPage) {
