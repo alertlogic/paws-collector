@@ -96,6 +96,11 @@ class SophossiemCollector extends PawsCollector {
                     console.log('Token expired or customer not authorized to make api call');
                     return callback('Token expired or customer not authorized to make api call');
                 }
+                else if (error.statusCode && error.statusCode === 429) {
+                    state.poll_interval_sec = 900;
+                    console.log('API Request Limit Exceeded.');
+                    return callback(null, [], state, state.poll_interval_sec);
+                }
                 else {
                     return callback(error);
                 }
