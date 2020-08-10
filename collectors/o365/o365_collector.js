@@ -85,11 +85,11 @@ class O365Collector extends PawsCollector {
         let collector = this;
 
         if (!moment(state.since).isValid() || !moment(state.until).isValid() || state.since === undefined || state.until === undefined) {
-            const newStartTs = moment();
-            state.since = newStartTs.toISOString();
-            state.until = newStartTs.add(collector.pollInterval, 'seconds').toISOString();
+            const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-day-progression', moment(), this.pollInterval);
+            state.since = nextSinceMoment.toISOString();
+            state.until = nextUntilMoment.toISOString();
             state.nextPage = null;
-            state.poll_interval_sec = collector.pollInterval;
+            state.poll_interval_sec = nextPollInterval;
             return callback(null, [], state, state.poll_interval_sec);
         }
 
