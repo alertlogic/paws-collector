@@ -84,12 +84,12 @@ class O365Collector extends PawsCollector {
     pawsGetLogs(state, callback) {
         let collector = this;
 
-        if (!moment(state.since).isValid() || !moment(state.until).isValid()) {
+        if (!moment(state.since).isValid() || !moment(state.until).isValid() || state.since === undefined || state.until === undefined) {
             const newStartTs = moment();
             state.since = newStartTs.toISOString();
-            state.until = newStartTs.add(this.pollInterval, 'seconds').toISOString();
+            state.until = newStartTs.add(collector.pollInterval, 'seconds').toISOString();
             state.nextPage = null;
-            state.poll_interval_sec = this.pollInterval;
+            state.poll_interval_sec = collector.pollInterval;
             return callback(null, [], state, state.poll_interval_sec);
         }
 
