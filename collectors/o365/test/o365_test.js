@@ -422,6 +422,27 @@ describe('O365 Collector Tests', function() {
             });
         });
 
+        it('check if since and until are undefined', function (done) {
+            setO365MangementStub();
+            O365Collector.load().then(function (creds) {
+                var collector = new O365Collector(ctx, creds, 'o365');
+                const curState = {
+                    stream: "FakeStream",
+                    since: undefined,
+                    until: undefined,
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(logs.length, 0);
+                    assert.equal(moment(newState.until).diff(newState.since, 'seconds'), collector.pollInterval);
+                    assert.equal(newState.poll_interval_sec, collector.pollInterval);
+                    restoreO365ManagemntStub();
+                    done();
+                });
+            });
+        });
+
         it('Get Logs Sunny', function(done) {
             setO365MangementStub();
             O365Collector.load().then(function(creds) {
