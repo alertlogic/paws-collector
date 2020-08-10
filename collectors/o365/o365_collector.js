@@ -83,6 +83,16 @@ class O365Collector extends PawsCollector {
 
     pawsGetLogs(state, callback) {
         let collector = this;
+
+        if (!moment(state.since).isValid() || !moment(state.until).isValid() || state.since === undefined || state.until === undefined) {
+            const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-day-progression', moment(), this.pollInterval);
+            state.since = nextSinceMoment.toISOString();
+            state.until = nextUntilMoment.toISOString();
+            state.nextPage = null;
+            state.poll_interval_sec = nextPollInterval;
+            return callback(null, [], state, state.poll_interval_sec);
+        }
+
         console.info(`O365000001 Collecting data from ${state.since} till ${state.until} for stream ${state.stream}`);
 
         if(moment().diff(state.since, 'days', true) > 7){
