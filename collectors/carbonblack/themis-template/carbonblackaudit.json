@@ -1,0 +1,12 @@
+{
+    "method": "GET",
+    "url": "{{paws_endpoint}}/integrationServices/v3/event?searchWindow=1d&rows=1",
+    "headers": {
+        "X-Auth-Token": "{{paws_secret}}/{{paws_client_id}}"
+    },
+    "body": "",
+    "expect": {
+        "response": 200,
+        "body": "ANY"
+    }
+}
