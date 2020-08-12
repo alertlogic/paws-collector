@@ -18,7 +18,6 @@ const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClie
 const packageJson = require('./package.json');
 
 
-
 const typeIdPaths = [{ path: ["attributes"] }];
 
 let tsPaths = [];
@@ -62,16 +61,14 @@ class SalesforceCollector extends PawsCollector {
 
     pawsGetLogs(state, callback) {
         let collector = this;
-        const encodedPrivateKey = collector.secret;
-        if (!encodedPrivateKey) {
-            throw new Error("The privateKey was not found!");
+        const privateKey = collector.secret;
+        if (!privateKey) {
+            throw new Error("The private key was not found!");
         }
         const clientId = collector.clientId;
         const salesForceUser = process.env.paws_collector_param_string_1;
         const baseUrl = process.env.paws_endpoint.replace(/^https:\/\/|\/$/g, '');
         const tokenUrl = `/services/oauth2/token`;
-
-        const privateKey = Buffer.from(encodedPrivateKey, 'base64').toString('ascii');
 
         var claim = {
             iss: clientId,
