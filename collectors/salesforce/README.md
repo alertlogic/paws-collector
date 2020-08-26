@@ -3,7 +3,7 @@ Alert Logic Salesforce AWS Based API Poll (PAWS) Log Collector Library.
 
 # Overview
 This repository contains the AWS JavaScript Lambda function and CloudFormation 
-Template (CFT) for deploying a log collector in AWS which will poll 3rd party service API to collect and 
+Template (CFT) for deploying a log collector in AWS which will poll Salesforce (LoginHistory, EventLogFile, LoginEvent, LoginGeo, User, ApiEvent, LoginEvent, LogoutEvent, LoginAsEvent) service API to collect and 
 forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
@@ -40,7 +40,7 @@ Before these steps ensure a digital certificate is generated.
     - Click Save.
     - Click Manage Profiles and then click Manage Permission Sets. Select the previously created permission set.   
 
-### 2. API Object List
+### 2. API Docs
 [LoginHistory](https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_objects_loginhistory.htm),
 [EventLogFile](https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_objects_eventlogfile.htm),
 [LoginEvent](https://developer.salesforce.com/docs/atlas.en-us.224.0.platform_events.meta/platform_events/sforce_api_objects_loginevent.htm),
