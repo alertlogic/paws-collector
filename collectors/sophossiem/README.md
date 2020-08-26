@@ -20,7 +20,7 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 ### 2. API Docs
 
-1. How to send alert and event data to your SIEM[Sophos_Central_APIs](https://support.sophos.com/support/s/article/KB-000036372?language=en_US)
+1. How to send alert and event data to your SIEM [Link](https://support.sophos.com/support/s/article/KB-000036372?language=en_US)
 2. [FAQs_on_SIEM](https://support.sophos.com/support/s/article/KB-000036413?language=en_US)
 
 ### 3. CloudFormation Template (CFT)
