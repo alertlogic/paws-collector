@@ -18,7 +18,12 @@ forward logs to the Alert Logic CloudInsight backend services.
 4. Click on Copy to copy your API Access URL and Headers from the API Token Summary section into your clipboard.<br />
 ![ScreenShot](./docs/img3.png)<br />
 
-### 2. CloudFormation Template (CFT)
+### 2. API Docs
+
+1. How to send alert and event data to your SIEM[Sophos_Central_APIs](https://support.sophos.com/support/s/article/KB-000036372?language=en_US)
+2. [FAQs_on_SIEM](https://support.sophos.com/support/s/article/KB-000036413?language=en_US)
+
+### 3. CloudFormation Template (CFT)
 
 Refer to [CF template readme](./cfn/README-SOPHOSSIEM.md) for installation instructions.
 
