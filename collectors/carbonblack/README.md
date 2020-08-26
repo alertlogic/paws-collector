@@ -11,9 +11,9 @@ forward logs to the Alert Logic CloudInsight backend services.
 ### 1. How to obtain an API Secret Key and API ID
 
 1. Log into your Carbon Black Cloud Organization.
-2. Navigate to Settings > API Keys.
+2. Navigate to Settings > API Access.
 3. Click “Add API Key”.
-4. Configure Name, Access Level, etc.
+4. Configure Name, Access Level type, etc.
 5. Obtain your API Secret Key and API ID pair.
 
 For Audit Log Events API use access level - API
