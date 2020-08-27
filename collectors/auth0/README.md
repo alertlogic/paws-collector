@@ -3,7 +3,7 @@ Alert Logic Auth0 AWS Based API Poll (PAWS) Log Collector Library.
 
 # Overview
 This repository contains the AWS JavaScript Lambda function and CloudFormation 
-Template (CFT) for deploying a log collector in AWS which will poll 3rd party service API to collect and forward logs to the Alert Logic CloudInsight backend services.
+Template (CFT) for deploying a log collector in AWS which will poll Auth0 Logs service API to collect and forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
 
@@ -17,8 +17,13 @@ You can define allowed permissions in the Permissions tab of the Auth0 Dashboard
 ![ScreenShot](./docs/auth0_3.png)
 4. On the Applications page of the Auth0 Dashboard, locate your Application and click its name to view the available settings. The generated client ID and client secret are found here.
 
+### 2. API Docs
 
-### 2. CloudFormation Template (CFT)
+1. [Auth0_Node_Library](https://www.npmjs.com/package/auth0)
+2. [Setup_API](https://auth0.com/docs/get-started/set-up-apis)
+3. [Auth0_Logs](https://auth0.com/docs/logs)
+
+### 3. CloudFormation Template (CFT)
 
 Refer to [CF template readme](./cfn/README-AUTH0.md) for installation instructions.
 
