@@ -1,6 +1,6 @@
 {
   "name": "carbonblack-collector",
-  "version": "1.0.6",
+  "version": "1.0.5",
   "description": "Alert Logic AWS based Carbonblack Log Collector",
   "repository": {},
   "private": true,
