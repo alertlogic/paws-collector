@@ -30,7 +30,7 @@ forward logs to the Alert Logic CloudInsight backend services.
         - alert-controller-v-1-impl (select Get to see information about this)
         - AlertAggregate (Model - explains what fields are used. eg. created_at, or customer_id, etc. )
         - EventAggregate (Model - explains what fields are used eg. created_at, or customer_id, etc. )
-    NOTE: Sophos Support is available only for the two SIEM APIs (Events + Alerts) and our unmodified script. We do not provide advice and troubleshooting for customer created integrations
+    - Sophos Support is available only for the two SIEM APIs (Events + Alerts) and our unmodified script. We do not provide advice and troubleshooting for customer created integrations
 
 3. [FAQs_on_SIEM](https://support.sophos.com/support/s/article/KB-000036413?language=en_US)
 
