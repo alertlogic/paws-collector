@@ -3,7 +3,7 @@ Alert Logic Ciscoduo AWS Based API Poll (PAWS) Log Collector Library.
 
 # Overview
 This repository contains the AWS JavaScript Lambda function and CloudFormation 
-Template (CFT) for deploying a log collector in AWS which will poll 3rd party service API to collect and 
+Template (CFT) for deploying a log collector in AWS which will poll Cisco Duo (Administrator, Telephony, OfflineEnrollment) service API to collect and 
 forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
@@ -19,12 +19,12 @@ forward logs to the Alert Logic CloudInsight backend services.
 5. Determine what permissions you want to grant to this Admin API application:
 ![ScreenShot](./docs/Ciscoduo_img3.png)
 
-### 2. API Object List
+### 2. API Docs
 
-[Authentication](https://duo.com/docs/adminapi#authentication-logs),
-[Administrator](https://duo.com/docs/adminapi#administrator-logs),
-[Telephony](https://duo.com/docs/adminapi#telephony-logs),
-[OfflineEnrollment](https://duo.com/docs/adminapi#offline-enrollment-logs)
+1. [Authentication](https://duo.com/docs/adminapi#authentication-logs)
+2. [Administrator](https://duo.com/docs/adminapi#administrator-logs)
+3. [Telephony](https://duo.com/docs/adminapi#telephony-logs)
+4. [OfflineEnrollment](https://duo.com/docs/adminapi#offline-enrollment-logs)
 
 ### 3. CloudFormation Template (CFT)
 
