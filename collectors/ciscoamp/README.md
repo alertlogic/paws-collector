@@ -3,7 +3,7 @@ Alert Logic Ciscoamp AWS Based API Poll (PAWS) Log Collector Library.
 
 # Overview
 This repository contains the AWS JavaScript Lambda function and CloudFormation 
-Template (CFT) for deploying a log collector in AWS which will poll 3rd party service API to collect and 
+Template (CFT) for deploying a log collector in AWS which will poll Cisco AMP (Audit Logs, Events) service API to collect and 
 forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
@@ -20,9 +20,11 @@ forward logs to the Alert Logic CloudInsight backend services.
 4. Popup window will open > Set your Application name with Scope `Read-only` and Click on Create. button.<br />
 ![ScreenShot](./docs/Ciscoamp_img3.png)
 
-### 2. API Object List 
-[AuditLogs](https://api-docs.amp.cisco.com/api_actions/details?api_action=GET+%2Fv1%2Faudit_logs&api_host=api.amp.cisco.com&api_resource=AuditLog&api_version=v1),
-[Events](https://api-docs.amp.cisco.com/api_actions/details?api_action=GET+%2Fv1%2Fevents&api_host=api.amp.cisco.com&api_resource=Event&api_version=v1)  
+### 2. API Docs
+
+1. [Authentication](https://api-docs.amp.cisco.com/api_resources?api_host=api.amp.cisco.com&api_version=v1) 
+2. [AuditLogs](https://api-docs.amp.cisco.com/api_actions/details?api_action=GET+%2Fv1%2Faudit_logs&api_host=api.amp.cisco.com&api_resource=AuditLog&api_version=v1),
+3. [Events](https://api-docs.amp.cisco.com/api_actions/details?api_action=GET+%2Fv1%2Fevents&api_host=api.amp.cisco.com&api_resource=Event&api_version=v1)  
 
 ### 3. CloudFormation Template (CFT)
 
