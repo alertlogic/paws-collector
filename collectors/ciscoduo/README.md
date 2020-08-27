@@ -22,10 +22,10 @@ forward logs to the Alert Logic CloudInsight backend services.
 ### 2. API Docs
 
 1. [Ciscoduo_Node_Library](https://www.npmjs.com/package/@duosecurity/duo_api)
-2. [Authentication](https://duo.com/docs/adminapi#authentication-logs)
-3. [Administrator](https://duo.com/docs/adminapi#administrator-logs)
-4. [Telephony](https://duo.com/docs/adminapi#telephony-logs)
-5. [OfflineEnrollment](https://duo.com/docs/adminapi#offline-enrollment-logs)
+2. [Authentication_Logs](https://duo.com/docs/adminapi#authentication-logs)
+3. [Administrator_Logs](https://duo.com/docs/adminapi#administrator-logs)
+4. [Telephony_Logs](https://duo.com/docs/adminapi#telephony-logs)
+5. [OfflineEnrollment_Logs](https://duo.com/docs/adminapi#offline-enrollment-logs)
 
 ### 3. CloudFormation Template (CFT)
 
