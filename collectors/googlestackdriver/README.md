@@ -24,7 +24,6 @@ forward logs to the Alert Logic CloudInsight backend services.
 ![ScreenShot](./docs/img_7.png)<br />
 7. Select *JSON* and click *Create*. The key will be downloaded to your computer as a JSON file.<br /><br />
 ![ScreenShot](./docs/img_8.png)<br />
-![ScreenShot](./docs/img_9.png)<br />
 
 ### 2. API Docs
 
