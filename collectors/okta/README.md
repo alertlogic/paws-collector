@@ -1,4 +1,4 @@
-# Sophos collector
+# OKTA collector
 Alert Logic OKTA AWS Based API Poll (PAWS) Log Collector Library.
 
 # Overview
