@@ -51,11 +51,6 @@
             "Type": "String",
             "Default": "none"
         },
-        "SophosEndpoint": {
-            "Description": "Sophos end point URL.",
-            "Type": "String",
-            "Default": "https://id.sophos.com"
-        },
         "SophosClientId": {
             "Description": "Sophos Client Id for authentication.",
             "Type": "String"
@@ -92,7 +87,7 @@
             "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
             "CollectorId" : { "Ref":"CollectorId" },
             "PollingInterval" : 60,
-            "PawsEndpoint" : { "Ref":"SophosEndpoint" },
+            "PawsEndpoint" : "",
             "PawsAuthType" : "oauth2",
             "PawsClientId" : { "Ref":"SophosClientId" },
             "PawsSecret" : { "Ref":"SophosSecret" },
