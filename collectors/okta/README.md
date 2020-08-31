@@ -13,15 +13,15 @@ forward logs to the Alert Logic CloudInsight backend services.
 1. Sign in to your Okta organization as a user with administrator privileges. API tokens have the same permissions as the user who creates them, and if the user permissions change, the API token permissions also change. <br /><br />
 2. Access the API page.<br /><br />
     - If you use the Developer Console, select Tokens from the API menu.<br /><br />
-    ![ScreenShot](./docs/img_1.png)<br />
-    - If you use the Administrator Console (Classic UI), select API from the Security menu, and then select Tokens.
-    ![ScreenShot](./docs/img_2.png)<br />
+    ![ScreenShot](./docs/img_1.png)<br /><br />
+    - If you use the Administrator Console (Classic UI), select API from the Security menu, and then select Tokens.<br /><br />
+    ![ScreenShot](./docs/img_2.png)<br /><br />
 3. Click Create Token.<br /><br />
-![ScreenShot](./docs/img_3.png)<br />
+![ScreenShot](./docs/img_3.png)<br /><br />
 4. Name your token and click Create Token.<br /><br />
-![ScreenShot](./docs/img_4.png)<br />
+![ScreenShot](./docs/img_4.png)<br /><br />
 5. Record the token value. This is the only opportunity to see it and record it.<br /><br />
-![ScreenShot](./docs/img_5.png)<br />
+![ScreenShot](./docs/img_5.png)<br /><br />
 
 ### 2. API Docs
 
