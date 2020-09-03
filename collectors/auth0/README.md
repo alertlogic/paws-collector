@@ -9,13 +9,22 @@ Template (CFT) for deploying a log collector in AWS which will poll Auth0 Logs s
 
 ### 1. How to obtain an API Secret Key and API ID
 
-1. In the APIs section of the Auth0 dashboard, click Create API.
-2. Provide a name and an identifier for your API, for example, https://quickstarts/api. You will use the identifier as an audience later, when you are configuring the Access Token verification. Leave the Signing Algorithm as RS256.
-![ScreenShot](./docs/auth0_2.png)
+1. In the APIs section of the Auth0 dashboard, click Create API.<br /><br />
+![ScreenShot](./docs/auth0_1.png)
+2. Provide a name and an identifier for your API, for example, https://quickstarts/api. You will use the identifier as an audience later, when you are configuring the Access Token verification. Leave the Signing Algorithm as RS256.<br /><br />
+![ScreenShot](./docs/auth0_2.png)<br /><br />
 3. Permissions let you define how resources can be accessed on behalf of the user with a given access token. For example, you might choose to grant read access to the messages resource if users have the manager access level, and a write access to that resource if they have the administrator access level.
-You can define allowed permissions in the Permissions tab of the Auth0 Dashboard's APIs section.
-![ScreenShot](./docs/auth0_3.png)
-4. On the Applications page of the Auth0 Dashboard, locate your Application and click its name to view the available settings. The generated client ID and client secret are found here.
+You can define allowed permissions in the Permissions tab of the Auth0 Dashboard's APIs section. <br /><br />
+![ScreenShot](./docs/auth0_3.png)<br /><br />
+4. In the APIs section of the Auth0 dashboard, click on Auth0 Management API.<br /><br /> 
+![ScreenShot](./docs/auth0_4.png)<br /><br />
+5. In Auth0 Management API click on Machine to Machine Applications.<br /><br />
+![ScreenShot](./docs/auth0_5.png)<br /><br />
+6. Authorize the application(which you are created) and select permissions read:logs.<br /><br />
+![ScreenShot](./docs/auth0_6.png)<br /><br />
+7. On the Applications page of the Auth0 Dashboard, locate your Application and click its name to view the available settings. The generated client ID and client secret are found here.<br /><br />
+![ScreenShot](./docs/auth0_7.png)<br /><br />
+![ScreenShot](./docs/auth0_8.png)<br /><br />
 
 ### 2. API Docs
 
