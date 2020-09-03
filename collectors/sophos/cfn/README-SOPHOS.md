@@ -32,7 +32,6 @@ Currently, we support US regions only: `us-east-1`, `us-east-2`, `us-west-1`,
    - `PackagesBucketPrefix` - example `alertlogic-collectors` S3 bucket name prefix where collector packages are located.
    - `PawsCollectorTypeName` - `Sophos`
    - `SophosClientId` - Sophos Client Id for authentication.
-   - `SophosEndpoint` - Sophos end point URL.
    - `SophosSecret` - Sophos Secret key for authentication.
 
 1. Continue to finish the stack.
