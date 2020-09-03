@@ -56,7 +56,7 @@ In the Office 365 portal, you must register a new Office 365 web application to 
 
 ### 4. CloudFormation Template (CFT)
 
-Refer to [CF template readme](./cfn/README.md) for installation instructions.
+Refer to [CF template readme](./cfn/README-O365.md) for installation instructions.
 
 # How it works
 
