@@ -20,7 +20,7 @@ You can define allowed permissions in the Permissions tab of the Auth0 Dashboard
 ![ScreenShot](./docs/auth0_4.png)<br /><br />
 5. In Auth0 Management API click on Machine to Machine Applications.<br /><br />
 ![ScreenShot](./docs/auth0_5.png)<br /><br />
-6. Authorize the application(which you are created) and select permissions read:logs.<br /><br />
+6. Authorize the application(which you are created) and select permissions "read:logs". After selection click on update<br /><br />
 ![ScreenShot](./docs/auth0_6.png)<br /><br />
 7. On the Applications page of the Auth0 Dashboard, locate your Application and click its name to view the available settings. The generated client ID and client secret are found here.<br /><br />
 ![ScreenShot](./docs/auth0_7.png)<br /><br />
