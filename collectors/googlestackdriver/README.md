@@ -32,7 +32,7 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 
 ### 3. CloudFormation Template (CFT)
-Refer to [CF template readme](./cfn/README.md) for installation instructions.
+Refer to [CF template readme](./cfn/README-GOOGLESTACKDRIVER.md) for installation instructions.
 
 # How it works
 
