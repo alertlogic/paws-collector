@@ -28,7 +28,7 @@ forward logs to the Alert Logic CloudInsight backend services.
 ### 2. API Docs
 
 1. [Googlestackdriver_Node_Library](https://www.npmjs.com/package/@google-cloud/logging)
-2. [Setup_API](https://cloud.google.com/nodejs/docs/reference/logging/2.0.x/v2.LoggingServiceV2Client)
+2. [Setup_API](https://cloud.google.com/nodejs/docs/reference/logging/2.0.x/v2.LoggingServiceV2Client#listLogEntries)
 
 
 ### 3. CloudFormation Template (CFT)
