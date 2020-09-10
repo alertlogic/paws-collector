@@ -18,7 +18,23 @@ forward logs to the Alert Logic CloudInsight backend services.
 4. Click on Copy to copy your API Access URL and Headers from the API Token Summary section into your clipboard.<br />
 ![ScreenShot](./docs/img3.png)<br />
 
-### 2. CloudFormation Template (CFT)
+### 2. API Docs
+
+1. How to send alert and event data to your SIEM [Link](https://support.sophos.com/support/s/article/KB-000036372?language=en_US)
+
+2. How to access the swagger definition. 
+    - You can download Swagger documentation on the API [here](https://central-public-prod-api.s3.amazonaws.com/swagger-api-specification-us-west-2).
+    - You can view the downloaded Swagger file using the [Swagger_Editor](https://editor.swagger.io/#/).
+    - This data contains API specifications for a several Sophos API functions. The ones specific to SIEM are:
+        - event-controller-v-1-impl (select Get to see information about this)
+        - alert-controller-v-1-impl (select Get to see information about this)
+        - AlertAggregate (Model - explains what fields are used. eg. created_at, or customer_id, etc. )
+        - EventAggregate (Model - explains what fields are used eg. created_at, or customer_id, etc. )
+    - Sophos Support is available only for the two SIEM APIs (Events + Alerts) and our unmodified script. We do not provide advice and troubleshooting for customer created integrations
+
+3. [FAQs_on_SIEM](https://support.sophos.com/support/s/article/KB-000036413?language=en_US)
+
+### 3. CloudFormation Template (CFT)
 
 Refer to [CF template readme](./cfn/README-SOPHOSSIEM.md) for installation instructions.
 

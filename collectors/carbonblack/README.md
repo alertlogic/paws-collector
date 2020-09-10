@@ -3,31 +3,34 @@ Alert Logic Carbonblack AWS Based API Poll (PAWS) Log Collector Library.
 
 # Overview
 This repository contains the AWS JavaScript Lambda function and CloudFormation 
-Template (CFT) for deploying a log collector in AWS which will poll 3rd party service API to collect and 
+Template (CFT) for deploying a log collector in AWS which will poll Carbonblack (Audit Log Events, Search Alerts, Search Alerts CBAnalytics, Search Alerts Vmware, Search Alerts Watchlist) service API to collect and 
 forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
 
 ### 1. How to obtain an API Secret Key and API ID
 
-[Authentication](https://developer.carbonblack.com/reference/carbon-black-cloud/authentication/)
-
 1. Log into your Carbon Black Cloud Organization.
-2. Navigate to Settings > API Keys.
+2. Navigate to Settings > API Access.
 3. Click “Add API Key”.
-4. Configure Name, Access Level, etc.
+4. Configure Name, Access Level type, etc.
 5. Obtain your API Secret Key and API ID pair.
 
-[AuditLogEvents](https://developer.carbonblack.com/reference/carbon-black-cloud/cb-defense/latest/rest-api/)
 For Audit Log Events API use access level - API
 
 ![ScreenShot](./docs/carbonblack_credentials_api.png)
 
-[SearchRequest](https://developer.carbonblack.com/reference/carbon-black-cloud/platform/latest/alerts-api/)
 For all Search Request API use access level (custom) and custom access level (View All)
 This access level is used for collecting Alerts.
 
 ![ScreenShot](./docs/carbonblack_credentials_custom.png)
+
+### 2. API Docs
+
+1. [Authentication](https://developer.carbonblack.com/reference/carbon-black-cloud/authentication/)
+2. [AuditLogEvents](https://developer.carbonblack.com/reference/carbon-black-cloud/cb-defense/latest/rest-api/)
+3. [SearchRequest](https://developer.carbonblack.com/reference/carbon-black-cloud/platform/latest/alerts-api/)
+
 
 API URLs required for CarbonBlack collector
 
@@ -39,7 +42,7 @@ API URLs required for CarbonBlack collector
 | Prod06 (EU)            | https://api-prod06.conferdeploy.net  |
 | ProdNRT (Asia Pacific) | https://api-prodnrt.conferdeploy.net |
 
-### 2. CloudFormation Template (CFT)
+### 3. CloudFormation Template (CFT)
 
 Refer to [CF template readme](./cfn/README-CARBONBLACK.md) for installation instructions.
 

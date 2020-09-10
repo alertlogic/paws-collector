@@ -3,7 +3,7 @@ Alert Logic Sophos AWS Based API Poll (PAWS) Log Collector Library.
 
 # Overview
 This repository contains the AWS JavaScript Lambda function and CloudFormation 
-Template (CFT) for deploying a log collector in AWS which will poll 3rd party service API to collect and 
+Template (CFT) for deploying a log collector in AWS which will poll Sophos (alerts) service API to collect and 
 forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
@@ -21,7 +21,12 @@ forward logs to the Alert Logic CloudInsight backend services.
 5. Click 'Copy' to note down the client secret.<br /><br />
 ![ScreenShot](./docs/sophos_img5.png)<br />
 
-### 2. CloudFormation Template (CFT)
+### 2. API Docs
+
+1. [Authentication](https://developer.sophos.com/intro)
+2. [Alerts_API](https://developer.sophos.com/docs/interactive-alerts-management/1/routes/alerts/get)
+
+### 3. CloudFormation Template (CFT)
 Refer to [CF template readme](./cfn/README-SOPHOS.md) for installation instructions.
 
 # How it works

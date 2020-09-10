@@ -1,40 +1,37 @@
-# Auth0 collector
-Alert Logic Auth0 AWS Based API Poll (PAWS) Log Collector Library.
+# OKTA collector
+Alert Logic OKTA AWS Based API Poll (PAWS) Log Collector Library.
 
 # Overview
 This repository contains the AWS JavaScript Lambda function and CloudFormation 
-Template (CFT) for deploying a log collector in AWS which will poll Auth0 Logs service API to collect and forward logs to the Alert Logic CloudInsight backend services.
+Template (CFT) for deploying a log collector in AWS which will poll OKTA (System Log) service API to collect and 
+forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
 
-### 1. How to obtain an API Secret Key and API ID
+### 1. How to obtain token(secret key).
 
-1. In the APIs section of the Auth0 dashboard, click Create API.<br /><br />
-![ScreenShot](./docs/auth0_1.png)<br /><br />
-2. Provide a name and an identifier for your API, for example, https://quickstarts/api. You will use the identifier as an audience later, when you are configuring the Access Token verification. Leave the Signing Algorithm as RS256.<br /><br />
-![ScreenShot](./docs/auth0_2.png)<br /><br />
-3. Permissions let you define how resources can be accessed on behalf of the user with a given access token. For example, you might choose to grant read access to the messages resource if users have the manager access level, and a write access to that resource if they have the administrator access level.
-You can define allowed permissions in the Permissions tab of the Auth0 Dashboard's APIs section. <br /><br />
-![ScreenShot](./docs/auth0_3.png)<br /><br />
-4. In the APIs section of the Auth0 dashboard, click on Auth0 Management API.<br /><br /> 
-![ScreenShot](./docs/auth0_4.png)<br /><br />
-5. In Auth0 Management API click on Machine to Machine Applications.<br /><br />
-![ScreenShot](./docs/auth0_5.png)<br /><br />
-6. Authorize the application(which you are created) and select permissions "read:logs". After selection click on update<br /><br />
-![ScreenShot](./docs/auth0_6.png)<br /><br />
-7. On the Applications page of the Auth0 Dashboard, locate your Application and click its name to view the available settings. The generated client ID and client secret are found here.<br /><br />
-![ScreenShot](./docs/auth0_7.png)<br /><br />
-![ScreenShot](./docs/auth0_8.png)<br /><br />
+1. Sign in to your Okta organization as a user with administrator privileges. API tokens have the same permissions as the user who creates them, and if the user permissions change, the API token permissions also change. <br /><br />
+2. Access the API page.<br /><br />
+    - If you use the Developer Console, select Tokens from the API menu.<br /><br />
+    ![ScreenShot](./docs/img_1.png)<br /><br />
+    - If you use the Administrator Console (Classic UI), select API from the Security menu, and then select Tokens.<br /><br />
+    ![ScreenShot](./docs/img_2.png)<br /><br />
+3. Click Create Token.<br /><br />
+![ScreenShot](./docs/img_3.png)<br /><br />
+4. Name your token and click Create Token.<br /><br />
+![ScreenShot](./docs/img_4.png)<br /><br />
+5. Record the token value. This is the only opportunity to see it and record it.<br /><br />
+![ScreenShot](./docs/img_5.png)<br /><br />
 
 ### 2. API Docs
 
-1. [Auth0_Node_Library](https://www.npmjs.com/package/auth0)
-2. [Setup_API](https://auth0.com/docs/get-started/set-up-apis)
-3. [Auth0_Logs](https://auth0.com/docs/logs)
+1. [OKTA Node Library](https://www.npmjs.com/package/@okta/okta-sdk-nodejs/v/3.1.0)
+2. [System Log](https://developer.okta.com/docs/reference/api/system-log/)
+3. [Create the token](https://developer.okta.com/docs/guides/create-an-api-token/create-the-token/)
+
 
 ### 3. CloudFormation Template (CFT)
-
-Refer to [CF template readme](./cfn/README-AUTH0.md) for installation instructions.
+Refer to [CF template readme](./README-OKTA.md) for installation instructions.
 
 # How it works
 
@@ -62,17 +59,17 @@ an AWS Scheduled Event that occurs every 15 minutes.
 ### 1. Creating New Collector Types
 run `npm run create-collector <<name>> <<version>> <<console log info prefix>>` to create a skeleton collector in the `collectors` folder.
 
-example `npm run create-collector auth0 1.0.0 AUTZ`
+example `npm run create-collector okta 1.0.0 OKTA`
 
 ### 2. Build collector
 Clone this repository and build a lambda package by executing:
 ```
 $ git clone https://github.com/alertlogic/paws-collector.git
-$ cd paws-collector/collectors/auth0
+$ cd paws-collector/collectors/okta
 $ make deps test package
 ```
 
-The package name is *al-auth0-collector.zip*
+The package name is *al-okta-collector.zip*
 
 ### 3. Debugging
 

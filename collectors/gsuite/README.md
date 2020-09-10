@@ -5,7 +5,7 @@ Alert Logic Gsuite AWS Based API Poll (PAWS) Log Collector Library.
 # Overview
 
 This repository contains the AWS JavaScript Lambda function and CloudFormation
-Template (CFT) for deploying a log collector in AWS which will poll 3rd party service API to collect and
+Template (CFT) for deploying a log collector in AWS which will poll Gsuite (Login, Admin, Access_transparency, Calendar, Drive, Gplus, Groups, Groups_enterprise, Mobile, Rules, Token, User_accounts) service API to collect and
 forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
@@ -29,9 +29,15 @@ forward logs to the Alert Logic CloudInsight backend services.
 5. - At the top right, click Add Services. 
    - Find the Add Services link at the top right
    - Below the subscription you want to add, click Add It Now.
-   - Follow the on-screen instructions to add the service to your organization's Google Account [Link](https://support.google.com/a/answer/45690?hl=en)    
+   - Follow the on-screen instructions to add the service to your organization's Google Account [Link](https://support.google.com/a/answer/45690?hl=en)
 
-### 3. CloudFormation Template (CFT)   
+### 3. API Docs
+
+1. [G Suite Node Library](https://www.npmjs.com/package/googleapis/v/39.2.0)
+2. [G Suite Service API](https://developers.google.com/admin-sdk/reports/v1/quickstart/nodejs)
+3. [G Suite Activities List](https://developers.google.com/admin-sdk/reports/v1/reference/activities/list)       
+
+### 4. CloudFormation Template (CFT)   
 
 Refer to [CF template readme](./cfn/README-GSUITE.md) for installation instructions.
 
