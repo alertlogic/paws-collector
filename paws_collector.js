@@ -24,6 +24,9 @@ const CREDS_FILE_PATH = '/tmp/paws_creds';
 var PAWS_DECRYPTED_CREDS = null;
 const DOMAIN_REGEXP = /^[htps]*:\/\/|\/$/gi;
 
+const STATE_RECORD_COMPLETE = "COMPLETE";
+const STATE_RECORD_INCOMPLETE ="INCOMPLETE";
+
 function getPawsParamStoreParam(){
     return new Promise((resolve, reject) => {
         if(fs.existsSync(CREDS_FILE_PATH)){
@@ -250,7 +253,7 @@ class PawsCollector extends AlAwsCollector {
         });
     };
 
-    handleEvent(event) {
+    handleEvent(event, asyncCallback) {
         let collector = this;
         if (event.Records) {
             let stateMsg = event.Records[0];
@@ -263,6 +266,77 @@ class PawsCollector extends AlAwsCollector {
             return super.handleEvent(event);
         }
     };
+
+    // check the status of the state in DDB to avoid duplication
+    checkStateSqsMessage(stateSqsMsg, asyncCallback) {
+        const collector = this;
+        const DDB = new AWS.DynamoDB();
+
+        const params = {
+            Key: {
+                "CollectorId": {S: collector._collectorId},
+                "MessageId": {S: stateSqsMsg.MessageId}
+            },
+            TableName: process.env.pawsDDBTableName,
+            ConsistentRead: true
+        }
+
+        const getItemPromise = DDB.getItem(params).promise();
+
+        getItemPromise.then(data => {
+            if (data.Item) {
+                if(Item.Status.S === STATE_RECORD_INCOMPLETE && Date.now() - Item.Updated.N < 900) {
+                    console.log(`Duplicate state: ${stateSqsMsg.MessageId}, already in progress. skipping`);
+                    return collector.done();
+                } else if (Item.Status.S === STATE_RECORD_COMPLETE){
+                    console.log(`Duplicate state: ${stateSqsMsg.MessageId}, already processed. skipping`);
+                    return collector.done();
+                }
+
+                return asyncCallback(null);
+            } else {
+                const newRecord = {
+                    Item: {
+                        CollectorId: {S: collector._collectorId},
+                        MessageId: {S: stateSqsMsg.MessageId},
+                        Updated: {N: Date.now().toString()},
+                        Status: {S: STATE_RECORD_INCOMPLETE},
+                        // setting DDB time to life. This is the same as the sqs queue message retention
+                        ExpireDate: {N: moment().add(14, 'days').unix().toString()}
+                    }
+                }
+                DDB.putItem(newRecord, (err) => {
+                    if(err){
+                        // TODO:figure out how to handle ddb write errors. Do they crash the collector?
+                    } else {
+                        return asyncCallback(null)
+                    }
+                });
+            }
+            
+        }).catch(asyncCallback)
+    }
+
+    completeState(stateSqsMsg) {
+        const collector = this;
+        const DDB = new AWS.DynamoDB();
+
+        const newRecord = {
+            Item: {
+                CollectorId: {S: collector._collectorId},
+                MessageId: {S: stateSqsMsg.MessageId},
+                Updated: {N: Date.now().toString()},
+                Status: {S: STATE_RECORD_COMPLETE},
+            }
+        }
+        DDB.putItem(newRecord, (err) => {
+            if(err){
+                // figure out how to handle ddb write errors
+            } else {
+                return asyncCallback(null)
+            }
+        });
+    }
     
     handlePollRequest(stateSqsMsg) {
         let collector = this;
@@ -275,6 +349,9 @@ class PawsCollector extends AlAwsCollector {
                 } else {
                     return asyncCallback();
                 }
+            },
+            function(asyncCallback) {
+                return collector.checkStateSqsMessage(stateSqsMsg, asyncCallback);
             },
             function(asyncCallback) {
                 return collector.pawsGetLogs(pawsState.priv_collector_state, asyncCallback);
@@ -303,6 +380,9 @@ class PawsCollector extends AlAwsCollector {
             },
             function(privCollectorState, nextInvocationTimeout, asyncCallback) {
                 return collector._storeCollectionState(pawsState, privCollectorState, nextInvocationTimeout, asyncCallback);
+            },
+            function(asyncCallback) {
+                return collector.completeState(stateSqsMsg, asyncCallback);
             }
         ], function(error) {
             collector.done(error);

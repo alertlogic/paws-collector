@@ -12,6 +12,11 @@
             "Type": "String",
             "Default": ""
         },
+        "DdbTableName" :{
+            "Description": "The table name the collector will use for state deduplication. This should be common for all collectors",
+            "Type": "String",
+            "Default": "PawsDedupeDdbTable"
+        },
         "AlertlogicAccessKeyId": {
             "Description": "Alert Logic Access Key Id obtained from AIMS",
             "Type": "String"
@@ -570,6 +575,9 @@
                   },
                   "DD_KMS_API_KEY": {
                       "Ref": "DatadogKMSKey"
+                  },
+                  "pawsDDBTableName": {
+                      "Ref": "DdbTableName" 
                   },
                   "al_application_id":{
                       "Ref":"AlApplicationId"
