@@ -268,16 +268,18 @@ class PawsCollector extends AlAwsCollector {
     };
 
     // check the status of the state in DDB to avoid duplication
+    // there is a lot of logic here. not sur eif there is a better way of deduping. trying for an MVP
     checkStateSqsMessage(stateSqsMsg, asyncCallback) {
         const collector = this;
         const DDB = new AWS.DynamoDB();
+        const tableName = process.env.pawsDDBTableName;
 
         const params = {
             Key: {
                 "CollectorId": {S: collector._collectorId},
                 "MessageId": {S: stateSqsMsg.MessageId}
             },
-            TableName: process.env.pawsDDBTableName,
+            TableName: tableName,
             ConsistentRead: true
         }
 
@@ -285,6 +287,7 @@ class PawsCollector extends AlAwsCollector {
 
         getItemPromise.then(data => {
             if (data.Item) {
+                // not sure if its right to call collector.done here
                 if(Item.Status.S === STATE_RECORD_INCOMPLETE && Date.now() - Item.Updated.N < 900) {
                     console.log(`Duplicate state: ${stateSqsMsg.MessageId}, already in progress. skipping`);
                     return collector.done();
@@ -303,7 +306,8 @@ class PawsCollector extends AlAwsCollector {
                         Status: {S: STATE_RECORD_INCOMPLETE},
                         // setting DDB time to life. This is the same as the sqs queue message retention
                         ExpireDate: {N: moment().add(14, 'days').unix().toString()}
-                    }
+                    },
+                    TableName: tableName
                 }
                 DDB.putItem(newRecord, (err) => {
                     if(err){
@@ -327,7 +331,8 @@ class PawsCollector extends AlAwsCollector {
                 MessageId: {S: stateSqsMsg.MessageId},
                 Updated: {N: Date.now().toString()},
                 Status: {S: STATE_RECORD_COMPLETE},
-            }
+            },
+            TableName: tableName
         }
         DDB.putItem(newRecord, (err) => {
             if(err){
