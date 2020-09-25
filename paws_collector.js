@@ -288,9 +288,9 @@ class PawsCollector extends AlAwsCollector {
         getItemPromise.then(data => {
             if (data.Item) {
                 // not sure if its right to call collector.done here
-                if(Item.Status.S === STATE_RECORD_INCOMPLETE && Date.now() - Item.Updated.N < 900) {
+                if(Item.Status.S === STATE_RECORD_INCOMPLETE && moment.unix() - Item.Updated.N < 900) {
                     console.log(`Duplicate state: ${stateSqsMsg.MessageId}, already in progress. skipping`);
-                    return collector.done();
+                    return asyncCallback('State is currently being processed by another invocation');
                 } else if (Item.Status.S === STATE_RECORD_COMPLETE){
                     console.log(`Duplicate state: ${stateSqsMsg.MessageId}, already processed. skipping`);
                     return collector.done();
