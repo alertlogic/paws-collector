@@ -388,7 +388,7 @@ class PawsCollector extends AlAwsCollector {
                 return collector._storeCollectionState(pawsState, privCollectorState, nextInvocationTimeout, asyncCallback);
             },
             function(asyncCallback) {
-                return collector.updateStateDBEntry(stateSqsMsg, asyncCallback);
+                return collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_COMPLETE, asyncCallback);
             }
         ], function(error) {
             collector.done(error);
