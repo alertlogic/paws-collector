@@ -286,6 +286,7 @@ class PawsCollector extends AlAwsCollector {
         const getItemPromise = DDB.getItem(params).promise();
 
         getItemPromise.then(data => {
+            // if the item is alread there, try and see if it is a duplicate
             if (data.Item) {
                 // not sure if its right to call collector.done here
                 if(Item.Status.S === STATE_RECORD_INCOMPLETE && moment.unix() - Item.Updated.N < 900) {
@@ -295,8 +296,8 @@ class PawsCollector extends AlAwsCollector {
                     console.log(`Duplicate state: ${stateSqsMsg.MessageId}, already processed. skipping`);
                     return collector.done();
                 }
-
-                return asyncCallback(null);
+                return collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_INCOMPLETE, asyncCallback);
+            // otherwise, put a new item in ddb.
             } else {
                 const newRecord = {
                     Item: {
@@ -321,16 +322,16 @@ class PawsCollector extends AlAwsCollector {
         }).catch(asyncCallback)
     }
 
-    completeState(stateSqsMsg) {
+    updateStateDBEntry(stateSqsMsg, Status, asyncCallback) {
         const collector = this;
         const DDB = new AWS.DynamoDB();
 
         const newRecord = {
             Item: {
                 CollectorId: {S: collector._collectorId},
-                MessageId: {S: stateSqsMsg.MessageId},
+                MessageId: {S: stateSqsMsg.MD5OfBody},
                 Updated: {N: Date.now().toString()},
-                Status: {S: STATE_RECORD_COMPLETE},
+                Status: {S: Status},
             },
             TableName: tableName
         }
@@ -387,7 +388,7 @@ class PawsCollector extends AlAwsCollector {
                 return collector._storeCollectionState(pawsState, privCollectorState, nextInvocationTimeout, asyncCallback);
             },
             function(asyncCallback) {
-                return collector.completeState(stateSqsMsg, asyncCallback);
+                return collector.updateStateDBEntry(stateSqsMsg, asyncCallback);
             }
         ], function(error) {
             collector.done(error);
