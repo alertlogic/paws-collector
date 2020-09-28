@@ -277,7 +277,7 @@ class PawsCollector extends AlAwsCollector {
         const params = {
             Key: {
                 "CollectorId": {S: collector._collectorId},
-                "MessageId": {S: stateSqsMsg.MessageId}
+                "MessageId": {S: stateSqsMsg.MD5OfBody}
             },
             TableName: tableName,
             ConsistentRead: true
