@@ -91,8 +91,13 @@ class MimecastCollector extends PawsCollector {
             "appKey": appKey
         };
 
-        console.info(`MIME000001 Collecting data from ${state.since} till ${state.until}`);
-
+        if (state.applicationName === Siem_Logs) {
+            console.info(`MIME000001 Collecting data for ${state.applicationName}`);
+        }
+        else{
+            console.info(`MIME000001 Collecting data for ${state.applicationName} from ${state.since} till ${state.until}`);
+        }
+        
         utils.getAPILogs(authDetails, state, [], process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextPage }) => {
                 const newState = collector._getNextCollectionState(state);
