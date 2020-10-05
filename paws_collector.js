@@ -253,7 +253,7 @@ class PawsCollector extends AlAwsCollector {
         });
     };
 
-    handleEvent(event, asyncCallback) {
+    handleEvent(event) {
         let collector = this;
         if (event.Records) {
             let stateMsg = event.Records[0];
@@ -277,7 +277,7 @@ class PawsCollector extends AlAwsCollector {
         const params = {
             Key: {
                 "CollectorId": {S: collector._collectorId},
-                "MessageId": {S: stateSqsMsg.MD5OfBody}
+                "MessageId": {S: stateSqsMsg.md5OfBody}
             },
             TableName: tableName,
             ConsistentRead: true
@@ -288,22 +288,25 @@ class PawsCollector extends AlAwsCollector {
         getItemPromise.then(data => {
             // if the item is alread there, try and see if it is a duplicate
             if (data.Item) {
+                console.log('state exists', data.Item);
+                const Item = data.Item;
                 // not sure if its right to call collector.done here
-                if(Item.Status.S === STATE_RECORD_INCOMPLETE && moment.unix() - Item.Updated.N < 900) {
+                if(Item.Status.S === STATE_RECORD_INCOMPLETE && moment().unix() - parseInt(Item.Updated.N) < 900) {
                     console.log(`Duplicate state: ${stateSqsMsg.MessageId}, already in progress. skipping`);
                     return asyncCallback('State is currently being processed by another invocation');
                 } else if (Item.Status.S === STATE_RECORD_COMPLETE){
                     console.log(`Duplicate state: ${stateSqsMsg.MessageId}, already processed. skipping`);
                     return collector.done();
+                } else {
+                    return collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_INCOMPLETE, asyncCallback);
                 }
-                return collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_INCOMPLETE, asyncCallback);
             // otherwise, put a new item in ddb.
             } else {
                 const newRecord = {
                     Item: {
                         CollectorId: {S: collector._collectorId},
-                        MessageId: {S: stateSqsMsg.MessageId},
-                        Updated: {N: Date.now().toString()},
+                        MessageId: {S: stateSqsMsg.md5OfBody},
+                        Updated: {N: moment().unix().toString()},
                         Status: {S: STATE_RECORD_INCOMPLETE},
                         // setting DDB time to life. This is the same as the sqs queue message retention
                         ExpireDate: {N: moment().add(14, 'days').unix().toString()}
@@ -312,6 +315,7 @@ class PawsCollector extends AlAwsCollector {
                 }
                 DDB.putItem(newRecord, (err) => {
                     if(err){
+                        return asyncCallback(err);
                         // TODO:figure out how to handle ddb write errors. Do they crash the collector?
                     } else {
                         return asyncCallback(null)
@@ -325,19 +329,28 @@ class PawsCollector extends AlAwsCollector {
     updateStateDBEntry(stateSqsMsg, Status, asyncCallback) {
         const collector = this;
         const DDB = new AWS.DynamoDB();
+        const tableName = process.env.pawsDDBTableName;
 
-        const newRecord = {
-            Item: {
+        const updateParams = {
+            Key: {
                 CollectorId: {S: collector._collectorId},
-                MessageId: {S: stateSqsMsg.MD5OfBody},
-                Updated: {N: Date.now().toString()},
-                Status: {S: Status},
+                MessageId: {S: stateSqsMsg.md5OfBody}
+            },
+            AttributeUpdates: {
+                Updated: {
+                    Action: 'PUT',
+                    Value:{N: moment().unix().toString()}
+                },
+                Status: {
+                    Action: 'PUT',
+                    Value: {S: Status}
+                },
             },
             TableName: tableName
         }
-        DDB.putItem(newRecord, (err) => {
+        DDB.updateItem(updateParams, (err) => {
             if(err){
-                // figure out how to handle ddb write errors
+                return asyncCallback(err);
             } else {
                 return asyncCallback(null)
             }
@@ -387,7 +400,7 @@ class PawsCollector extends AlAwsCollector {
             function(privCollectorState, nextInvocationTimeout, asyncCallback) {
                 return collector._storeCollectionState(pawsState, privCollectorState, nextInvocationTimeout, asyncCallback);
             },
-            function(asyncCallback) {
+            function(_results, asyncCallback) {
                 return collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_COMPLETE, asyncCallback);
             }
         ], function(error) {
