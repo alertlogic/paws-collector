@@ -60,11 +60,11 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                             if (body.fail.errors) {
                                 return reject(body.fail.errors);
                             }
-                            if (state.applicationName === Attachment_Protect_Logs && body.data.attachmentLogs) {
-                                accumulator.push(...body.data.attachmentLogs);
+                            if (state.applicationName === Attachment_Protect_Logs && body.data[0].attachmentLogs) {
+                                accumulator.push(...body.data[0].attachmentLogs);
                             }
-                            if (state.applicationName === URL_Protect_Logs && body.data.clickLogs) {
-                                accumulator.push(...body.data.clickLogs);
+                            if (state.applicationName === URL_Protect_Logs && body.data[0].clickLogs) {
+                                accumulator.push(...body.data[0].clickLogs);
                             }
                             if (body.meta.pagination.next) {
                                 nextPage = body.meta.pagination.next;
@@ -97,8 +97,7 @@ function getAPIDetails(state, nextPage) {
                     "data": [
                         {
                             'type': 'MTA',
-                            'fileFormat': 'JSON',
-                            'compress': true
+                            'fileFormat': 'JSON'
                         }
                     ]
                 };
@@ -109,8 +108,7 @@ function getAPIDetails(state, nextPage) {
                         {
                             'type': 'MTA',
                             'token': nextPage,
-                            'fileFormat': 'JSON',
-                            'compress': true
+                            'fileFormat': 'JSON'
                         }
                     ]
                 };

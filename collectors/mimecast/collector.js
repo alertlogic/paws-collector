@@ -12,6 +12,7 @@
 const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const parse = require('@alertlogic/al-collector-js').Parse;
+const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const packageJson = require('./package.json');
 const utils = require("./utils");
 
@@ -54,6 +55,15 @@ class MimecastCollector extends PawsCollector {
             }
         });
         return callback(null, initialStates, 1);
+    }
+
+    pawsGetRegisterParameters(event, callback) {
+        const regValues = {
+            mimecastApplicationNames: process.env.paws_collector_param_string_1,
+            mimecastApplicationID: process.env.paws_collector_param_string_2,
+            mimecastApplicationKey: process.env.paws_collector_param_string_3
+        };
+        callback(null, regValues);
     }
 
     pawsGetLogs(state, callback) {
@@ -100,7 +110,6 @@ class MimecastCollector extends PawsCollector {
         
         utils.getAPILogs(authDetails, state, [], process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextPage }) => {
-                const newState = collector._getNextCollectionState(state);
                 let newState;
                 if (nextPage === undefined) {
                     newState = this._getNextCollectionState(state);
@@ -115,7 +124,7 @@ class MimecastCollector extends PawsCollector {
     }
 
     _getNextCollectionState(curState) {
-        if (applicationName === Siem_Logs) {
+        if (curState.applicationName === Siem_Logs) {
             return {
                 applicationName: curState.applicationName,
                 nextPage: null,
@@ -123,10 +132,11 @@ class MimecastCollector extends PawsCollector {
             }
         }
         else {
+            
             const untilMoment = moment(curState.until);
 
             const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
-
+            
             return {
                 applicationName: curState.applicationName,
                 since: nextSinceMoment.toISOString(),
@@ -138,7 +148,7 @@ class MimecastCollector extends PawsCollector {
     }
 
     _getNextCollectionStateWithNextPage(curState, nextPage) {
-        if (applicationName === Siem_Logs) {
+        if (curState.applicationName === Siem_Logs) {
             return {
                 applicationName: curState.applicationName,
                 nextPage: nextPage,
