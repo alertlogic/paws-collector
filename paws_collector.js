@@ -288,14 +288,12 @@ class PawsCollector extends AlAwsCollector {
         getItemPromise.then(data => {
             // if the item is alread there, try and see if it is a duplicate
             if (data.Item) {
-                console.log('state exists', data.Item);
                 const Item = data.Item;
-                // not sure if its right to call collector.done here
                 if(Item.Status.S === STATE_RECORD_INCOMPLETE && moment().unix() - parseInt(Item.Updated.N) < 900) {
-                    console.log(`Duplicate state: ${stateSqsMsg.MessageId}, already in progress. skipping`);
+                    console.log(`Duplicate state: ${Item.MessageId.S}, already in progress. skipping`);
                     return asyncCallback('State is currently being processed by another invocation');
                 } else if (Item.Status.S === STATE_RECORD_COMPLETE){
-                    console.log(`Duplicate state: ${stateSqsMsg.MessageId}, already processed. skipping`);
+                    console.log(`Duplicate state: ${Item.MessageId.S}, already processed. skipping`);
                     return collector.done();
                 } else {
                     return collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_INCOMPLETE, asyncCallback);
@@ -316,7 +314,6 @@ class PawsCollector extends AlAwsCollector {
                 DDB.putItem(newRecord, (err) => {
                     if(err){
                         return asyncCallback(err);
-                        // TODO:figure out how to handle ddb write errors. Do they crash the collector?
                     } else {
                         return asyncCallback(null)
                     }
