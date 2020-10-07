@@ -93,8 +93,8 @@ function mockSQSSendMessageBatch(returnObject) {
 
 function mockDDB(getItemStub, putItemStub, updateItemStub){
     const defaultMock = (_params, callback) => {
-        return callback(null, {data: null})
-    }
+        return callback(null, {data: null});
+    };
 
     AWS.mock('DynamoDB', 'getItem', getItemStub ? getItemStub : defaultMock);
 
@@ -272,7 +272,7 @@ describe('Unit Tests', function() {
     });
     describe('State Deduplicationt Tests', function(){
         it('creates a new DDB item when the states does not exist', function(done){
-            const fakeFun = function(_params, callback){return callback(null, {data:null})};
+            const fakeFun = function(_params, callback){return callback(null, {data:null});};
             const putItemStub = sinon.stub().callsFake(fakeFun);
             const updateItemStub = sinon.stub().callsFake(fakeFun);
 
@@ -317,7 +317,7 @@ describe('Unit Tests', function() {
                 "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
                 "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
                 "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-            }
+            };
             const fakeGetFun = function (_params, callback) {
                 const mockItem = {
                     Item: {
@@ -325,10 +325,10 @@ describe('Unit Tests', function() {
                         Status: {S: 'COMPLETE'},
                         Updated: {N: `${Date.now()/1000 - 100 }`}
                     }
-                }
-                return callback(null, mockItem)
-            }
-            const fakeFun = function(_params, callback){return callback(null, {data:null})};
+                };
+                return callback(null, mockItem);
+            };
+            const fakeFun = function(_params, callback){return callback(null, {data:null});};
             const getItemStub = sinon.stub().callsFake(fakeGetFun);
             const putItemStub = sinon.stub().callsFake(fakeFun);
             const updateItemStub = sinon.stub().callsFake(fakeFun);
@@ -367,7 +367,7 @@ describe('Unit Tests', function() {
                 "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
                 "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
                 "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-            }
+            };
             const fakeGetFun = function (_params, callback) {
                 const mockItem = {
                     Item: {
@@ -375,10 +375,10 @@ describe('Unit Tests', function() {
                         Status: {S: 'INCOMPLETE'},
                         Updated: {N: `${Date.now()/1000 - 100 }`}
                     }
-                }
-                return callback(null, mockItem)
-            }
-            const fakeFun = function(_params, callback){return callback(null, {data:null})};
+                };
+                return callback(null, mockItem);
+            };
+            const fakeFun = function(_params, callback){return callback(null, {data:null});};
             const getItemStub = sinon.stub().callsFake(fakeGetFun);
             const putItemStub = sinon.stub().callsFake(fakeFun);
             const updateItemStub = sinon.stub().callsFake(fakeFun);
@@ -412,7 +412,7 @@ describe('Unit Tests', function() {
             });
         });
         it('updates the state if it is successful', function(done){
-            const fakeFun = function(_params, callback){return callback(null, {data:null})};
+            const fakeFun = function(_params, callback){return callback(null, {data:null});};
             const updateItemStub = sinon.stub().callsFake(fakeFun);
 
             mockDDB(null, null, updateItemStub);
