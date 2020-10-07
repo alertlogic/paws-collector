@@ -51,23 +51,31 @@
             "Type": "String",
             "Default": "none"
         },
-        "PawsEndpoint": {
-            "Description": "URL to poll",
+        "MimecastEndpoint": {
+            "Description": "Mimecast end point API access URL.",
             "Type": "String"
         },
-        "PawsAuthType": {
-            "Description": "Target API authentication type. Supported types: ssws, oauth2",
-            "Type": "String",
-            "Default": "ssws"
-        },
-        "PawsClientId": {
-            "Description": "Client ID for oauth2 authentication type",
+        "MimecastAccessKey": {
+            "Description": "Mimecast Access Key",
             "Type": "String"
         },
-        "PawsSecret": {
-            "Description": "Client secret for oauth2 or secret token for ssws.",
+        "MimecastSecret": {
+            "Description": "Mimecast Secret Key.",
             "Type": "String",
             "NoEcho": true
+        },
+        "MimecastApplicationId": {
+            "Description": "Mimecast Application Id.",
+            "Type": "String"
+        },
+        "MimecastApplicationKey": {
+            "Description": "Mimecast Application Key.",
+            "Type": "String"
+        },
+        "MimecastApplicationNames": {
+            "Description": "Define Application names. Please pass JSON formatted list.",
+            "Type": "String",
+            "Default": "[\"SiemLogs\", \"AttachmentProtectLogs\", \"URLProtectLogs\", \"MalwareFeed\"]"
         },
         "CollectionStartTs": {
             "Description": "Timestamp when log collection starts. For example, 2019-11-21T16:00:00Z",
@@ -96,10 +104,13 @@
             "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
             "CollectorId" : { "Ref":"CollectorId" },
             "PollingInterval" : 60,
-            "PawsEndpoint" : { "Ref":"PawsEndpoint" },
-            "PawsAuthType" : { "Ref":"PawsAuthType" },
-            "PawsClientId" : "",
-            "PawsSecret" : { "Ref":"PawsSecret" },
+            "PawsEndpoint" : { "Ref":"MimecastEndpoint" },
+            "PawsAuthType" : "oauth2",
+            "PawsClientId" : { "Ref":"MimecastAccessKey" },
+            "PawsSecret" : { "Ref":"MimecastSecret" },
+            "CollectorParamString1" : { "Ref":"MimecastApplicationNames" },
+            "CollectorParamString2" : { "Ref":"MimecastApplicationId" },
+            "CollectorParamString3" : { "Ref":"MimecastApplicationKey" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }
         }
