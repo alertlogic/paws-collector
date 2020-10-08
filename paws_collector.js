@@ -344,7 +344,7 @@ class PawsCollector extends AlAwsCollector {
                 },
             },
             TableName: tableName
-        }
+        };
         DDB.updateItem(updateParams, (err) => {
             if(err){
                 return asyncCallback(err);
