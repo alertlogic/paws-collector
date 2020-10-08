@@ -771,7 +771,7 @@
                      "Resource":[{
                        "Fn::Join":["",
                           [
-                             "arn:aws:dynamobd:",
+                             "arn:aws:dynamodb:",
                              { "Ref" : "AWS::Region" }, ":",
                              { "Ref" : "AWS::AccountId"}, ":",
                              "table/",
