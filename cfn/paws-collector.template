@@ -15,7 +15,7 @@
         "DdbTableName" :{
             "Description": "The table name the collector will use for state deduplication. This should be common for all collectors",
             "Type": "String",
-            "Default": "PawsState"
+            "Default": ""
         },
         "AlertlogicAccessKeyId": {
             "Description": "Alert Logic Access Key Id obtained from AIMS",
@@ -130,7 +130,41 @@
             "Default": ""
         }
     },
+    "Conditions":{
+        "createDdbTable": {"Fn::Equals" : [{"Ref" :"DdbTableName" }, ""]}
+    },
     "Resources":{
+        "DdupeDdbTable": {
+            "Type" : "AWS::DynamoDB::Table",
+            "Condition": "createDdbTable",
+            "Properties" : {
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName" : "CollectorId",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName" : "MessageId",
+                        "AttributeType": "S"
+                    }
+                ],
+                "BillingMode" : "PAY_PER_REQUEST",
+                "KeySchema" : [
+                    {
+                        "AttributeName" : "CollectorId",
+                        "KeyType" : "HASH"
+                    },
+                    {
+                        "AttributeName" : "MessageId",
+                        "KeyType" : "RANGE"
+                    }
+                ],
+                "TimeToLiveSpecification" : {
+                    "AttributeName" : "ExpireDate",
+                    "Enabled" : true
+                }
+            }
+        },
       "CollectLambdaRole":{
          "Type":"AWS::IAM::Role",
          "Properties":{
@@ -577,7 +611,11 @@
                       "Ref": "DatadogKMSKey"
                   },
                   "pawsDDBTableName": {
-                      "Ref": "DdbTableName" 
+                      "Fn::If": [
+                        "createDdbTable",
+                        {"Ref": "DdupeDdbTable"},
+                        {"Ref": "DdbTableName"} 
+                      ]
                   },
                   "al_application_id":{
                       "Ref":"AlApplicationId"
@@ -775,7 +813,13 @@
                              { "Ref" : "AWS::Region" }, ":",
                              { "Ref" : "AWS::AccountId"}, ":",
                              "table/",
-                             { "Ref" : "DdbTableName" }
+                             {
+                                "Fn::If": [
+                                    "createDdbTable",
+                                    {"Ref": "DdupeDdbTable"},
+                                    {"Ref": "DdbTableName"} 
+                                ]
+                             }
                           ]
                        ]
                      }]

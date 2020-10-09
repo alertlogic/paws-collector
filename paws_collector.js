@@ -26,6 +26,7 @@ const DOMAIN_REGEXP = /^[htps]*:\/\/|\/$/gi;
 
 const STATE_RECORD_COMPLETE = "COMPLETE";
 const STATE_RECORD_INCOMPLETE ="INCOMPLETE";
+const SQS_VISIBILITY_TIMEOUT = 900;
 
 function getPawsParamStoreParam(){
     return new Promise((resolve, reject) => {
@@ -109,6 +110,7 @@ class PawsCollector extends AlAwsCollector {
         this._pawsEndpoint = process.env.paws_endpoint
         this._pawsDomainEndpoint = endpointDomain;
         this._pawsHttpsEndpoint = 'https://' + endpointDomain;
+        this.ddbTableName = process.env.pawsDDBTableName;
     };
 
     get secret () {
@@ -272,14 +274,13 @@ class PawsCollector extends AlAwsCollector {
     checkStateSqsMessage(stateSqsMsg, asyncCallback) {
         const collector = this;
         const DDB = new AWS.DynamoDB();
-        const tableName = process.env.pawsDDBTableName;
 
         const params = {
             Key: {
                 "CollectorId": {S: collector._collectorId},
                 "MessageId": {S: stateSqsMsg.md5OfBody}
             },
-            TableName: tableName,
+            TableName: this.ddbTableName,
             ConsistentRead: true
         }
 
@@ -289,11 +290,13 @@ class PawsCollector extends AlAwsCollector {
             // if the item is alread there, try and see if it is a duplicate
             if (data.Item) {
                 const Item = data.Item;
-                if(Item.Status.S === STATE_RECORD_INCOMPLETE && moment().unix() - parseInt(Item.Updated.N) < 900) {
-                    console.log(`Duplicate state: ${Item.MessageId.S}, already in progress. skipping`);
+                // check to see if record was updated within the visibility timeout of the SQS queue.
+                // if it is within that limit, then it likely to be processed by another invocation and this is a duplicate
+                if(Item.Status.S === STATE_RECORD_INCOMPLETE && moment().unix() - parseInt(Item.Updated.N) < SQS_VISIBILITY_TIMEOUT) {
+                    console.info(`Duplicate state: ${Item.MessageId.S}, already in progress. skipping`);
                     return asyncCallback('State is currently being processed by another invocation');
                 } else if (Item.Status.S === STATE_RECORD_COMPLETE){
-                    console.log(`Duplicate state: ${Item.MessageId.S}, already processed. skipping`);
+                    console.info(`Duplicate state: ${Item.MessageId.S}, already processed. skipping`);
                     return collector.done();
                 } else {
                     return collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_INCOMPLETE, asyncCallback);
@@ -305,11 +308,12 @@ class PawsCollector extends AlAwsCollector {
                         CollectorId: {S: collector._collectorId},
                         MessageId: {S: stateSqsMsg.md5OfBody},
                         Updated: {N: moment().unix().toString()},
+                        Cid: {S: this.cid},
                         Status: {S: STATE_RECORD_INCOMPLETE},
                         // setting DDB time to life. This is the same as the sqs queue message retention
                         ExpireDate: {N: moment().add(14, 'days').unix().toString()}
                     },
-                    TableName: tableName
+                    TableName: this.ddbTableName
                 }
                 DDB.putItem(newRecord, (err) => {
                     if(err){
@@ -326,7 +330,6 @@ class PawsCollector extends AlAwsCollector {
     updateStateDBEntry(stateSqsMsg, Status, asyncCallback) {
         const collector = this;
         const DDB = new AWS.DynamoDB();
-        const tableName = process.env.pawsDDBTableName;
 
         const updateParams = {
             Key: {
@@ -343,7 +346,7 @@ class PawsCollector extends AlAwsCollector {
                     Value: {S: Status}
                 },
             },
-            TableName: tableName
+            TableName: this.ddbTableName
         };
         DDB.updateItem(updateParams, (err) => {
             if(err){
