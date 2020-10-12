@@ -308,7 +308,7 @@ class PawsCollector extends AlAwsCollector {
                         CollectorId: {S: collector._collectorId},
                         MessageId: {S: stateSqsMsg.md5OfBody},
                         Updated: {N: moment().unix().toString()},
-                        Cid: {S: this.cid},
+                        Cid: {S: this.cid ? this.cid : 'none'},
                         Status: {S: STATE_RECORD_INCOMPLETE},
                         // setting DDB time to life. This is the same as the sqs queue message retention
                         ExpireDate: {N: moment().add(14, 'days').unix().toString()}
@@ -340,6 +340,10 @@ class PawsCollector extends AlAwsCollector {
                 Updated: {
                     Action: 'PUT',
                     Value:{N: moment().unix().toString()}
+                },
+                Cid: {
+                    Action: 'PUT',
+                    Value:{S: this.cid ? this.cid : 'none'}
                 },
                 Status: {
                     Action: 'PUT',

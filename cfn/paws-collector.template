@@ -15,7 +15,7 @@
         "DdbTableName" :{
             "Description": "The table name the collector will use for state deduplication. This should be common for all collectors",
             "Type": "String",
-            "Default": ""
+            "Default": "PawsCollectorStates"
         },
         "AlertlogicAccessKeyId": {
             "Description": "Alert Logic Access Key Id obtained from AIMS",
@@ -802,6 +802,8 @@
                   {
                      "Effect":"Allow",
                      "Action":[
+                        "dynamodb:Query",
+                        "dynamodb:Scan",
                         "dynamodb:GetItem",
                         "dynamodb:PutItem",
                         "dynamodb:UpdateItem"
