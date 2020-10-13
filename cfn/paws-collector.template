@@ -12,7 +12,7 @@
             "Type": "String",
             "Default": ""
         },
-        "DdbTableName" :{
+        "ExistingDDBTableName" :{
             "Description": "The table name the collector will use for state deduplication. This should be common for all collectors",
             "Type": "String",
             "Default": "PawsCollectorStates"
