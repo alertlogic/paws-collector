@@ -27,6 +27,7 @@ const DOMAIN_REGEXP = /^[htps]*:\/\/|\/$/gi;
 const STATE_RECORD_COMPLETE = "COMPLETE";
 const STATE_RECORD_INCOMPLETE ="INCOMPLETE";
 const SQS_VISIBILITY_TIMEOUT = 900;
+const DDB_TTL_DAYS = 14;
 
 function getPawsParamStoreParam(){
     return new Promise((resolve, reject) => {
@@ -311,7 +312,7 @@ class PawsCollector extends AlAwsCollector {
                         Cid: {S: collector.cid ? collector.cid : 'none'},
                         Status: {S: STATE_RECORD_INCOMPLETE},
                         // setting DDB time to life. This is the same as the sqs queue message retention
-                        ExpireDate: {N: moment().add(14, 'days').unix().toString()}
+                        ExpireDate: {N: moment().add(DDB_TTL_DAYS, 'days').unix().toString()}
                     },
                     TableName: this.ddbTableName
                 }
