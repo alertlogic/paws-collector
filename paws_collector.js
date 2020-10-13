@@ -111,7 +111,7 @@ class PawsCollector extends AlAwsCollector {
         this._pawsEndpoint = process.env.paws_endpoint
         this._pawsDomainEndpoint = endpointDomain;
         this._pawsHttpsEndpoint = 'https://' + endpointDomain;
-        this.ddbTableName = process.env.pawsDDBTableName;
+        this._pawsDdbTableName = process.env.paws_ddb_table_name;
     };
 
     get secret () {
@@ -281,7 +281,7 @@ class PawsCollector extends AlAwsCollector {
                 "CollectorId": {S: collector._collectorId},
                 "MessageId": {S: stateSqsMsg.md5OfBody}
             },
-            TableName: this.ddbTableName,
+            TableName: this._paws_pawsDdbTableName,
             ConsistentRead: true
         }
 
@@ -314,7 +314,7 @@ class PawsCollector extends AlAwsCollector {
                         // setting DDB time to life. This is the same as the sqs queue message retention
                         ExpireDate: {N: moment().add(DDB_TTL_DAYS, 'days').unix().toString()}
                     },
-                    TableName: this.ddbTableName
+                    TableName: this._pawsDdbTableName
                 }
                 DDB.putItem(newRecord, (err) => {
                     if(err){
@@ -351,7 +351,7 @@ class PawsCollector extends AlAwsCollector {
                     Value: {S: Status}
                 },
             },
-            TableName: this.ddbTableName
+            TableName: this._pawsDdbTableName
         };
         DDB.updateItem(updateParams, (err) => {
             if(err){

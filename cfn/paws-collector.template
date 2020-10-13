@@ -610,7 +610,7 @@
                   "DD_KMS_API_KEY": {
                       "Ref": "DatadogKMSKey"
                   },
-                  "pawsDDBTableName": {
+                  "paws_ddb_table_name": {
                       "Fn::If": [
                         "createDdbTable",
                         {"Ref": "DdupeDdbTable"},
