@@ -12,7 +12,7 @@
             "Type": "String",
             "Default": ""
         },
-        "ExistingDDBTableName" :{
+        "ExistingExistingDDBTableName" :{
             "Description": "The table name the collector will use for state deduplication. This should be common for all collectors",
             "Type": "String",
             "Default": "PawsCollectorStates"
@@ -131,7 +131,7 @@
         }
     },
     "Conditions":{
-        "createDdbTable": {"Fn::Equals" : [{"Ref" :"DdbTableName" }, ""]}
+        "createDdbTable": {"Fn::Equals" : [{"Ref" :"ExistingExistingDDBTableName" }, ""]}
     },
     "Resources":{
         "DdupeDdbTable": {
@@ -614,7 +614,7 @@
                       "Fn::If": [
                         "createDdbTable",
                         {"Ref": "DdupeDdbTable"},
-                        {"Ref": "DdbTableName"} 
+                        {"Ref": "ExistingDDBTableName"} 
                       ]
                   },
                   "al_application_id":{
@@ -819,7 +819,7 @@
                                 "Fn::If": [
                                     "createDdbTable",
                                     {"Ref": "DdupeDdbTable"},
-                                    {"Ref": "DdbTableName"} 
+                                    {"Ref": "ExistingDDBTableName"} 
                                 ]
                              }
                           ]
