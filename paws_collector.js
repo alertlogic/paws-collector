@@ -281,7 +281,7 @@ class PawsCollector extends AlAwsCollector {
                 "CollectorId": {S: collector._collectorId},
                 "MessageId": {S: stateSqsMsg.md5OfBody}
             },
-            TableName: this._paws_pawsDdbTableName,
+            TableName: this._pawsDdbTableName,
             ConsistentRead: true
         }
 
