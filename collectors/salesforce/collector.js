@@ -120,6 +120,12 @@ class SalesforceCollector extends PawsCollector {
                         return callback(null, [], state, state.poll_interval_sec);
                     }
                     else {
+                        if (error.errorCode && errorCode === "INVALID_FIELD") {
+                            console.log(`API not able to fetch field for object ${state.object}`);
+                        }
+                        if (error.errorCode && errorCode === "INVALID_TYPE") {
+                            console.log(`API not able to fetch logs for object ${state.object}`);
+                        }
                         return callback(error);
                     }
 
