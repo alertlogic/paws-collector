@@ -17,10 +17,11 @@ process.env.paws_poll_interval = 900;
 process.env.paws_endpoint = 'https://test.alertlogic.com/';
 process.env.paws_api_secret = 'api-token';
 process.env.collector_id = 'collector-id';
+process.env.customer_id = '8675309';
 process.env.paws_secret_param_name = 'PAWS-SECRET-paws';
 process.env.paws_api_client_id = 'api-client-id';
 process.env.al_application_id = 'paws';
-process.env.pawsDDBTableName = 'asampletable';
+process.env.paws_ddb_table_name = 'asampletable';
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',
