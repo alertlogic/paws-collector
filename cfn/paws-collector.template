@@ -12,6 +12,11 @@
             "Type": "String",
             "Default": ""
         },
+        "ExistingDDBTableName" :{
+            "Description": "The table name the collector will use for state deduplication. This should be common for all collectors",
+            "Type": "String",
+            "Default": "PawsCollectorStates"
+        },
         "AlertlogicAccessKeyId": {
             "Description": "Alert Logic Access Key Id obtained from AIMS",
             "Type": "String"
@@ -125,7 +130,41 @@
             "Default": ""
         }
     },
+    "Conditions":{
+        "createDdbTable": {"Fn::Equals" : [{"Ref" :"ExistingDDBTableName" }, ""]}
+    },
     "Resources":{
+        "DdupeDdbTable": {
+            "Type" : "AWS::DynamoDB::Table",
+            "Condition": "createDdbTable",
+            "Properties" : {
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName" : "CollectorId",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName" : "MessageId",
+                        "AttributeType": "S"
+                    }
+                ],
+                "BillingMode" : "PAY_PER_REQUEST",
+                "KeySchema" : [
+                    {
+                        "AttributeName" : "CollectorId",
+                        "KeyType" : "HASH"
+                    },
+                    {
+                        "AttributeName" : "MessageId",
+                        "KeyType" : "RANGE"
+                    }
+                ],
+                "TimeToLiveSpecification" : {
+                    "AttributeName" : "ExpireDate",
+                    "Enabled" : true
+                }
+            }
+        },
       "CollectLambdaRole":{
          "Type":"AWS::IAM::Role",
          "Properties":{
@@ -571,6 +610,13 @@
                   "DD_KMS_API_KEY": {
                       "Ref": "DatadogKMSKey"
                   },
+                  "paws_ddb_table_name": {
+                      "Fn::If": [
+                        "createDdbTable",
+                        {"Ref": "DdupeDdbTable"},
+                        {"Ref": "ExistingDDBTableName"} 
+                      ]
+                  },
                   "al_application_id":{
                       "Ref":"AlApplicationId"
                   },
@@ -749,6 +795,33 @@
                                 ]]
                              },
                              "/*"
+                          ]
+                       ]
+                     }]
+                  },
+                  {
+                     "Effect":"Allow",
+                     "Action":[
+                        "dynamodb:Query",
+                        "dynamodb:Scan",
+                        "dynamodb:GetItem",
+                        "dynamodb:PutItem",
+                        "dynamodb:UpdateItem"
+                     ],
+                     "Resource":[{
+                       "Fn::Join":["",
+                          [
+                             "arn:aws:dynamodb:",
+                             { "Ref" : "AWS::Region" }, ":",
+                             { "Ref" : "AWS::AccountId"}, ":",
+                             "table/",
+                             {
+                                "Fn::If": [
+                                    "createDdbTable",
+                                    {"Ref": "DdupeDdbTable"},
+                                    {"Ref": "ExistingDDBTableName"} 
+                                ]
+                             }
                           ]
                        ]
                      }]
