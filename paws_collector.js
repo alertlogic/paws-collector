@@ -24,6 +24,11 @@ const CREDS_FILE_PATH = '/tmp/paws_creds';
 var PAWS_DECRYPTED_CREDS = null;
 const DOMAIN_REGEXP = /^[htps]*:\/\/|\/$/gi;
 
+const STATE_RECORD_COMPLETE = "COMPLETE";
+const STATE_RECORD_INCOMPLETE ="INCOMPLETE";
+const SQS_VISIBILITY_TIMEOUT = 900;
+const DDB_TTL_DAYS = 14;
+
 function getPawsParamStoreParam(){
     return new Promise((resolve, reject) => {
         if(fs.existsSync(CREDS_FILE_PATH)){
@@ -106,6 +111,7 @@ class PawsCollector extends AlAwsCollector {
         this._pawsEndpoint = process.env.paws_endpoint
         this._pawsDomainEndpoint = endpointDomain;
         this._pawsHttpsEndpoint = 'https://' + endpointDomain;
+        this._pawsDdbTableName = process.env.paws_ddb_table_name;
     };
 
     get secret () {
@@ -263,6 +269,98 @@ class PawsCollector extends AlAwsCollector {
             return super.handleEvent(event);
         }
     };
+
+    // check the status of the state in DDB to avoid duplication
+    // there is a lot of logic here. not sur eif there is a better way of deduping. trying for an MVP
+    checkStateSqsMessage(stateSqsMsg, asyncCallback) {
+        const collector = this;
+        const DDB = new AWS.DynamoDB();
+
+        const params = {
+            Key: {
+                "CollectorId": {S: collector._collectorId},
+                "MessageId": {S: stateSqsMsg.md5OfBody}
+            },
+            TableName: this._pawsDdbTableName,
+            ConsistentRead: true
+        }
+
+        const getItemPromise = DDB.getItem(params).promise();
+
+        getItemPromise.then(data => {
+            // if the item is alread there, try and see if it is a duplicate
+            if (data.Item) {
+                const Item = data.Item;
+                // check to see if record was updated within the visibility timeout of the SQS queue.
+                // if it is within that limit, then it likely to be processed by another invocation and this is a duplicate
+                if(Item.Status.S === STATE_RECORD_INCOMPLETE && moment().unix() - parseInt(Item.Updated.N) < SQS_VISIBILITY_TIMEOUT) {
+                    console.info(`Duplicate state: ${Item.MessageId.S}, already in progress. skipping`);
+                    return asyncCallback('State is currently being processed by another invocation');
+                } else if (Item.Status.S === STATE_RECORD_COMPLETE){
+                    console.info(`Duplicate state: ${Item.MessageId.S}, already processed. skipping`);
+                    return collector.done();
+                } else {
+                    return collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_INCOMPLETE, asyncCallback);
+                }
+            // otherwise, put a new item in ddb.
+            } else {
+                const newRecord = {
+                    Item: {
+                        CollectorId: {S: collector._collectorId},
+                        MessageId: {S: stateSqsMsg.md5OfBody},
+                        Updated: {N: moment().unix().toString()},
+                        Cid: {S: collector.cid ? collector.cid : 'none'},
+                        Status: {S: STATE_RECORD_INCOMPLETE},
+                        // setting DDB time to life. This is the same as the sqs queue message retention
+                        ExpireDate: {N: moment().add(DDB_TTL_DAYS, 'days').unix().toString()}
+                    },
+                    TableName: this._pawsDdbTableName
+                }
+                DDB.putItem(newRecord, (err) => {
+                    if(err){
+                        return asyncCallback(err);
+                    } else {
+                        return asyncCallback(null)
+                    }
+                });
+            }
+            
+        }).catch(asyncCallback)
+    }
+
+    updateStateDBEntry(stateSqsMsg, Status, asyncCallback) {
+        const collector = this;
+        const DDB = new AWS.DynamoDB();
+
+        const updateParams = {
+            Key: {
+                CollectorId: {S: collector._collectorId},
+                MessageId: {S: stateSqsMsg.md5OfBody}
+            },
+            AttributeUpdates: {
+                Updated: {
+                    Action: 'PUT',
+                    Value:{N: moment().unix().toString()}
+                },
+                Cid: {
+                    Action: 'PUT',
+                    Value:{S: collector.cid ? collector.cid : 'none'}
+                },
+                Status: {
+                    Action: 'PUT',
+                    Value: {S: Status}
+                },
+            },
+            TableName: this._pawsDdbTableName
+        };
+        DDB.updateItem(updateParams, (err) => {
+            if(err){
+                return asyncCallback(err);
+            } else {
+                return asyncCallback(null)
+            }
+        });
+    }
     
     handlePollRequest(stateSqsMsg) {
         let collector = this;
@@ -275,6 +373,9 @@ class PawsCollector extends AlAwsCollector {
                 } else {
                     return asyncCallback();
                 }
+            },
+            function(asyncCallback) {
+                return collector.checkStateSqsMessage(stateSqsMsg, asyncCallback);
             },
             function(asyncCallback) {
                 return collector.pawsGetLogs(pawsState.priv_collector_state, asyncCallback);
@@ -303,6 +404,9 @@ class PawsCollector extends AlAwsCollector {
             },
             function(privCollectorState, nextInvocationTimeout, asyncCallback) {
                 return collector._storeCollectionState(pawsState, privCollectorState, nextInvocationTimeout, asyncCallback);
+            },
+            function(_results, asyncCallback) {
+                return collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_COMPLETE, asyncCallback);
             }
         ], function(error) {
             collector.done(error);
