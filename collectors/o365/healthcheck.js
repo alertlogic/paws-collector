@@ -40,8 +40,8 @@ function checkO365Subscriptions(callback){
                     error.message ? error.message :
                         util.inspect(error);
             }
-            callback(al_health.errorMsg('O365000103', 'Bad O365 stream status: ' + errorString)));
-        }
+            callback(al_health.errorMsg('O365000103', 'Bad O365 stream status: ' + errorString));
+        });
 }
 
 function filterSubscriptions(result){
