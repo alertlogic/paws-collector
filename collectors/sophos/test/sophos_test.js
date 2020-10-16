@@ -100,6 +100,7 @@ describe('Unit Tests', function () {
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     nextPage: null,
+                    apiQuotaResetDate: null,
                     poll_interval_sec: 1
                 };
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
@@ -148,6 +149,7 @@ describe('Unit Tests', function () {
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     nextPage: null,
+                    apiQuotaResetDate: null,
                     poll_interval_sec: 1
                 };
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
@@ -157,6 +159,124 @@ describe('Unit Tests', function () {
                     getAPILogs.restore();
                     getTenantIdAndDataRegion.restore();
                     authenticate.restore();
+                    done();
+                });
+
+            });
+        });
+
+        it('Paws Get Logs testing credentials type error', function (done) {
+            authenticate = sinon.stub(utils, 'authenticate').callsFake(
+                function fakeFn(hostName, clientId, clientSecret) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve("token");
+                    });
+                });
+            getTenantIdAndDataRegion = sinon.stub(utils, 'getTenantIdAndDataRegion').callsFake(
+                function fakeFn(hostName, token) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({
+                            "id": "57ca9a6b-885f-4e36-95ec-290548c26059",
+                            "idType": "ORG",
+                            "apiHosts": {
+                                "global": "https://api.central.sophos.com",
+                            }
+                        });
+                    });
+                });
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(baseUrl, token, tenant_Id, state, accumulator, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ accumulator: [sophosMock.LOG_EVENT, sophosMock.LOG_EVENT] });
+                    });
+                });
+            SophosCollector.load().then(function (creds) {
+                var collector = new SophosCollector(ctx, creds, 'sophos');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    nextPage: null,
+                    apiQuotaResetDate: null,
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.ok(err);
+                    assert.equal(err,"Please generate credentials for the tenant. Currently we do not support credentials for Organization and Partner.");
+                    getAPILogs.restore();
+                    getTenantIdAndDataRegion.restore();
+                    authenticate.restore();
+                    done();
+                });
+
+            });
+        });
+
+        it('Paws Get Logs testing throttling error', function (done) {
+            authenticate = sinon.stub(utils, 'authenticate').callsFake(
+                function fakeFn(hostName, clientId, clientSecret) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve("token");
+                    });
+                });
+            getTenantIdAndDataRegion = sinon.stub(utils, 'getTenantIdAndDataRegion').callsFake(
+                function fakeFn(hostName, token) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({
+                            "id": "57ca9a6b-885f-4e36-95ec-290548c26059",
+                            "idType": "tenant",
+                            "apiHosts": {
+                                "global": "https://api.central.sophos.com",
+                                "dataRegion": "https://api-us03.central.sophos.com"
+                            }
+                        });
+                    });
+                });
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(baseUrl, token, tenant_Id, state, accumulator, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ error: {error:"TooManyRequests"} });
+                    });
+                });
+            SophosCollector.load().then(function (creds) {
+                var collector = new SophosCollector(ctx, creds, 'sophos');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    nextPage: null,
+                    apiQuotaResetDate: null,
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.ok(newState.apiQuotaResetDate);
+                    assert.notEqual(newState.apiQuotaResetDate,null);
+                    assert.equal(logs.length, 0);
+                    assert.equal(newState.poll_interval_sec, 900);           
+                    getAPILogs.restore();
+                    getTenantIdAndDataRegion.restore();
+                    authenticate.restore();
+                    done();
+                });
+
+            });
+        });
+
+        it('Paws Get Logs with API Quota Reset Date', function (done) {
+            SophosCollector.load().then(function (creds) {
+                var collector = new SophosCollector(ctx, creds, 'sophos');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    nextPage: null,
+                    apiQuotaResetDate: moment().add(1, 'hours').toISOString(),
+                    poll_interval_sec: 900
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(logs.length, 0);
+                    assert.equal(newState.poll_interval_sec, 900);
                     done();
                 });
 
@@ -184,6 +304,7 @@ describe('Unit Tests', function () {
                     since: startDate.toISOString(),
                     until: startDate.add(collector.pollInterval, 'seconds').toISOString(),
                     nextPage: null,
+                    apiQuotaResetDate: null,
                     poll_interval_sec: 1
                 };
                 let nextState = collector._getNextCollectionState(curState);
