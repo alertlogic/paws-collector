@@ -38,6 +38,7 @@ class SophosCollector extends PawsCollector {
             since: startTs,
             until: endTs,
             nextPage: null,
+            apiQuotaResetDate: null,
             poll_interval_sec: 1
         };
         return callback(null, initialState, 1);
@@ -57,9 +58,17 @@ class SophosCollector extends PawsCollector {
 
         console.info(`SOPH000001 Collecting data from ${state.since} till ${state.until}`);
 
+        if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
+            console.log('API Request Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
+            return callback(null, [], state, state.poll_interval_sec);
+        }
+        
         utils.authenticate(SOPHOS_AUTH_BASE_URL, clientId, clientSecret).then((token) => {
             // while runing on live api server pass getTenantIdAndDataRegion hostname value "api.central.sophos.com"
             utils.getTenantIdAndDataRegion(SOPHOS_API_BASE_URL, token).then((response) => {
+                if (!response.apiHosts.dataRegion) {
+                    return callback("Please generate credentials for the tenant. Currently we do not support credentials for Organization and Partner.");
+                }
                 const apiHostsURL = response.apiHosts.dataRegion.replace(/^https:\/\/|\/$/g, '');
                 utils.getAPILogs(apiHostsURL, token, response.id, state, [], process.env.paws_max_pages_per_invocation)
                     .then(({ accumulator, nextPage }) => {
@@ -72,6 +81,12 @@ class SophosCollector extends PawsCollector {
                         console.info(`SOPH000002 Next collection in ${newState.poll_interval_sec} seconds`);
                         return callback(null, accumulator, newState, newState.poll_interval_sec);
                     }).catch((error) => {
+                        if (error.error.error && error.error.error === "TooManyRequests") {
+                            state.apiQuotaResetDate = moment().add(1, "hours").toISOString();
+                            state.poll_interval_sec = 900;
+                            console.log('API Request Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
+                            return callback(null, [], state, state.poll_interval_sec);
+                        }
                         return callback(error);
                     });
             }).catch((error) => {
@@ -92,6 +107,7 @@ class SophosCollector extends PawsCollector {
             since: nextSinceMoment.toISOString(),
             until: nextUntilMoment.toISOString(),
             nextPage: null,
+            apiQuotaResetDate: null,
             poll_interval_sec: nextPollInterval
         };
     }
@@ -101,6 +117,7 @@ class SophosCollector extends PawsCollector {
             since,
             until,
             nextPage,
+            apiQuotaResetDate: null,
             poll_interval_sec: 1
         };
     }
