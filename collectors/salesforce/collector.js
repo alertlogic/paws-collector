@@ -83,57 +83,51 @@ class SalesforceCollector extends PawsCollector {
 
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
             console.log('API Request Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
-            collector.reportApiThrottling(function () {
-                return callback(null, [], state, state.poll_interval_sec);
-            });
+            return callback(null, [], state, state.poll_interval_sec);
         }
-        else {
 
-            let restServiceClient = new RestServiceClient(baseUrl);
+        let restServiceClient = new RestServiceClient(baseUrl);
 
-            restServiceClient.post(tokenUrl, {
-                form: {
-                    grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-                    assertion: token
-                }
-            }).then(response => {
-                var objectQueryDetails = utils.getObjectQuery(state);
-                if (!objectQueryDetails.query) {
-                    return callback("The object name was not found!");
-                }
-                tsPaths = objectQueryDetails.tsPaths;
-                utils.getObjectLogs(response, objectQueryDetails, [], state, process.env.paws_max_pages_per_invocation)
-                    .then(({ accumulator, nextPage }) => {
-                        let newState;
-                        if (nextPage === undefined) {
-                            newState = this._getNextCollectionState(state);
-                        } else {
-                            newState = this._getNextCollectionStateWithNextPage(state, nextPage);
-                        }
-                        console.info(`SALE000002 Next collection in ${newState.poll_interval_sec} seconds`);
-                        return callback(null, accumulator, newState, newState.poll_interval_sec);
-                    })
-                    .catch((error) => {
-                        if (error.errorCode && error.errorCode === "REQUEST_LIMIT_EXCEEDED") {
-                            // Api will reset after next 24 hours 
-                            // Added extra 1 hours for buffer
-                            state.apiQuotaResetDate = moment().add(25, "hours").toISOString();
-                            state.poll_interval_sec = 900;
-                            console.log('API Request Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
-                            collector.reportApiThrottling(function () {
-                                return callback(null, [], state, state.poll_interval_sec);
-                            });
-                        }
-                        else {
-                            return callback(error);
-                        }
+        restServiceClient.post(tokenUrl, {
+            form: {
+                grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                assertion: token
+            }
+        }).then(response => {
+            var objectQueryDetails = utils.getObjectQuery(state);
+            if (!objectQueryDetails.query) {
+                return callback("The object name was not found!");
+            }
+            tsPaths = objectQueryDetails.tsPaths;
+            utils.getObjectLogs(response, objectQueryDetails, [], state, process.env.paws_max_pages_per_invocation)
+                .then(({ accumulator, nextPage }) => {
+                    let newState;
+                    if (nextPage === undefined) {
+                        newState = this._getNextCollectionState(state);
+                    } else {
+                        newState = this._getNextCollectionStateWithNextPage(state, nextPage);
+                    }
+                    console.info(`SALE000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                    return callback(null, accumulator, newState, newState.poll_interval_sec);
+                })
+                .catch((error) => {
+                    if (error.errorCode && error.errorCode === "REQUEST_LIMIT_EXCEEDED") {
+                        // Api will reset after next 24 hours 
+                        // Added extra 1 hours for buffer
+                        state.apiQuotaResetDate = moment().add(25, "hours").toISOString();
+                        state.poll_interval_sec = 900;
+                        console.log('API Request Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
+                        return callback(null, [], state, state.poll_interval_sec);
+                    }
+                    else {
+                        return callback(error);
+                    }
 
-                    });
+                });
 
-            }).catch(err => {
-                return callback(err);
-            });
-        } 
+        }).catch(err => {
+            return callback(err);
+        });
     }
 
     _getNextCollectionState(curState) {
