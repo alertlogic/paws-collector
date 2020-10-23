@@ -28,13 +28,6 @@ function setAlServiceStub() {
             });
         });
 
-    getObjectLogs = sinon.stub(utils, 'getObjectLogs').callsFake(
-        function fakeFn(response, objectQueryDetails, accumulator, state, maxPagesPerInvocation) {
-            return new Promise(function (resolve, reject) {
-                return resolve({ accumulator: [salesforceMock.LOG_EVENT, salesforceMock.LOG_EVENT] });
-            });
-        });
-
     getObjectQuery = sinon.stub(utils, 'getObjectQuery').callsFake(
         function fakeFn(state) {
             return {
@@ -51,7 +44,6 @@ function restoreAlServiceStub() {
 
     token.restore();
     requestPost.restore();
-    getObjectLogs.restore();
     getObjectQuery.restore();
 }
 
@@ -158,6 +150,14 @@ describe('Unit Tests', function () {
             succeed: function () { }
         };
         it('Paws Get Logs Success', function (done) {
+
+            getObjectLogs = sinon.stub(utils, 'getObjectLogs').callsFake(
+                function fakeFn(response, objectQueryDetails, accumulator, state, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ accumulator: [salesforceMock.LOG_EVENT, salesforceMock.LOG_EVENT] });
+                    });
+                });
+
             SalesforceCollector.load().then(function (creds) {
                 var collector = new SalesforceCollector(ctx, creds, 'salesforce');
                 const startDate = moment().subtract(3, 'days');
@@ -172,6 +172,7 @@ describe('Unit Tests', function () {
                     assert.equal(logs.length, 2);
                     assert.equal(newState.poll_interval_sec, 1);
                     assert.ok(logs[0].attributes);
+                    getObjectLogs.restore();
                     done();
                 });
 
@@ -179,6 +180,14 @@ describe('Unit Tests', function () {
         });
 
         it('Paws Get Logs with API Quota Reset Date', function (done) {
+
+            getObjectLogs = sinon.stub(utils, 'getObjectLogs').callsFake(
+                function fakeFn(response, objectQueryDetails, accumulator, state, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ accumulator: [salesforceMock.LOG_EVENT, salesforceMock.LOG_EVENT] });
+                    });
+                });
+
             SalesforceCollector.load().then(function (creds) {
                 var collector = new SalesforceCollector(ctx, creds, 'salesforce');
                 const startDate = moment().subtract(3, 'days');
@@ -186,13 +195,43 @@ describe('Unit Tests', function () {
                     object: "LoginHistory",
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
-                    apiQuotaResetDate: moment().add(25, 'hours'),
+                    apiQuotaResetDate: moment().add(25, 'hours').toISOString(),
                     poll_interval_sec: 900
                 };
 
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
                     assert.equal(logs.length, 0);
                     assert.equal(newState.poll_interval_sec, 900);
+                    getObjectLogs.restore();
+                    done();
+                });
+
+            });
+        });
+
+        it('Paws Get Logs check throttling error', function (done) {
+
+            getObjectLogs = sinon.stub(utils, 'getObjectLogs').callsFake(
+                function fakeFn(response, objectQueryDetails, accumulator, state, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ errorCode: "REQUEST_LIMIT_EXCEEDED"  });
+                    });
+                });
+
+            SalesforceCollector.load().then(function (creds) {
+                var collector = new SalesforceCollector(ctx, creds, 'salesforce');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    object: "LoginHistory",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(logs.length, 0);
+                    assert.equal(newState.poll_interval_sec, 900);
+                    getObjectLogs.restore();
                     done();
                 });
 
