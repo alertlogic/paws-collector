@@ -28,7 +28,8 @@ Resources:
           paws_endpoint: 
           paws_collector_param_string_1:
           paws_collector_param_string_2:
-          paws_max_pages_per_invocation:          
+          paws_max_pages_per_invocation:
+          paws_ddb_table_name:        
           collector_id:
       Runtime: nodejs10.x
       Handler: index.handler
