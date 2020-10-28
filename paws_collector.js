@@ -440,6 +440,37 @@ class PawsCollector extends AlAwsCollector {
         this.reportDDMetric('api_throttling', 1)
         return cloudwatch.putMetricData(params, callback);
     };
+
+    /**
+     * Report the client errors and show case on DDMetrics and cloudwatch
+     * @param callback 
+     */
+    reportClientErrors(callback) {
+        var cloudwatch = new AWS.CloudWatch({apiVersion: '2010-08-01'});
+        const params = {
+            MetricData: [
+              {
+                MetricName: "PawsClientErrors",
+                Dimensions: [
+                  {
+                    Name: 'CollectorType',
+                    Value: this._pawsCollectorType
+                  },
+                  {
+                    Name: 'FunctionName',
+                    Value: process.env.AWS_LAMBDA_FUNCTION_NAME
+                  }
+                ],
+                Timestamp: new Date(),
+                Unit: 'Count',
+                Value: 1
+              }
+            ],
+            Namespace: 'PawsCollectors'
+        };
+        this.reportDDMetric("client_errors", 1);
+        return cloudwatch.putMetricData(params, callback);
+    };
     
     reportCollectionDelay(lastCollectedTs, callback) {
         const nowMoment = moment();
