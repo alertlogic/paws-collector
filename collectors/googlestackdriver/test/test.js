@@ -161,6 +161,36 @@ describe('Unit Tests', function() {
             });
         });
 
+        it('Get Logs check API Throttling', function(done) {
+            logginClientStub = sinon.stub(logging.v2.LoggingServiceV2Client.prototype, 'listLogEntries');
+            
+            logginClientStub.onCall(0).callsFake(() => {
+                return new Promise((res, rej) => {
+                    rej({code:8});
+                });
+            });
+
+            GooglestackdriverCollector.load().then(function(creds) {
+                var collector = new GooglestackdriverCollector(ctx, creds);
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                var reportSpy = sinon.spy(collector, 'reportApiThrottling');
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
+                    assert.equal(true, reportSpy.calledOnce);
+                    assert.equal(logs.length, 0);
+                    assert.equal(newPollInterval, 2);
+                    restoreLoggingClientStub();
+                    done();
+                });
+            });
+        });
+
         it('Stops paginiating at the pagination limit', function(done) {
             logginClientStub = sinon.stub(logging.v2.LoggingServiceV2Client.prototype, 'listLogEntries');
             

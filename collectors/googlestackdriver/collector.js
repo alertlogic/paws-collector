@@ -119,10 +119,13 @@ timestamp < "${state.until}"`;
                         state.poll_interval_sec + 1:
                         10;
                     const backOffState = Object.assign({}, state, {poll_interval_sec:nextPollInterval});
-
-                    return callback(null, [], backOffState, nextPollInterval);
+                    collector.reportApiThrottling(function () {
+                        return callback(null, [], backOffState, nextPollInterval);
+                    });
                 }
-                return callback(err);
+                else {
+                    return callback(err);
+                }
             });
     }
 

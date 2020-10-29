@@ -259,7 +259,10 @@ describe('Unit Tests', function () {
                     poll_interval_sec: 900
                 };
 
+                var reportSpy = sinon.spy(collector, 'reportApiThrottling');
+
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(true, reportSpy.calledOnce);
                     assert.equal(logs.length, 0);
                     assert.equal(newState.poll_interval_sec, 900);
                     done();
