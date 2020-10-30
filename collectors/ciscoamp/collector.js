@@ -89,8 +89,11 @@ class CiscoampCollector extends PawsCollector {
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
             console.log('CAMP000002 API hourly Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
             state.poll_interval_sec = 900;
-            return callback(null, [], state, state.poll_interval_sec);
+            collector.reportApiThrottling(function () {
+                return callback(null, [], state, state.poll_interval_sec);
+            });
         }
+        else {
 
         utils.getAPILogs(baseUrl, base64EncodedString, apiUrl, state, [], process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextPage, resetSeconds, totalLogsCount, discardFlag }) => {
@@ -135,6 +138,7 @@ class CiscoampCollector extends PawsCollector {
             }).catch((error) => {
                 return callback(error);
             });
+        }
     }
 
     _getNextCollectionState(curState) {

@@ -17,6 +17,7 @@ process.env.paws_type_name = "sophos";
 process.env.paws_api_secret = "secret";
 process.env.paws_endpoint = "sophos.com";
 process.env.paws_api_client_id = "client-id";
+process.env.AWS_LAMBDA_FUNCTION_NAME = "test";
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',

@@ -88,41 +88,47 @@ class GsuiteCollector extends PawsCollector {
 
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
             console.log('API Daily Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
-            return callback(null, [], state, state.poll_interval_sec);
-        }
-        utils.listEvents(client, params, [], process.env.paws_max_pages_per_invocation)
-            .then(({ accumulator, nextPage }) => {
-                let newState;
-                if (nextPage === undefined) {
-                    newState = this._getNextCollectionState(state);
-                } else {
-                    newState = this._getNextCollectionStateWithNextPage(state, nextPage);
-                }
-                console.info(
-                    `GSUI000002 Next collection in ${newState.poll_interval_sec} seconds`
-                );
-                return callback(null, accumulator, newState, newState.poll_interval_sec);
-            })
-            .catch((error) => {
-                if (error.errors && error.errors.length > 0 && error.errors[0].reason === "dailyLimitExceeded") {
-                    // As per gsuite document daily limit quota will be reset at midnight Pacific Time (PT), 
-                    // Get current PST time by subtracting 8 hours from UTC.
-                    const pstCurrentDateTime = moment().subtract(8, "hours").toISOString();
-                    // Get PST end of day datetime.
-                    const pstEndDateTime = moment(pstCurrentDateTime).endOf('day');
-                    const extraBufferSeconds = 60;
-                    state.poll_interval_sec = 900;
-                    // After crossing daily limit calculate PST time difference in seconds. 
-                    // Get next day reset date time(midnight Pacific Time (PT)) in utc 
-                    state.apiQuotaResetDate = moment().add(pstEndDateTime.diff(pstCurrentDateTime, 'seconds') + extraBufferSeconds, "seconds").toISOString();
-                    console.log('API Daily Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
-                    return callback(null, [], state, state.poll_interval_sec);
-                }
-                else {
-                    return callback(error);
-                }
-
+            collector.reportApiThrottling(function () {
+                return callback(null, [], state, state.poll_interval_sec);
             });
+        }
+        else {
+            utils.listEvents(client, params, [], process.env.paws_max_pages_per_invocation)
+                .then(({ accumulator, nextPage }) => {
+                    let newState;
+                    if (nextPage === undefined) {
+                        newState = this._getNextCollectionState(state);
+                    } else {
+                        newState = this._getNextCollectionStateWithNextPage(state, nextPage);
+                    }
+                    console.info(
+                        `GSUI000002 Next collection in ${newState.poll_interval_sec} seconds`
+                    );
+                    return callback(null, accumulator, newState, newState.poll_interval_sec);
+                })
+                .catch((error) => {
+                    if (error.errors && error.errors.length > 0 && error.errors[0].reason === "dailyLimitExceeded") {
+                        // As per gsuite document daily limit quota will be reset at midnight Pacific Time (PT), 
+                        // Get current PST time by subtracting 8 hours from UTC.
+                        const pstCurrentDateTime = moment().subtract(8, "hours").toISOString();
+                        // Get PST end of day datetime.
+                        const pstEndDateTime = moment(pstCurrentDateTime).endOf('day');
+                        const extraBufferSeconds = 60;
+                        state.poll_interval_sec = 900;
+                        // After crossing daily limit calculate PST time difference in seconds. 
+                        // Get next day reset date time(midnight Pacific Time (PT)) in utc 
+                        state.apiQuotaResetDate = moment().add(pstEndDateTime.diff(pstCurrentDateTime, 'seconds') + extraBufferSeconds, "seconds").toISOString();
+                        console.log('API Daily Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
+                        collector.reportApiThrottling(function () {
+                            return callback(null, [], state, state.poll_interval_sec);
+                        });
+                    }
+                    else {
+                        return callback(error);
+                    }
+
+                });
+        }    
     }
 
     _getNextCollectionState(curState) {

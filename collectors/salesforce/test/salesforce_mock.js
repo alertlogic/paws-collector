@@ -18,6 +18,7 @@ process.env.paws_collector_param_string_1 = "salesforceUserID";
 process.env.paws_api_secret = 'paws-secret-key-encrypted';
 process.env.paws_collector_param_string_2 = "[\"LoginHistory\", \"EventLogFile\",\"ApiEvent\", \"LoginEvent\", \"LogoutEvent\", \"LoginAsEvent\"]";
 process.env.paws_endpoint = "login.salesforce.com";
+process.env.AWS_LAMBDA_FUNCTION_NAME = "test";
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',
