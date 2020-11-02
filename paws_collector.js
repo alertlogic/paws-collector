@@ -444,8 +444,9 @@ class PawsCollector extends AlAwsCollector {
     /**
      * Report the client errors and show case on DDMetrics and cloudwatch
      * @param callback 
+     * @param errorCode - error type
      */
-    reportClientErrors(callback) {
+    reportClientErrors(errorCode = 'unknown', callback) {
         var cloudwatch = new AWS.CloudWatch({apiVersion: '2010-08-01'});
         const params = {
             MetricData: [
@@ -468,7 +469,7 @@ class PawsCollector extends AlAwsCollector {
             ],
             Namespace: 'PawsCollectors'
         };
-        this.reportDDMetric("client_errors", 1);
+        this.reportDDMetric(`${errorCode}_client_errors`, 1);
         return cloudwatch.putMetricData(params, callback);
     };
     
