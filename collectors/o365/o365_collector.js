@@ -17,6 +17,7 @@ const { checkO365Subscriptions } = require('./healthcheck');
 const packageJson = require('./package.json');
 
 const parse = require('@alertlogic/al-collector-js').Parse;
+const asyncPool = require("tiny-async-pool");
 
 // Subtracting less than 7 days to avoid weird race conditions with the azure api...
 // Missing about 2 hours of historical logs shouldn't be too bad.
@@ -141,9 +142,10 @@ class O365Collector extends PawsCollector {
         // Call out to get content pages and form result
         const contentPromise = initialListContent.then(listContentCallback)
             .then(({parsedBody, nextPageUri}) => {
-                const contentUriPromises = parsedBody.map(({contentUri}) => m_o365mgmnt.getPreFormedUrl(contentUri));
+                const contentUriFun = ({contentUri}) => m_o365mgmnt.getPreFormedUrl(contentUri);
+                const poolLimit = 20;
 
-                return Promise.all(contentUriPromises).then(content => {
+                return asyncPool(poolLimit, parsedBody, contentUriFun).then(content => {
                     return {
                         logs: content.reduce((agg, {parsedBody}) => [...parsedBody, ...agg], []),
                         nextPage: nextPageUri
@@ -153,7 +155,6 @@ class O365Collector extends PawsCollector {
 
         // Now that we have all the content uri promises agregated, we can call them and collect the data
         contentPromise.then(({logs, nextPage}) => {
-
             let newState;
             if(nextPage === undefined){
                 newState = this._getNextCollectionState(state);
