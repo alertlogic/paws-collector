@@ -444,14 +444,51 @@ class PawsCollector extends AlAwsCollector {
     /**
      * Report the client errors and show case on DDMetrics and cloudwatch
      * @param callback 
-     * @param errorCode - error type
+     * @param error 
      */
-    reportClientErrors(errorCode = 'unknown', callback) {
+    reportClientError(error, callback) {
+        var cloudwatch = new AWS.CloudWatch({ apiVersion: '2010-08-01' });
+        const params = {
+            MetricData: [
+                {
+                    MetricName: "PawsClientError",
+                    Dimensions: [
+                        {
+                            Name: 'CollectorType',
+                            Value: this._pawsCollectorType
+                        },
+                        {
+                            Name: 'FunctionName',
+                            Value: process.env.AWS_LAMBDA_FUNCTION_NAME
+                        }
+                    ],
+                    Timestamp: new Date(),
+                    Unit: 'Count',
+                    Value: 1
+                }
+            ],
+            Namespace: 'PawsCollectors'
+        };
+        // Tags can be up to 200 characters long
+        let errorMesage = error.errorMessage? `error_message:${error.errorMessage}`:`error_message:not_define`;
+        if(errorMesage.length > 200){
+             errorMesage = errorMesage.slice(0,199);
+        }
+        this.reportDDMetric("client", 1, [`result:error`,`error_code:${error.errorCode}`,errorMesage]);
+        return cloudwatch.putMetricData(params, callback);
+    };
+
+    /**
+    * Collector to report client execute successfully, 
+    * So we can check how often 3rd party APIs get called.
+    * @param callback 
+    */
+    reportClientOK( callback) {
         var cloudwatch = new AWS.CloudWatch({apiVersion: '2010-08-01'});
         const params = {
             MetricData: [
               {
-                MetricName: "PawsClientErrors",
+                MetricName: "PawsClientOK",
                 Dimensions: [
                   {
                     Name: 'CollectorType',
@@ -469,7 +506,7 @@ class PawsCollector extends AlAwsCollector {
             ],
             Namespace: 'PawsCollectors'
         };
-        this.reportDDMetric(`${errorCode}_client_errors`, 1);
+        this.reportDDMetric("client", 1, [`result:ok`]);
         return cloudwatch.putMetricData(params, callback);
     };
     
