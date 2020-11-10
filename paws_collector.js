@@ -378,7 +378,17 @@ class PawsCollector extends AlAwsCollector {
                 return collector.checkStateSqsMessage(stateSqsMsg, asyncCallback);
             },
             function(asyncCallback) {
-                return collector.pawsGetLogs(pawsState.priv_collector_state, asyncCallback);
+                return collector.pawsGetLogs(pawsState.priv_collector_state, (err, ...remainingParams) => {
+                    if (err) {
+                        collector.reportClientError(err, () => {
+                            return asyncCallback(err);
+                        });
+                    } else {
+                        collector.reportClientOK(() => {
+                            return asyncCallback(null, ...remainingParams)
+                        });
+                    }
+                });
             },
             function(logs, privCollectorState, nextInvocationTimeout, asyncCallback) {
                 console.info('PAWS000200 Log events received ', logs.length);
@@ -469,12 +479,8 @@ class PawsCollector extends AlAwsCollector {
             ],
             Namespace: 'PawsCollectors'
         };
-        // Tags can be up to 200 characters long
-        let errorMesage = error.errorMessage? `error_message:${error.errorMessage}`:`error_message:not_define`;
-        if(errorMesage.length > 200){
-             errorMesage = errorMesage.slice(0,199);
-        }
-        this.reportDDMetric("client", 1, [`result:error`,`error_code:${error.errorCode}`,errorMesage]);
+        let errorCode = typeof (error) === 'object' && error.errorCode ? error.errorCode : 'unknown';
+        this.reportDDMetric("client", 1, [`result:error`,`error_code:${errorCode}`]);
         return cloudwatch.putMetricData(params, callback);
     };
 
