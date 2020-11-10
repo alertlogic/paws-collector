@@ -628,6 +628,57 @@ describe('Unit Tests', function() {
                 });
             });
         });
+        it('reportClientOK', function(done) {
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+            let putMetricDataSpy = sinon.spy((params, callback) => callback());
+            AWS.mock('CloudWatch', 'putMetricData', putMetricDataSpy);
+            TestCollector.load().then(function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                collector.reportClientOK( function(error) {
+                    assert.equal(null, error);
+                    assert.equal(putMetricDataSpy.callCount, 1);
+                    AWS.restore('KMS');
+                    AWS.restore('CloudWatch');
+                    done();
+                });
+            });
+        });
+
+        it('reportClientError', function(done) {
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+
+            let errorObj = {name:'OktaApiError',status: 401,errorCode:'E0000011',errorSummary:'Invalid token provided'};
+            let putMetricDataSpy = sinon.spy((params, callback) => callback());
+            AWS.mock('CloudWatch', 'putMetricData', putMetricDataSpy);
+            TestCollector.load().then(function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                collector.reportClientError(errorObj, function(error) {
+                    assert.equal(errorObj.errorCode, 'E0000011');
+                    assert.equal(putMetricDataSpy.callCount, 1);
+                    AWS.restore('KMS');
+                    AWS.restore('CloudWatch');
+                    done();
+                });
+            });
+        });
     });
     
     describe('Register Tests', function() {
