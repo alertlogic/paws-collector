@@ -409,7 +409,8 @@ class PawsCollector extends AlAwsCollector {
                 return collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_COMPLETE, asyncCallback);
             }
         ], function(error) {
-            collector.done(error);
+            // passing subobject to form the seperate error status per log object type instead of overwriting overall status
+            collector.done(error, pawsState.priv_collector_state.object);
         });
     };
 
