@@ -378,7 +378,17 @@ class PawsCollector extends AlAwsCollector {
                 return collector.checkStateSqsMessage(stateSqsMsg, asyncCallback);
             },
             function(asyncCallback) {
-                return collector.pawsGetLogs(pawsState.priv_collector_state, asyncCallback);
+                return collector.pawsGetLogs(pawsState.priv_collector_state, (err, ...remainingParams) => {
+                    if (err) {
+                        collector.reportClientError(err, () => {
+                            return asyncCallback(err);
+                        });
+                    } else {
+                        collector.reportClientOK(() => {
+                            return asyncCallback(null, ...remainingParams)
+                        });
+                    }
+                });
             },
             function(logs, privCollectorState, nextInvocationTimeout, asyncCallback) {
                 console.info('PAWS000200 Log events received ', logs.length);
@@ -438,6 +448,71 @@ class PawsCollector extends AlAwsCollector {
             Namespace: 'PawsCollectors'
         };
         this.reportDDMetric('api_throttling', 1)
+        return cloudwatch.putMetricData(params, callback);
+    };
+
+    /**
+     * Report the client errors and show case on DDMetrics and cloudwatch
+     * @param callback 
+     * @param error 
+     */
+    reportClientError(error, callback) {
+        var cloudwatch = new AWS.CloudWatch({ apiVersion: '2010-08-01' });
+        const params = {
+            MetricData: [
+                {
+                    MetricName: "PawsClientError",
+                    Dimensions: [
+                        {
+                            Name: 'CollectorType',
+                            Value: this._pawsCollectorType
+                        },
+                        {
+                            Name: 'FunctionName',
+                            Value: process.env.AWS_LAMBDA_FUNCTION_NAME
+                        }
+                    ],
+                    Timestamp: new Date(),
+                    Unit: 'Count',
+                    Value: 1
+                }
+            ],
+            Namespace: 'PawsCollectors'
+        };
+        let errorCode = typeof (error) === 'object' && error.errorCode ? error.errorCode : 'unknown';
+        this.reportDDMetric("client", 1, [`result:error`,`error_code:${errorCode}`]);
+        return cloudwatch.putMetricData(params, callback);
+    };
+
+    /**
+    * Collector to report client execute successfully, 
+    * So we can check how often 3rd party APIs get called.
+    * @param callback 
+    */
+    reportClientOK( callback) {
+        var cloudwatch = new AWS.CloudWatch({apiVersion: '2010-08-01'});
+        const params = {
+            MetricData: [
+              {
+                MetricName: "PawsClientOK",
+                Dimensions: [
+                  {
+                    Name: 'CollectorType',
+                    Value: this._pawsCollectorType
+                  },
+                  {
+                    Name: 'FunctionName',
+                    Value: process.env.AWS_LAMBDA_FUNCTION_NAME
+                  }
+                ],
+                Timestamp: new Date(),
+                Unit: 'Count',
+                Value: 1
+              }
+            ],
+            Namespace: 'PawsCollectors'
+        };
+        this.reportDDMetric("client", 1, [`result:ok`]);
         return cloudwatch.putMetricData(params, callback);
     };
     
