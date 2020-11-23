@@ -74,6 +74,7 @@ class SentineloneCollector extends PawsCollector {
                 console.info(`SONE000002 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             }).catch((error) => {
+                error.errorCode = error.statusCode;
                 return callback(error);
             });
 

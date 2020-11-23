@@ -105,7 +105,9 @@ class CiscoduoCollector extends PawsCollector {
                 }
                 console.info(`CDUO000002 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
-            }).catch((error) => {
+            }).catch((error) => {         
+                // set errorCode if not available in error object to showcase client error on DDMetrics
+                error.errorCode = error.code;
                 return callback(error);
             });
     }

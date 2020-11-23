@@ -57,6 +57,8 @@ class Auth0Collector extends PawsCollector {
                 console.info(`AUTZ000002 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             }).catch((error) => {
+                // set error code for DDMetrics
+                error.errorCode = error.statusCode;
                 return callback(error);
             });
     }

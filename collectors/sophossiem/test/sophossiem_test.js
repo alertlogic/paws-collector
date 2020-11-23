@@ -193,6 +193,36 @@ describe('Unit Tests', function () {
 
             });
         });
+
+        it('Paws Get Logs api Failed and show client error on DDMetric', function (done) {
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(BaseAPIURL, headers, state, accumulator, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ statusCode: 403,
+                            error: "Forbidden",
+                        message: "Forbidden",
+                        correlationId: "59763C8E-B687-47D0-8F7B-88113425CE3B",
+                        code: "USR00004c5",
+                        createdAt: "2019-08-15T11:25:45.987Z"});
+                    });
+                });
+
+            SophossiemCollector.load().then(function (creds) {
+                var collector = new SophossiemCollector(ctx, creds, 'sophossiem');
+                const startDate = moment().subtract(23, 'hours');
+                const curState = {
+                    objectName: "Events",
+                    from_date: startDate.unix(),
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err) => {
+                    assert.equal(err.errorCode,403);
+                    getAPILogs.restore();
+                    done();
+                });
+
+            });
+        });
     });
 
     describe('Next state tests', function () {

@@ -217,6 +217,37 @@ describe('Unit Tests', function () {
 
             });
         });
+
+        it('Paws Get Logs check client error', function (done) {
+            listEvent = sinon.stub(utils, 'listEvents').callsFake(
+                function fakeFn(path) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ code: 403,
+                            errors:
+                             [ { message: 'Insufficient Permission',
+                                 domain: 'global',
+                                 reason: 'insufficientPermissions' } ]  });
+                    });
+                });
+
+            GsuiteCollector.load().then(function (creds) {
+                var collector = new GsuiteCollector(ctx, creds, 'gsuite');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    application: "login",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err) => {
+                    assert.equal(err.errorCode, 'insufficientPermissions');
+                    listEvent.restore();
+                    done();
+                });
+
+            });
+        });
     });
 
 

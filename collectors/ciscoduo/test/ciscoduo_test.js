@@ -189,6 +189,51 @@ describe('Unit Tests', function () {
 
             });
         });
+
+        it('Paws Get client error', function (done) {
+
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ code: 40103,
+                            message: 'Invalid signature in request credentials',
+                            stat: 'FAIL' });
+                    });
+                });
+            getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
+                function fakeFn(state) {
+                    const startDate = moment().subtract(3, 'days');
+                    return {
+                        url: "api_url",
+                        typeIdPaths: [{ path: ["txid"] }],
+                        tsPaths: [{ path: ["timestamp"] }],
+                        query: {
+                            mintime: startDate.valueOf(),
+                            maxtime: startDate.add(2, 'days').valueOf(),
+                            limit: 1000
+                        },
+                        method: "GET"
+                    };
+                });
+            CiscoduoCollector.load().then(function (creds) {
+                var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    object: "Authentication",
+                    mintime: startDate.valueOf(),
+                    maxtime: startDate.add(2, 'days').valueOf(),
+                    nextPage: null,
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(err.errorCode, 40103);
+                    getAPILogs.restore();
+                    getAPIDetails.restore();
+                    done();
+                });
+
+            });
+        });
     });
 
     describe('Next state tests', function () {
