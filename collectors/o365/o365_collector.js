@@ -164,6 +164,11 @@ class O365Collector extends PawsCollector {
 
             return callback(null, logs, newState, newState.poll_interval_sec);
         }).catch(err => {
+            if(err.message){
+                let message = err.message;
+                let error = JSON.parse(message.slice(message.indexOf('{'), message.lastIndexOf('}') + 1));
+                err.errorCode = error.error;
+            }
             console.error(`O365000003 Error in collection: ${err.message}`);
             return callback(err);
         })
