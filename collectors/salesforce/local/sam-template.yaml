@@ -15,7 +15,7 @@ Resources:
           al_api:
           al_application_id:
           stack_name:
-          azollect_api:
+          azcollect_api:
           ingest_api:
           DEBUG:
           paws_state_queue_arn:

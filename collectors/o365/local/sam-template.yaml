@@ -15,7 +15,7 @@ Resources:
           aims_access_key_id:
           al_api:
           stack_name:
-          azollect_api:
+          azcollect_api:
           ingest_api:
           DEBUG:
           paws_state_queue_arn:
@@ -35,6 +35,7 @@ Resources:
           paws_endpoint:
           okta_token:
           okta_collection_start_ts:
+          paws_ddb_table_name: 
           collector_id:
       Runtime: nodejs10.x
       Handler: index.handler
