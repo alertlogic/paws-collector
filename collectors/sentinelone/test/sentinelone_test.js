@@ -115,6 +115,30 @@ describe('Unit Tests', function () {
                 });
             });
         });
+
+        it('Paws Get Logs failed and show client errors', function (done) {
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(baseUrl, token, params, accumulator, paws_max_pages_per_invocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({name: 'StatusCodeError', statusCode: 401, message:'401 - {"errors":[{"code":4010010,"detail":null,"title":"Authentication Failed"}]}'});
+                    });
+                });
+            SentineloneCollector.load().then(function (creds) {
+                var collector = new SentineloneCollector(ctx, creds, 'sentinelone');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    nextPage: null,
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(err.errorCode, 401);
+                    getAPILogs.restore();
+                    done();
+                });
+            });
+        });
     });
 
     describe('Next state tests', function () {

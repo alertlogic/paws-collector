@@ -92,6 +92,8 @@ class SophossiemCollector extends PawsCollector {
                 console.info(`SIEM000002 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             }).catch((error) => {
+                // set errorCode if not available in error object to showcase client error on DDMetric
+                error.errorCode = error.statusCode;
                 if (error.statusCode && error.statusCode === 401) {
                     console.log('Token expired or customer not authorized to make api call');
                     return callback('Token expired or customer not authorized to make api call');

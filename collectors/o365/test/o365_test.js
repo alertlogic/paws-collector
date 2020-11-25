@@ -658,6 +658,38 @@ describe('O365 Collector Tests', function() {
                 });
             });
         });
+
+        it('Get Logs check client error', function(done) {
+            subscriptionsContentStub = sinon.stub(m_o365mgmnt, 'subscriptionsContent').callsFake(
+                function fakeFn(path, extraOptions) {
+                    return new Promise(function(resolve, reject) {
+                        return reject({message:'Get Token request returned http error: 400 and server response: {"error":"invalid_request","error_description":"AADSTS90002: Tenant bf8d32d3-1c13-4487-af02-80dba22364851 not found. This may happen if there are no active subscriptions for the tenant. Check to make sure you have the correct tenant ID.","error_codes":[90002],"timestamp":"2020-11-24 08:41:22Z","trace_id":"dcf34502-9b8b-4601-b5ec-3d33437b9d00","correlation_id":"f82dc929-3899-4ba5-890f-cf18ac92e0a3","error_uri":"https://login.microsoftonline.com/error?code=90002"}'});
+                    });
+                });
+            getPreFormedUrlStub = sinon.stub(m_o365mgmnt, 'getPreFormedUrl').callsFake(
+                    function fakeFn(path, extraOptions) {
+                        return new Promise(function(resolve, reject) {
+                            return resolve({parsedBody: [o365Mock.MOCK_LOG]});
+                        });
+                    });
+
+            O365Collector.load().then(function(creds) {
+                var collector = new O365Collector(ctx, creds, 'o365');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
+                    assert.notEqual(err, null);
+                    assert.equal(err.errorCode ,'invalid_request');
+                    restoreO365ManagemntStub();
+                    done();
+                });
+            });
+        });
     });
     describe('pawsGetRegisterParameters', function() {
         let ctx = {

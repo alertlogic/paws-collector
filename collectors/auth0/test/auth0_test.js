@@ -234,4 +234,43 @@ describe('Unit Tests', function () {
             });
         });
     });
+
+
+    describe('pawsGetLogs', function () {
+        let ctx = {
+            invokedFunctionArn: auth0Mock.FUNCTION_ARN,
+            fail: function (error) {
+                assert.fail(error);
+            },
+            succeed: function () { }
+        };
+
+        let errorObj ={
+            statusCode:401,
+            message:'error'
+        };
+        it('Paws Get Logs Failed', function (done) {
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(auth0Client, state, accumulator, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject(errorObj);
+                    });
+                });
+            Auth0Collector.load().then(function (creds) {
+                var collector = new Auth0Collector(ctx, creds);
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    since: startDate.toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(err.errorCode,401);
+                    getAPILogs.restore();
+                    done();
+                });
+
+            });
+        });
+    });
 });

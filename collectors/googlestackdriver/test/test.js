@@ -223,6 +223,32 @@ describe('Unit Tests', function() {
                 });
             });
         });
+
+        it('Get Logs check client error', function(done) {
+            logginClientStub = sinon.stub(logging.v2.LoggingServiceV2Client.prototype, 'listLogEntries');
+            
+            logginClientStub.onCall(0).callsFake(() => {
+                return new Promise((res, rej) => {
+                    rej({code:401});
+                });
+            });
+
+            GooglestackdriverCollector.load().then(function(creds) {
+                var collector = new GooglestackdriverCollector(ctx, creds);
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
+                    assert.equal(err.errorCode, 401);
+                    restoreLoggingClientStub();
+                    done();
+                });
+            });
+        });
     });
 
     describe('_getNextCollectionState', function() {
