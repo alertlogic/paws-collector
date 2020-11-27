@@ -1,6 +1,6 @@
 {
   "name": "sophos-collector",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Alert Logic AWS based Sophos Log Collector",
   "repository": {},
   "private": true,
