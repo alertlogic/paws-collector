@@ -410,7 +410,7 @@ class PawsCollector extends AlAwsCollector {
             }
         ], function(error) {
             // passing subobject to form the seperate error status per log object type instead of overwriting overall status
-            collector.done(error, pawsState.priv_collector_state.object);
+            collector.done(error, process.env.paws_extension + "_"+ pawsState.priv_collector_state.object);
         });
     };
 
