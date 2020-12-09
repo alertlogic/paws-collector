@@ -392,8 +392,12 @@ class PawsCollector extends AlAwsCollector {
             },
             function(logs, privCollectorState, nextInvocationTimeout, asyncCallback) {
                 console.info('PAWS000200 Log events received ', logs.length);
-                return collector.processLog(logs, collector.pawsFormatLog.bind(collector), null, function(err) {
-                    return asyncCallback(err, privCollectorState, nextInvocationTimeout);
+                return collector.processLog(logs, collector.pawsFormatLog.bind(collector), null, (err) => {
+                    if (err) {
+                        collector.reportErrorToIngestApi(err);
+                        return asyncCallback(err);
+                    }
+                    return asyncCallback(null, privCollectorState, nextInvocationTimeout);
                 });
             },
             function(privCollectorState, nextInvocationTimeout, asyncCallback) {
@@ -450,6 +454,14 @@ class PawsCollector extends AlAwsCollector {
         this.reportDDMetric('api_throttling', 1)
         return cloudwatch.putMetricData(params, callback);
     };
+    /**
+     * Report the error to Ingest api service and show case on DDMetrics
+     * @param error 
+     */
+    reportErrorToIngestApi(error) {
+        let errorCode = typeof (error) === 'object' && error.errorCode ? error.errorCode : `unknown_${this.collector_id}`;
+        this.reportDDMetric("ingest_api", 1, [`result:error`, `error_code:${errorCode}`]);
+    };
 
     /**
      * Report the client errors and show case on DDMetrics and cloudwatch
@@ -479,7 +491,7 @@ class PawsCollector extends AlAwsCollector {
             ],
             Namespace: 'PawsCollectors'
         };
-        let errorCode = typeof (error) === 'object' && error.errorCode ? error.errorCode : 'unknown';
+        let errorCode = typeof (error) === 'object' && error.errorCode ? error.errorCode : `unknown_${this.collector_id}`;
         this.reportDDMetric("client", 1, [`result:error`,`error_code:${errorCode}`]);
         return cloudwatch.putMetricData(params, callback);
     };
