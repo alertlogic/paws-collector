@@ -394,10 +394,12 @@ class PawsCollector extends AlAwsCollector {
                 console.info('PAWS000200 Log events received ', logs.length);
                 return collector.processLog(logs, collector.pawsFormatLog.bind(collector), null, (err) => {
                     if (err) {
-                        collector.reportErrorToIngestApi(err);
-                        return asyncCallback(err);
+                        collector.reportErrorToIngestApi(err, () => {
+                            return asyncCallback(err);
+                        });
+                    } else {
+                        return asyncCallback(null, privCollectorState, nextInvocationTimeout);
                     }
-                    return asyncCallback(null, privCollectorState, nextInvocationTimeout);
                 });
             },
             function(privCollectorState, nextInvocationTimeout, asyncCallback) {
@@ -457,10 +459,39 @@ class PawsCollector extends AlAwsCollector {
     /**
      * Report the error to Ingest api service and show case on DDMetrics
      * @param error 
+     * @param callback 
      */
-    reportErrorToIngestApi(error) {
-        let errorCode = typeof (error) === 'object' && error.errorCode ? error.errorCode : `unknown_${this.collector_id}`;
+    reportErrorToIngestApi(error, callback) {
+        var cloudwatch = new AWS.CloudWatch({apiVersion: '2010-08-01'});
+        const params = {
+            MetricData: [
+              {
+                MetricName: 'PawsIngestApi',
+                Dimensions: [
+                  {
+                    Name: 'CollectorType',
+                    Value: this._pawsCollectorType
+                  },
+                  {
+                    Name: 'FunctionName',
+                    Value: process.env.AWS_LAMBDA_FUNCTION_NAME
+                  }
+                ],
+                Timestamp: new Date(),
+                Unit: 'Count',
+                Value: 1
+              }
+            ],
+            Namespace: 'PawsCollectors'
+        };
+        let errorCode = 'unknown';
+        if (error && error.errorCode) {
+            errorCode = error.errorCode;
+        } else if (error && error.statusCode) {
+            errorCode = error.statusCode;
+        }
         this.reportDDMetric("ingest_api", 1, [`result:error`, `error_code:${errorCode}`]);
+        return cloudwatch.putMetricData(params, callback);
     };
 
     /**
@@ -491,7 +522,7 @@ class PawsCollector extends AlAwsCollector {
             ],
             Namespace: 'PawsCollectors'
         };
-        let errorCode = typeof (error) === 'object' && error.errorCode ? error.errorCode : `unknown_${this.collector_id}`;
+        let errorCode = typeof (error) === 'object' && error.errorCode ? error.errorCode : 'unknown';
         this.reportDDMetric("client", 1, [`result:error`,`error_code:${errorCode}`]);
         return cloudwatch.putMetricData(params, callback);
     };
