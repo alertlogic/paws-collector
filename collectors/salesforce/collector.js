@@ -127,15 +127,12 @@ class SalesforceCollector extends PawsCollector {
                         else {
                             if (error.errorCode && error.errorCode === "INVALID_FIELD") {
                                 console.log(`API not able to fetch field for object ${state.object}`);
-                                return callback(`API not able to fetch field for object ${state.object}`);
                             }
                             if (error.errorCode && error.errorCode === "INVALID_TYPE") {
                                 console.log(`API not able to fetch logs for object ${state.object}`);
-                                return callback(`API not able to fetch logs for object ${state.object}`);
                             }
                             if (error.errorCode && error.errorCode === "INVALID_SESSION_ID") {
                                 console.log("User not added 'Access and manage your data (api)' in Oauth scope");
-                                return callback("User not added 'Access and manage your data (api)' in Oauth scope");
                             }
                             return callback(error);
                         }
