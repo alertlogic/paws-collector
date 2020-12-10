@@ -124,6 +124,10 @@ class GsuiteCollector extends PawsCollector {
                         });
                     }
                     else {
+                        // set errorCode if not available in error object to showcase client error on DDMetrics
+                        if (error.errors && error.errors.length > 0 && error.errors[0].reason) {
+                            error.errorCode = error.errors[0].reason;
+                        };
                         return callback(error);
                     }
 

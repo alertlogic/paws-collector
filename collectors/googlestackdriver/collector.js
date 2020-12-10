@@ -124,6 +124,10 @@ timestamp < "${state.until}"`;
                     });
                 }
                 else {
+                    // set errorCode if not available in error object to showcase client error on DDMetrics
+                    if (err.code) {
+                        err.errorCode = err.code;
+                    }
                     return callback(err);
                 }
             });

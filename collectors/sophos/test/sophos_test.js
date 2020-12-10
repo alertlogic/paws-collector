@@ -289,6 +289,42 @@ describe('Unit Tests', function () {
 
             });
         });
+
+        it('Paws Get Logs check client error', function (done) {
+            authenticate = sinon.stub(utils, 'authenticate').callsFake(
+                function fakeFn(hostName, clientId, clientSecret) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve("token");
+                    });
+                });
+            getTenantIdAndDataRegion = sinon.stub(utils, 'getTenantIdAndDataRegion').callsFake(
+                function fakeFn(hostName, token) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ error: {error:"Unauthorized",code: "USR00004c5",message: "The client needs to authenticate before making the API call. Either your credentials are invalid or blacklisted, or your JWT authorization token has expired",requestId: "6DB1D8AC-1BFA-448B-8439-5486E6D25A74"} });
+                    });
+                });
+           
+            SophosCollector.load().then(function (creds) {
+                var collector = new SophosCollector(ctx, creds, 'sophos');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    nextPage: null,
+                    apiQuotaResetDate: null,
+                    poll_interval_sec: 1
+                };
+
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(err.errorCode , 'Unauthorized');
+                    getTenantIdAndDataRegion.restore();
+                    authenticate.restore();
+                    done();
+                });
+
+            });
+        });
     });
 
     describe('Next state tests', function () {

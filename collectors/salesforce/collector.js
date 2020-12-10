@@ -143,6 +143,10 @@ class SalesforceCollector extends PawsCollector {
                     });
 
             }).catch(err => {
+                // set errorCode if not available in error object to showcase client error on DDMetrics
+                if (err.error && err.error.error) {
+                    err.errorCode = err.error.error;
+                }
                 return callback(err);
             });
         } 

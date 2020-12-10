@@ -16,7 +16,7 @@ function getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvoca
                 pageCount++;
                 return client.jsonApiCall(objectDetails.method, objectDetails.url, objectDetails.query, function (res) {
                     if (res.stat !== 'OK') {
-                        return reject(res.message);
+                        return reject(res);
                     } else {
                         if (Authentication === state.object) {
                             if (res.response.authlogs.length > 0) {

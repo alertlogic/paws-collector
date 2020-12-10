@@ -93,13 +93,27 @@ class SophosCollector extends PawsCollector {
                                 });
                             }
                             else {
+                                // set errorCode if not available in error object to showcase client error on DDMetric
+                                if(error.error && error.error.error){
+                                    error.errorCode = error.error.error;
+                                }
                                 return callback(error);
                             }
                         });
                 }).catch((error) => {
+                    if (error.error && error.error.error) {
+                        error.errorCode = error.error.error;
+                    } else {
+                        error.errorCode = error.statusCode;
+                    }
                     return callback(error);
                 });
             }).catch((error) => {
+                if (error.error && error.error.error) {
+                    error.errorCode = error.error.error;
+                } else {
+                    error.errorCode = error.statusCode;
+                }
                 return callback(error);
             });
         }

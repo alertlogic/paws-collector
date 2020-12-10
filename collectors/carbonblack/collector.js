@@ -102,9 +102,11 @@ class CarbonblackCollector extends PawsCollector {
                     newState = this._getNextCollectionStateWithNextPage(state, nextPage);
                 }
                 console.info(`CABL000002 Next collection in ${newState.poll_interval_sec} seconds`);
-                return callback(null, accumulator, newState, newState.poll_interval_sec);
+                return callback(null, accumulator, newState, newState.poll_interval_sec);  
             })
             .catch((error) => {
+                // set errorCode if not available in error object to showcase client error on DDMetric
+                error.errorCode = error.statusCode;
                 return callback(error);
             });
 
