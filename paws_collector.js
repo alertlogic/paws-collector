@@ -155,7 +155,7 @@ class PawsCollector extends AlAwsCollector {
         ];
 
         ddLambda.sendDistributionMetric(
-            `paws_${this.pawsCollectorType}.${name}`,
+            `paws.${name}`,
             value,
             ...baseTags.concat(tags)
         );
