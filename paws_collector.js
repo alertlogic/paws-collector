@@ -420,9 +420,8 @@ class PawsCollector extends AlAwsCollector {
             }
         ], function(error) {
                 // passing subobject to form the seperate error status per log object type instead of overwriting overall status
-                let subObject = process.env.sub_object_name; // set the object_name as per collector configuration ,ex. In stalesfoce this is object and for o365 this is stream
-                if (pawsState.priv_collector_state[subObject]) {
-                    collector.done(error, process.env.paws_extension + "_" + pawsState.priv_collector_state[subObject]);
+               if (pawsState.priv_collector_state.stream) {
+                    collector.done(error, process.env.paws_extension + "_" + pawsState.priv_collector_state.stream);
                 } else {
                     collector.done(error);
                 }

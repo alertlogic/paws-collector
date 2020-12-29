@@ -236,7 +236,7 @@ describe('Unit Tests', function () {
                 var collector = new CiscoampCollector(ctx, creds, 'ciscoamp');
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
-                    resource: "Events",
+                    stream: "Events",
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     nextPage: "/v1/events?start_date=2020-04-01T00%3A00%3A00Z&limit=2&offset=2",
@@ -258,7 +258,7 @@ describe('Unit Tests', function () {
                 var collector = new CiscoampCollector(ctx, creds, 'ciscoamp');
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
-                    resource: "AuditLogs",
+                    stream: "AuditLogs",
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     nextPage: "nextPageUrl",

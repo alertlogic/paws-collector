@@ -40,10 +40,10 @@ class SophossiemCollector extends PawsCollector {
             from_date_unix = moment().subtract(23, 'hours').unix();
         }
 
-        const objectNames = JSON.parse(process.env.paws_collector_param_string_1);
-        const initialStates = objectNames.map(objectName => {
+        const streams = JSON.parse(process.env.paws_collector_param_string_1);
+        const initialStates = streams.map(stream => {
             return {
-                objectName,
+                stream,
                 from_date: from_date_unix,
                 poll_interval_sec: 1
             }
@@ -84,7 +84,7 @@ class SophossiemCollector extends PawsCollector {
 
         let messageString = state.nextPage ? collector.decodebase64string(state.nextPage) : `from ${moment.unix(parseInt(state.from_date)).format("YYYY-MM-DDTHH:mm:ssZ")}`;
 
-        console.info(`SIEM000001 Collecting data for ${state.objectName} ${messageString}`);
+        console.info(`SIEM000001 Collecting data for ${state.stream} ${messageString}`);
 
         utils.getAPILogs(APIHostName, headers, state, [], process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextPage, has_more }) => {
@@ -122,7 +122,7 @@ class SophossiemCollector extends PawsCollector {
             }
 
             return {
-                objectName: curState.objectName,
+                stream: curState.stream,
                 nextPage: nextPage,
                 poll_interval_sec: nextPollInterval
             };
@@ -130,7 +130,7 @@ class SophossiemCollector extends PawsCollector {
         else {
             // This condition works if next page getting null or undefined
             return {
-                objectName: curState.objectName,
+                stream: curState.stream,
                 from_date: moment().unix(),
                 poll_interval_sec: 1
             };

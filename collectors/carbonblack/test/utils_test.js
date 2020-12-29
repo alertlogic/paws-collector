@@ -32,7 +32,7 @@ describe('Unit Tests', function () {
             let maxPagesPerInvocation = 5;
             const startDate = moment().subtract(5, 'minutes');
             let state = {
-                apiName: "AuditLogEvents",
+                stream: "AuditLogEvents",
                 since: startDate.toISOString(),
                 until: startDate.add(5, 'minutes').toISOString(),
                 poll_interval_sec: 1
@@ -61,7 +61,7 @@ describe('Unit Tests', function () {
             let maxPagesPerInvocation = 5;
             const startDate = moment().subtract(5, 'minutes');
             let state = {
-                apiName: "SearchAlerts",
+                stream: "SearchAlerts",
                 since: startDate.toISOString(),
                 until: startDate.add(5, 'minutes').toISOString(),
                 poll_interval_sec: 1
@@ -101,9 +101,9 @@ describe('Unit Tests', function () {
             const orgKey = "orgKey";
             let apiDetails = [];
             const apiNames = JSON.parse(process.env.paws_collector_param_string_1);
-            apiNames.map(apiName => {
+            apiNames.map(stream => {
                 let state = {
-                    apiName: apiName,
+                    stream: stream,
                     since: startDate.toISOString(),
                     until: startDate.add(5, 'minutes').toISOString(),
                     poll_interval_sec: 1

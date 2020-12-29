@@ -46,8 +46,8 @@ class GooglestackdriverCollector extends PawsCollector {
             endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
         }
         const resourceNames = JSON.parse(process.env.paws_collector_param_string_1);
-        const initialStates = resourceNames.map(resource => ({
-            resource,
+        const initialStates = resourceNames.map(stream => ({
+            stream,
             nextPage:null,
             since: startTs,
             until: endTs,
@@ -65,7 +65,7 @@ class GooglestackdriverCollector extends PawsCollector {
         });
 
 
-        console.info(`GSTA000001 Collecting data from ${state.since} till ${state.until} for ${state.resource}`);
+        console.info(`GSTA000001 Collecting data from ${state.since} till ${state.until} for ${state.stream}`);
 
         // TODO: figure out a better way to format this. I'm pretty sure that it needs the newlines in it.
         const filter = `timestamp >= "${state.since}"
@@ -96,7 +96,7 @@ timestamp < "${state.until}"`;
             {
                 filter,
                 pageSize: 1000,
-                resourceNames:[state.resource]
+                resourceNames:[state.stream]
             };
 
         client.listLogEntries(params, options)
@@ -134,7 +134,7 @@ timestamp < "${state.until}"`;
     }
 
     _getNextCollectionState(curState, nextPage) {
-        const {resource} = curState;
+        const {stream} = curState;
 
         const untilMoment = moment(curState.until);
 
@@ -143,7 +143,7 @@ timestamp < "${state.until}"`;
         return  {
             since: nextSinceMoment.toISOString(),
             nextPage,
-            resource,
+            stream,
             until: nextUntilMoment.toISOString(),
             poll_interval_sec: nextPollInterval
         };

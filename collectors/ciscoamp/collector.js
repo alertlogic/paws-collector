@@ -35,8 +35,8 @@ class CiscoampCollector extends PawsCollector {
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
 
         const resourceNames = JSON.parse(process.env.paws_collector_param_string_1);
-        const initialStates = resourceNames.map(resource => ({
-            resource,
+        const initialStates = resourceNames.map(stream => ({
+            stream,
             since: startTs,
             until: endTs,
             nextPage: null,
@@ -69,7 +69,7 @@ class CiscoampCollector extends PawsCollector {
         const baseUrl = process.env.paws_endpoint.replace(/^https:\/\/|\/$/g, '');
         const base64EncodedString = Buffer.from(`${clientId}:${clientSecret}`, 'ascii').toString("base64");
 
-        if (state.resource === Events && state.totalLogsCount === 0 && state.nextPage === null) {
+        if (state.stream === Events && state.totalLogsCount === 0 && state.nextPage === null) {
             //Events API first call(Date time)
             state.until = moment().toISOString();
         }
@@ -84,7 +84,7 @@ class CiscoampCollector extends PawsCollector {
 
         let apiUrl = state.nextPage ? state.nextPage : resourceDetails.url;
 
-        console.info(`CAMP000001 Collecting data for ${state.resource} from ${state.since} till ${state.until}`);
+        console.info(`CAMP000001 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
 
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
             console.log('CAMP000002 API hourly Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
@@ -106,7 +106,7 @@ class CiscoampCollector extends PawsCollector {
                 else {
                     state.apiQuotaResetDate = null;
                 }
-                if (discardFlag && state.resource === Events) {
+                if (discardFlag && state.stream === Events) {
 
                     if (state.totalLogsCount === 0) {
                         return callback(null, accumulator, state, state.poll_interval_sec);
@@ -150,7 +150,7 @@ class CiscoampCollector extends PawsCollector {
         const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
 
         return {
-            resource: curState.resource,
+            stream: curState.stream,
             since: nextSinceMoment.toISOString(),
             until: nextUntilMoment.toISOString(),
             nextPage: null,
@@ -160,9 +160,9 @@ class CiscoampCollector extends PawsCollector {
         };
     }
 
-    _getNextCollectionStateWithNextPage({ resource, since, until, apiQuotaResetDate }, nextPage, totalLogsCount) {
+    _getNextCollectionStateWithNextPage({ stream, since, until, apiQuotaResetDate }, nextPage, totalLogsCount) {
         return {
-            resource,
+            stream,
             since,
             until,
             nextPage,

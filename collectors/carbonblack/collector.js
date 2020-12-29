@@ -31,10 +31,10 @@ class CarbonblackCollector extends PawsCollector {
     pawsInitCollectionState(event, callback) {
 
         const apiNames = JSON.parse(process.env.paws_collector_param_string_1);
-        const initialStates = apiNames.map(apiName => {
+        const initialStates = apiNames.map(stream => {
             let startTs = "";
             let endTs = "";
-            if (apiName === "AuditLogEvents") {
+            if (stream === "AuditLogEvents") {
                 startTs = moment().toISOString();
                 endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
             }
@@ -46,7 +46,7 @@ class CarbonblackCollector extends PawsCollector {
 
             }
             return {
-                apiName,
+                stream,
                 since: startTs,
                 until: endTs,
                 nextPage: null,
@@ -91,7 +91,7 @@ class CarbonblackCollector extends PawsCollector {
         typeIdPaths = apiDetails.typeIdPaths;
         tsPaths = apiDetails.tsPaths;
 
-        console.info(`CABL000001 Collecting data for ${state.apiName} from ${state.since} till ${state.until}`);
+        console.info(`CABL000001 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
 
         utils.getAPILogs(apiDetails, [], apiEndpoint, state, clientSecret, clientId, process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextPage }) => {
@@ -120,7 +120,7 @@ class CarbonblackCollector extends PawsCollector {
         const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
 
         return {
-            apiName: curState.apiName,
+            stream: curState.stream,
             since: nextSinceMoment.toISOString(),
             until: nextUntilMoment.toISOString(),
             nextPage: null,
@@ -128,9 +128,9 @@ class CarbonblackCollector extends PawsCollector {
         };
     }
 
-    _getNextCollectionStateWithNextPage({ apiName, since, until }, nextPage) {
+    _getNextCollectionStateWithNextPage({ stream, since, until }, nextPage) {
         return {
-            apiName,
+            stream,
             since,
             until,
             nextPage,

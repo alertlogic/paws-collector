@@ -119,7 +119,7 @@ describe('Unit Tests', function() {
                 var collector = new GooglestackdriverCollector(ctx, creds);
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
-                    resource: "projects/a-fake-project",
+                    stream: "projects/a-fake-project",
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     poll_interval_sec: 1
@@ -208,7 +208,7 @@ describe('Unit Tests', function() {
                 var collector = new GooglestackdriverCollector(ctx, creds);
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
-                    resource: "projects/a-fake-project",
+                    stream: "projects/a-fake-project",
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     poll_interval_sec: 1

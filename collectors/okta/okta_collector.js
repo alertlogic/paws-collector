@@ -34,6 +34,7 @@ const sensitiveFields = [
     "client.http.defaultHeaders.Authorization"
 ];
 
+const STREAM_NAME = 'default';
 
 class OktaCollector extends PawsCollector {
 
@@ -48,6 +49,7 @@ class OktaCollector extends PawsCollector {
                 process.env.paws_collection_start_ts :
                     moment().toISOString();
         const initialState = this._getNextCollectionState({
+            stream:STREAM_NAME,
             since: startTs,
             until: startTs,
             poll_interval_sec: 1
@@ -97,6 +99,7 @@ class OktaCollector extends PawsCollector {
         const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
 
         return  {
+             stream: curState.stream ? curState.stream : STREAM_NAME,
              since: nextSinceMoment.toISOString(),
              until: nextUntilMoment.toISOString(),
              poll_interval_sec: nextPollInterval

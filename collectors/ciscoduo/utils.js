@@ -18,7 +18,7 @@ function getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvoca
                     if (res.stat !== 'OK') {
                         return reject(res);
                     } else {
-                        if (Authentication === state.object) {
+                        if (Authentication === state.stream) {
                             if (res.response.authlogs.length > 0) {
                                 accumulator.push(...res.response.authlogs);
                             }
@@ -47,7 +47,7 @@ function getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvoca
                 });
             }
             else {
-                if (Authentication === state.object) {
+                if (Authentication === state.stream) {
                     nextPage = objectDetails.query.next_offset;
                 }
                 else {
@@ -68,7 +68,7 @@ function getAPIDetails(state) {
         mintime: state.mintime
     };
 
-    switch (state.object) {
+    switch (state.stream) {
         case Authentication:
             url = `/admin/v2/logs/authentication`;
             typeIdPaths = [{ path: ['txid'] }];

@@ -37,9 +37,9 @@ class SalesforceCollector extends PawsCollector {
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
 
         const objectNames = JSON.parse(process.env.paws_collector_param_string_2);
-        const initialStates = objectNames.map(object => {
+        const initialStates = objectNames.map(stream => {
             return {
-                object,
+                stream,
                 since: startTs,
                 until: endTs,
                 nextPage: null,
@@ -79,7 +79,7 @@ class SalesforceCollector extends PawsCollector {
 
         var token = jwt.sign(claim, privateKey, { algorithm: 'RS256' });
 
-        console.info(`SALE000001 Collecting data for ${state.object} from ${state.since} till ${state.until}`);
+        console.info(`SALE000001 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
 
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
             console.log('API Request Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
@@ -178,7 +178,7 @@ class SalesforceCollector extends PawsCollector {
             1 : this.pollInterval;
 
         return {
-            object: curState.object,
+            stream: curState.stream,
             since: nextSinceTs,
             until: nextUntilMoment.toISOString(),
             nextPage: null,
@@ -187,9 +187,9 @@ class SalesforceCollector extends PawsCollector {
         };
     }
 
-    _getNextCollectionStateWithNextPage({ object, since, until }, nextPage) {
+    _getNextCollectionStateWithNextPage({ stream, since, until }, nextPage) {
         return {
-            object,
+            stream,
             since,
             until,
             nextPage,
