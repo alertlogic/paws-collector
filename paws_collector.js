@@ -18,6 +18,7 @@ const moment = require('moment');
 const ddLambda = require('datadog-lambda-js');
 
 const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector;
+const checkLastState = require('./healthcheck');
 const packageJson = require('./package.json');
 
 const CREDS_FILE_PATH = '/tmp/paws_creds';
@@ -103,7 +104,7 @@ class PawsCollector extends AlAwsCollector {
               AlAwsCollector.IngestTypes.LOGMSGS,
               version,
               aimsCreds,
-              null, healthChecks, statsChecks);
+              null, [...healthChecks, checkLastState], statsChecks);
         console.info('PAWS000100 Loading collector', process.env.paws_type_name);
         this._pawsCreds = pawsCreds;
         this._pawsCollectorType = process.env.paws_type_name;
