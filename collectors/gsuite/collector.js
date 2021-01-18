@@ -26,7 +26,7 @@ const tsPaths = [{ path: ["id", "time"] }];
 class GsuiteCollector extends PawsCollector {
     
     constructor(context, creds) {
-        super(context, creds, packageJson.version);
+        super(context, creds, packageJson.version, process.env.paws_collector_param_string_2);
     }
 
     pawsInitCollectionState(event, callback) {

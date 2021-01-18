@@ -23,7 +23,7 @@ const tsPaths = [{ path: ['created_at'] }];
 
 class SophossiemCollector extends PawsCollector {
     constructor(context, creds) {
-        super(context, creds, packageJson.version);
+        super(context, creds, packageJson.version, process.env.paws_collector_param_string_1);
     }
 
     pawsInitCollectionState(event, callback) {

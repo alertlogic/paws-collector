@@ -28,7 +28,7 @@ const STREAM_NAME = 'default';
 
 class SophosCollector extends PawsCollector {
     constructor(context, creds) {
-        super(context, creds, packageJson.version);
+        super(context, creds, packageJson.version, []);
     }
 
     pawsInitCollectionState(event, callback) {

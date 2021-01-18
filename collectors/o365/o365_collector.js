@@ -35,7 +35,7 @@ const tsPaths = [
 class O365Collector extends PawsCollector {
 
     constructor(context, creds) {
-        super(context, creds, packageJson.version, [checkO365Subscriptions], []);
+        super(context, creds, packageJson.version, process.env.paws_collector_param_string_2, [checkO365Subscriptions], []);
     }
     
     pawsInitCollectionState(event, callback) {

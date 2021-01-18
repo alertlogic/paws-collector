@@ -26,7 +26,7 @@ const STREAM_NAME = 'default';
 
 class SentineloneCollector extends PawsCollector {
     constructor(context, creds) {
-        super(context, creds, packageJson.version, [healthChecks.sentinelOneTokenHealthCheck], []);
+        super(context, creds, packageJson.version, [], [healthChecks.sentinelOneTokenHealthCheck], []);
     }
 
     pawsInitCollectionState(event, callback) {

@@ -40,7 +40,7 @@ class OktaCollector extends PawsCollector {
 
     constructor(context, creds){
         super(context,
-            creds, packageJson.version,
+            creds, packageJson.version,[],
             [healthChecks.oktaTokenHealthCheck], []);
     }
     
