@@ -357,45 +357,4 @@ describe('Unit Tests', function() {
             });
         });
     });
-    describe('Health Check Tests', function() {
-        it('token validation check success', function(done) {
-            const oktaHealth = require('../health_checks');
-            // Okta endpoints mock
-            nock('https://test.alertlogic.com:443', {'encodedQueryParams':true})
-            .get('/api/v1/users/me')
-            .query(true)
-            .times(1)
-            .reply(200);
-            
-            oktaHealth.oktaTokenHealthCheck(function(err) {
-                assert.equal(null, err);
-                done();
-            });
-            
-        });
-        it('token validation check fail', function(done) {
-            const oktaHealth = require('../health_checks');
-            // Okta endpoints mock
-            nock('https://test.alertlogic.com:443', {'encodedQueryParams':true})
-            .get('/api/v1/users/me')
-            .query(true)
-            .times(1)
-            .reply(401, { 
-                errorCode: 'E0000011',
-                errorSummary: 'Invalid token provided',
-                errorLink: 'E0000011',
-                errorId: 'testid',
-                errorCauses: [] });
-            
-            const expectedError = { status: 'error',
-                    code: 'OKTA000003',
-                    details: 'Failed to validate auth token for test.alertlogic.com due to error 401 - {"errorCode":"E0000011","errorSummary":"Invalid token provided","errorLink":"E0000011","errorId":"testid","errorCauses":[]}' };
-
-            oktaHealth.oktaTokenHealthCheck(function(err) {
-                assert.deepEqual(err, expectedError);
-                done();
-            });
-            
-        });
-    });
 });
