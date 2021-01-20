@@ -15,8 +15,6 @@ const parse = require('@alertlogic/al-collector-js').Parse;
 const utils = require("./utils");
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const packageJson = require('./package.json');
-const healthChecks = require('./health_checks');
-
 
 const typeIdPaths = [{ path: ['id'] }];
 
@@ -26,7 +24,7 @@ const STREAM_NAME = 'default';
 
 class SentineloneCollector extends PawsCollector {
     constructor(context, creds) {
-        super(context, creds, packageJson.version, [], [healthChecks.sentinelOneTokenHealthCheck], []);
+        super(context, creds, packageJson.version, [], [],[]);
     }
 
     pawsInitCollectionState(event, callback) {
