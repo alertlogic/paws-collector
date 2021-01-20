@@ -265,7 +265,7 @@ describe('Unit Tests', function() {
                 var collector = new TestCollector(ctx, creds);
                 collector.reportDDMetric('test_metric', 2);
 
-                assert(ddLambdaSendMetricStub.calledWith('paws_okta.test_metric'));
+                assert(ddLambdaSendMetricStub.calledWith('paws.test_metric'));
                 done();
             });
         });
