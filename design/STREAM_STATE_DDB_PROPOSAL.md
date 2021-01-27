@@ -27,7 +27,7 @@ no info regarding what stream was collected.
 The proposed schema is as follows:
 
 | CollectorId(PK) | stream (SK) | CID | CollectionDate | ExpireDate(TTL) | Status | Updated |
-| ----------- | ----------- | ----------- | ----------- | ----------- | ----------- |
+| ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- |
 |  F976AEE4-F24F-45FC-9AF6-DABAE2D83EAE | auth0 | 134265762 | 1611836604 | 1611836604 | 1610627006 | 
 
 In this schema the following changes are made: 
