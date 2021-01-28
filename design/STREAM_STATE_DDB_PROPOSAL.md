@@ -10,7 +10,7 @@ then all collection for the collector ceases, and only healthchecks are left.
 ## Solution
 
 Implement a health check that is run periodically that shall check if collection has ceased for a given collector by 
-checking against an updated collector state database to ensure that collection has occured recently.
+checking against an updated collector state database to ensure that collection has occured recently for every stream.
 
 ### PawsCollectorStates DDB 
 
