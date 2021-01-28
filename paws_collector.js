@@ -96,14 +96,14 @@ class PawsCollector extends AlAwsCollector {
         }
     }
 
-    constructor(context, {aimsCreds, pawsCreds}, childVersion,streams =[], healthChecks = [], statsChecks = []) {
+    constructor(context, {aimsCreds, pawsCreds}, childVersion, healthChecks = [], statsChecks = []) {
         const version = childVersion ? childVersion : packageJson.version;
         const endpointDomain = process.env.paws_endpoint.replace(DOMAIN_REGEXP, '');
         super(context, 'paws',
               AlAwsCollector.IngestTypes.LOGMSGS,
               version,
               aimsCreds,
-              null, healthChecks, statsChecks, streams);
+              null, healthChecks, statsChecks);
         console.info('PAWS000100 Loading collector', process.env.paws_type_name);
         this._pawsCreds = pawsCreds;
         this._pawsCollectorType = process.env.paws_type_name;
@@ -425,12 +425,7 @@ class PawsCollector extends AlAwsCollector {
                 return collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_COMPLETE, asyncCallback);
             }
         ], function(error) {
-                // passing collector  stream to form the separate error status  as per stream type instead of overwriting overall status
-               if (pawsState.priv_collector_state.stream) {
-                    collector.done(error, process.env.paws_extension + "_" + pawsState.priv_collector_state.stream);
-                } else {
-                    collector.done(error);
-                }
+            collector.done(error);
         });
     };
 

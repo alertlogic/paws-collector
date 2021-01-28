@@ -27,17 +27,14 @@ const tsPaths = [
 
 const HOSTNAME_REGEXP = /^[htps]*:\/\/|\/$/gi;
 
-const STREAM_NAME = 'default';
-
 class Auth0Collector extends PawsCollector {
 
     constructor(context, creds) {
-        super(context, creds, packageJson.version,[]);
+        super(context, creds, packageJson.version);
     }
     
     pawsInitCollectionState(event, callback) {
         const initialState = {
-            stream : STREAM_NAME,
             since: process.env.paws_collection_start_ts ? process.env.paws_collection_start_ts : moment().subtract(5, 'minutes').toISOString(),
             poll_interval_sec: 1
         };
@@ -75,14 +72,12 @@ class Auth0Collector extends PawsCollector {
         if (nextLogId === null) {
             //If collector initial call and get empty logs then this condition will work
             return {
-                stream: curState.stream ? curState.stream : STREAM_NAME,
                 since: curState.since,
                 poll_interval_sec: 1
             };
         }
 
         return {
-            stream: curState.stream ? curState.stream : STREAM_NAME,
             last_log_id: nextLogId,
             last_collected_ts: lastLogTs,
             poll_interval_sec: nextPollInterval

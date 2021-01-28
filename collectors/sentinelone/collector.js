@@ -20,11 +20,9 @@ const typeIdPaths = [{ path: ['id'] }];
 
 const tsPaths = [{ path: ['createdAt'] }];
 
-const STREAM_NAME = 'default';
-
 class SentineloneCollector extends PawsCollector {
     constructor(context, creds) {
-        super(context, creds, packageJson.version, [], [],[]);
+        super(context, creds, packageJson.version);
     }
 
     pawsInitCollectionState(event, callback) {
@@ -33,7 +31,6 @@ class SentineloneCollector extends PawsCollector {
             moment().toISOString();
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
         const initialState = {
-            stream: STREAM_NAME,
             since: startTs,
             until: endTs,
             nextPage: null,
@@ -87,7 +84,6 @@ class SentineloneCollector extends PawsCollector {
         const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-day-progression', untilMoment, this.pollInterval);
 
         return {
-            stream: curState.stream ? curState.stream : STREAM_NAME,
             since: nextSinceMoment.toISOString(),
             until: nextUntilMoment.toISOString(),
             nextPage: null,
@@ -95,9 +91,8 @@ class SentineloneCollector extends PawsCollector {
         };
     }
 
-    _getNextCollectionStateWithNextPage({stream, since, until }, nextPage) {
+    _getNextCollectionStateWithNextPage({ since, until }, nextPage) {
         return {
-            stream: stream ? stream : STREAM_NAME,
             since,
             until,
             nextPage,

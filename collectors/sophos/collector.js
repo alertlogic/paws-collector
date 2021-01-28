@@ -24,11 +24,9 @@ const tsPaths = [{ path: ["raisedAt"] }];
 const SOPHOS_AUTH_BASE_URL = "id.sophos.com";
 const SOPHOS_API_BASE_URL = "api.central.sophos.com";
 
-const STREAM_NAME = 'default';
-
 class SophosCollector extends PawsCollector {
     constructor(context, creds) {
-        super(context, creds, packageJson.version, []);
+        super(context, creds, packageJson.version);
     }
 
     pawsInitCollectionState(event, callback) {
@@ -37,7 +35,6 @@ class SophosCollector extends PawsCollector {
             moment().toISOString();
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
         const initialState = {
-            stream: STREAM_NAME,
             since: startTs,
             until: endTs,
             nextPage: null,
@@ -129,7 +126,6 @@ class SophosCollector extends PawsCollector {
         const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-cap', untilMoment, this.pollInterval);
 
         return {
-            stream :curState.stream? curState.stream : STREAM_NAME,
             since: nextSinceMoment.toISOString(),
             until: nextUntilMoment.toISOString(),
             nextPage: null,
@@ -138,9 +134,8 @@ class SophosCollector extends PawsCollector {
         };
     }
 
-    _getNextCollectionStateWithNextPage({ stream, since, until }, nextPage) {
+    _getNextCollectionStateWithNextPage({ since, until }, nextPage) {
         return {
-            stream : stream ? stream : STREAM_NAME,
             since,
             until,
             nextPage,
