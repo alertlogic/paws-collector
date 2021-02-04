@@ -96,15 +96,15 @@ class PawsCollector extends AlAwsCollector {
         }
     }
 
-    constructor(context, {aimsCreds, pawsCreds}, childVersion,healthChecks = [], statsChecks = []) {
+    constructor(context, {aimsCreds, pawsCreds}, childVersion, healthChecks = [], statsChecks = []) {
         const version = childVersion ? childVersion : packageJson.version;
         const endpointDomain = process.env.paws_endpoint.replace(DOMAIN_REGEXP, '');
-        let collectorStreams = process.env.collector_stream ? JSON.parse(process.env.collector_stream) : [];
+        let collectorStreams = process.env.collector_streams && Array.isArray(JSON.parse(process.env.collector_streams)) ? JSON.parse(process.env.collector_streams) : [];
         super(context, 'paws',
               AlAwsCollector.IngestTypes.LOGMSGS,
               version,
               aimsCreds,
-              null, healthChecks, statsChecks,collectorStreams);
+              null, healthChecks, statsChecks, collectorStreams);
         console.info('PAWS000100 Loading collector', process.env.paws_type_name);
         this._pawsCreds = pawsCreds;
         this._pawsCollectorType = process.env.paws_type_name;
