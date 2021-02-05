@@ -160,7 +160,7 @@ describe('Unit Tests', function () {
         it('Get API Details', function (done) {
             const startDate = moment().subtract(5, 'minutes');
             let objectDetailsArray = [];
-            const objectNames = JSON.parse(process.env.paws_collector_param_string_1);
+            const objectNames = JSON.parse(process.env.collector_streams);
             objectNames.map(stream => {
                 let state;
                 if (stream === "Authentication") {

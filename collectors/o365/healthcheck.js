@@ -46,7 +46,7 @@ function checkO365Subscriptions(callback){
 
 function filterSubscriptions(result){
     const subscriptionsList = result.parsedBody;
-    const streams = JSON.parse(process.env.paws_collector_param_string_2);
+    const streams = JSON.parse(process.env.collector_streams);
     return streams.filter(stream => {
         return !subscriptionsList.some(sub => {
             return sub.contentType === stream &&

@@ -27,6 +27,7 @@ const tsPaths = [
 
 const HOSTNAME_REGEXP = /^[htps]*:\/\/|\/$/gi;
 
+
 class Auth0Collector extends PawsCollector {
 
     constructor(context, creds) {
@@ -69,6 +70,7 @@ class Auth0Collector extends PawsCollector {
         // Check if we're behind collection schedule and need to catch up.
         const nextPollInterval = nowMoment.diff(lastLogMoment, 'seconds') > this.pollInterval ?
                 1 : this.pollInterval;
+
         if (nextLogId === null) {
             //If collector initial call and get empty logs then this condition will work
             return {

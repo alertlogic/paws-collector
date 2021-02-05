@@ -27,7 +27,7 @@ const typeIdPaths = [
 class GooglestackdriverCollector extends PawsCollector {
 
     constructor(context, creds){
-        super(context, creds, packageJson.version, process.env.paws_collector_param_string_1);
+        super(context, creds, packageJson.version);
     }
     
     pawsInitCollectionState(event, callback) {
@@ -45,7 +45,7 @@ class GooglestackdriverCollector extends PawsCollector {
         else {
             endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
         }
-        const resourceNames = JSON.parse(process.env.paws_collector_param_string_1);
+        const resourceNames = JSON.parse(process.env.collector_streams);
         const initialStates = resourceNames.map(stream => ({
             stream,
             nextPage:null,

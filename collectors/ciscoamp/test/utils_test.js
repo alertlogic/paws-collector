@@ -99,7 +99,7 @@ describe('Unit Tests', function () {
         it('Get API Details', function (done) {
             const startDate = moment().subtract(5, 'minutes');
             let resourceDetailsArray = [];
-            const resourceNames = JSON.parse(process.env.paws_collector_param_string_1);
+            const resourceNames = JSON.parse(process.env.collector_streams);
             resourceNames.map(stream => {
                 let state = {
                     stream: stream,

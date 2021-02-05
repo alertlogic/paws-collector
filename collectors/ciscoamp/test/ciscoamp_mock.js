@@ -17,7 +17,7 @@ process.env.paws_type_name = "ciscoamp";
 process.env.paws_api_secret = "secret";
 process.env.paws_api_client_id = "client_id";
 process.env.paws_endpoint = "https://ciscoamp.com";
-process.env.paws_collector_param_string_1 = "[\"AuditLogs\",\"Events\"]";
+process.env.collector_streams = "[\"AuditLogs\",\"Events\"]";
 process.env.AWS_LAMBDA_FUNCTION_NAME = "test";
 
 const AIMS_TEST_CREDS = {

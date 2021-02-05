@@ -16,7 +16,7 @@ process.env.paws_poll_interval = 60;
 process.env.paws_type_name = "gsuite";
 process.env.paws_secret_param_name = "gsuite-param-name";
 process.env.paws_collector_param_string_1 = "[\"gsuiteScope\"]";
-process.env.paws_collector_param_string_2 = "[\"login\",\"admin\",\"token\"]";
+process.env.collector_streams = "[\"login\",\"admin\",\"token\"]";
 process.env.paws_max_pages_per_invocation = 2;
 process.env.AWS_LAMBDA_FUNCTION_NAME = "test";
 

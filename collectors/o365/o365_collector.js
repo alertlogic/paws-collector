@@ -35,7 +35,7 @@ const tsPaths = [
 class O365Collector extends PawsCollector {
 
     constructor(context, creds) {
-        super(context, creds, packageJson.version, process.env.paws_collector_param_string_2, [checkO365Subscriptions], []);
+        super(context, creds, packageJson.version, [checkO365Subscriptions], []);
     }
     
     pawsInitCollectionState(event, callback) {
@@ -57,7 +57,7 @@ class O365Collector extends PawsCollector {
         }
 
         // Create a new
-        const streams = JSON.parse(process.env.paws_collector_param_string_2);
+        const streams = JSON.parse(process.env.collector_streams);
         const initialStates = streams.map(stream => {
             return {
                 stream,
@@ -76,7 +76,7 @@ class O365Collector extends PawsCollector {
     pawsGetRegisterParameters(event, callback){
         const regValues = {
             azureTenantId: process.env.paws_collector_param_string_1,
-            azureStreams: process.env.paws_collector_param_string_2
+            azureStreams: process.env.collector_streams
         };
 
         callback(null, regValues);

@@ -100,7 +100,7 @@ describe('Unit Tests', function () {
             const startDate = moment().subtract(5, 'minutes');
             const orgKey = "orgKey";
             let apiDetails = [];
-            const apiNames = JSON.parse(process.env.paws_collector_param_string_1);
+            const apiNames = JSON.parse(process.env.collector_streams);
             apiNames.map(stream => {
                 let state = {
                     stream: stream,

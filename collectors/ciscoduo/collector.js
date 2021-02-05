@@ -27,7 +27,7 @@ const Authentication = 'Authentication';
 
 class CiscoduoCollector extends PawsCollector {
     constructor(context, creds) {
-        super(context, creds, packageJson.version, process.env.paws_collector_param_string_1);
+        super(context, creds, packageJson.version);
     }
 
     pawsInitCollectionState(event, callback) {
@@ -35,7 +35,7 @@ class CiscoduoCollector extends PawsCollector {
             process.env.paws_collection_start_ts :
             moment().toISOString();
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
-        const objectNames = JSON.parse(process.env.paws_collector_param_string_1);
+        const objectNames = JSON.parse(process.env.collector_streams);
         const initialStates = objectNames.map(stream => {
             if (stream === Authentication) {
                 return {
@@ -59,7 +59,7 @@ class CiscoduoCollector extends PawsCollector {
 
     pawsGetRegisterParameters(event, callback) {
         const regValues = {
-            ciscoduoObjectNames: process.env.paws_collector_param_string_1
+            ciscoduoObjectNames: process.env.collector_streams
         };
         callback(null, regValues);
     }

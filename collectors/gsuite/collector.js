@@ -26,7 +26,7 @@ const tsPaths = [{ path: ["id", "time"] }];
 class GsuiteCollector extends PawsCollector {
     
     constructor(context, creds) {
-        super(context, creds, packageJson.version, process.env.paws_collector_param_string_2);
+        super(context, creds, packageJson.version);
     }
 
     pawsInitCollectionState(event, callback) {
@@ -40,7 +40,7 @@ class GsuiteCollector extends PawsCollector {
             .add(this.pollInterval, "seconds")
             .toISOString();
 
-        const applicationNames = JSON.parse(process.env.paws_collector_param_string_2);
+        const applicationNames = JSON.parse(process.env.collector_streams);
         const initialStates = applicationNames.map(application => {
             return {
                 application,
@@ -57,7 +57,7 @@ class GsuiteCollector extends PawsCollector {
     pawsGetRegisterParameters(event, callback) {
         const regValues = {
             gsuiteScope: process.env.paws_collector_param_string_1,
-            gsuiteApplicationNames: process.env.paws_collector_param_string_2
+            gsuiteApplicationNames: process.env.collector_streams
         };
 
         callback(null, regValues);

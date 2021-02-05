@@ -110,7 +110,7 @@
                     "PawsAuthType": "oauth2",
                     "PawsSecret": {"Ref": "GoogleSecret"},
                     "PawsEndpoint": "No-Endpoint",
-                    "CollectorParamString1": {
+                    "CollectorStreams": {
                         "Ref": "GoogleResourceIds"
                     },
                     "CollectionStartTs": {

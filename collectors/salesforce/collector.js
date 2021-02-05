@@ -25,7 +25,7 @@ let tsPaths = [];
 
 class SalesforceCollector extends PawsCollector {
     constructor(context, creds) {
-        super(context, creds, packageJson.version, process.env.paws_collector_param_string_2);
+        super(context, creds, packageJson.version);
     }
 
     pawsInitCollectionState(event, callback) {
@@ -36,7 +36,7 @@ class SalesforceCollector extends PawsCollector {
 
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
 
-        const objectNames = JSON.parse(process.env.paws_collector_param_string_2);
+        const objectNames = JSON.parse(process.env.collector_streams);
         const initialStates = objectNames.map(stream => {
             return {
                 stream,
@@ -53,7 +53,7 @@ class SalesforceCollector extends PawsCollector {
     pawsGetRegisterParameters(event, callback) {
         const regValues = {
             salesforceUserID: process.env.paws_collector_param_string_1,
-            salesforceObjectNames: process.env.paws_collector_param_string_2
+            salesforceObjectNames: process.env.collector_streams
         };
 
         callback(null, regValues);
@@ -126,10 +126,10 @@ class SalesforceCollector extends PawsCollector {
                         }
                         else {
                             if (error.errorCode && error.errorCode === "INVALID_FIELD") {
-                                console.log(`API not able to fetch field for object ${state.object}`);
+                                console.log(`API not able to fetch field for object ${state.stream}`);
                             }
                             if (error.errorCode && error.errorCode === "INVALID_TYPE") {
-                                console.log(`API not able to fetch logs for object ${state.object}`);
+                                console.log(`API not able to fetch logs for object ${state.stream}`);
                             }
                             if (error.errorCode && error.errorCode === "INVALID_SESSION_ID") {
                                 console.log("User not added 'Access and manage your data (api)' in Oauth scope");

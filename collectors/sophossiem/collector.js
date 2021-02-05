@@ -23,7 +23,7 @@ const tsPaths = [{ path: ['created_at'] }];
 
 class SophossiemCollector extends PawsCollector {
     constructor(context, creds) {
-        super(context, creds, packageJson.version, process.env.paws_collector_param_string_1);
+        super(context, creds, packageJson.version);
     }
 
     pawsInitCollectionState(event, callback) {
@@ -40,7 +40,7 @@ class SophossiemCollector extends PawsCollector {
             from_date_unix = moment().subtract(23, 'hours').unix();
         }
 
-        const streams = JSON.parse(process.env.paws_collector_param_string_1);
+        const streams = JSON.parse(process.env.collector_streams);
         const initialStates = streams.map(stream => {
             return {
                 stream,
@@ -54,7 +54,7 @@ class SophossiemCollector extends PawsCollector {
 
     pawsGetRegisterParameters(event, callback) {
         const regValues = {
-            sophosSiemObjectNames: process.env.paws_collector_param_string_1
+            sophosSiemObjectNames: process.env.collector_streams
         };
         callback(null, regValues);
     }

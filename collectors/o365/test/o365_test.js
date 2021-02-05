@@ -179,26 +179,26 @@ describe('O365 Collector Tests', function() {
     describe('healthcheck', function() {
         it('does not start subscriptions when streams are enabled', function(done) {
             setO365MangementStub();
-            const tempStreams = process.env.paws_collector_param_string_2;
-            process.env.paws_collector_param_string_2 = "[\"Audit.Exchange\", \"Audit.General\"]";
+            const tempStreams = process.env.collector_streams;
+            process.env.collector_streams = "[\"Audit.Exchange\", \"Audit.General\"]";
             checkO365Subscriptions((err) => {
                 assert.equal(err, null);
                 assert.equal(startSubscriptionStub.called, false);
                 restoreO365ManagemntStub();
-                process.env.paws_collector_param_string_2 = tempStreams;
+                process.env.collector_streams = tempStreams;
                 done();
             });
         });
 
         it('starts subscriptions when streams are not enabled', function(done) {
             setO365MangementStub();
-            const tempStreams = process.env.paws_collector_param_string_2;
-            process.env.paws_collector_param_string_2 = "[\"Audit.Exchange\", \"Audit.Sharepoint\", \"Audit.General\"]";
+            const tempStreams = process.env.collector_streams;
+            process.env.collector_streams = "[\"Audit.Exchange\", \"Audit.Sharepoint\", \"Audit.General\"]";
             checkO365Subscriptions((err) => {
                 assert.equal(err, null);
                 assert.equal(startSubscriptionStub.called, true);
                 restoreO365ManagemntStub();
-                process.env.paws_collector_param_string_2 = tempStreams;
+                process.env.collector_streams = tempStreams;
                 done();
             });
         });

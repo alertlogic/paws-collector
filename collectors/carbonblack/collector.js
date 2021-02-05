@@ -25,12 +25,12 @@ let tsPaths = [];
 class CarbonblackCollector extends PawsCollector {
 
     constructor(context, creds) {
-        super(context, creds, packageJson.version,process.env.paws_collector_param_string_1);
+        super(context, creds, packageJson.version);
     }
 
     pawsInitCollectionState(event, callback) {
 
-        const apiNames = JSON.parse(process.env.paws_collector_param_string_1);
+        const apiNames = JSON.parse(process.env.collector_streams);
         const initialStates = apiNames.map(stream => {
             let startTs = "";
             let endTs = "";
@@ -59,7 +59,7 @@ class CarbonblackCollector extends PawsCollector {
 
     pawsGetRegisterParameters(event, callback) {
         const regValues = {
-            carbonblackAPINames: process.env.paws_collector_param_string_1,
+            carbonblackAPINames: process.env.collector_streams,
             carbonblackOrgKey: process.env.paws_collector_param_string_2
         };
 
