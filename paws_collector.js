@@ -18,6 +18,7 @@ const moment = require('moment');
 const ddLambda = require('datadog-lambda-js');
 
 const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector;
+const AlAwsUtil = require('@alertlogic/al-aws-collector-js').Util;
 const packageJson = require('./package.json');
 
 const CREDS_FILE_PATH = '/tmp/paws_creds';
@@ -657,6 +658,20 @@ class PawsCollector extends AlAwsCollector {
         // Current state message will be removed by Lambda trigger upon successful completion
         sqs.sendMessage(params, callback);
     };
+
+    /**
+     * This function to set collector_streams in environment variable for exsisting collector
+     * Streams is send to AL-aws-collector to post stream specific status if there is no error.
+     * @param {*} streams 
+     */
+    setCollectorStreamsEnv(streams) {
+        let collectorStreams = { collector_streams: streams };
+        return AlAwsUtil.setEnv(collectorStreams, (err) => {
+            if (err) {
+                console.error('Paws error while adding collector_streams in environment variable')
+            }
+        });
+    }
 
     /**
      * @function collector callback to initialize collection state
