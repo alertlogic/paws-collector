@@ -102,7 +102,7 @@
         "PawsSecretParamTier": {
             "Description": "Tier for AWS Param store param. Change this to advanced if the size of the PAws secrets is over 4kb",
             "Type": "String",
-            "Default": "Standard",
+            "Default": "Intelligent-Tiering",
             "AllowedValues": [
                 "Standard",
                 "Advanced",
@@ -660,6 +660,9 @@
                   },
                   "paws_secret_param_name":{
                       "Ref":"PawsSecretParam"
+                  },
+                  "paws_secret_param_tier": {
+                      "Ref": "PawsSecretParamTier"
                   },
                   "paws_collection_start_ts":{
                       "Ref":"CollectionStartTs"
