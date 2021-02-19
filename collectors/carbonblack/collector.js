@@ -67,6 +67,13 @@ class CarbonblackCollector extends PawsCollector {
     }
 
     pawsGetLogs(state, callback) {
+        // This code can remove once exsisting code set stream and collector_streams env variable
+        if (!process.env.collector_streams) {
+            this.setCollectorStreamsEnv(process.env.paws_collector_param_string_1);
+        }
+        if (!state.stream) {
+            state = this.setStreamToCollectionState(state);
+        }
 
         let collector = this;
 
@@ -160,6 +167,16 @@ class CarbonblackCollector extends PawsCollector {
             formattedMsg.messageTsUs = ts.usec;
         }
         return formattedMsg;
+    }
+
+    setStreamToCollectionState(curState) {
+        return {
+            stream: curState.apiName,
+            since: curState.since,
+            until: curState.until,
+            nextPage: curState.nextPage,
+            poll_interval_sec: curState.poll_interval_sec
+        };
     }
 }
 
