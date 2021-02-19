@@ -661,8 +661,8 @@ class PawsCollector extends AlAwsCollector {
     };
 
     /**
-     * This function to set collector_streams in environment variable for exsisting collector
-     * Streams is send to AL-aws-collector to post stream specific status if there is no error.
+     * This function to set collector_streams in environment variable for existing collectors.
+     * Streams are pass to AL-aws-collector to post stream specific status if there is no error.
      * @param {*} streams 
      */
     setCollectorStreamsEnv(streams) {
