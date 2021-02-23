@@ -84,6 +84,10 @@ class O365Collector extends PawsCollector {
 
     pawsGetLogs(state, callback) {
         let collector = this;
+        // This code can remove once exsisting code set collector_streams env variable
+        if (!process.env.collector_streams) {
+            collector.setCollectorStreamsEnv(process.env.paws_collector_param_string_2);
+        }
 
         if (!moment(state.since).isValid() || !moment(state.until).isValid() || state.since === undefined || state.until === undefined) {
             const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-day-progression', moment(), this.pollInterval);

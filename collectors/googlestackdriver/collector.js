@@ -58,7 +58,13 @@ class GooglestackdriverCollector extends PawsCollector {
 
     pawsGetLogs(state, callback) {
         let collector = this;
-
+        // This code can remove once exsisting code set stream and collector_streams env variable
+        if (!process.env.collector_streams) {
+            collector.setCollectorStreamsEnv(process.env.paws_collector_param_string_1);
+        }
+        if (!state.stream) {
+            state = collector.setStreamToCollectionState(state);
+        }
         // Start API client
         const client = new logging.v2.LoggingServiceV2Client({
             credentials: JSON.parse(collector.secret)
@@ -175,6 +181,16 @@ timestamp < "${state.until}"`;
             formattedMsg.messageTsUs = ts.nanos;
         }
         return formattedMsg;
+    }
+
+    setStreamToCollectionState(curState) {
+        return {
+            stream: curState.resource,
+            since: curState.since,
+            until: curState.until,
+            nextPage: curState.nextPage,
+            poll_interval_sec: curState.poll_interval_sec
+        };
     }
 }
 

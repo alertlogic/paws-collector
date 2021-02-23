@@ -41,9 +41,9 @@ class GsuiteCollector extends PawsCollector {
             .toISOString();
 
         const applicationNames = JSON.parse(process.env.collector_streams);
-        const initialStates = applicationNames.map(application => {
+        const initialStates = applicationNames.map(stream => {
             return {
-                application,
+                stream,
                 since: startTs,
                 until: endTs,
                 nextPage: null,
@@ -65,6 +65,14 @@ class GsuiteCollector extends PawsCollector {
 
     pawsGetLogs(state, callback) {
         let collector = this;
+        // This code can remove once exsisting code set stream and collector_streams env variable
+        if (!process.env.collector_streams) {
+            collector.setCollectorStreamsEnv(process.env.paws_collector_param_string_2);
+        }
+        if (!state.stream) {
+            state = collector.setStreamToCollectionState(state);
+        }
+
         const keysEnvVar = collector.secret;
         if (!keysEnvVar) {
             throw new Error("The $CREDS environment variable was not found!");
@@ -183,6 +191,17 @@ class GsuiteCollector extends PawsCollector {
             formattedMsg.messageTsUs = ts.usec;
         }
         return formattedMsg;
+    }
+
+    setStreamToCollectionState(curState) {
+        return {
+            stream: curState.application,
+            since: curState.since,
+            until: curState.until,
+            nextPage: curState.nextPage,
+            apiQuotaResetDate: curState.apiQuotaResetDate,
+            poll_interval_sec: curState.poll_interval_sec
+        };
     }
 }
 

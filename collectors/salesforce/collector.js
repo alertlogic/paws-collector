@@ -61,6 +61,14 @@ class SalesforceCollector extends PawsCollector {
 
     pawsGetLogs(state, callback) {
         let collector = this;
+        // This code can remove once exsisting code set stream and collector_streams env variable
+        if (!process.env.collector_streams) {
+            collector.setCollectorStreamsEnv(process.env.paws_collector_param_string_2);
+        }
+        if (!state.stream) {
+            state = collector.setStreamToCollectionState(state);
+        }
+          
         const privateKey = collector.secret;
         if (!privateKey) {
             throw new Error("The private key was not found!");
@@ -217,6 +225,17 @@ class SalesforceCollector extends PawsCollector {
             formattedMsg.messageTsUs = ts.usec;
         }
         return formattedMsg;
+    }
+
+    setStreamToCollectionState(curState) {
+        return {
+            stream: curState.object,
+            since: curState.since,
+            until: curState.until,
+            nextPage: curState.nextPage,
+            apiQuotaResetDate: curState.apiQuotaResetDate,
+            poll_interval_sec: curState.poll_interval_sec
+        };
     }
 }
 

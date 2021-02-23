@@ -66,7 +66,13 @@ class CiscoduoCollector extends PawsCollector {
 
     pawsGetLogs(state, callback) {
         let collector = this;
-
+        // This code can remove once exsisting code set stream and collector_streams env variable
+        if (!process.env.collector_streams) {
+            collector.setCollectorStreamsEnv(process.env.paws_collector_param_string_1);
+        }
+        if (!state.stream) {
+            state = collector.setStreamToCollectionState(state);
+        }
         const clientSecret = collector.secret;
         if (!clientSecret) {
             return callback("The Client Secret was not found!");
@@ -185,6 +191,24 @@ class CiscoduoCollector extends PawsCollector {
             formattedMsg.messageTsUs = ts.usec;
         }
         return formattedMsg;
+    }
+
+    setStreamToCollectionState(curState) {
+        if (curState.object === Authentication) {
+            return {
+                stream: curState.object,
+                mintime: curState.mintime,
+                maxtime: curState.maxtime,
+                nextPage: curState.nextPage,
+                poll_interval_sec: curState.poll_interval_sec
+            };
+        } else {
+            return {
+                stream: curState.object,
+                mintime: curState.mintime,
+                poll_interval_sec: curState.poll_interval_sec
+            };
+        }
     }
 }
 
