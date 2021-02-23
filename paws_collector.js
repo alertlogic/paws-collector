@@ -23,6 +23,7 @@ const packageJson = require('./package.json');
 
 const CREDS_FILE_PATH = '/tmp/paws_creds';
 var PAWS_DECRYPTED_CREDS = null;
+const DEFAULT_PAWS_SECRET_PARAM_TIER = 'Standard';
 const DOMAIN_REGEXP = /^[htps]*:\/\/|\/$/gi;
 
 const STATE_RECORD_COMPLETE = "COMPLETE";
@@ -200,7 +201,7 @@ class PawsCollector extends AlAwsCollector {
                     Type: 'String',
                     Overwrite: true,
                     Value: base64,
-                    Tier: process.env.paws_secret_param_tier
+                    Tier: process.env.paws_secret_param_tier ? process.env.paws_secret_param_tier : DEFAULT_PAWS_SECRET_PARAM_TIER
                 };
                 ssm.putParameter(params, function(err, data) {
                     if (err) return reject(err, err.stack);
