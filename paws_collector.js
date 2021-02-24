@@ -18,6 +18,7 @@ const moment = require('moment');
 const ddLambda = require('datadog-lambda-js');
 
 const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector;
+const AlAwsUtil = require('@alertlogic/al-aws-collector-js').Util;
 const packageJson = require('./package.json');
 
 const CREDS_FILE_PATH = '/tmp/paws_creds';
@@ -100,11 +101,12 @@ class PawsCollector extends AlAwsCollector {
     constructor(context, {aimsCreds, pawsCreds}, childVersion, healthChecks = [], statsChecks = []) {
         const version = childVersion ? childVersion : packageJson.version;
         const endpointDomain = process.env.paws_endpoint.replace(DOMAIN_REGEXP, '');
+        let collectorStreams = process.env.collector_streams && Array.isArray(JSON.parse(process.env.collector_streams)) ? JSON.parse(process.env.collector_streams) : [];
         super(context, 'paws',
               AlAwsCollector.IngestTypes.LOGMSGS,
               version,
               aimsCreds,
-              null, healthChecks, statsChecks);
+              null, healthChecks, statsChecks, collectorStreams);
         console.info('PAWS000100 Loading collector', process.env.paws_type_name);
         this._pawsCreds = pawsCreds;
         this._pawsCollectorType = process.env.paws_type_name;
@@ -171,8 +173,8 @@ class PawsCollector extends AlAwsCollector {
         return Object.assign(pawsProps, baseProps);
     };
 
-    prepareErrorStatus(errorString, streamName = 'none') {
-        return super.prepareErrorStatus(errorString, streamName, this.pawsCollectorType);
+    prepareErrorStatus(errorString, streamName = 'none', collectorType = this.pawsCollectorType) {
+        return super.prepareErrorStatus(errorString, streamName, collectorType);
     }
 
     setPawsSecret(secretValue){
@@ -427,7 +429,11 @@ class PawsCollector extends AlAwsCollector {
                 return collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_COMPLETE, asyncCallback);
             }
         ], function(error) {
-            collector.done(error);
+            if (pawsState.priv_collector_state.stream) {
+                collector.done(error, process.env.al_application_id + "_" + pawsState.priv_collector_state.stream);
+            } else {
+                collector.done(error);
+            }
         });
     };
 
@@ -654,6 +660,20 @@ class PawsCollector extends AlAwsCollector {
         // Current state message will be removed by Lambda trigger upon successful completion
         sqs.sendMessage(params, callback);
     };
+
+    /**
+     * This function to set collector_streams in environment variable for existing collectors.
+     * Streams are pass to AL-aws-collector to post stream specific status if there is no error.
+     * @param {*} streams 
+     */
+    setCollectorStreamsEnv(streams) {
+        let collectorStreams = { collector_streams: streams };
+        return AlAwsUtil.setEnv(collectorStreams, (err) => {
+            if (err) {
+                console.error('Paws error while adding collector_streams in environment variable')
+            }
+        });
+    }
 
     /**
      * @function collector callback to initialize collection state
