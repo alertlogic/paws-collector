@@ -1,6 +1,6 @@
 {
   "name": "googlestackdriver-collector",
-  "version": "1.1.16",
+  "version": "1.1.17",
   "description": "Alert Logic AWS based Googlestackdriver Log Collector",
   "repository": {},
   "private": true,
@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@alertlogic/al-collector-js": "^1.4.5",
-    "@alertlogic/paws-collector": "^2.0.5",
+    "@alertlogic/paws-collector": "^2.0.6",
     "@google-cloud/logging": "6.0.0",
     "async": "3.1.0",
     "debug": "4.1.1",
