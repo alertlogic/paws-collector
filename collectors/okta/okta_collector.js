@@ -33,13 +33,11 @@ const sensitiveFields = [
     "client.http.defaultHeaders.Authorization"
 ];
 
-
 class OktaCollector extends PawsCollector {
 
     constructor(context, creds){
         super(context,
-            creds, packageJson.version,
-            [], []);
+            creds, packageJson.version);
     }
     
     pawsInitCollectionState(event, callback) {

@@ -3,7 +3,7 @@
         {
             "messageId": "f67a45fc-ab43-4df1-9f2f-585bb2043122",
             "receiptHandle": "AQEB78LmKaaZ+uj8DVnc/O2zQcAe+qKSi3ZGTSBFssIRSmpwwzUEi2vhPTaIBnhOoh0aoRxVjWdoXO3ZloINfMxmcjycP3KC0WXwcWokoOc3iMCdqhYg0NcOhQW1X0ixc79C9/5/XF1xGd79vLhFL7KvRjjiT4sOaSxlAv6v2fJ5eDETnp7CRa5pocCF4EO2su0M4/TnlLreGfsY+C+/tH+r19AM+d3Jt5dbNMrKMWRRZ7/PTjczkIM7U38AHPuusuBz9uzA5yMQGOMI8FPXfqgcafEN17JqKuNSd/l54v1+s9rBQSzL/MH9wZ0XpZditcpe5pTc+dGuRHOXbFK2A0YUQCvRq1Ed8tfr68uELTQK5jWHH/zPnEMWsTyco9VuNCKr",
-            "body": "{\n  \"priv_collector_state\": {\n    \"from_date\": \"1595548800\", \n    \"objectName\": \"Events\" \n  }\n}",
+            "body": "{\n  \"priv_collector_state\": {\n    \"from_date\": \"1595548800\", \n    \"stream\": \"Events\" \n  }\n}",
             "attributes": {
                 "ApproximateReceiveCount": "1",
                 "SentTimestamp": "1574159909907",

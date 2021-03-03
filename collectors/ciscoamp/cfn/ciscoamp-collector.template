@@ -100,7 +100,7 @@
             "PawsAuthType" : "oauth2",
             "PawsClientId" : { "Ref":"CiscoampClientId" },
             "PawsSecret" : { "Ref":"CiscoampSecret" },
-            "CollectorParamString1" : { "Ref":"CiscoampResourceNames" },
+            "CollectorStreams" : { "Ref":"CiscoampResourceNames" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }
         }

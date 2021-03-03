@@ -22,7 +22,7 @@ function getObjectLogs(response, objectQueryDetails, accumulator, state, maxPage
                     version: "48.0"
                 });
                 let queryWithLimit = "";
-                switch (state.object) {
+                switch (state.stream) {
                     case LOGIN_HISTORY_OBJECT:
                     case EVENT_LOG_FILE_OBJECT:
                         queryWithLimit = lastValue ? `${objectQueryDetails.query} AND ${objectQueryDetails.sortFieldName} > '${lastValue}'` : objectQueryDetails.query;
@@ -59,7 +59,7 @@ function getObjectQuery(state) {
     let tsPaths = [];
     let sortFieldName = "Id";
     let sortType = "ASC";
-    switch (state.object) {
+    switch (state.stream) {
         case LOGIN_HISTORY_OBJECT:
             query = `SELECT Id, UserId, TlsProtocol, Status, SourceIp, Platform, LoginUrl, LoginType, LoginTime, LoginGeoId, CountryIso, CipherSuite, ClientVersion, Browser, AuthenticationServiceId, Application, APIVersion, ApiType, LoginGeo.City, LoginGeo.Country, LoginGeo.CountryIso, LoginGeo.Latitude, LoginGeo.LoginTime, LoginGeo.Longitude, LoginGeo.PostalCode, LoginGeo.Subdivision FROM LoginHistory WHERE UserId in (SELECT Id FROM User) AND LoginTime >= ${state.since} AND LoginTime < ${state.until}`;
             tsPaths = [{ path: ["LoginTime"] }];

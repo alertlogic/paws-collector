@@ -40,10 +40,10 @@ class GsuiteCollector extends PawsCollector {
             .add(this.pollInterval, "seconds")
             .toISOString();
 
-        const applicationNames = JSON.parse(process.env.paws_collector_param_string_2);
-        const initialStates = applicationNames.map(application => {
+        const applicationNames = JSON.parse(process.env.collector_streams);
+        const initialStates = applicationNames.map(stream => {
             return {
-                application,
+                stream,
                 since: startTs,
                 until: endTs,
                 nextPage: null,
@@ -57,7 +57,7 @@ class GsuiteCollector extends PawsCollector {
     pawsGetRegisterParameters(event, callback) {
         const regValues = {
             gsuiteScope: process.env.paws_collector_param_string_1,
-            gsuiteApplicationNames: process.env.paws_collector_param_string_2
+            gsuiteApplicationNames: process.env.collector_streams
         };
 
         callback(null, regValues);
@@ -65,6 +65,14 @@ class GsuiteCollector extends PawsCollector {
 
     pawsGetLogs(state, callback) {
         let collector = this;
+        // This code can remove once exsisting code set stream and collector_streams env variable
+        if (!process.env.collector_streams) {
+            collector.setCollectorStreamsEnv(process.env.paws_collector_param_string_2);
+        }
+        if (!state.stream) {
+            state = collector.setStreamToCollectionState(state);
+        }
+
         const keysEnvVar = collector.secret;
         if (!keysEnvVar) {
             throw new Error("The $CREDS environment variable was not found!");
@@ -73,7 +81,7 @@ class GsuiteCollector extends PawsCollector {
         const client = auth.fromJSON(keys);
         client.subject = collector.clientId;
         client.scopes = JSON.parse(process.env.paws_collector_param_string_1);
-        console.info(`GSUI000001 Collecting data for ${state.application} from ${state.since} till ${state.until}`);
+        console.info(`GSUI000001 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
 
         let params = state.nextPage ? {
             pageToken: state.nextPage
@@ -83,7 +91,7 @@ class GsuiteCollector extends PawsCollector {
             startTime: state.since,
             endTime: state.until,
             userKey: "all",
-            applicationName: state.application
+            applicationName: state.stream
         });
 
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
@@ -142,7 +150,7 @@ class GsuiteCollector extends PawsCollector {
         const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-day-progression', untilMoment, this.pollInterval);
 
         return {
-            application: curState.application,
+            stream: curState.stream,
             since: nextSinceMoment.toISOString(),
             until: nextUntilMoment.toISOString(),
             apiQuotaResetDate: null,
@@ -150,9 +158,9 @@ class GsuiteCollector extends PawsCollector {
         };
     }
 
-    _getNextCollectionStateWithNextPage({ application, since, until }, nextPage) {
+    _getNextCollectionStateWithNextPage({ stream, since, until }, nextPage) {
         return {
-            application,
+            stream,
             since,
             until,
             nextPage,
@@ -183,6 +191,17 @@ class GsuiteCollector extends PawsCollector {
             formattedMsg.messageTsUs = ts.usec;
         }
         return formattedMsg;
+    }
+
+    setStreamToCollectionState(curState) {
+        return {
+            stream: curState.application,
+            since: curState.since,
+            until: curState.until,
+            nextPage: curState.nextPage,
+            apiQuotaResetDate: curState.apiQuotaResetDate,
+            poll_interval_sec: curState.poll_interval_sec
+        };
     }
 }
 

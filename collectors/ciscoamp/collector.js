@@ -34,9 +34,9 @@ class CiscoampCollector extends PawsCollector {
             moment().toISOString();
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
 
-        const resourceNames = JSON.parse(process.env.paws_collector_param_string_1);
-        const initialStates = resourceNames.map(resource => ({
-            resource,
+        const resourceNames = JSON.parse(process.env.collector_streams);
+        const initialStates = resourceNames.map(stream => ({
+            stream,
             since: startTs,
             until: endTs,
             nextPage: null,
@@ -49,14 +49,20 @@ class CiscoampCollector extends PawsCollector {
 
     pawsGetRegisterParameters(event, callback) {
         const regValues = {
-            ciscoampResourceNames: process.env.paws_collector_param_string_1
+            ciscoampResourceNames: process.env.collector_streams
         };
         callback(null, regValues);
     }
 
     pawsGetLogs(state, callback) {
         let collector = this;
-
+        // This code can remove once exsisting code set stream and collector_streams env variable
+        if (!process.env.collector_streams) {
+            collector.setCollectorStreamsEnv(process.env.paws_collector_param_string_1);
+        }
+        if (!state.stream) {
+            state = collector.setStreamToCollectionState(state);
+        }
         const clientSecret = collector.secret;
         if (!clientSecret) {
             return callback("The Client Secret was not found!");
@@ -69,7 +75,7 @@ class CiscoampCollector extends PawsCollector {
         const baseUrl = process.env.paws_endpoint.replace(/^https:\/\/|\/$/g, '');
         const base64EncodedString = Buffer.from(`${clientId}:${clientSecret}`, 'ascii').toString("base64");
 
-        if (state.resource === Events && state.totalLogsCount === 0 && state.nextPage === null) {
+        if (state.stream === Events && state.totalLogsCount === 0 && state.nextPage === null) {
             //Events API first call(Date time)
             state.until = moment().toISOString();
         }
@@ -84,7 +90,7 @@ class CiscoampCollector extends PawsCollector {
 
         let apiUrl = state.nextPage ? state.nextPage : resourceDetails.url;
 
-        console.info(`CAMP000001 Collecting data for ${state.resource} from ${state.since} till ${state.until}`);
+        console.info(`CAMP000001 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
 
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
             console.log('CAMP000002 API hourly Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
@@ -106,7 +112,7 @@ class CiscoampCollector extends PawsCollector {
                 else {
                     state.apiQuotaResetDate = null;
                 }
-                if (discardFlag && state.resource === Events) {
+                if (discardFlag && state.stream === Events) {
 
                     if (state.totalLogsCount === 0) {
                         return callback(null, accumulator, state, state.poll_interval_sec);
@@ -150,7 +156,7 @@ class CiscoampCollector extends PawsCollector {
         const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
 
         return {
-            resource: curState.resource,
+            stream: curState.stream,
             since: nextSinceMoment.toISOString(),
             until: nextUntilMoment.toISOString(),
             nextPage: null,
@@ -160,9 +166,9 @@ class CiscoampCollector extends PawsCollector {
         };
     }
 
-    _getNextCollectionStateWithNextPage({ resource, since, until, apiQuotaResetDate }, nextPage, totalLogsCount) {
+    _getNextCollectionStateWithNextPage({ stream, since, until, apiQuotaResetDate }, nextPage, totalLogsCount) {
         return {
-            resource,
+            stream,
             since,
             until,
             nextPage,
@@ -194,6 +200,18 @@ class CiscoampCollector extends PawsCollector {
             formattedMsg.messageTsUs = ts.usec;
         }
         return formattedMsg;
+    }
+
+    setStreamToCollectionState(curState) {
+        return {
+            stream: curState.resource,
+            since: curState.since,
+            until: curState.until,
+            nextPage: curState.nextPage,
+            apiQuotaResetDate:curState.apiQuotaResetDate,
+            totalLogsCount: curState.totalLogsCount,
+            poll_interval_sec: curState.poll_interval_sec
+        };
     }
 }
 

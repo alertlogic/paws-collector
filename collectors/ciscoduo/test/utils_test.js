@@ -29,7 +29,7 @@ describe('Unit Tests', function () {
             let accumulator = [];
             const startDate = moment().subtract(5, 'days');
             let state = {
-                object: "Authentication",
+                stream: "Authentication",
                 mintime: startDate.valueOf(),
                 maxtime: startDate.add(2, 'days').valueOf(),
                 nextPage: null,
@@ -69,7 +69,7 @@ describe('Unit Tests', function () {
             let accumulator = [];
             const startDate = moment().subtract(5, 'days');
             let state = {
-                object: "Authentication",
+                stream: "Authentication",
                 mintime: startDate.valueOf(),
                 maxtime: startDate.add(2, 'days').valueOf(),
                 nextPage: null,
@@ -104,7 +104,7 @@ describe('Unit Tests', function () {
             let accumulator = [];
             const startDate = moment().subtract(5, 'days');
             let state = {
-                object: "Administrator",
+                stream: "Administrator",
                 mintime: startDate.unix(),
                 poll_interval_sec: 1
             };
@@ -135,7 +135,7 @@ describe('Unit Tests', function () {
             let accumulator = [];
             const startDate = moment().subtract(5, 'days');
             let state = {
-                object: "Administrator",
+                stream: "Administrator",
                 mintime: startDate.unix(),
                 poll_interval_sec: 1
             };
@@ -160,12 +160,12 @@ describe('Unit Tests', function () {
         it('Get API Details', function (done) {
             const startDate = moment().subtract(5, 'minutes');
             let objectDetailsArray = [];
-            const objectNames = JSON.parse(process.env.paws_collector_param_string_1);
-            objectNames.map(object => {
+            const objectNames = JSON.parse(process.env.collector_streams);
+            objectNames.map(stream => {
                 let state;
-                if (object === "Authentication") {
+                if (stream === "Authentication") {
                     state = {
-                        object,
+                        stream,
                         mintime: startDate.valueOf(),
                         maxtime: startDate.add(5, 'minutes').valueOf(),
                         nextPage: "nextPage",
@@ -174,7 +174,7 @@ describe('Unit Tests', function () {
                 }
                 else {
                     state = {
-                        object,
+                        stream,
                         mintime: startDate.unix(),
                         poll_interval_sec: 1
                     };
@@ -189,7 +189,7 @@ describe('Unit Tests', function () {
         it('Get API Details check url is null', function (done) {
             const startDate = moment().subtract(5, 'minutes');
             let state = {
-                object: "object",
+                stream: "object",
                 mintime: startDate.valueOf(),
                 maxtime: startDate.add(5, 'minutes').valueOf(),
                 nextPage: null,

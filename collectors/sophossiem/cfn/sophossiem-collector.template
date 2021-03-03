@@ -100,7 +100,7 @@
             "PawsAuthType" : "oauth2",
             "PawsClientId" : { "Ref":"SophosSiemXAPIKey" },
             "PawsSecret" : { "Ref":"SophosSiemAuthorizationToken" },
-            "CollectorParamString1" : { "Ref":"SophosSiemObjectNames" },
+            "CollectorStreams" : { "Ref":"SophosSiemObjectNames" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }
         }

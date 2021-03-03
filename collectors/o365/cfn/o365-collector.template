@@ -96,7 +96,7 @@
             "PawsSecret" : { "Ref":"AzureAppRegistrationClientSecret" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" },
             "CollectorParamString1" : { "Ref":"AzureTenantId" },
-            "CollectorParamString2" : { "Ref":"AzureContentStreams" }
+            "CollectorStreams" : { "Ref":"AzureContentStreams" }
           }
         }
       }

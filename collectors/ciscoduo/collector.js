@@ -35,11 +35,11 @@ class CiscoduoCollector extends PawsCollector {
             process.env.paws_collection_start_ts :
             moment().toISOString();
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
-        const objectNames = JSON.parse(process.env.paws_collector_param_string_1);
-        const initialStates = objectNames.map(object => {
-            if (object === Authentication) {
+        const objectNames = JSON.parse(process.env.collector_streams);
+        const initialStates = objectNames.map(stream => {
+            if (stream === Authentication) {
                 return {
-                    object,
+                    stream,
                     mintime: moment(startTs).valueOf(),
                     maxtime: moment(endTs).valueOf(),
                     nextPage: null,
@@ -48,7 +48,7 @@ class CiscoduoCollector extends PawsCollector {
             }
             else {
                 return {
-                    object,
+                    stream,
                     mintime: moment(startTs).unix(),
                     poll_interval_sec: 1
                 }
@@ -59,14 +59,20 @@ class CiscoduoCollector extends PawsCollector {
 
     pawsGetRegisterParameters(event, callback) {
         const regValues = {
-            ciscoduoObjectNames: process.env.paws_collector_param_string_1
+            ciscoduoObjectNames: process.env.collector_streams
         };
         callback(null, regValues);
     }
 
     pawsGetLogs(state, callback) {
         let collector = this;
-
+        // This code can remove once exsisting code set stream and collector_streams env variable
+        if (!process.env.collector_streams) {
+            collector.setCollectorStreamsEnv(process.env.paws_collector_param_string_1);
+        }
+        if (!state.stream) {
+            state = collector.setStreamToCollectionState(state);
+        }
         const clientSecret = collector.secret;
         if (!clientSecret) {
             return callback("The Client Secret was not found!");
@@ -93,7 +99,7 @@ class CiscoduoCollector extends PawsCollector {
 
         const stateMaxtime = state.maxtime ? `till ${moment(parseInt(state.maxtime)).toISOString()}` : ``;
 
-        console.info(`CDUO000001 Collecting data for ${state.object} from ${moment(parseInt(state.mintime)).toISOString()} ${stateMaxtime}`);
+        console.info(`CDUO000001 Collecting data for ${state.stream} from ${moment(parseInt(state.mintime)).toISOString()} ${stateMaxtime}`);
 
         utils.getAPILogs(client, objectDetails, state, [], process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextPage }) => {
@@ -114,14 +120,14 @@ class CiscoduoCollector extends PawsCollector {
 
     _getNextCollectionState(curState) {
 
-        if (curState.object === Authentication) {
+        if (curState.stream === Authentication) {
 
             const untilMoment = moment(parseInt(curState.maxtime));
 
             const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
 
             return {
-                object: curState.object,
+                stream: curState.stream,
                 mintime: nextSinceMoment.valueOf(),
                 maxtime: nextUntilMoment.valueOf(),
                 nextPage: null,
@@ -135,7 +141,7 @@ class CiscoduoCollector extends PawsCollector {
             const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
 
             return {
-                object: curState.object,
+                stream: curState.stream,
                 mintime: nextSinceMoment.unix(),
                 poll_interval_sec: nextPollInterval
             };
@@ -145,9 +151,9 @@ class CiscoduoCollector extends PawsCollector {
 
     _getNextCollectionStateWithNextPage(curState, nextPage) {
 
-        if (curState.object === Authentication) {
+        if (curState.stream === Authentication) {
             return {
-                object: curState.object,
+                stream: curState.stream,
                 mintime: curState.mintime,
                 maxtime: curState.maxtime,
                 nextPage: nextPage,
@@ -156,7 +162,7 @@ class CiscoduoCollector extends PawsCollector {
         } else {
             //There is no next page concept for this API, So Setting up the next state mintime using the last log (Unix timestamp + 1).
             return {
-                object: curState.object,
+                stream: curState.stream,
                 mintime: nextPage,
                 poll_interval_sec: 1
             };
@@ -185,6 +191,24 @@ class CiscoduoCollector extends PawsCollector {
             formattedMsg.messageTsUs = ts.usec;
         }
         return formattedMsg;
+    }
+
+    setStreamToCollectionState(curState) {
+        if (curState.object === Authentication) {
+            return {
+                stream: curState.object,
+                mintime: curState.mintime,
+                maxtime: curState.maxtime,
+                nextPage: curState.nextPage,
+                poll_interval_sec: curState.poll_interval_sec
+            };
+        } else {
+            return {
+                stream: curState.object,
+                mintime: curState.mintime,
+                poll_interval_sec: curState.poll_interval_sec
+            };
+        }
     }
 }
 

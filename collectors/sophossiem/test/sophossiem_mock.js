@@ -17,7 +17,7 @@ process.env.paws_type_name = "sophossiem";
 process.env.paws_api_secret = "secret";
 process.env.paws_endpoint = "https://sophossiem.com";
 process.env.paws_api_client_id = "client-id";
-process.env.paws_collector_param_string_1 = "[\"Events\", \"Alerts\"]";
+process.env.collector_streams = "[\"Events\", \"Alerts\"]";
 process.env.AWS_LAMBDA_FUNCTION_NAME = "test";
 
 const AIMS_TEST_CREDS = {

@@ -71,7 +71,7 @@ function getAPIDetails(state, orgKey) {
     let requestBody = "";
     let typeIdPaths = [];
     let tsPaths = [];
-    switch (state.apiName) {
+    switch (state.stream) {
         case Audit_Log_Events:
             url = `/integrationServices/v3/auditlogs`;
             typeIdPaths = [{ path: ["eventId"] }];

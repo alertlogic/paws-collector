@@ -57,7 +57,7 @@ class O365Collector extends PawsCollector {
         }
 
         // Create a new
-        const streams = JSON.parse(process.env.paws_collector_param_string_2);
+        const streams = JSON.parse(process.env.collector_streams);
         const initialStates = streams.map(stream => {
             return {
                 stream,
@@ -76,7 +76,7 @@ class O365Collector extends PawsCollector {
     pawsGetRegisterParameters(event, callback){
         const regValues = {
             azureTenantId: process.env.paws_collector_param_string_1,
-            azureStreams: process.env.paws_collector_param_string_2
+            azureStreams: process.env.collector_streams
         };
 
         callback(null, regValues);
@@ -84,6 +84,10 @@ class O365Collector extends PawsCollector {
 
     pawsGetLogs(state, callback) {
         let collector = this;
+        // This code can remove once exsisting code set collector_streams env variable
+        if (!process.env.collector_streams) {
+            collector.setCollectorStreamsEnv(process.env.paws_collector_param_string_2);
+        }
 
         if (!moment(state.since).isValid() || !moment(state.until).isValid() || state.since === undefined || state.until === undefined) {
             const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-day-progression', moment(), this.pollInterval);

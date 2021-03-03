@@ -20,10 +20,9 @@ const typeIdPaths = [{ path: ['id'] }];
 
 const tsPaths = [{ path: ['createdAt'] }];
 
-
 class SentineloneCollector extends PawsCollector {
     constructor(context, creds) {
-        super(context, creds, packageJson.version, [], []);
+        super(context, creds, packageJson.version);
     }
 
     pawsInitCollectionState(event, callback) {

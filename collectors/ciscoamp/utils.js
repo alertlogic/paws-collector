@@ -27,13 +27,13 @@ function getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPages
                     if (parseInt(headers['x-ratelimit-remaining']) < 200) {
                         resetSeconds = parseInt(headers['x-ratelimit-reset']);
                     }
-                    if (state.resource === Events && totalLogsCount !== 0 && totalLogsCount !== body.metadata.results.total) {
+                    if (state.stream === Events && totalLogsCount !== 0 && totalLogsCount !== body.metadata.results.total) {
                         discardFlag = true;
                         totalLogsCount = body.metadata.results.total;
                         resolve({ accumulator: [], nextPage, resetSeconds, totalLogsCount, discardFlag });
                     }
                     else {
-                        if (state.resource === Events && totalLogsCount === 0) {
+                        if (state.stream === Events && totalLogsCount === 0) {
                             //This condition works when first time call 
                             totalLogsCount = body.metadata.results.total;
                         }
@@ -65,7 +65,7 @@ function getAPIDetails(state) {
     let typeIdPaths = [];
     let tsPaths = [];
 
-    switch (state.resource) {
+    switch (state.stream) {
         case Audit_Logs:
             url = `/v1/audit_logs?start_time=${state.since}&end_time=${state.until}`;
             typeIdPaths = [{ path: ["audit_log_id"] }];

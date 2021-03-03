@@ -100,7 +100,7 @@
             "PawsAuthType" : { "Ref":"PawsAuthType" },
             "PawsSecret" : { "Ref":"GsuiteClientSecret" },
             "CollectorParamString1" : { "Ref":"GsuiteScope" },
-            "CollectorParamString2" : { "Ref":"GsuiteApplicationNames" },
+            "CollectorStreams" : { "Ref":"GsuiteApplicationNames" },
             "PawsClientId" : { "Ref":"GsuiteEmailId" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }

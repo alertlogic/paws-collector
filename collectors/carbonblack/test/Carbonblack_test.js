@@ -131,7 +131,7 @@ describe('Unit Tests', function () {
                 var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
-                    apiName: "AuditLogEvents",
+                    stream: "AuditLogEvents",
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     nextPage: null,
@@ -220,7 +220,7 @@ describe('Unit Tests', function () {
 
             const startDate = moment().subtract(5, 'minutes');
             const curState = {
-                apiName: "SearchAlerts",
+                stream: "SearchAlerts",
                 since: startDate.toISOString(),
                 until: startDate.add(5, 'minutes').toISOString(),
                 poll_interval_sec: 1
@@ -275,7 +275,7 @@ describe('Unit Tests', function () {
                 var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
-                    apiName: "AuditLogEvents",
+                    stream: "AuditLogEvents",
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     nextPage: null,
