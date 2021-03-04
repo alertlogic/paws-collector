@@ -174,6 +174,17 @@ class O365Collector extends PawsCollector {
                 try {
                     let error = JSON.parse(message.slice(message.indexOf('{'), message.lastIndexOf('}') + 1));
                     err.errorCode = error.error;
+                    if (error.error_codes) {
+                        if (error.error_codes[0] === 7000215) {
+                            return callback("Invalid client secret is provided.");
+                        }
+                        if (error.error_codes[0] === 700016) {
+                            return callback("Invalid client ID is provided.");
+                        }
+                        if (error.error_codes[0] === 90002) {
+                            return callback("Please make sure you have the correct tenant ID or This may happen if there are no active subscriptions for the tenant. Check with your subscription administrator.");
+                        }
+                    } 
                 } catch (exception) {
                     return callback(err);
                 }
