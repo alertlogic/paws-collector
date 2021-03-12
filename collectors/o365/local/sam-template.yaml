@@ -37,6 +37,7 @@ Resources:
           okta_collection_start_ts:
           collector_id:
           paws_ddb_table_name:
+          customer_id:  
       Runtime: nodejs10.x
       Handler: index.handler
       Timeout: 60 
