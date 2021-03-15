@@ -40,12 +40,15 @@ function getPawsParamStoreParam(){
         var params = {
             Name: process.env.paws_secret_param_name
         };
+        if (process.env.ssm_direct) {
+            params.WithDecryption = true;
+        }
         ssm.getParameter(params, function(err, res) {
             if(err){
                 reject(err, err.stack);
             } else{
                 const {Parameter:{Value}} = res;
-                const data = Buffer.from(Value, 'base64');
+                const data = process.env.ssm_direct ? Value : Buffer.from(Value, 'base64');
                 fs.writeFileSync(CREDS_FILE_PATH, data, 'base64');
                 resolve(data);
             }
@@ -56,6 +59,13 @@ function getPawsParamStoreParam(){
 function getDecryptedPawsCredentials(credsBuffer) {
     return new Promise((resolve, reject) => {
         if (PAWS_DECRYPTED_CREDS) {
+            return resolve(PAWS_DECRYPTED_CREDS);
+        } else if (process.env.ssm_direct) {
+            PAWS_DECRYPTED_CREDS = {
+                auth_type: process.env.paws_api_auth_type,
+                client_id: process.env.paws_api_client_id,
+                secret: credsBuffer
+            };
             return resolve(PAWS_DECRYPTED_CREDS);
         } else {
             const kms = new AWS.KMS();
