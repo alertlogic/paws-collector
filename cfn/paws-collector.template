@@ -434,7 +434,9 @@
                             "Effect":"Allow",
                             "Action":[
                                 "ssm:GetParameter",
-                                "ssm:PutParameter"
+                                "ssm:PutParameter",
+                                "ssm:DeleteParameter",
+                                "ssm:AddTagsToResource"
                             ],
                             "Resource":[
                                 { "Fn::Join":["", [
@@ -547,8 +549,8 @@
                                 "        Type: 'SecureString',\n",
                                 "        KeyId: event.ResourceProperties.KeyId,\n",
                                 "        Value: event.ResourceProperties.Plaintext,\n",
-                                "        Overwrite: true,\n",
-                                "        Tier: event.ResourceProperties.Tier\n",
+                                "        Tier: event.ResourceProperties.Tier,\n",
+                                "        Tags: event.ResourceProperties.Tags",
                                 "    };\n",
                                 "    const ssm = new AWS.SSM();\n",
                                 "    ssm.putParameter(params, function(err, data) {\n",
@@ -641,7 +643,13 @@
                 },
                 "Tier": {
                     "Ref": "PawsSecretParamTier"
-                }
+                },
+                "Tags": [{
+                        "Key": "StackId",
+                        "Value": {
+                            "Ref": "AWS::StackId"
+                        }
+                    }]
             }
         },
       "PawsPollStateQueue":{
