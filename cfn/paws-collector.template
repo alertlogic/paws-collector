@@ -563,11 +563,27 @@
                                 "    });\n",
                                 "}\n",
                                 "\n",
+                                "function deleteSSMParam(event, context) {\n",
+                                "    var params = {\n",
+                                "        Name: event.ResourceProperties.Name\n",
+                                "    };\n",
+                                "    const ssm = new AWS.SSM();\n",
+                                "    ssm.deleteParameter(params, function(err, data) {\n",
+                                "        if (err) {\n",
+                                "            console.log(err, err.stack); // an error occurred\n",
+                                "            return response.send(event, context, response.FAILED);\n",
+                                "        }\n",
+                                "        return response.send(event, context, response.SUCCESS, data);\n",
+                                "    });\n",
+                                "}\n",
                                 "\n",
                                 "exports.handler = (event, context, callback) => {\n",
                                 "    if (event.ResourceType == 'AWS::CloudFormation::CustomResource' &&\n",
                                 "        (event.RequestType == 'Create' || event.RequestType == 'Update')) {\n",
                                 "        return createSSMParam(event, context);\n",
+                                "     } else if (event.ResourceType == 'AWS::CloudFormation::CustomResource' &&\n",
+                                "        (event.RequestType == 'Delete')) {\n",
+                                "        return deleteSSMParam(event, context);\n",
                                 "    }\n",
                                 "    return response.send(event, context, response.SUCCESS);\n",
                                 "}"
@@ -644,12 +660,14 @@
                 "Tier": {
                     "Ref": "PawsSecretParamTier"
                 },
-                "Tags": [{
+                "Tags": [
+                    {
                         "Key": "StackId",
                         "Value": {
                             "Ref": "AWS::StackId"
                         }
-                    }]
+                    }
+                ]
             }
         },
       "PawsPollStateQueue":{
