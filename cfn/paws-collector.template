@@ -133,6 +133,12 @@
             "Description": "Collector specific streams",
             "Type": "String",
             "Default": ""
+        },
+        "SsmDirect" :{
+            "Description": "Used System manger secure string",
+            "Type": "String",
+            "Default": "true",
+            "AllowedValues":["true"]
         }
     },
     "Conditions":{
@@ -316,7 +322,8 @@
             "Type":"AWS::IAM::Policy",
             "DependsOn":[
                 "EncryptLambdaRole",
-                "EncryptLambdaFunction"
+                "EncryptLambdaFunction",
+                "CreateSsmParameterLambdaFunction"
             ],
             "Properties":{
                 "Roles":[
@@ -351,6 +358,26 @@
                                             ":*"
                                         ]
                                     ]
+                                },
+                                {
+                                    "Fn::Join":[
+                                        "",
+                                        [
+                                            "arn:aws:logs:",
+                                            {
+                                                "Ref":"AWS::Region"
+                                            },
+                                            ":",
+                                            {
+                                                "Ref":"AWS::AccountId"
+                                            },
+                                            ":log-group:/aws/lambda/",
+                                            {
+                                                "Ref":"CreateSsmParameterLambdaFunction"
+                                            },
+                                            ":*"
+                                        ]
+                                    ]
                                 }
                             ]
                         },
@@ -380,6 +407,48 @@
                                             ":log-stream:*"
                                         ]
                                     ]
+                                },
+                                {
+                                    "Fn::Join":[
+                                         "",
+                                         [
+                                             "arn:aws:logs:",
+                                             {
+                                                 "Ref":"AWS::Region"
+                                             },
+                                             ":",
+                                             {
+                                                 "Ref":"AWS::AccountId"
+                                             },
+                                             ":log-group:/aws/lambda/",
+                                             {
+                                                 "Ref":"CreateSsmParameterLambdaFunction"
+                                             },
+                                             ":log-stream:*"
+                                         ]
+                                     ]
+                                 }
+                            ]
+                        },
+                        {
+                            "Effect":"Allow",
+                            "Action":[
+                                "ssm:GetParameter",
+                                "ssm:PutParameter",
+                                "ssm:DeleteParameter",
+                                "ssm:AddTagsToResource"
+                            ],
+                            "Resource":[
+                                { "Fn::Join":["", [
+                                    "arn:aws:ssm:",
+                                    {"Ref": "AWS::Region"},
+                                    ":",
+                                    {"Ref": "AWS::AccountId"},
+                                    ":parameter/PAWS-SECRET-",
+                                    {"Ref": "PawsCollectorTypeName"},
+                                    "-",
+                                    {"Ref": "AWS::StackName"}
+                                   ]]
                                 }
                             ]
                         }
@@ -452,6 +521,88 @@
                 ]
             }
         },
+        "CreateSsmParameterLambdaFunction":{
+            "Type":"AWS::Lambda::Function",
+            "DependsOn":[
+                "EncryptLambdaRole"
+            ],
+            "Properties":{
+                "Description":"Alert Logic System manager parameter creation Lambda function",
+                "Role":{
+                    "Fn::GetAtt":[
+                        "EncryptLambdaRole",
+                        "Arn"
+                     ]
+                },
+                "Code":{
+                    "ZipFile": {
+                       "Fn::Join": [
+                           "",
+                           [
+                                "const AWS = require('aws-sdk');\n",
+                                "const response = require('./cfn-response');\n",
+                                "\n",
+                                "\n",
+                                "function createSSMParam(event, context) {\n",
+                                "    var params = {\n",
+                                "        Name: event.ResourceProperties.Name,\n",
+                                "        Type: 'SecureString',\n",
+                                "        KeyId: event.ResourceProperties.KeyId,\n",
+                                "        Value: event.ResourceProperties.Plaintext,\n",
+                                "        Tier: event.ResourceProperties.Tier,\n",
+                                "        Tags: event.ResourceProperties.Tags",
+                                "    };\n",
+                                "    const ssm = new AWS.SSM();\n",
+                                "    ssm.putParameter(params, function(err, data) {\n",
+                                "        if (err) {\n",
+                                "            console.log(err, err.stack); // an error occurred\n",
+                                "            return response.send(event, context, response.FAILED);\n",
+                                "        }\n",
+                                "        data.PawsSecretParamName = params.Name\n",
+                                "        return response.send(event, context, response.SUCCESS, data);\n",
+                                "    });\n",
+                                "}\n",
+                                "\n",
+                                "function deleteSSMParam(event, context) {\n",
+                                "    var params = {\n",
+                                "        Name: event.ResourceProperties.Name\n",
+                                "    };\n",
+                                "    const ssm = new AWS.SSM();\n",
+                                "    ssm.deleteParameter(params, function(err, data) {\n",
+                                "        if (err) {\n",
+                                "            console.log(err, err.stack); // an error occurred\n",
+                                "            return response.send(event, context, response.FAILED);\n",
+                                "        }\n",
+                                "        return response.send(event, context, response.SUCCESS, data);\n",
+                                "    });\n",
+                                "}\n",
+                                "\n",
+                                "exports.handler = (event, context, callback) => {\n",
+                                "    if (event.ResourceType == 'AWS::CloudFormation::CustomResource' &&\n",
+                                "        (event.RequestType == 'Create' || event.RequestType == 'Update')) {\n",
+                                "        return createSSMParam(event, context);\n",
+                                "     } else if (event.ResourceType == 'AWS::CloudFormation::CustomResource' &&\n",
+                                "        (event.RequestType == 'Delete')) {\n",
+                                "        return deleteSSMParam(event, context);\n",
+                                "    }\n",
+                                "    return response.send(event, context, response.SUCCESS);\n",
+                                "}"
+                            ]
+                        ]
+                    }
+                },
+                "Handler":"index.handler",
+                "Runtime":"nodejs12.x",
+                "MemorySize":128,
+                "Timeout": 5,
+                "Tags": [
+                    {
+                        "Key": "AlertLogic",
+                        "Value": "Collect"
+                    }
+                ]
+            }
+        },
         "EncryptSecretKeyCustomResource": {
             "Type": "AWS::CloudFormation::CustomResource",
             "DependsOn": [
@@ -477,34 +628,20 @@
                 }
             }
         },
-        "EncryptPawsSecret": {
+        "StorePawsSecretInSsm": {
             "Type": "AWS::CloudFormation::CustomResource",
             "DependsOn": [
                 "LambdaKmsKey",
-                "EncryptLambdaFunction",
+                "CreateSsmParameterLambdaFunction",
                 "EncryptLambdaPolicy"
             ],
             "Properties": {
                 "ServiceToken": {
                     "Fn::GetAtt": [
-                        "EncryptLambdaFunction",
+                        "CreateSsmParameterLambdaFunction",
                         "Arn"
                     ]
                 },
-                "KeyId": {
-                    "Fn::GetAtt": [
-                        "LambdaKmsKey",
-                        "Arn"
-                    ]
-                },
-                "Plaintext": {
-                    "Ref": "PawsSecret"
-                }
-            }
-        },
-        "PawsSecretParam": {
-            "Type": "AWS::SSM::Parameter",
-            "Properties": {
                 "Name": {"Fn::Join": [
                     "",
                     [
@@ -514,14 +651,23 @@
                         {"Ref": "AWS::StackName"}
                     ]
                 ]},
-                "Type": "String",
-                "Tier": {"Ref": "PawsSecretParamTier"},
-                "Value": {
-                    "Fn::GetAtt": ["EncryptPawsSecret", "EncryptedText"]
+                "KeyId": {
+                    "Fn::GetAtt":["LambdaKmsKey","Arn"]
                 },
-                "Tags": {
-                    "StackId": {"Ref": "AWS::StackId"}
-                }
+                "Plaintext": {
+                    "Ref": "PawsSecret"
+                },
+                "Tier": {
+                    "Ref": "PawsSecretParamTier"
+                },
+                "Tags": [
+                    {
+                        "Key": "StackId",
+                        "Value": {
+                            "Ref": "AWS::StackId"
+                        }
+                    }
+                ]
             }
         },
       "PawsPollStateQueue":{
@@ -555,7 +701,7 @@
             "CollectLambdaRole",
             "LambdaKmsKey",
             "EncryptSecretKeyCustomResource",
-            "EncryptPawsSecret",
+            "StorePawsSecretInSsm",
             "PawsPollStateQueue"
          ],
          "Properties":{
@@ -659,7 +805,7 @@
                       "Fn::GetAtt": [ "LambdaKmsKey", "Arn" ]
                   },
                   "paws_secret_param_name":{
-                      "Ref":"PawsSecretParam"
+                      "Fn::GetAtt": ["StorePawsSecretInSsm", "PawsSecretParamName"]
                   },
                   "paws_secret_param_tier": {
                       "Ref": "PawsSecretParamTier"
@@ -684,7 +830,10 @@
                   },
                   "collector_streams": {
                     "Ref": "CollectorStreams"
-                  }
+                  },
+                  "ssm_direct": {
+                    "Ref": "SsmDirect"
+                }
                }
             },
             "Tags": [
@@ -756,7 +905,7 @@
                               ":",
                               {"Ref": "AWS::AccountId"},
                               ":parameter/",
-                              {"Ref":"PawsSecretParam"}
+                              {"Fn::GetAtt": ["StorePawsSecretInSsm", "PawsSecretParamName"]}
                             ]]
                           }
                       ]
