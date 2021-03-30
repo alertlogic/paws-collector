@@ -21,7 +21,7 @@ describe('Unit Tests', function () {
             let headers = {};
             const startDate = moment().subtract(23, 'hours');
             const state = {
-                objectName: "Events",
+                stream: "Events",
                 from_date: startDate.unix(),
                 poll_interval_sec: 1
             };
@@ -46,7 +46,7 @@ describe('Unit Tests', function () {
             let accumulator = [];
             let headers = {};
             const state = {
-                objectName: "Alerts",
+                stream: "Alerts",
                 nextPage: "next_cursor",
                 poll_interval_sec: 1
             };
