@@ -15,7 +15,7 @@ function getAPILogs(BaseAPIURL, headers, state, accumulator, maxPagesPerInvocati
 
     let restServiceClient = new RestServiceClient(BaseAPIURL);
 
-    switch (state.objectName) {
+    switch (state.stream) {
         case Events:
             APIURL = `/siem/v1/events`;
             break;

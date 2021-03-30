@@ -121,7 +121,7 @@ describe('Unit Tests', function () {
                 var collector = new SophossiemCollector(ctx, creds, 'sophossiem');
                 const startDate = moment().subtract(23, 'hours');
                 const curState = {
-                    objectName: "Events",
+                    stream: "Events",
                     from_date: startDate.unix(),
                     poll_interval_sec: 1
                 };
@@ -148,7 +148,7 @@ describe('Unit Tests', function () {
             SophossiemCollector.load().then(function (creds) {
                 var collector = new SophossiemCollector(ctx, creds, 'sophossiem');
                 const curState = {
-                    objectName: "Events",
+                    stream: "Events",
                     nextPage: "nextPage",
                     poll_interval_sec: 1
                 };
@@ -176,7 +176,7 @@ describe('Unit Tests', function () {
                 var collector = new SophossiemCollector(ctx, creds, 'sophossiem');
                 const startDate = moment().subtract(23, 'hours');
                 const curState = {
-                    objectName: "Events",
+                    stream: "Events",
                     from_date: startDate.unix(),
                     poll_interval_sec: 1
                 };
@@ -211,7 +211,7 @@ describe('Unit Tests', function () {
                 var collector = new SophossiemCollector(ctx, creds, 'sophossiem');
                 const startDate = moment().subtract(23, 'hours');
                 const curState = {
-                    objectName: "Events",
+                    stream: "Events",
                     from_date: startDate.unix(),
                     poll_interval_sec: 1
                 };
@@ -240,7 +240,7 @@ describe('Unit Tests', function () {
                 var collector = new SophossiemCollector(ctx, creds, 'sophossiem');
                 const startDate = moment();
                 const curState = {
-                    objectName: "Events",
+                    stream: "Events",
                     from_date: startDate.unix(),
                     poll_interval_sec: 1
                 };
@@ -258,7 +258,7 @@ describe('Unit Tests', function () {
                 var collector = new SophossiemCollector(ctx, creds, 'sophossiem');
                 const startDate = moment();
                 const curState = {
-                    objectName: "Events",
+                    stream: "Events",
                     from_date: startDate.unix(),
                     poll_interval_sec: 1
                 };
