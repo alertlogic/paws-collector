@@ -68,6 +68,10 @@ class SophossiemCollector extends PawsCollector {
         if (!state.stream) {
             state = collector.setStreamToCollectionState(state);
         }
+        // If from date > 24 hr api return invalid request , so set the date between 24 hr only. 
+        if (moment().diff((moment.unix(parseInt(state.from_date))), 'hours') > 24) {
+            state.from_date = moment().subtract(23, 'hours').unix();
+        }
         const clientSecret = collector.secret;
         if (!clientSecret) {
             return callback("The Authorization token was not found!");
