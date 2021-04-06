@@ -68,11 +68,13 @@ class SophossiemCollector extends PawsCollector {
         if (!state.stream) {
             state = collector.setStreamToCollectionState(state);
         }
-        // If from date > 24 hr api return invalid request , so set the date between 24 hr only. 
-        if (moment().diff((moment.unix(parseInt(state.from_date))), 'hours') > 24) {
+        // If from date > 24 hr api return invalid request , so set the date between 24 hr only and report the skip duration on DD metrics
+        if (moment().diff((moment.unix(parseInt(state.from_date))), 'hours') >= 24) {
             const previuosDate = state.from_date;
-            state.from_date = moment().subtract(23.45, 'hours').unix();
+            state.from_date = moment().subtract(23.75, 'hours').unix();
             console.warn(`Adjusted date from  ${moment.unix(parseInt(previuosDate)).format("YYYY-MM-DDTHH:mm:ssZ")} to ${moment.unix(parseInt(state.from_date)).format("YYYY-MM-DDTHH:mm:ssZ")} as api require date must be within last 24 hours`);
+            const skipDuration = moment.unix(parseInt(state.from_date)).diff(moment.unix(parseInt(previuosDate)),'hours');
+            collector.reportDDMetric("adjust_collection_interval", 1, [`skip_hrs:${skipDuration}`]);
         }
         const clientSecret = collector.secret;
         if (!clientSecret) {
