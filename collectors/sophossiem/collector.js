@@ -70,7 +70,8 @@ class SophossiemCollector extends PawsCollector {
         }
         // If from date > 24 hr api return invalid request , so set the date between 24 hr only. 
         if (moment().diff((moment.unix(parseInt(state.from_date))), 'hours') > 24) {
-            state.from_date = moment().subtract(23, 'hours').unix();
+            console.warn('Adjusted from date as api require date must be within last 24 hours');
+            state.from_date = moment().subtract(23.45, 'hours').unix();
         }
         const clientSecret = collector.secret;
         if (!clientSecret) {
