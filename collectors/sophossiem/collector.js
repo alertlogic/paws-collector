@@ -74,7 +74,12 @@ class SophossiemCollector extends PawsCollector {
             state.from_date = moment().subtract(23.75, 'hours').unix();
             console.warn(`Adjusted date from  ${moment.unix(parseInt(previuosDate)).format("YYYY-MM-DDTHH:mm:ssZ")} to ${moment.unix(parseInt(state.from_date)).format("YYYY-MM-DDTHH:mm:ssZ")} as api require date must be within last 24 hours`);
             const skipDuration = moment.unix(parseInt(state.from_date)).diff(moment.unix(parseInt(previuosDate)),'hours');
-            collector.reportDDMetric("adjust_collection_interval", 1, [`skip_hrs:${skipDuration}`]);
+            if (skipDuration > 24) {
+                collector.reportDDMetric("adjust_collection_interval", 1, [`skip_hrs:24h`]);
+            }
+            else {
+                collector.reportDDMetric("adjust_collection_interval", 1, [`skip_hrs:${skipDuration}h`]);
+            }
         }
         const clientSecret = collector.secret;
         if (!clientSecret) {
