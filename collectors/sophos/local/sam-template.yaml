@@ -6,7 +6,7 @@ Resources:
   LocalLambda:
     Type: AWS::Serverless::Function
     Properties:
-      KmsKeyArn: your-arn-here
+      KmsKeyArn: 
       Environment:
         Variables:
           AWS_LAMBDA_FUNCTION_NAME:
@@ -14,7 +14,7 @@ Resources:
           aims_access_key_id:
           al_api:
           stack_name:
-          azollect_api:
+          azcollect_api:
           ingest_api:
           DEBUG:
           paws_state_queue_arn:
@@ -26,7 +26,10 @@ Resources:
           paws_api_client_id:
           paws_max_pages_per_invocation:
           collector_id:
-      Runtime: nodejs10.x
+          paws_ddb_table_name:
+          customer_id:
+      CodeUri:      
+      Runtime: nodejs12.x
       Handler: index.handler
       Timeout: 300 
       MemorySize: 1024
