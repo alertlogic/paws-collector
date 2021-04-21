@@ -55,7 +55,7 @@ class SophosCollector extends PawsCollector {
         if (!clientId) {
             return callback("The Client ID was not found!");
         }
-
+        
         console.info(`SOPH000001 Collecting data from ${state.since} till ${state.until}`);
 
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
@@ -108,12 +108,29 @@ class SophosCollector extends PawsCollector {
                     }
                     return callback(error);
                 });
-            }).catch((error) => {
+            }).catch((error) => {  
                 if (error.error && error.error.error) {
                     error.errorCode = error.error.error;
                 } else {
                     error.errorCode = error.statusCode;
+                }              
+                if ((error.statusCode === 401 || error.statusCode === 400) && error.message) {
+                    try {
+                        let errorStatus = JSON.parse(error.message.slice(error.message.indexOf('{'), error.message.lastIndexOf('}') + 1));
+                        if (errorStatus.errorCode) {
+                            if (errorStatus.errorCode === "oauth.invalid_client_secret" || errorStatus.errorCode === "customer.validation") {
+                                return callback(`Error code [${error.statusCode}]. Invalid client secret is provided.`);
+                            }
+                            if (errorStatus.errorCode === "oauth.client_app_does_not_exist") {
+                                return callback(`Error code [${error.statusCode}]. Invalid client ID is provided.`);
+                            }
+                        }
+                    } catch (exception) {
+                        //here it send actual error
+                        return callback(error);
+                    }
                 }
+                
                 return callback(error);
             });
         }

@@ -212,6 +212,62 @@ describe('Unit Tests', function () {
             });
         });
 
+        it('Paws Get Logs checking invalid client secret error', function (done) {
+            authenticate = sinon.stub(utils, 'authenticate').callsFake(
+                function fakeFn(hostName, clientId, clientSecret) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ "statusCode": 401, "message": `{ "errorCode": "oauth.invalid_client_secret" }` });
+                    });
+                });
+           
+            SophosCollector.load().then(function (creds) {
+                var collector = new SophosCollector(ctx, creds, 'sophos');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    nextPage: null,
+                    apiQuotaResetDate: null,
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.ok(err);
+                    assert.equal(err,"Error code [401]. Invalid client secret is provided.");
+                    authenticate.restore();
+                    done();
+                });
+
+            });
+        });
+
+        it('Paws Get Logs checking invalid client ID error', function (done) {
+            authenticate = sinon.stub(utils, 'authenticate').callsFake(
+                function fakeFn(hostName, clientId, clientSecret) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ "statusCode": 401, "message": `{ "errorCode": "oauth.client_app_does_not_exist" }` });
+                    });
+                });
+           
+            SophosCollector.load().then(function (creds) {
+                var collector = new SophosCollector(ctx, creds, 'sophos');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    nextPage: null,
+                    apiQuotaResetDate: null,
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.ok(err);
+                    assert.equal(err,"Error code [401]. Invalid client ID is provided.");
+                    authenticate.restore();
+                    done();
+                });
+
+            });
+        });
+
         it('Paws Get Logs testing throttling error', function (done) {
             authenticate = sinon.stub(utils, 'authenticate').callsFake(
                 function fakeFn(hostName, clientId, clientSecret) {
