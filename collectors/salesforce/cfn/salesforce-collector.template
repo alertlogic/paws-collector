@@ -110,7 +110,7 @@
             "PawsClientId" : { "Ref":"SalesforceClientId" },
             "PawsSecret" : { "Ref":"SalesforceSecret" },
             "CollectorParamString1" : { "Ref":"SalesforceUserID" },
-            "CollectorParamString2" : { "Ref":"SalesforceObjectNames" },
+            "CollectorStreams" : { "Ref":"SalesforceObjectNames" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }
         }

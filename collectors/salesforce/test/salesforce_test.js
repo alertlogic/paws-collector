@@ -28,13 +28,6 @@ function setAlServiceStub() {
             });
         });
 
-    getObjectLogs = sinon.stub(utils, 'getObjectLogs').callsFake(
-        function fakeFn(response, objectQueryDetails, accumulator, state, maxPagesPerInvocation) {
-            return new Promise(function (resolve, reject) {
-                return resolve({ accumulator: [salesforceMock.LOG_EVENT, salesforceMock.LOG_EVENT] });
-            });
-        });
-
     getObjectQuery = sinon.stub(utils, 'getObjectQuery').callsFake(
         function fakeFn(state) {
             return {
@@ -51,7 +44,6 @@ function restoreAlServiceStub() {
 
     token.restore();
     requestPost.restore();
-    getObjectLogs.restore();
     getObjectQuery.restore();
 }
 
@@ -73,7 +65,7 @@ describe('Unit Tests', function () {
             function fakeFn(event, mockContext, responseStatus, responseData, physicalResourceId) {
                 mockContext.succeed();
             });
-        setAlServiceStub();
+    
     });
 
     afterEach(function () {
@@ -89,6 +81,9 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
+        beforeEach(function(){
+            setAlServiceStub();
+        });
         it('get inital state less than 7 days in the past', function (done) {
             SalesforceCollector.load().then(function (creds) {
                 var collector = new SalesforceCollector(ctx, creds, 'salesforce');
@@ -123,6 +118,7 @@ describe('Unit Tests', function () {
 
     describe('Paws Get Register Parameters', function () {
         it('Paws Get Register Parameters Success', function (done) {
+            setAlServiceStub();
             let ctx = {
                 invokedFunctionArn: salesforceMock.FUNCTION_ARN,
                 fail: function (error) {
@@ -157,7 +153,18 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
+        beforeEach(function(){
+            setAlServiceStub();
+        });
         it('Paws Get Logs Success', function (done) {
+
+            getObjectLogs = sinon.stub(utils, 'getObjectLogs').callsFake(
+                function fakeFn(response, objectQueryDetails, accumulator, state, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ accumulator: [salesforceMock.LOG_EVENT, salesforceMock.LOG_EVENT] });
+                    });
+                });
+
             SalesforceCollector.load().then(function (creds) {
                 var collector = new SalesforceCollector(ctx, creds, 'salesforce');
                 const startDate = moment().subtract(3, 'days');
@@ -172,6 +179,7 @@ describe('Unit Tests', function () {
                     assert.equal(logs.length, 2);
                     assert.equal(newState.poll_interval_sec, 1);
                     assert.ok(logs[0].attributes);
+                    getObjectLogs.restore();
                     done();
                 });
 
@@ -179,6 +187,14 @@ describe('Unit Tests', function () {
         });
 
         it('Paws Get Logs with API Quota Reset Date', function (done) {
+
+            getObjectLogs = sinon.stub(utils, 'getObjectLogs').callsFake(
+                function fakeFn(response, objectQueryDetails, accumulator, state, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ accumulator: [salesforceMock.LOG_EVENT, salesforceMock.LOG_EVENT] });
+                    });
+                });
+
             SalesforceCollector.load().then(function (creds) {
                 var collector = new SalesforceCollector(ctx, creds, 'salesforce');
                 const startDate = moment().subtract(3, 'days');
@@ -186,13 +202,49 @@ describe('Unit Tests', function () {
                     object: "LoginHistory",
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
-                    apiQuotaResetDate: moment().add(25, 'hours'),
+                    apiQuotaResetDate: moment().add(25, 'hours').toISOString(),
                     poll_interval_sec: 900
                 };
 
+                var reportSpy = sinon.spy(collector, 'reportApiThrottling');
+
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(true, reportSpy.calledOnce);
                     assert.equal(logs.length, 0);
                     assert.equal(newState.poll_interval_sec, 900);
+                    getObjectLogs.restore();
+                    done();
+                });
+
+            });
+        });
+
+        it('Paws Get Logs check throttling error', function (done) {
+
+            getObjectLogs = sinon.stub(utils, 'getObjectLogs').callsFake(
+                function fakeFn(response, objectQueryDetails, accumulator, state, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ errorCode: "REQUEST_LIMIT_EXCEEDED"  });
+                    });
+                });
+
+            SalesforceCollector.load().then(function (creds) {
+                var collector = new SalesforceCollector(ctx, creds, 'salesforce');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    object: "LoginHistory",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                var reportSpy = sinon.spy(collector, 'reportApiThrottling');
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(true, reportSpy.calledOnce);
+                    assert.equal(logs.length, 0);
+                    assert.equal(newState.poll_interval_sec, 900);
+                    getObjectLogs.restore();
                     done();
                 });
 
@@ -210,6 +262,9 @@ describe('Unit Tests', function () {
             succeed: function () { }
         };
 
+        beforeEach(function(){
+            setAlServiceStub();
+        });
         it('get next state if more than 24 hours in the past', function (done) {
             const startDate = moment().subtract(10, 'days');
             const curState = {
@@ -279,6 +334,7 @@ describe('Unit Tests', function () {
 
     describe('Format Tests', function () {
         it('log format success', function (done) {
+            setAlServiceStub();
             let ctx = {
                 invokedFunctionArn: salesforceMock.FUNCTION_ARN,
                 fail: function (error) {
@@ -304,6 +360,7 @@ describe('Unit Tests', function () {
 
     describe('NextCollectionStateWithNextPage', function () {
         it('Get Next Collection State With NextPage Success', function (done) {
+            setAlServiceStub();
             let ctx = {
                 invokedFunctionArn: salesforceMock.FUNCTION_ARN,
                 fail: function (error) {
@@ -328,6 +385,71 @@ describe('Unit Tests', function () {
                 let nextState = collector._getNextCollectionStateWithNextPage(curState, nextPage);
                 assert.ok(nextState.since);
                 done();
+            });
+        });
+    });
+
+    describe('Paws Get Logs check  errors',function(){
+       
+        it('Paws Get Logs check Client error', function (done) {
+
+            let ctx = {
+                invokedFunctionArn: salesforceMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+            token = sinon.stub(jwt, 'sign').callsFake(
+                function fakeFn(path) {
+                    return {};
+                });
+        
+            requestPost = sinon.stub(RestServiceClient.prototype, 'post').callsFake(
+                function fakeFn(path, extraOptions) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({statusCode:400,error:{
+                            error : "invalid_client_id",
+                            error_description: 'client identifier invalid'
+                        }  });
+                    });
+                });
+        
+            getObjectQuery = sinon.stub(utils, 'getObjectQuery').callsFake(
+                function fakeFn(state) {
+                    return {
+                        query: "query",
+                        tsPaths: [{ path: ["LastLoginDate"] }],
+                        sortFieldName: "sortFieldName",
+                        sortType: "sortType"
+                    };
+                });
+            getObjectLogs = sinon.stub(utils, 'getObjectLogs').callsFake(
+                function fakeFn(response, objectQueryDetails, accumulator, state, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ errorCode: "invalid_client_id"  });
+                    });
+                });
+
+            SalesforceCollector.load().then(function (creds) {
+                var collector = new SalesforceCollector(ctx, creds, 'salesforce');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    object: "LoginHistory",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.strictEqual(err.errorCode, 'invalid_client_id');
+                    getObjectLogs.restore();
+                    done();
+                });
+
             });
         });
     });

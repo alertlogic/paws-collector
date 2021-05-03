@@ -36,10 +36,10 @@ class SalesforceCollector extends PawsCollector {
 
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
 
-        const objectNames = JSON.parse(process.env.paws_collector_param_string_2);
-        const initialStates = objectNames.map(object => {
+        const objectNames = JSON.parse(process.env.collector_streams);
+        const initialStates = objectNames.map(stream => {
             return {
-                object,
+                stream,
                 since: startTs,
                 until: endTs,
                 nextPage: null,
@@ -53,7 +53,7 @@ class SalesforceCollector extends PawsCollector {
     pawsGetRegisterParameters(event, callback) {
         const regValues = {
             salesforceUserID: process.env.paws_collector_param_string_1,
-            salesforceObjectNames: process.env.paws_collector_param_string_2
+            salesforceObjectNames: process.env.collector_streams
         };
 
         callback(null, regValues);
@@ -61,6 +61,14 @@ class SalesforceCollector extends PawsCollector {
 
     pawsGetLogs(state, callback) {
         let collector = this;
+        // This code can remove once exsisting code set stream and collector_streams env variable
+        if (!process.env.collector_streams) {
+            collector.setCollectorStreamsEnv(process.env.paws_collector_param_string_2);
+        }
+        if (!state.stream) {
+            state = collector.setStreamToCollectionState(state);
+        }
+          
         const privateKey = collector.secret;
         if (!privateKey) {
             throw new Error("The private key was not found!");
@@ -79,55 +87,74 @@ class SalesforceCollector extends PawsCollector {
 
         var token = jwt.sign(claim, privateKey, { algorithm: 'RS256' });
 
-        console.info(`SALE000001 Collecting data for ${state.object} from ${state.since} till ${state.until}`);
+        console.info(`SALE000001 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
 
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
             console.log('API Request Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
-            return callback(null, [], state, state.poll_interval_sec);
+            collector.reportApiThrottling(function () {
+                return callback(null, [], state, state.poll_interval_sec);
+            });
         }
+        else {
 
-        let restServiceClient = new RestServiceClient(baseUrl);
+            let restServiceClient = new RestServiceClient(baseUrl);
 
-        restServiceClient.post(tokenUrl, {
-            form: {
-                grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-                assertion: token
-            }
-        }).then(response => {
-            var objectQueryDetails = utils.getObjectQuery(state);
-            if (!objectQueryDetails.query) {
-                return callback("The object name was not found!");
-            }
-            tsPaths = objectQueryDetails.tsPaths;
-            utils.getObjectLogs(response, objectQueryDetails, [], state, process.env.paws_max_pages_per_invocation)
-                .then(({ accumulator, nextPage }) => {
-                    let newState;
-                    if (nextPage === undefined) {
-                        newState = this._getNextCollectionState(state);
-                    } else {
-                        newState = this._getNextCollectionStateWithNextPage(state, nextPage);
-                    }
-                    console.info(`SALE000002 Next collection in ${newState.poll_interval_sec} seconds`);
-                    return callback(null, accumulator, newState, newState.poll_interval_sec);
-                })
-                .catch((error) => {
-                    if (error.errorCode && error.errorCode === "REQUEST_LIMIT_EXCEEDED") {
-                        // Api will reset after next 24 hours 
-                        // Added extra 1 hours for buffer
-                        state.apiQuotaResetDate = moment().add(25, "hours").toISOString();
-                        state.poll_interval_sec = 900;
-                        console.log('API Request Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
-                        return callback(null, [], state, state.poll_interval_sec);
-                    }
-                    else {
-                        return callback(error);
-                    }
+            restServiceClient.post(tokenUrl, {
+                form: {
+                    grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                    assertion: token
+                }
+            }).then(response => {
+                var objectQueryDetails = utils.getObjectQuery(state);
+                if (!objectQueryDetails.query) {
+                    return callback("The object name was not found!");
+                }
+                tsPaths = objectQueryDetails.tsPaths;
+                utils.getObjectLogs(response, objectQueryDetails, [], state, process.env.paws_max_pages_per_invocation)
+                    .then(({ accumulator, nextPage }) => {
+                        let newState;
+                        if (nextPage === undefined) {
+                            newState = this._getNextCollectionState(state);
+                        } else {
+                            newState = this._getNextCollectionStateWithNextPage(state, nextPage);
+                        }
+                        console.info(`SALE000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                        return callback(null, accumulator, newState, newState.poll_interval_sec);
+                    })
+                    .catch((error) => {
+                        if (error.errorCode && error.errorCode === "REQUEST_LIMIT_EXCEEDED") {
+                            // Api will reset after next 24 hours 
+                            // Added extra 1 hours for buffer
+                            state.apiQuotaResetDate = moment().add(25, "hours").toISOString();
+                            state.poll_interval_sec = 900;
+                            console.log('API Request Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
+                            collector.reportApiThrottling(function () {
+                                return callback(null, [], state, state.poll_interval_sec);
+                            });
+                        }
+                        else {
+                            if (error.errorCode && error.errorCode === "INVALID_FIELD") {
+                                console.log(`API not able to fetch field for object ${state.stream}`);
+                            }
+                            if (error.errorCode && error.errorCode === "INVALID_TYPE") {
+                                console.log(`API not able to fetch logs for object ${state.stream}`);
+                            }
+                            if (error.errorCode && error.errorCode === "INVALID_SESSION_ID") {
+                                console.log("User not added 'Access and manage your data (api)' in Oauth scope");
+                            }
+                            return callback(error);
+                        }
 
-                });
+                    });
 
-        }).catch(err => {
-            return callback(err);
-        });
+            }).catch(err => {
+                // set errorCode if not available in error object to showcase client error on DDMetrics
+                if (err.error && err.error.error) {
+                    err.errorCode = err.error.error;
+                }
+                return callback(err);
+            });
+        } 
     }
 
     _getNextCollectionState(curState) {
@@ -156,7 +183,7 @@ class SalesforceCollector extends PawsCollector {
             1 : this.pollInterval;
 
         return {
-            object: curState.object,
+            stream: curState.stream,
             since: nextSinceTs,
             until: nextUntilMoment.toISOString(),
             nextPage: null,
@@ -165,9 +192,9 @@ class SalesforceCollector extends PawsCollector {
         };
     }
 
-    _getNextCollectionStateWithNextPage({ object, since, until }, nextPage) {
+    _getNextCollectionStateWithNextPage({ stream, since, until }, nextPage) {
         return {
-            object,
+            stream,
             since,
             until,
             nextPage,
@@ -198,6 +225,17 @@ class SalesforceCollector extends PawsCollector {
             formattedMsg.messageTsUs = ts.usec;
         }
         return formattedMsg;
+    }
+
+    setStreamToCollectionState(curState) {
+        return {
+            stream: curState.object,
+            since: curState.since,
+            until: curState.until,
+            nextPage: curState.nextPage,
+            apiQuotaResetDate: curState.apiQuotaResetDate,
+            poll_interval_sec: curState.poll_interval_sec
+        };
     }
 }
 

@@ -12,6 +12,11 @@
             "Type": "String",
             "Default": ""
         },
+        "ExistingDDBTableName" :{
+            "Description": "The table name the collector will use for state deduplication. This should be common for all collectors",
+            "Type": "String",
+            "Default": "PawsCollectorStates"
+        },
         "AlertlogicAccessKeyId": {
             "Description": "Alert Logic Access Key Id obtained from AIMS",
             "Type": "String"
@@ -97,7 +102,7 @@
         "PawsSecretParamTier": {
             "Description": "Tier for AWS Param store param. Change this to advanced if the size of the PAws secrets is over 4kb",
             "Type": "String",
-            "Default": "Standard",
+            "Default": "Intelligent-Tiering",
             "AllowedValues": [
                 "Standard",
                 "Advanced",
@@ -123,9 +128,54 @@
             "Description": "Collector specific string type parameter 2.",
             "Type": "String",
             "Default": ""
+        },
+        "CollectorStreams" :{
+            "Description": "Collector specific streams",
+            "Type": "String",
+            "Default": ""
+        },
+        "SsmDirect" :{
+            "Description": "Used System manger secure string",
+            "Type": "String",
+            "Default": "true",
+            "AllowedValues":["true"]
         }
     },
+    "Conditions":{
+        "createDdbTable": {"Fn::Equals" : [{"Ref" :"ExistingDDBTableName" }, ""]}
+    },
     "Resources":{
+        "DdupeDdbTable": {
+            "Type" : "AWS::DynamoDB::Table",
+            "Condition": "createDdbTable",
+            "Properties" : {
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName" : "CollectorId",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName" : "MessageId",
+                        "AttributeType": "S"
+                    }
+                ],
+                "BillingMode" : "PAY_PER_REQUEST",
+                "KeySchema" : [
+                    {
+                        "AttributeName" : "CollectorId",
+                        "KeyType" : "HASH"
+                    },
+                    {
+                        "AttributeName" : "MessageId",
+                        "KeyType" : "RANGE"
+                    }
+                ],
+                "TimeToLiveSpecification" : {
+                    "AttributeName" : "ExpireDate",
+                    "Enabled" : true
+                }
+            }
+        },
       "CollectLambdaRole":{
          "Type":"AWS::IAM::Role",
          "Properties":{
@@ -272,7 +322,8 @@
             "Type":"AWS::IAM::Policy",
             "DependsOn":[
                 "EncryptLambdaRole",
-                "EncryptLambdaFunction"
+                "EncryptLambdaFunction",
+                "CreateSsmParameterLambdaFunction"
             ],
             "Properties":{
                 "Roles":[
@@ -307,6 +358,26 @@
                                             ":*"
                                         ]
                                     ]
+                                },
+                                {
+                                    "Fn::Join":[
+                                        "",
+                                        [
+                                            "arn:aws:logs:",
+                                            {
+                                                "Ref":"AWS::Region"
+                                            },
+                                            ":",
+                                            {
+                                                "Ref":"AWS::AccountId"
+                                            },
+                                            ":log-group:/aws/lambda/",
+                                            {
+                                                "Ref":"CreateSsmParameterLambdaFunction"
+                                            },
+                                            ":*"
+                                        ]
+                                    ]
                                 }
                             ]
                         },
@@ -336,6 +407,48 @@
                                             ":log-stream:*"
                                         ]
                                     ]
+                                },
+                                {
+                                    "Fn::Join":[
+                                         "",
+                                         [
+                                             "arn:aws:logs:",
+                                             {
+                                                 "Ref":"AWS::Region"
+                                             },
+                                             ":",
+                                             {
+                                                 "Ref":"AWS::AccountId"
+                                             },
+                                             ":log-group:/aws/lambda/",
+                                             {
+                                                 "Ref":"CreateSsmParameterLambdaFunction"
+                                             },
+                                             ":log-stream:*"
+                                         ]
+                                     ]
+                                 }
+                            ]
+                        },
+                        {
+                            "Effect":"Allow",
+                            "Action":[
+                                "ssm:GetParameter",
+                                "ssm:PutParameter",
+                                "ssm:DeleteParameter",
+                                "ssm:AddTagsToResource"
+                            ],
+                            "Resource":[
+                                { "Fn::Join":["", [
+                                    "arn:aws:ssm:",
+                                    {"Ref": "AWS::Region"},
+                                    ":",
+                                    {"Ref": "AWS::AccountId"},
+                                    ":parameter/PAWS-SECRET-",
+                                    {"Ref": "PawsCollectorTypeName"},
+                                    "-",
+                                    {"Ref": "AWS::StackName"}
+                                   ]]
                                 }
                             ]
                         }
@@ -408,6 +521,88 @@
                 ]
             }
         },
+        "CreateSsmParameterLambdaFunction":{
+            "Type":"AWS::Lambda::Function",
+            "DependsOn":[
+                "EncryptLambdaRole"
+            ],
+            "Properties":{
+                "Description":"Alert Logic System manager parameter creation Lambda function",
+                "Role":{
+                    "Fn::GetAtt":[
+                        "EncryptLambdaRole",
+                        "Arn"
+                     ]
+                },
+                "Code":{
+                    "ZipFile": {
+                       "Fn::Join": [
+                           "",
+                           [
+                                "const AWS = require('aws-sdk');\n",
+                                "const response = require('./cfn-response');\n",
+                                "\n",
+                                "\n",
+                                "function createSSMParam(event, context) {\n",
+                                "    var params = {\n",
+                                "        Name: event.ResourceProperties.Name,\n",
+                                "        Type: 'SecureString',\n",
+                                "        KeyId: event.ResourceProperties.KeyId,\n",
+                                "        Value: event.ResourceProperties.Plaintext,\n",
+                                "        Tier: event.ResourceProperties.Tier,\n",
+                                "        Tags: event.ResourceProperties.Tags",
+                                "    };\n",
+                                "    const ssm = new AWS.SSM();\n",
+                                "    ssm.putParameter(params, function(err, data) {\n",
+                                "        if (err) {\n",
+                                "            console.log(err, err.stack); // an error occurred\n",
+                                "            return response.send(event, context, response.FAILED);\n",
+                                "        }\n",
+                                "        data.PawsSecretParamName = params.Name\n",
+                                "        return response.send(event, context, response.SUCCESS, data);\n",
+                                "    });\n",
+                                "}\n",
+                                "\n",
+                                "function deleteSSMParam(event, context) {\n",
+                                "    var params = {\n",
+                                "        Name: event.ResourceProperties.Name\n",
+                                "    };\n",
+                                "    const ssm = new AWS.SSM();\n",
+                                "    ssm.deleteParameter(params, function(err, data) {\n",
+                                "        if (err) {\n",
+                                "            console.log(err, err.stack); // an error occurred\n",
+                                "            return response.send(event, context, response.FAILED);\n",
+                                "        }\n",
+                                "        return response.send(event, context, response.SUCCESS, data);\n",
+                                "    });\n",
+                                "}\n",
+                                "\n",
+                                "exports.handler = (event, context, callback) => {\n",
+                                "    if (event.ResourceType == 'AWS::CloudFormation::CustomResource' &&\n",
+                                "        (event.RequestType == 'Create' || event.RequestType == 'Update')) {\n",
+                                "        return createSSMParam(event, context);\n",
+                                "     } else if (event.ResourceType == 'AWS::CloudFormation::CustomResource' &&\n",
+                                "        (event.RequestType == 'Delete')) {\n",
+                                "        return deleteSSMParam(event, context);\n",
+                                "    }\n",
+                                "    return response.send(event, context, response.SUCCESS);\n",
+                                "}"
+                            ]
+                        ]
+                    }
+                },
+                "Handler":"index.handler",
+                "Runtime":"nodejs12.x",
+                "MemorySize":128,
+                "Timeout": 5,
+                "Tags": [
+                    {
+                        "Key": "AlertLogic",
+                        "Value": "Collect"
+                    }
+                ]
+            }
+        },
         "EncryptSecretKeyCustomResource": {
             "Type": "AWS::CloudFormation::CustomResource",
             "DependsOn": [
@@ -433,34 +628,20 @@
                 }
             }
         },
-        "EncryptPawsSecret": {
+        "StorePawsSecretInSsm": {
             "Type": "AWS::CloudFormation::CustomResource",
             "DependsOn": [
                 "LambdaKmsKey",
-                "EncryptLambdaFunction",
+                "CreateSsmParameterLambdaFunction",
                 "EncryptLambdaPolicy"
             ],
             "Properties": {
                 "ServiceToken": {
                     "Fn::GetAtt": [
-                        "EncryptLambdaFunction",
+                        "CreateSsmParameterLambdaFunction",
                         "Arn"
                     ]
                 },
-                "KeyId": {
-                    "Fn::GetAtt": [
-                        "LambdaKmsKey",
-                        "Arn"
-                    ]
-                },
-                "Plaintext": {
-                    "Ref": "PawsSecret"
-                }
-            }
-        },
-        "PawsSecretParam": {
-            "Type": "AWS::SSM::Parameter",
-            "Properties": {
                 "Name": {"Fn::Join": [
                     "",
                     [
@@ -470,14 +651,23 @@
                         {"Ref": "AWS::StackName"}
                     ]
                 ]},
-                "Type": "String",
-                "Tier": {"Ref": "PawsSecretParamTier"},
-                "Value": {
-                    "Fn::GetAtt": ["EncryptPawsSecret", "EncryptedText"]
+                "KeyId": {
+                    "Fn::GetAtt":["LambdaKmsKey","Arn"]
                 },
-                "Tags": {
-                    "StackId": {"Ref": "AWS::StackId"}
-                }
+                "Plaintext": {
+                    "Ref": "PawsSecret"
+                },
+                "Tier": {
+                    "Ref": "PawsSecretParamTier"
+                },
+                "Tags": [
+                    {
+                        "Key": "StackId",
+                        "Value": {
+                            "Ref": "AWS::StackId"
+                        }
+                    }
+                ]
             }
         },
       "PawsPollStateQueue":{
@@ -511,7 +701,7 @@
             "CollectLambdaRole",
             "LambdaKmsKey",
             "EncryptSecretKeyCustomResource",
-            "EncryptPawsSecret",
+            "StorePawsSecretInSsm",
             "PawsPollStateQueue"
          ],
          "Properties":{
@@ -571,6 +761,13 @@
                   "DD_KMS_API_KEY": {
                       "Ref": "DatadogKMSKey"
                   },
+                  "paws_ddb_table_name": {
+                      "Fn::If": [
+                        "createDdbTable",
+                        {"Ref": "DdupeDdbTable"},
+                        {"Ref": "ExistingDDBTableName"} 
+                      ]
+                  },
                   "al_application_id":{
                       "Ref":"AlApplicationId"
                   },
@@ -608,7 +805,10 @@
                       "Fn::GetAtt": [ "LambdaKmsKey", "Arn" ]
                   },
                   "paws_secret_param_name":{
-                      "Ref":"PawsSecretParam"
+                      "Fn::GetAtt": ["StorePawsSecretInSsm", "PawsSecretParamName"]
+                  },
+                  "paws_secret_param_tier": {
+                      "Ref": "PawsSecretParamTier"
                   },
                   "paws_collection_start_ts":{
                       "Ref":"CollectionStartTs"
@@ -627,7 +827,13 @@
                   },
                   "paws_collector_param_string_2": {
                     "Ref": "CollectorParamString2"
-                  }
+                  },
+                  "collector_streams": {
+                    "Ref": "CollectorStreams"
+                  },
+                  "ssm_direct": {
+                    "Ref": "SsmDirect"
+                }
                }
             },
             "Tags": [
@@ -699,7 +905,7 @@
                               ":",
                               {"Ref": "AWS::AccountId"},
                               ":parameter/",
-                              {"Ref":"PawsSecretParam"}
+                              {"Fn::GetAtt": ["StorePawsSecretInSsm", "PawsSecretParamName"]}
                             ]]
                           }
                       ]
@@ -749,6 +955,33 @@
                                 ]]
                              },
                              "/*"
+                          ]
+                       ]
+                     }]
+                  },
+                  {
+                     "Effect":"Allow",
+                     "Action":[
+                        "dynamodb:Query",
+                        "dynamodb:Scan",
+                        "dynamodb:GetItem",
+                        "dynamodb:PutItem",
+                        "dynamodb:UpdateItem"
+                     ],
+                     "Resource":[{
+                       "Fn::Join":["",
+                          [
+                             "arn:aws:dynamodb:",
+                             { "Ref" : "AWS::Region" }, ":",
+                             { "Ref" : "AWS::AccountId"}, ":",
+                             "table/",
+                             {
+                                "Fn::If": [
+                                    "createDdbTable",
+                                    {"Ref": "DdupeDdbTable"},
+                                    {"Ref": "ExistingDDBTableName"} 
+                                ]
+                             }
                           ]
                        ]
                      }]

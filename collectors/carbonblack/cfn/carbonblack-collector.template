@@ -105,7 +105,7 @@
             "PawsAuthType" : "oauth2",
             "PawsClientId" : { "Ref":"CarbonblackClientId" },
             "PawsSecret" : { "Ref":"CarbonblackSecret" },
-            "CollectorParamString1" : { "Ref":"CarbonblackAPINames" },
+            "CollectorStreams" : { "Ref":"CarbonblackAPINames" },
             "CollectorParamString2" : { "Ref":"CarbonblackOrgKey" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }

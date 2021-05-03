@@ -127,7 +127,7 @@ describe('Unit Tests', function () {
                 var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
-                    object: "Authentication",
+                    stream: "Authentication",
                     mintime: startDate.valueOf(),
                     maxtime: startDate.add(2, 'days').valueOf(),
                     nextPage: null,
@@ -171,7 +171,7 @@ describe('Unit Tests', function () {
                 var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
-                    object: "Authentication",
+                    stream: "Authentication",
                     mintime: startDate.valueOf(),
                     maxtime: startDate.add(2, 'days').valueOf(),
                     nextPage: null,
@@ -182,6 +182,51 @@ describe('Unit Tests', function () {
                     assert.equal(newState.poll_interval_sec, 1);
                     assert.equal(newState.nextPage, "nextPage");
                     assert.ok(logs[0].txid);
+                    getAPILogs.restore();
+                    getAPIDetails.restore();
+                    done();
+                });
+
+            });
+        });
+
+        it('Paws Get client error', function (done) {
+
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ code: 40103,
+                            message: 'Invalid signature in request credentials',
+                            stat: 'FAIL' });
+                    });
+                });
+            getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
+                function fakeFn(state) {
+                    const startDate = moment().subtract(3, 'days');
+                    return {
+                        url: "api_url",
+                        typeIdPaths: [{ path: ["txid"] }],
+                        tsPaths: [{ path: ["timestamp"] }],
+                        query: {
+                            mintime: startDate.valueOf(),
+                            maxtime: startDate.add(2, 'days').valueOf(),
+                            limit: 1000
+                        },
+                        method: "GET"
+                    };
+                });
+            CiscoduoCollector.load().then(function (creds) {
+                var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    stream: "Authentication",
+                    mintime: startDate.valueOf(),
+                    maxtime: startDate.add(2, 'days').valueOf(),
+                    nextPage: null,
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(err.errorCode, 40103);
                     getAPILogs.restore();
                     getAPIDetails.restore();
                     done();
@@ -205,7 +250,7 @@ describe('Unit Tests', function () {
                 var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
                 const startDate = moment();
                 const curState = {
-                    object: "Authentication",
+                    stream: "Authentication",
                     mintime: startDate.valueOf(),
                     maxtime: startDate.add(collector.pollInterval, 'seconds').valueOf(),
                     nextPage: null,
@@ -222,7 +267,7 @@ describe('Unit Tests', function () {
                 var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
                 const startDate = moment();
                 const curState = {
-                    object: "OfflineEnrollment",
+                    stream: "OfflineEnrollment",
                     mintime: startDate.unix(),
                     poll_interval_sec: 1
                 };
@@ -267,7 +312,7 @@ describe('Unit Tests', function () {
         it('Get Next Collection State (Authentication) With NextPage Success', function (done) {
             const startDate = moment().subtract(5, 'minutes');
             const curState = {
-                object: "Authentication",
+                stream: "Authentication",
                 mintime: startDate.valueOf(),
                 maxtime: startDate.add(5, 'minutes').valueOf(),
                 poll_interval_sec: 1
@@ -284,7 +329,7 @@ describe('Unit Tests', function () {
         it('Get Next Collection State (OfflineEnrollment) With NextPage Success', function (done) {
             const startDate = moment().subtract(5, 'minutes');
             const curState = {
-                object: "OfflineEnrollment",
+                stream: "OfflineEnrollment",
                 mintime: startDate.unix(),
                 poll_interval_sec: 1
             };

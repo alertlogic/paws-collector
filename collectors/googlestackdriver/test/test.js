@@ -119,7 +119,7 @@ describe('Unit Tests', function() {
                 var collector = new GooglestackdriverCollector(ctx, creds);
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
-                    resource: "projects/a-fake-project",
+                    stream: "projects/a-fake-project",
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     poll_interval_sec: 1
@@ -161,6 +161,36 @@ describe('Unit Tests', function() {
             });
         });
 
+        it('Get Logs check API Throttling', function(done) {
+            logginClientStub = sinon.stub(logging.v2.LoggingServiceV2Client.prototype, 'listLogEntries');
+            
+            logginClientStub.onCall(0).callsFake(() => {
+                return new Promise((res, rej) => {
+                    rej({code:8});
+                });
+            });
+
+            GooglestackdriverCollector.load().then(function(creds) {
+                var collector = new GooglestackdriverCollector(ctx, creds);
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                var reportSpy = sinon.spy(collector, 'reportApiThrottling');
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
+                    assert.equal(true, reportSpy.calledOnce);
+                    assert.equal(logs.length, 0);
+                    assert.equal(newPollInterval, 2);
+                    restoreLoggingClientStub();
+                    done();
+                });
+            });
+        });
+
         it('Stops paginiating at the pagination limit', function(done) {
             logginClientStub = sinon.stub(logging.v2.LoggingServiceV2Client.prototype, 'listLogEntries');
             
@@ -178,7 +208,7 @@ describe('Unit Tests', function() {
                 var collector = new GooglestackdriverCollector(ctx, creds);
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
-                    resource: "projects/a-fake-project",
+                    stream: "projects/a-fake-project",
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     poll_interval_sec: 1
@@ -188,6 +218,32 @@ describe('Unit Tests', function() {
                     assert.ok(logginClientStub.calledTwice);
                     assert.equal(logs.length, parseInt(process.env.paws_max_pages_per_invocation));
                     assert.equal(newState.nextPage, 'http://somenextpage.com');
+                    restoreLoggingClientStub();
+                    done();
+                });
+            });
+        });
+
+        it('Get Logs check client error', function(done) {
+            logginClientStub = sinon.stub(logging.v2.LoggingServiceV2Client.prototype, 'listLogEntries');
+            
+            logginClientStub.onCall(0).callsFake(() => {
+                return new Promise((res, rej) => {
+                    rej({code:401});
+                });
+            });
+
+            GooglestackdriverCollector.load().then(function(creds) {
+                var collector = new GooglestackdriverCollector(ctx, creds);
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
+                    assert.equal(err.errorCode, 401);
                     restoreLoggingClientStub();
                     done();
                 });

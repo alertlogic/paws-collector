@@ -45,9 +45,9 @@ class GooglestackdriverCollector extends PawsCollector {
         else {
             endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
         }
-        const resourceNames = JSON.parse(process.env.paws_collector_param_string_1);
-        const initialStates = resourceNames.map(resource => ({
-            resource,
+        const resourceNames = JSON.parse(process.env.collector_streams);
+        const initialStates = resourceNames.map(stream => ({
+            stream,
             nextPage:null,
             since: startTs,
             until: endTs,
@@ -58,14 +58,20 @@ class GooglestackdriverCollector extends PawsCollector {
 
     pawsGetLogs(state, callback) {
         let collector = this;
-
+        // This code can remove once exsisting code set stream and collector_streams env variable
+        if (!process.env.collector_streams) {
+            collector.setCollectorStreamsEnv(process.env.paws_collector_param_string_1);
+        }
+        if (!state.stream) {
+            state = collector.setStreamToCollectionState(state);
+        }
         // Start API client
         const client = new logging.v2.LoggingServiceV2Client({
             credentials: JSON.parse(collector.secret)
         });
 
 
-        console.info(`GSTA000001 Collecting data from ${state.since} till ${state.until} for ${state.resource}`);
+        console.info(`GSTA000001 Collecting data from ${state.since} till ${state.until} for ${state.stream}`);
 
         // TODO: figure out a better way to format this. I'm pretty sure that it needs the newlines in it.
         const filter = `timestamp >= "${state.since}"
@@ -96,7 +102,7 @@ timestamp < "${state.until}"`;
             {
                 filter,
                 pageSize: 1000,
-                resourceNames:[state.resource]
+                resourceNames:[state.stream]
             };
 
         client.listLogEntries(params, options)
@@ -119,15 +125,22 @@ timestamp < "${state.until}"`;
                         state.poll_interval_sec + 1:
                         10;
                     const backOffState = Object.assign({}, state, {poll_interval_sec:nextPollInterval});
-
-                    return callback(null, [], backOffState, nextPollInterval);
+                    collector.reportApiThrottling(function () {
+                        return callback(null, [], backOffState, nextPollInterval);
+                    });
                 }
-                return callback(err);
+                else {
+                    // set errorCode if not available in error object to showcase client error on DDMetrics
+                    if (err.code) {
+                        err.errorCode = err.code;
+                    }
+                    return callback(err);
+                }
             });
     }
 
     _getNextCollectionState(curState, nextPage) {
-        const {resource} = curState;
+        const {stream} = curState;
 
         const untilMoment = moment(curState.until);
 
@@ -136,7 +149,7 @@ timestamp < "${state.until}"`;
         return  {
             since: nextSinceMoment.toISOString(),
             nextPage,
-            resource,
+            stream,
             until: nextUntilMoment.toISOString(),
             poll_interval_sec: nextPollInterval
         };
@@ -168,6 +181,16 @@ timestamp < "${state.until}"`;
             formattedMsg.messageTsUs = ts.nanos;
         }
         return formattedMsg;
+    }
+
+    setStreamToCollectionState(curState) {
+        return {
+            stream: curState.resource,
+            since: curState.since,
+            until: curState.until,
+            nextPage: curState.nextPage,
+            poll_interval_sec: curState.poll_interval_sec
+        };
     }
 }
 

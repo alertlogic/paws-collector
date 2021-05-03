@@ -100,7 +100,7 @@
             "PawsAuthType" : "oauth2",
             "PawsClientId" : { "Ref":"CiscoduoClientId" },
             "PawsSecret" : { "Ref":"CiscoduoSecret" },
-            "CollectorParamString1" : { "Ref":"CiscoduoObjectNames" },
+            "CollectorStreams" : { "Ref":"CiscoduoObjectNames" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }
         }

@@ -17,6 +17,7 @@ const { checkO365Subscriptions } = require('./healthcheck');
 const packageJson = require('./package.json');
 
 const parse = require('@alertlogic/al-collector-js').Parse;
+const asyncPool = require("tiny-async-pool");
 
 // Subtracting less than 7 days to avoid weird race conditions with the azure api...
 // Missing about 2 hours of historical logs shouldn't be too bad.
@@ -56,7 +57,7 @@ class O365Collector extends PawsCollector {
         }
 
         // Create a new
-        const streams = JSON.parse(process.env.paws_collector_param_string_2);
+        const streams = JSON.parse(process.env.collector_streams);
         const initialStates = streams.map(stream => {
             return {
                 stream,
@@ -75,7 +76,7 @@ class O365Collector extends PawsCollector {
     pawsGetRegisterParameters(event, callback){
         const regValues = {
             azureTenantId: process.env.paws_collector_param_string_1,
-            azureStreams: process.env.paws_collector_param_string_2
+            azureStreams: process.env.collector_streams
         };
 
         callback(null, regValues);
@@ -83,6 +84,10 @@ class O365Collector extends PawsCollector {
 
     pawsGetLogs(state, callback) {
         let collector = this;
+        // This code can remove once exsisting code set collector_streams env variable
+        if (!process.env.collector_streams) {
+            collector.setCollectorStreamsEnv(process.env.paws_collector_param_string_2);
+        }
 
         if (!moment(state.since).isValid() || !moment(state.until).isValid() || state.since === undefined || state.until === undefined) {
             const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-day-progression', moment(), this.pollInterval);
@@ -141,9 +146,10 @@ class O365Collector extends PawsCollector {
         // Call out to get content pages and form result
         const contentPromise = initialListContent.then(listContentCallback)
             .then(({parsedBody, nextPageUri}) => {
-                const contentUriPromises = parsedBody.map(({contentUri}) => m_o365mgmnt.getPreFormedUrl(contentUri));
+                const contentUriFun = ({contentUri}) => m_o365mgmnt.getPreFormedUrl(contentUri);
+                const poolLimit = 20;
 
-                return Promise.all(contentUriPromises).then(content => {
+                return asyncPool(poolLimit, parsedBody, contentUriFun).then(content => {
                     return {
                         logs: content.reduce((agg, {parsedBody}) => [...parsedBody, ...agg], []),
                         nextPage: nextPageUri
@@ -153,7 +159,6 @@ class O365Collector extends PawsCollector {
 
         // Now that we have all the content uri promises agregated, we can call them and collect the data
         contentPromise.then(({logs, nextPage}) => {
-
             let newState;
             if(nextPage === undefined){
                 newState = this._getNextCollectionState(state);
@@ -163,6 +168,27 @@ class O365Collector extends PawsCollector {
 
             return callback(null, logs, newState, newState.poll_interval_sec);
         }).catch(err => {
+            if (err.message) {
+                let message = err.message;
+                // set errorCode if not available in error object to showcase client error on DDMetric
+                try {
+                    let error = JSON.parse(message.slice(message.indexOf('{'), message.lastIndexOf('}') + 1));
+                    err.errorCode = error.error;
+                    if (error.error_codes) {
+                        if (error.error_codes[0] === 7000215) {
+                            return callback("Error code [7000215]. Invalid client secret is provided.");
+                        }
+                        if (error.error_codes[0] === 700016) {
+                            return callback("Error code [700016]. Invalid client ID is provided.");
+                        }
+                        if (error.error_codes[0] === 90002) {
+                            return callback("Error code [90002]. Please make sure you have the correct tenant ID or this may happen if there are no active subscriptions for the tenant. Check with your subscription administrator.");
+                        }
+                    } 
+                } catch (exception) {
+                    return callback(err);
+                }
+            }
             console.error(`O365000003 Error in collection: ${err.message}`);
             return callback(err);
         })

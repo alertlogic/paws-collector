@@ -91,6 +91,18 @@ function mockSQSSendMessageBatch(returnObject) {
     });
 }
 
+function mockDDB(getItemStub, putItemStub, updateItemStub){
+    const defaultMock = (_params, callback) => {
+        return callback(null, {data: null});
+    };
+
+    AWS.mock('DynamoDB', 'getItem', getItemStub ? getItemStub : defaultMock);
+
+    AWS.mock('DynamoDB', 'putItem', putItemStub ? putItemStub : defaultMock);
+
+    AWS.mock('DynamoDB', 'updateItem', updateItemStub ? updateItemStub : defaultMock);
+}
+
 function gen_state_objects(num) {
     return new Array(num).fill(0).map((e,i) => ({state: 'new-state-' + i}));
 }
@@ -258,8 +270,14 @@ describe('Unit Tests', function() {
             });
         });
     });
-    describe('Poll Request Tests', function() {
-        it('poll request success, single state', function(done) {
+    describe('State Deduplicationt Tests', function(){
+        it('creates a new DDB item when the states does not exist', function(done){
+            const fakeFun = function(_params, callback){return callback(null, {data:null});};
+            const putItemStub = sinon.stub().callsFake(fakeFun);
+            const updateItemStub = sinon.stub().callsFake(fakeFun);
+
+            mockDDB(null, putItemStub, updateItemStub);
+
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,
                 fail : function(error) {
@@ -267,6 +285,182 @@ describe('Unit Tests', function() {
                     done();
                 },
                 succeed : function() {
+                    const putItemArgs = putItemStub.args[0][0];
+                    const updateItemArgs = updateItemStub.args[0][0];
+                    assert.equal(putItemStub.called, true, 'should put a new item in');
+                    assert.equal(updateItemStub.called, true, 'should update the item to complete');
+                    assert.equal(putItemArgs.Item.MessageId.S, "5d172f741470c05e3d2a45c8ffcd9ab3");
+                    assert.equal(updateItemArgs.Key.MessageId.S, "5d172f741470c05e3d2a45c8ffcd9ab3");
+
+                    AWS.restore('DynamoDB');
+                    done();
+                }
+            };
+
+            const testEvent = {
+                Records: [
+                    {
+                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
+                        "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
+                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
+                    }
+                ]
+            };
+            
+            TestCollector.load().then(function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                collector.handleEvent(testEvent);
+            });
+        });
+        it('skips the state if it is already completed', function(done){
+            const mockRecord = {
+                "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
+                "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
+                "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
+            };
+            const fakeGetFun = function (_params, callback) {
+                const mockItem = {
+                    Item: {
+                        MessageId: { S: mockRecord.md5OfBody },
+                        Status: {S: 'COMPLETE'},
+                        Updated: {N: `${Date.now()/1000 - 100 }`}
+                    }
+                };
+                return callback(null, mockItem);
+            };
+            const fakeFun = function(_params, callback){return callback(null, {data:null});};
+            const getItemStub = sinon.stub().callsFake(fakeGetFun);
+            const putItemStub = sinon.stub().callsFake(fakeFun);
+            const updateItemStub = sinon.stub().callsFake(fakeFun);
+
+            mockDDB(getItemStub, putItemStub, updateItemStub);
+
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    assert.equal(getItemStub.called, true, 'should get new item');
+                    assert.equal(putItemStub.notCalled, true, 'should not put a new item in');
+                    assert.equal(updateItemStub.notCalled, true, 'should not update the item to complete');
+
+                    AWS.restore('DynamoDB');
+                    done();
+                }
+            };
+
+            const testEvent = {
+                Records: [
+                    mockRecord
+                ]
+            };
+            
+            TestCollector.load().then(function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                collector.handleEvent(testEvent);
+            });
+        });
+        it('throws an error if the state is bing processed by another invocation', function(done){
+            const mockRecord = {
+                "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
+                "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
+                "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
+            };
+            const fakeGetFun = function (_params, callback) {
+                const mockItem = {
+                    Item: {
+                        MessageId: { S: mockRecord.md5OfBody },
+                        Status: {S: 'INCOMPLETE'},
+                        Updated: {N: `${Date.now()/1000 - 100 }`}
+                    }
+                };
+                return callback(null, mockItem);
+            };
+            const fakeFun = function(_params, callback){return callback(null, {data:null});};
+            const getItemStub = sinon.stub().callsFake(fakeGetFun);
+            const putItemStub = sinon.stub().callsFake(fakeFun);
+            const updateItemStub = sinon.stub().callsFake(fakeFun);
+
+            mockDDB(getItemStub, putItemStub, updateItemStub);
+
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.equal(getItemStub.called, true, 'should get new item');
+                    assert.equal(putItemStub.notCalled, true, 'should not put a new item in');
+                    assert.equal(updateItemStub.notCalled, true, 'should not update the item to complete');
+
+                    AWS.restore('DynamoDB');
+                    done();
+                },
+                succeed : function() {
+                    assert.fail("invocation should not succeed while state is being processed by another invocation");
+                }
+            };
+
+            const testEvent = {
+                Records: [
+                    mockRecord
+                ]
+            };
+            
+            TestCollector.load().then(function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                collector.handleEvent(testEvent);
+            });
+        });
+        it('updates the state if it is successful', function(done){
+            const fakeFun = function(_params, callback){return callback(null, {data:null});};
+            const updateItemStub = sinon.stub().callsFake(fakeFun);
+
+            mockDDB(null, null, updateItemStub);
+
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    const updateItemArgs = updateItemStub.args[0][0];
+                    assert.equal(updateItemStub.called, true, 'should update the item to complete');
+                    assert.equal(updateItemArgs.Key.MessageId.S, "5d172f741470c05e3d2a45c8ffcd9ab3");
+
+                    AWS.restore('DynamoDB');
+                    done();
+                }
+            };
+
+            const testEvent = {
+                Records: [
+                    {
+                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
+                        "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
+                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
+                    }
+                ]
+            };
+            
+            TestCollector.load().then(function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                collector.handleEvent(testEvent);
+            });
+        });
+    });
+    describe('Poll Request Tests', function() {
+        it('poll request success, single state', function(done) {
+            mockDDB();
+
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    AWS.restore('DynamoDB');
                     done();
                 }
             };
@@ -287,6 +481,8 @@ describe('Unit Tests', function() {
         });
         
         it('poll request success, multiple state', function(done) {
+            mockDDB();
+
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,
                 fail : function(error) {
@@ -294,6 +490,7 @@ describe('Unit Tests', function() {
                     done();
                 },
                 succeed : function() {
+                    AWS.restore('DynamoDB');
                     done();
                 }
             };
@@ -424,6 +621,83 @@ describe('Unit Tests', function() {
                 var collector = new TestCollector(ctx, creds);
                 collector.reportCollectionDelay('2020-01-26T12:08:31.316Z', function(error) {
                     assert.equal(null, error);
+                    assert.equal(putMetricDataSpy.callCount, 1);
+                    AWS.restore('KMS');
+                    AWS.restore('CloudWatch');
+                    done();
+                });
+            });
+        });
+        it('reportClientOK', function(done) {
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+            let putMetricDataSpy = sinon.spy((params, callback) => callback());
+            AWS.mock('CloudWatch', 'putMetricData', putMetricDataSpy);
+            TestCollector.load().then(function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                collector.reportClientOK( function(error) {
+                    assert.equal(null, error);
+                    assert.equal(putMetricDataSpy.callCount, 1);
+                    AWS.restore('KMS');
+                    AWS.restore('CloudWatch');
+                    done();
+                });
+            });
+        });
+
+        it('reportClientError', function(done) {
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+
+            let errorObj = {name:'OktaApiError',status: 401,errorCode:'E0000011',errorSummary:'Invalid token provided'};
+            let putMetricDataSpy = sinon.spy((params, callback) => callback());
+            AWS.mock('CloudWatch', 'putMetricData', putMetricDataSpy);
+            TestCollector.load().then(function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                collector.reportClientError(errorObj, function(error) {
+                    assert.equal(errorObj.errorCode, 'E0000011');
+                    assert.equal(putMetricDataSpy.callCount, 1);
+                    AWS.restore('KMS');
+                    AWS.restore('CloudWatch');
+                    done();
+                });
+            });
+        });
+        it('reportErrorToIngestApi', function(done) {
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+    
+            let errorObj = {name:'StatusCodeError',statusCode: 401,errorCode:'E0000011',message: '401 - undefined'};
+            let putMetricDataSpy = sinon.spy((params, callback) => callback());
+            AWS.mock('CloudWatch', 'putMetricData', putMetricDataSpy);
+            TestCollector.load().then(function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                collector.reportErrorToIngestApi(errorObj, function(error) {
+                    assert.equal(errorObj.errorCode, 'E0000011');
                     assert.equal(putMetricDataSpy.callCount, 1);
                     AWS.restore('KMS');
                     AWS.restore('CloudWatch');

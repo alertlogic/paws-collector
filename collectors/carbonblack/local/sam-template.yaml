@@ -15,7 +15,7 @@ Resources:
           al_api:
           al_application_id:  
           stack_name:
-          azollect_api:
+          azcollect_api:
           ingest_api:
           DEBUG:
           paws_state_queue_arn:
@@ -26,10 +26,11 @@ Resources:
           paws_api_client_id:   
           paws_api_secret: 
           paws_endpoint:  
-          paws_collector_param_string_1:
-          paws_collector_param_string_2:  
+          paws_collector_param_string_2:
+          collector_streams:  
           paws_max_pages_per_invocation:    
           collector_id:  
+          paws_ddb_table_name:
       Runtime: nodejs10.x
       Handler: index.handler
       Timeout: 300 

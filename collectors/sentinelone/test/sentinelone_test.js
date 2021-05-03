@@ -6,11 +6,9 @@ const sentineloneMock = require('./sentinelone_mock');
 var SentineloneCollector = require('../collector').SentineloneCollector;
 const moment = require('moment');
 const utils = require("../utils");
-const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClient;
-
 
 var responseStub = {};
-let getAPILogs, alserviceStuPost;
+let getAPILogs;
 
 describe('Unit Tests', function () {
     beforeEach(function () {
@@ -115,6 +113,30 @@ describe('Unit Tests', function () {
                 });
             });
         });
+
+        it('Paws Get Logs failed and show client errors', function (done) {
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(baseUrl, token, params, accumulator, paws_max_pages_per_invocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({name: 'StatusCodeError', statusCode: 401, message:'401 - {"errors":[{"code":4010010,"detail":null,"title":"Authentication Failed"}]}'});
+                    });
+                });
+            SentineloneCollector.load().then(function (creds) {
+                var collector = new SentineloneCollector(ctx, creds, 'sentinelone');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    nextPage: null,
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(err.errorCode, 401);
+                    getAPILogs.restore();
+                    done();
+                });
+            });
+        });
     });
 
     describe('Next state tests', function () {
@@ -194,59 +216,6 @@ describe('Unit Tests', function () {
                 let nextState = collector._getNextCollectionStateWithNextPage(curState, nextPage);
                 assert.ok(nextState.nextPage);
                 assert.equal(nextState.nextPage, nextPage);
-                done();
-            });
-        });
-    });
-
-    describe('Health Check Tests', function () {
-        it('token validation check success', function (done) {
-            const sentineloneHealth = require('../health_checks');
-            alserviceStuPost = sinon.stub(RestServiceClient.prototype, 'post').callsFake(
-                function fakeFn(path, extraOptions) {
-                    return new Promise(function (resolve, reject) {
-                        assert.notEqual(path, '/web/api/v2.0/users/generate-api-token');
-                        return resolve({ data: { expiresAt: moment().add(6, 'months').toISOString() } });
-                    });
-                });
-
-            sentineloneHealth.sentinelOneTokenHealthCheck(function (err) {
-                assert.equal(alserviceStuPost.callCount, 1);
-                assert.equal(null, err);
-                alserviceStuPost.restore();
-                done();
-            });
-
-        });
-        it('token expire check success', function (done) {
-            const sentineloneHealth = require('../health_checks');
-            alserviceStuPost = sinon.stub(RestServiceClient.prototype, 'post').callsFake(
-                function fakeFn(path, extraOptions) {
-                    return new Promise(function (resolve, reject) {
-                        var response = null;
-                        switch (path) {
-                            case '/web/api/v2.0/users/api-token-details':
-                                response = { data: { expiresAt: moment().subtract(2, 'days').toISOString() } };
-                                break;
-                            case '/web/api/v2.0/users/generate-api-token':
-                                response = { data: { token: "token" } };
-                                break;
-                            default:
-                                break;
-                        }
-                        return resolve(response);
-                    });
-                });
-
-            let targetObject = {
-                setPawsSecret(token) {
-                    return Promise.resolve('success');
-                }
-            };
-            sentineloneHealth.sentinelOneTokenHealthCheck.bind(targetObject)(function (err) {
-                assert.equal(alserviceStuPost.callCount, 2);
-                assert.equal(null, err);
-                alserviceStuPost.restore();
                 done();
             });
         });

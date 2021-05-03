@@ -1,10 +1,10 @@
 {
     "method": "GET",
-    "url": "{{paws_endpoint}}/siem/v1/events?limit=10",
+    "url": "{{endpoint}}/siem/v1/events?limit=10",
     "headers": {
         "Accept": "*/*",
-        "x-api-key": "{{paws_client_id}}",
-        "Authorization": "{{paws_secret}}"
+        "x-api-key": "{{client_id}}",
+        "Authorization": "{{secret}}"
     },
     "body": "",
     "expect": {

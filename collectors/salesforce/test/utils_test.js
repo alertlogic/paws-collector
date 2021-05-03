@@ -86,7 +86,7 @@ describe('Unit Tests', function () {
         it('Get Object Query', function (done) {
             const startDate = moment().subtract(5, 'minutes');
             let objectQueryDetails = [];
-            const objectNames = JSON.parse(process.env.paws_collector_param_string_2);
+            const objectNames = JSON.parse(process.env.collector_streams);
             objectNames.map(object => {
                 let state = {
                     object: object,

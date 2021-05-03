@@ -22,7 +22,7 @@ describe('Unit Tests', function () {
             let apiUrl = "apiUrl";
             const startDate = moment().subtract(5, 'days');
             let state = {
-                resource: "Events",
+                stream: "Events",
                 since: startDate.toISOString(),
                 until: startDate.add(5, 'days').toISOString(),
                 totalLogsCount: 0,
@@ -51,7 +51,7 @@ describe('Unit Tests', function () {
             let apiUrl = "apiUrl";
             const startDate = moment().subtract(5, 'days');
             let state = {
-                resource: "Events",
+                stream: "Events",
                 since: startDate.toISOString(),
                 until: startDate.add(5, 'days').toISOString(),
                 totalLogsCount: 0,
@@ -80,7 +80,7 @@ describe('Unit Tests', function () {
             let apiUrl = "apiUrl";
             const startDate = moment().subtract(5, 'days');
             let state = {
-                resource: "Events",
+                stream: "Events",
                 since: startDate.toISOString(),
                 until: startDate.add(5, 'days').toISOString(),
                 totalLogsCount: 50,
@@ -99,10 +99,10 @@ describe('Unit Tests', function () {
         it('Get API Details', function (done) {
             const startDate = moment().subtract(5, 'minutes');
             let resourceDetailsArray = [];
-            const resourceNames = JSON.parse(process.env.paws_collector_param_string_1);
-            resourceNames.map(resource => {
+            const resourceNames = JSON.parse(process.env.collector_streams);
+            resourceNames.map(stream => {
                 let state = {
-                    resource: resource,
+                    stream: stream,
                     since: startDate.toISOString(),
                     until: startDate.add(5, 'minutes').toISOString(),
                     totalLogsCount: 0,
@@ -118,7 +118,7 @@ describe('Unit Tests', function () {
         it('Get API Details check url is null', function (done) {
             const startDate = moment().subtract(5, 'minutes');
             let state = {
-                resource: "resource",
+                stream: "resource",
                 since: startDate.toISOString(),
                 until: startDate.add(5, 'minutes').toISOString(),
                 totalLogsCount: 0,

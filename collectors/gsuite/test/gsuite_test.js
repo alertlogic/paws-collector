@@ -19,17 +19,9 @@ function setAlServiceStub() {
         function fakeFn(path) {
             return {};
         });
-    listEvent = sinon.stub(utils, 'listEvents').callsFake(
-        function fakeFn(path) {
-            return new Promise(function (resolve, reject) {
-                return resolve({ accumulator: [gsuiteMock.LOG_EVENT, gsuiteMock.LOG_EVENT] });
-            });
-        });
-
 }
 
 function restoreAlServiceStub() {
-    listEvent.restore();
     authenticationT.restore();
 }
 describe('Unit Tests', function () {
@@ -136,6 +128,13 @@ describe('Unit Tests', function () {
             succeed: function () { }
         };
         it('Paws Get Logs Success', function (done) {
+            listEvent = sinon.stub(utils, 'listEvents').callsFake(
+                function fakeFn(path) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ accumulator: [gsuiteMock.LOG_EVENT, gsuiteMock.LOG_EVENT] });
+                    });
+                });
+
             GsuiteCollector.load().then(function (creds) {
                 var collector = new GsuiteCollector(ctx, creds, 'gsuite');
                 const startDate = moment().subtract(3, 'days');
@@ -150,6 +149,7 @@ describe('Unit Tests', function () {
                     assert.equal(logs.length, 2);
                     assert.equal(newState.poll_interval_sec, 1);
                     assert.ok(logs[0].kind);
+                    listEvent.restore();
                     done();
                 });
 
@@ -157,6 +157,13 @@ describe('Unit Tests', function () {
         });
 
         it('Paws Get Logs with API Quota Reset Date', function (done) {
+            listEvent = sinon.stub(utils, 'listEvents').callsFake(
+                function fakeFn(path) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ accumulator: [gsuiteMock.LOG_EVENT, gsuiteMock.LOG_EVENT] });
+                    });
+                });
+
             GsuiteCollector.load().then(function (creds) {
                 var collector = new GsuiteCollector(ctx, creds, 'gsuite');
                 const startDate = moment().subtract(3, 'days');
@@ -164,13 +171,78 @@ describe('Unit Tests', function () {
                     application: "login",
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
-                    apiQuotaResetDate: moment().add(1, 'days'),
+                    apiQuotaResetDate: moment().add(1, 'days').toISOString(),
                     poll_interval_sec: 900
                 };
 
+                var reportSpy = sinon.spy(collector, 'reportApiThrottling');
+
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(true, reportSpy.calledOnce);
                     assert.equal(logs.length, 0);
                     assert.equal(newState.poll_interval_sec, 900);
+                    listEvent.restore();
+                    done();
+                });
+
+            });
+        });
+        it('Paws Get Logs check throttling error', function (done) {
+            listEvent = sinon.stub(utils, 'listEvents').callsFake(
+                function fakeFn(path) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ errors: [ { reason: "dailyLimitExceeded"}] });
+                    });
+                });
+
+            GsuiteCollector.load().then(function (creds) {
+                var collector = new GsuiteCollector(ctx, creds, 'gsuite');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    application: "login",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                var reportSpy = sinon.spy(collector, 'reportApiThrottling');
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(true, reportSpy.calledOnce);
+                    assert.equal(logs.length, 0);
+                    assert.equal(newState.poll_interval_sec, 900);
+                    listEvent.restore();
+                    done();
+                });
+
+            });
+        });
+
+        it('Paws Get Logs check client error', function (done) {
+            listEvent = sinon.stub(utils, 'listEvents').callsFake(
+                function fakeFn(path) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ code: 403,
+                            errors:
+                             [ { message: 'Insufficient Permission',
+                                 domain: 'global',
+                                 reason: 'insufficientPermissions' } ]  });
+                    });
+                });
+
+            GsuiteCollector.load().then(function (creds) {
+                var collector = new GsuiteCollector(ctx, creds, 'gsuite');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    application: "login",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err) => {
+                    assert.equal(err.errorCode, 'insufficientPermissions');
+                    listEvent.restore();
                     done();
                 });
 

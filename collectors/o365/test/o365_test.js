@@ -179,26 +179,26 @@ describe('O365 Collector Tests', function() {
     describe('healthcheck', function() {
         it('does not start subscriptions when streams are enabled', function(done) {
             setO365MangementStub();
-            const tempStreams = process.env.paws_collector_param_string_2;
-            process.env.paws_collector_param_string_2 = "[\"Audit.Exchange\", \"Audit.General\"]";
+            const tempStreams = process.env.collector_streams;
+            process.env.collector_streams = "[\"Audit.Exchange\", \"Audit.General\"]";
             checkO365Subscriptions((err) => {
                 assert.equal(err, null);
                 assert.equal(startSubscriptionStub.called, false);
                 restoreO365ManagemntStub();
-                process.env.paws_collector_param_string_2 = tempStreams;
+                process.env.collector_streams = tempStreams;
                 done();
             });
         });
 
         it('starts subscriptions when streams are not enabled', function(done) {
             setO365MangementStub();
-            const tempStreams = process.env.paws_collector_param_string_2;
-            process.env.paws_collector_param_string_2 = "[\"Audit.Exchange\", \"Audit.Sharepoint\", \"Audit.General\"]";
+            const tempStreams = process.env.collector_streams;
+            process.env.collector_streams = "[\"Audit.Exchange\", \"Audit.Sharepoint\", \"Audit.General\"]";
             checkO365Subscriptions((err) => {
                 assert.equal(err, null);
                 assert.equal(startSubscriptionStub.called, true);
                 restoreO365ManagemntStub();
-                process.env.paws_collector_param_string_2 = tempStreams;
+                process.env.collector_streams = tempStreams;
                 done();
             });
         });
@@ -653,6 +653,38 @@ describe('O365 Collector Tests', function() {
                     assert.ok(getPreFormedUrlStub.getCall(1).calledWithExactly('a fake next page'));
                     assert.equal(logs.length, parseInt(process.env.paws_max_pages_per_invocation) + 1);
                     assert.equal(newState.nextPage, 'a fake next page');
+                    restoreO365ManagemntStub();
+                    done();
+                });
+            });
+        });
+
+        it('Get Logs check client error', function(done) {
+            subscriptionsContentStub = sinon.stub(m_o365mgmnt, 'subscriptionsContent').callsFake(
+                function fakeFn(path, extraOptions) {
+                    return new Promise(function(resolve, reject) {
+                        return reject({message:'Get Token request returned http error: 400 and server response: {"error":"invalid_request","error_description":"AADSTS90002: Tenant bf8d32d3-1c13-4487-af02-80dba22364851 not found. This may happen if there are no active subscriptions for the tenant. Check to make sure you have the correct tenant ID.","error_codes":[90002],"timestamp":"2020-11-24 08:41:22Z","trace_id":"dcf34502-9b8b-4601-b5ec-3d33437b9d00","correlation_id":"f82dc929-3899-4ba5-890f-cf18ac92e0a3","error_uri":"https://login.microsoftonline.com/error?code=90002"}'});
+                    });
+                });
+            getPreFormedUrlStub = sinon.stub(m_o365mgmnt, 'getPreFormedUrl').callsFake(
+                    function fakeFn(path, extraOptions) {
+                        return new Promise(function(resolve, reject) {
+                            return resolve({parsedBody: [o365Mock.MOCK_LOG]});
+                        });
+                    });
+
+            O365Collector.load().then(function(creds) {
+                var collector = new O365Collector(ctx, creds, 'o365');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
+                    assert.notEqual(err, null);
+                    assert.equal(err.errorCode ,'invalid_request');
                     restoreO365ManagemntStub();
                     done();
                 });

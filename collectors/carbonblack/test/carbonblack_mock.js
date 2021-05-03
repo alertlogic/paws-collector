@@ -16,7 +16,7 @@ process.env.paws_poll_interval = 60;
 process.env.paws_type_name = "carbonblack";
 process.env.paws_api_client_id = "client-id";
 process.env.paws_api_secret = "api-secret";
-process.env.paws_collector_param_string_1 = "[\"AuditLogEvents\", \"SearchAlerts\",\"SearchAlertsCBAnalytics\", \"SearchAlertsVmware\", \"SearchAlertsWatchlist\"]";
+process.env.collector_streams = "[\"AuditLogEvents\", \"SearchAlerts\",\"SearchAlertsCBAnalytics\", \"SearchAlertsVmware\", \"SearchAlertsWatchlist\"]";
 process.env.paws_collector_param_string_2 = "carbonblackOrgKey";
 process.env.paws_endpoint = "https://api-url.conferdeploy.net";
 

@@ -16,7 +16,6 @@ const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 
 const packageJson = require('./package.json');
-const healthChecks = require('./health_checks');
 
 const THROTTLING_ERROR_REGEXP = /rateLimit/g;
 
@@ -34,13 +33,11 @@ const sensitiveFields = [
     "client.http.defaultHeaders.Authorization"
 ];
 
-
 class OktaCollector extends PawsCollector {
 
     constructor(context, creds){
         super(context,
-            creds, packageJson.version,
-            [healthChecks.oktaTokenHealthCheck], []);
+            creds, packageJson.version);
     }
     
     pawsInitCollectionState(event, callback) {

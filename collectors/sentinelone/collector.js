@@ -15,17 +15,14 @@ const parse = require('@alertlogic/al-collector-js').Parse;
 const utils = require("./utils");
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const packageJson = require('./package.json');
-const healthChecks = require('./health_checks');
-
 
 const typeIdPaths = [{ path: ['id'] }];
 
 const tsPaths = [{ path: ['createdAt'] }];
 
-
 class SentineloneCollector extends PawsCollector {
     constructor(context, creds) {
-        super(context, creds, packageJson.version, [healthChecks.sentinelOneTokenHealthCheck], []);
+        super(context, creds, packageJson.version);
     }
 
     pawsInitCollectionState(event, callback) {
@@ -74,6 +71,7 @@ class SentineloneCollector extends PawsCollector {
                 console.info(`SONE000002 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             }).catch((error) => {
+                error.errorCode = error.statusCode;
                 return callback(error);
             });
 

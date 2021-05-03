@@ -121,7 +121,7 @@ describe('Unit Tests', function () {
                 var collector = new SophossiemCollector(ctx, creds, 'sophossiem');
                 const startDate = moment().subtract(23, 'hours');
                 const curState = {
-                    objectName: "Events",
+                    stream: "Events",
                     from_date: startDate.unix(),
                     poll_interval_sec: 1
                 };
@@ -148,7 +148,7 @@ describe('Unit Tests', function () {
             SophossiemCollector.load().then(function (creds) {
                 var collector = new SophossiemCollector(ctx, creds, 'sophossiem');
                 const curState = {
-                    objectName: "Events",
+                    stream: "Events",
                     nextPage: "nextPage",
                     poll_interval_sec: 1
                 };
@@ -157,6 +157,66 @@ describe('Unit Tests', function () {
                     assert.equal(newState.poll_interval_sec, 1);
                     assert.equal(newState.nextPage, "nextPage");
                     assert.ok(logs[0].id);
+                    getAPILogs.restore();
+                    done();
+                });
+
+            });
+        });
+
+        it('Get Logs check API throttling error', function (done) {
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(BaseAPIURL, headers, state, accumulator, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({statusCode: 429});
+                    });
+                });
+
+            SophossiemCollector.load().then(function (creds) {
+                var collector = new SophossiemCollector(ctx, creds, 'sophossiem');
+                const startDate = moment().subtract(23, 'hours');
+                const curState = {
+                    stream: "Events",
+                    from_date: startDate.unix(),
+                    poll_interval_sec: 1
+                };
+                
+                var reportSpy = sinon.spy(collector, 'reportApiThrottling');
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(true, reportSpy.calledOnce);
+                    assert.equal(logs.length, 0);
+                    assert.equal(newState.poll_interval_sec, 900);
+                    getAPILogs.restore();
+                    done();
+                });
+
+            });
+        });
+
+        it('Paws Get Logs api Failed and show client error on DDMetric', function (done) {
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(BaseAPIURL, headers, state, accumulator, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ statusCode: 403,
+                            error: "Forbidden",
+                        message: "Forbidden",
+                        correlationId: "59763C8E-B687-47D0-8F7B-88113425CE3B",
+                        code: "USR00004c5",
+                        createdAt: "2019-08-15T11:25:45.987Z"});
+                    });
+                });
+
+            SophossiemCollector.load().then(function (creds) {
+                var collector = new SophossiemCollector(ctx, creds, 'sophossiem');
+                const startDate = moment().subtract(23, 'hours');
+                const curState = {
+                    stream: "Events",
+                    from_date: startDate.unix(),
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err) => {
+                    assert.equal(err.errorCode,403);
                     getAPILogs.restore();
                     done();
                 });
@@ -180,7 +240,7 @@ describe('Unit Tests', function () {
                 var collector = new SophossiemCollector(ctx, creds, 'sophossiem');
                 const startDate = moment();
                 const curState = {
-                    objectName: "Events",
+                    stream: "Events",
                     from_date: startDate.unix(),
                     poll_interval_sec: 1
                 };
@@ -198,7 +258,7 @@ describe('Unit Tests', function () {
                 var collector = new SophossiemCollector(ctx, creds, 'sophossiem');
                 const startDate = moment();
                 const curState = {
-                    objectName: "Events",
+                    stream: "Events",
                     from_date: startDate.unix(),
                     poll_interval_sec: 1
                 };
