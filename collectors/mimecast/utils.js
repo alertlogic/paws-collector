@@ -1,7 +1,7 @@
-const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClient;
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 const moment = require('moment');
+var request = require('request');
 
 const Siem_Logs = 'SiemLogs';
 const Attachment_Protect_Logs = 'AttachmentProtectLogs';
@@ -13,8 +13,6 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
     let pageCount = 0;
     let nextPage = state.nextPage ? state.nextPage : undefined;
 
-    let restServiceClient = new RestServiceClient(authDetails.baseUrl);
-
     return new Promise(function (resolve, reject) {
         getData();
         function getData() {
@@ -25,25 +23,33 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                     reject("The application name was not found!");
                 }
 
-                let headers = generateHeaders(authDetails, applicationDetails.uri);
+                let requestHeaders = generateHeaders(authDetails, applicationDetails.uri);
 
-                restServiceClient.post(applicationDetails.uri, {
-                    headers: headers,
-                    json: applicationDetails.payload,
-                    resolveWithFullResponse: true
-                }).then(({ headers, body }) => {
+                request.post({
+                    url: `https://${authDetails.baseUrl}${applicationDetails.uri}`,
+                    headers: requestHeaders,
+                    body: JSON.stringify(applicationDetails.payload)
+                }, function (error, response, body) {
+                    if (error) {
+                        return reject(error);
+                    }
+                    body = JSON.parse(body);
+                    if (body.fail && body.fail[0] && body.fail[0].errors) {
+                        return reject(body.fail[0].errors);
+                    }
                     pageCount++;
-                    //will change this response code once we get creds
                     switch (state.applicationName) {
                         case Siem_Logs:
-                            if (body.meta.isLastToken) {
+                            if (response.meta && response.meta.isLastToken) {
                                 nextPage = undefined;
                                 return resolve({ accumulator, nextPage });
                             }
-                            if (headers['mc-siem-token']) {
-                                nextPage = headers['mc-siem-token'];
+                            if (response.headers && response.headers['mc-siem-token']) {
+                                nextPage = response.headers['mc-siem-token'];
                             }
-                            accumulator.push(...body.json());
+                            if (body.data) {
+                                accumulator.push(...body.data);
+                            }
                             break;
                         case Malware_Feed:
                             if (body.objects.length === 0) {
@@ -57,13 +63,10 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                             break;
                         case Attachment_Protect_Logs:
                         case URL_Protect_Logs:
-                            if (body.fail.errors) {
-                                return reject(body.fail.errors);
-                            }
-                            if (state.applicationName === Attachment_Protect_Logs && body.data[0].attachmentLogs) {
+                            if (state.applicationName === Attachment_Protect_Logs && body.data && body.data[0] && body.data[0].attachmentLogs) {
                                 accumulator.push(...body.data[0].attachmentLogs);
                             }
-                            if (state.applicationName === URL_Protect_Logs && body.data[0].clickLogs) {
+                            if (state.applicationName === URL_Protect_Logs && body.data && body.data[0] && body.data[0].clickLogs) {
                                 accumulator.push(...body.data[0].clickLogs);
                             }
                             if (body.meta.pagination.next) {
@@ -75,8 +78,6 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                             break;
                     }
                     getData();
-                }).catch(err => {
-                    return reject(err);
                 });
             }
             else {
@@ -203,12 +204,13 @@ function getAPIDetails(state, nextPage) {
 }
 
 function generateHeaders(authDetails, uri) {
-    let requestId = uuidv4();
+    let requestId = uuidv4().toString();
     let hdrDate = moment().utc().format('ddd, DD MMM YYYY HH:mm:ss z');
 
-    let hmac = crypto.createHmac("sha1", Buffer.from(authDetails.secretKey, 'base64').toString('utf-8'));
-    hmac.update(`${hdrDate}:${requestId}:${uri}:${authDetails.appKey}`);
-    let signature = hmac.digest("base64");
+    let hmac = crypto.createHmac("sha1", Buffer.from(authDetails.secretKey, 'base64'));
+    hmac.write(`${hdrDate}:${requestId}:${uri}:${authDetails.appKey}`);
+    hmac.end();       // can't read from the stream until you call end()
+    signature = hmac.read().toString('base64'); 
 
     return {
         "Authorization": `MC ${authDetails.accessKey}:${signature}`,

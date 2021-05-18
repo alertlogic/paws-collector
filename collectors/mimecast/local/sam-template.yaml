@@ -14,7 +14,7 @@ Resources:
           aims_access_key_id:
           al_api:
           stack_name:
-          azollect_api:
+          azcollect_api:
           ingest_api:
           DEBUG:
           paws_state_queue_arn:
@@ -29,7 +29,10 @@ Resources:
           paws_collector_param_string_2:
           paws_collector_param_string_3:      
           collector_id:
-      Runtime: nodejs10.x
+          paws_ddb_table_name:
+          customer_id:
+      CodeUri: 
+      Runtime: nodejs12.x
       Handler: index.handler
       Timeout: 300 
       MemorySize: 1024
