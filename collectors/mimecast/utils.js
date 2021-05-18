@@ -38,7 +38,7 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                         return reject(body.fail[0].errors);
                     }
                     pageCount++;
-                    switch (state.applicationName) {
+                    switch (state.stream) {
                         case Siem_Logs:
                             if (response.meta && response.meta.isLastToken) {
                                 nextPage = undefined;
@@ -63,10 +63,10 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                             break;
                         case Attachment_Protect_Logs:
                         case URL_Protect_Logs:
-                            if (state.applicationName === Attachment_Protect_Logs && body.data && body.data[0] && body.data[0].attachmentLogs) {
+                            if (state.stream === Attachment_Protect_Logs && body.data && body.data[0] && body.data[0].attachmentLogs) {
                                 accumulator.push(...body.data[0].attachmentLogs);
                             }
-                            if (state.applicationName === URL_Protect_Logs && body.data && body.data[0] && body.data[0].clickLogs) {
+                            if (state.stream === URL_Protect_Logs && body.data && body.data[0] && body.data[0].clickLogs) {
                                 accumulator.push(...body.data[0].clickLogs);
                             }
                             if (body.meta.pagination.next) {
@@ -90,7 +90,7 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
 function getAPIDetails(state, nextPage) {
     let uri = "";
     let payload = "";
-    switch (state.applicationName) {
+    switch (state.stream) {
         case Siem_Logs:
             uri = `/api/audit/get-siem-logs`;
             if (nextPage === undefined) {
@@ -119,11 +119,11 @@ function getAPIDetails(state, nextPage) {
         case Attachment_Protect_Logs:
         case URL_Protect_Logs:
 
-            if (state.applicationName === Attachment_Protect_Logs) {
+            if (state.stream === Attachment_Protect_Logs) {
                 uri = `/api/ttp/attachment/get-logs`;
             }
 
-            if (state.applicationName === URL_Protect_Logs) {
+            if (state.stream === URL_Protect_Logs) {
                 uri = `/api/ttp/url/get-logs`;
             }
 

@@ -35,18 +35,18 @@ class MimecastCollector extends PawsCollector {
             moment().toISOString();
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
 
-        const applicationNames = JSON.parse(process.env.paws_collector_param_string_1);
-        const initialStates = applicationNames.map(applicationName => {
-            if (applicationName === Siem_Logs) {
+        const applicationNames = JSON.parse(process.env.collector_streams);
+        const initialStates = applicationNames.map(stream => {
+            if (stream === Siem_Logs) {
                 return {
-                    applicationName,
+                    stream,
                     nextPage: null,
                     poll_interval_sec: 1
                 }
             }
             else {
                 return {
-                    applicationName,
+                    stream,
                     since: startTs,
                     until: endTs,
                     nextPage: null,
@@ -59,9 +59,9 @@ class MimecastCollector extends PawsCollector {
 
     pawsGetRegisterParameters(event, callback) {
         const regValues = {
-            mimecastApplicationNames: process.env.paws_collector_param_string_1,
-            mimecastApplicationID: process.env.paws_collector_param_string_2,
-            mimecastApplicationKey: process.env.paws_collector_param_string_3
+            mimecastApplicationNames: process.env.collector_streams,
+            mimecastApplicationID: process.env.paws_collector_param_string_1,
+            mimecastApplicationKey: process.env.paws_collector_param_string_2
         };
         callback(null, regValues);
     }
@@ -83,12 +83,12 @@ class MimecastCollector extends PawsCollector {
             return callback("The Endpoint was not found!");
         }
 
-        const appId = process.env.paws_collector_param_string_2;
+        const appId = process.env.paws_collector_param_string_1;
         if (!appId) {
             return callback("The app Id was not found!");
         }
 
-        const appKey = process.env.paws_collector_param_string_3;
+        const appKey = process.env.paws_collector_param_string_2;
         if (!appKey) {
             return callback("The app key was not found!");
         }
@@ -101,11 +101,11 @@ class MimecastCollector extends PawsCollector {
             "appKey": appKey
         };
 
-        if (state.applicationName === Siem_Logs) {
-            console.info(`MIME000001 Collecting data for ${state.applicationName}`);
+        if (state.stream === Siem_Logs) {
+            console.info(`MIME000001 Collecting data for ${state.stream}`);
         }
         else{
-            console.info(`MIME000001 Collecting data for ${state.applicationName} from ${state.since} till ${state.until}`);
+            console.info(`MIME000001 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
         }
         
         utils.getAPILogs(authDetails, state, [], process.env.paws_max_pages_per_invocation)
@@ -124,9 +124,9 @@ class MimecastCollector extends PawsCollector {
     }
 
     _getNextCollectionState(curState) {
-        if (curState.applicationName === Siem_Logs) {
+        if (curState.stream === Siem_Logs) {
             return {
-                applicationName: curState.applicationName,
+                stream: curState.stream,
                 nextPage: null,
                 poll_interval_sec: 1
             }
@@ -138,7 +138,7 @@ class MimecastCollector extends PawsCollector {
             const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
             
             return {
-                applicationName: curState.applicationName,
+                stream: curState.stream,
                 since: nextSinceMoment.toISOString(),
                 until: nextUntilMoment.toISOString(),
                 nextPage: null,
@@ -148,16 +148,16 @@ class MimecastCollector extends PawsCollector {
     }
 
     _getNextCollectionStateWithNextPage(curState, nextPage) {
-        if (curState.applicationName === Siem_Logs) {
+        if (curState.stream === Siem_Logs) {
             return {
-                applicationName: curState.applicationName,
+                stream: curState.stream,
                 nextPage: nextPage,
                 poll_interval_sec: 1
             }
         }
         else {
             return {
-                applicationName: curState.applicationName,
+                stream: curState.stream,
                 since: curState.since,
                 until: curState.until,
                 nextPage: nextPage,

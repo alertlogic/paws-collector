@@ -108,9 +108,9 @@
             "PawsAuthType" : "oauth2",
             "PawsClientId" : { "Ref":"MimecastAccessKey" },
             "PawsSecret" : { "Ref":"MimecastSecret" },
-            "CollectorParamString1" : { "Ref":"MimecastApplicationNames" },
-            "CollectorParamString2" : { "Ref":"MimecastApplicationId" },
-            "CollectorParamString3" : { "Ref":"MimecastApplicationKey" },
+            "CollectorStreams" : { "Ref":"MimecastApplicationNames" },
+            "CollectorParamString1" : { "Ref":"MimecastApplicationId" },
+            "CollectorParamString2" : { "Ref":"MimecastApplicationKey" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }
         }

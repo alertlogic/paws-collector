@@ -27,11 +27,11 @@ Resources:
           paws_max_pages_per_invocation:
           paws_collector_param_string_1:
           paws_collector_param_string_2:
-          paws_collector_param_string_3:      
+          collector_streams:
           collector_id:
           paws_ddb_table_name:
           customer_id:
-      CodeUri: 
+      CodeUri:
       Runtime: nodejs12.x
       Handler: index.handler
       Timeout: 300 
