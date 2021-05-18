@@ -35,7 +35,7 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                     }
                     body = JSON.parse(body);
                     if (body.fail && body.fail[0] && body.fail[0].errors) {
-                        return reject(body.fail[0].errors);
+                        return reject(body.fail[0].errors[0]);
                     }
                     pageCount++;
                     switch (state.stream) {

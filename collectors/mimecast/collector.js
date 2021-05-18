@@ -119,6 +119,10 @@ class MimecastCollector extends PawsCollector {
                 console.info(`MIME000002 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             }).catch((error) => {
+                // set errorCode if not available in error object to showcase client error on DDMetrics
+                if (error.code) {
+                    error.errorCode = error.code;
+                }
                 return callback(error);
             });
     }
