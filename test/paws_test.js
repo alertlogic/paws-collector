@@ -60,6 +60,7 @@ function restoreAlServiceStub() {
     alserviceStub.del.restore();
 }
 
+
 function mockSetEnvStub() {
     setEnvStub = sinon.stub(m_al_aws, 'setEnv').callsFake((vars, callback)=>{
         const {
@@ -271,6 +272,11 @@ describe('Unit Tests', function() {
         });
     });
     describe('State Deduplicationt Tests', function(){
+        beforeEach(function () {
+        });
+        afterEach(function () {
+            AWS.restore('DynamoDB');
+        });
         it('creates a new DDB item when the states does not exist', function(done){
             const fakeFun = function(_params, callback){return callback(null, {data:null});};
             const putItemStub = sinon.stub().callsFake(fakeFun);
@@ -291,8 +297,6 @@ describe('Unit Tests', function() {
                     assert.equal(updateItemStub.called, true, 'should update the item to complete');
                     assert.equal(putItemArgs.Item.MessageId.S, "5d172f741470c05e3d2a45c8ffcd9ab3");
                     assert.equal(updateItemArgs.Key.MessageId.S, "5d172f741470c05e3d2a45c8ffcd9ab3");
-
-                    AWS.restore('DynamoDB');
                     done();
                 }
             };
@@ -345,8 +349,7 @@ describe('Unit Tests', function() {
                     assert.equal(getItemStub.called, true, 'should get new item');
                     assert.equal(putItemStub.notCalled, true, 'should not put a new item in');
                     assert.equal(updateItemStub.notCalled, true, 'should not update the item to complete');
-
-                    AWS.restore('DynamoDB');
+                    
                     done();
                 }
             };
@@ -391,8 +394,7 @@ describe('Unit Tests', function() {
                     assert.equal(getItemStub.called, true, 'should get new item');
                     assert.equal(putItemStub.notCalled, true, 'should not put a new item in');
                     assert.equal(updateItemStub.notCalled, true, 'should not update the item to complete');
-
-                    AWS.restore('DynamoDB');
+                   
                     done();
                 },
                 succeed : function() {
@@ -427,8 +429,7 @@ describe('Unit Tests', function() {
                     const updateItemArgs = updateItemStub.args[0][0];
                     assert.equal(updateItemStub.called, true, 'should update the item to complete');
                     assert.equal(updateItemArgs.Key.MessageId.S, "5d172f741470c05e3d2a45c8ffcd9ab3");
-
-                    AWS.restore('DynamoDB');
+                   
                     done();
                 }
             };
@@ -452,7 +453,6 @@ describe('Unit Tests', function() {
     describe('Poll Request Tests', function() {
         it('poll request success, single state', function(done) {
             mockDDB();
-
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,
                 fail : function(error) {
