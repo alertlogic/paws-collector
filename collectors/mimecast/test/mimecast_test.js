@@ -49,7 +49,7 @@ describe('Unit Tests', function() {
                 collector.pawsInitCollectionState({}, (err, initialStates, nextPoll) => {
                     initialStates.forEach((state) => {
                         assert.equal(state.poll_interval_sec, 1);
-                        if (state.applicationName !== "SiemLogs") {
+                        if (state.stream !== "SiemLogs") {
                             assert.equal(moment(state.until).diff(state.since, 'seconds'), 60);
                         }
                     });
@@ -107,7 +107,7 @@ describe('Unit Tests', function() {
                 var collector = new MimecastCollector(ctx, creds, 'mimecast');
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
-                    applicationName: "AttachmentProtectLogs",
+                    stream: "AttachmentProtectLogs",
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     nextPage: null,
@@ -134,7 +134,7 @@ describe('Unit Tests', function() {
                 var collector = new MimecastCollector(ctx, creds, 'mimecast');
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
-                    applicationName: "AttachmentProtectLogs",
+                    stream: "AttachmentProtectLogs",
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     nextPage: null,
@@ -143,12 +143,39 @@ describe('Unit Tests', function() {
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
                     assert.equal(logs.length, 2);
                     assert.equal(newState.poll_interval_sec, 1);
+                    assert.equal(newState.nextPage, "nextPage");
                     assert.ok(logs[0].result);
                     getAPILogs.restore();
                     done();
                 });
             });
         });
+
+        it('Paws Get Logs with error Success', function (done) {
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(authDetails, state, accumulator, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ "code": "error code", "message": "error message", "retryable": false });
+                    });
+                });
+                MimecastCollector.load().then(function (creds) {
+                var collector = new MimecastCollector(ctx, creds, 'mimecast');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    stream: "SiemLogs",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    nextPage: null,
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.ok(err.code);
+                    getAPILogs.restore();
+                    done();
+                });
+            });
+        });
+
     });
 
     describe('Next state tests', function () {
@@ -164,12 +191,13 @@ describe('Unit Tests', function() {
             MimecastCollector.load().then(function (creds) {
                 var collector = new MimecastCollector(ctx, creds, 'mimecast');
                 const curState = {
-                    applicationName: "SiemLogs",
+                    stream: "SiemLogs",
                     nextPage: null,
                     poll_interval_sec: 1
                 };
                 let nextState = collector._getNextCollectionState(curState);
                 assert.equal(nextState.poll_interval_sec, 1);
+                assert.equal(nextState.stream, "SiemLogs");
                 done();
             });
         });
@@ -179,7 +207,7 @@ describe('Unit Tests', function() {
                 var collector = new MimecastCollector(ctx, creds, 'mimecast');
                 const startDate = moment();
                 const curState = {
-                    applicationName: "AttachmentProtectLogs",
+                    stream: "AttachmentProtectLogs",
                     since: startDate.toISOString(),
                     until: startDate.add(collector.pollInterval, 'seconds').toISOString(),
                     nextPage: null,
@@ -187,6 +215,7 @@ describe('Unit Tests', function() {
                 };
                 let nextState = collector._getNextCollectionState(curState);
                 assert.equal(nextState.poll_interval_sec, collector.pollInterval);
+                assert.equal(nextState.stream, "AttachmentProtectLogs");
                 done();
             });
         });
@@ -225,7 +254,7 @@ describe('Unit Tests', function() {
         };
         it('Get Next Collection State (SiemLogs) With NextPage Success', function (done) {
             const curState = {
-                applicationName: "SiemLogs",
+                stream: "SiemLogs",
                 poll_interval_sec: 1
             };
             const nextPage = "nextPage";
@@ -234,13 +263,14 @@ describe('Unit Tests', function() {
                 let nextState = collector._getNextCollectionStateWithNextPage(curState, nextPage);
                 assert.ok(nextState.nextPage);
                 assert.equal(nextState.nextPage, nextPage);
+                assert.equal(nextState.stream, "SiemLogs");
                 done();
             });
         });
         it('Get Next Collection State (AttachmentProtectLogs) With NextPage Success', function (done) {
             const startDate = moment().subtract(5, 'minutes');
             const curState = {
-                applicationName: "AttachmentProtectLogs",
+                stream: "AttachmentProtectLogs",
                 since: startDate.toISOString(),
                 until: startDate.add(5, 'minutes').toISOString(),
                 poll_interval_sec: 1
@@ -251,6 +281,7 @@ describe('Unit Tests', function() {
                 let nextState = collector._getNextCollectionStateWithNextPage(curState, nextPage);
                 assert.ok(nextState.nextPage);
                 assert.equal(nextState.nextPage, nextPage);
+                assert.equal(nextState.stream, "AttachmentProtectLogs");
                 done();
             });
         });

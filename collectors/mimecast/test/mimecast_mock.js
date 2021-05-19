@@ -17,9 +17,9 @@ process.env.paws_type_name = "mimecast";
 process.env.paws_api_secret = "secret";
 process.env.paws_endpoint = "https://mimecast.com";
 process.env.paws_api_client_id = "client-id";
-process.env.paws_collector_param_string_1 = "[\"SiemLogs\", \"AttachmentProtectLogs\", \"URLProtectLogs\", \"MalwareFeed\" ]";
-process.env.paws_collector_param_string_2 = "APPLICATION_ID";
-process.env.paws_collector_param_string_3 = "APPLICATION_KEY";
+process.env.collector_streams = "[\"SiemLogs\", \"AttachmentProtectLogs\", \"URLProtectLogs\", \"MalwareFeed\" ]";
+process.env.paws_collector_param_string_1 = "APPLICATION_ID";
+process.env.paws_collector_param_string_2 = "APPLICATION_KEY";
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',
@@ -62,6 +62,23 @@ const MALWARE_FEED_LOGS_EVENT = {
         "virus"
     ]
 };
+const SIEM_LOGS_EVENT = {
+    "type": "MTA",
+    "data": [
+        {
+            "acc": "SSSSSS",
+            "Sender": "noreply@example.com",
+            "datetime": "2021-05-12T02:18:02-0400",
+            "AttSize": 0,
+            "Act": "Acc",
+            "aCode": "SSSSSSS",
+            "AttCnt": 0,
+            "AttNames": null,
+            "MsgSize": 6065,
+            "MsgId": "<id>",
+            "Subject": "Re: [SUB] ENG-0000 : System Extensions for mac (#1)"
+        }]
+};
 
 const FUNCTION_ARN = 'arn:aws:lambda:us-east-1:352283894008:function:test-01-CollectLambdaFunction-2CWNLPPW5XO8';
 const FUNCTION_NAME = 'test-TestCollectLambdaFunction-1JNNKQIPOTEST';
@@ -72,5 +89,6 @@ module.exports = {
     FUNCTION_NAME: FUNCTION_NAME,
     LOG_EVENT: LOG_EVENT,
     CLICK_LOGS_EVENT: CLICK_LOGS_EVENT,
-    MALWARE_FEED_LOGS_EVENT:MALWARE_FEED_LOGS_EVENT
+    MALWARE_FEED_LOGS_EVENT:MALWARE_FEED_LOGS_EVENT,
+    SIEM_LOGS_EVENT:SIEM_LOGS_EVENT
 };

@@ -40,15 +40,15 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                     pageCount++;
                     switch (state.stream) {
                         case Siem_Logs:
+                            if (body.data) {
+                                accumulator.push(...body.data);
+                            }
                             if (response.meta && response.meta.isLastToken) {
                                 nextPage = undefined;
                                 return resolve({ accumulator, nextPage });
                             }
                             if (response.headers && response.headers['mc-siem-token']) {
                                 nextPage = response.headers['mc-siem-token'];
-                            }
-                            if (body.data) {
-                                accumulator.push(...body.data);
                             }
                             break;
                         case Malware_Feed:
