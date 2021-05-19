@@ -221,6 +221,33 @@ function generateHeaders(authDetails, uri) {
     };
 }
 
+function getTypeIdAndTsPaths(stream) {
+    let typeIdPaths = [];
+    let tsPaths = [];
+
+    switch (stream) {
+        case Siem_Logs:
+            typeIdPaths = [{ path: ["aCode"] }];
+            tsPaths = [{ path: ["datetime"] }];
+            break;
+        case Attachment_Protect_Logs:
+        case URL_Protect_Logs:
+            typeIdPaths = [{ path: ["messageId"] }];
+            tsPaths = [{ path: ["date"] }];
+            break;
+        case Malware_Feed:
+            typeIdPaths = [{ path: ["id"] }];
+            tsPaths = [{ path: ["modified"] }];
+            break;
+    }
+
+    return {
+        typeIdPaths,
+        tsPaths
+    };
+}
+
 module.exports = {
-    getAPILogs: getAPILogs
+    getAPILogs: getAPILogs,
+    getTypeIdAndTsPaths: getTypeIdAndTsPaths
 };

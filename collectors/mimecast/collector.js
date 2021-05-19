@@ -17,9 +17,9 @@ const packageJson = require('./package.json');
 const utils = require("./utils");
 
 
-const typeIdPaths = [];
+let typeIdPaths = [];
 
-const tsPaths = [];
+let tsPaths = [];
 
 const Siem_Logs = 'SiemLogs';
 
@@ -100,6 +100,10 @@ class MimecastCollector extends PawsCollector {
             "appId": appId,
             "appKey": appKey
         };
+
+        let typeIdAndTsPaths = utils.getTypeIdAndTsPaths(state.stream);
+        typeIdPaths = typeIdAndTsPaths.typeIdPaths;
+        tsPaths = typeIdAndTsPaths.tsPaths;
 
         if (state.stream === Siem_Logs) {
             console.info(`MIME000001 Collecting data for ${state.stream}`);
