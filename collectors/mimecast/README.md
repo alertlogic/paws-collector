@@ -10,9 +10,9 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 ### 1. Api Permissions And Documentation.
 
-1. Authentication and Authorization [Link](https://www.mimecast.com/tech-connect/documentation/api-overview/authentication-and-authorization/).
+1. [Authentication and Authorization](https://www.mimecast.com/tech-connect/documentation/api-overview/authentication-and-authorization/).
 
-2. Get SEIM Logs
+2. [Get SEIM Logs](https://www.mimecast.com/tech-connect/documentation/endpoint-reference/logs-and-statistics/get-siem-logs/)
 
 How to enable SEIM logs API?
 
@@ -26,26 +26,19 @@ The data served by this endpoint is only generated when the requested log type i
 
 In order to use this endpoint the logged in user must be a Mimecast administrator with at least the `Gateway` | `Tracking` | `Read` permission.
 
-[API Documentation](https://www.mimecast.com/tech-connect/documentation/endpoint-reference/logs-and-statistics/get-siem-logs/)
-
-3. Attachment Protect Logs
+3. [Attachment Protect Logs](https://www.mimecast.com/tech-connect/documentation/endpoint-reference/logs-and-statistics/get-attachment-protection-logs/)
 
 How to enable Attachment Protect Logs API?
 
 In order to successfully use this endpoint the logged in user must be a Mimecast administrator with at least the `Monitoring` | `Attachment Protection` | `Read` permission.
  
-[API Documentation](https://www.mimecast.com/tech-connect/documentation/endpoint-reference/logs-and-statistics/get-attachment-protection-logs/)
-
-4. URL Protect Logs
+4. [URL Protect Logs](https://www.mimecast.com/tech-connect/documentation/endpoint-reference/logs-and-statistics/get-ttp-url-logs/)
 
 How to enable URL Protect Logs API?
 
 In order to successfully use this endpoint the logged in user must be a Mimecast administrator with at least the `Monitoring` | `URL Protection` | `Read` permission.
  
-[API Documentation](https://www.mimecast.com/tech-connect/documentation/endpoint-reference/logs-and-statistics/get-ttp-url-logs/)
- 
- 
-5. Get Malware Feed
+5. [Get Malware Feed](https://www.mimecast.com/tech-connect/documentation/endpoint-reference/threat-intel/get-feed/)
  
 How to enable Malware Feed API?
 
@@ -55,9 +48,7 @@ Note: This is tied to the Threat Intel feature in the Administration Console, wh
 
 In order to successfully use this endpoint the logged in user must be a Mimecast administrator with at least the `Services` | `Gateway` | `Tracking` | `Read` permission.
  
-[API Documentation](https://www.mimecast.com/tech-connect/documentation/endpoint-reference/threat-intel/get-feed/)
-
-
+ 
 ### 2. CloudFormation Template (CFT)
 
 Refer to [CFN template readme](./cfn/README-MIMECAST.md) for installation instructions.
