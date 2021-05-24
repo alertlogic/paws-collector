@@ -127,3 +127,7 @@ make sam-local
 ```
   4. Please see `local/event.json` for the event payload used for local invocation.
 Please write your readme here
+
+### 5. Removed Search alert vmware 
+1. Carbon black search alert api not supporting the vmware api.
+2. One new api (i.e devicecontrol) get added in CB search alert api [doc](https://developer.carbonblack.com/reference/carbon-black-cloud/platform/latest/alerts-api/#alert-search), but we are not yet supporting this.
