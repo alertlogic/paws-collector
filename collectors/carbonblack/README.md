@@ -3,7 +3,7 @@ Alert Logic Carbonblack AWS Based API Poll (PAWS) Log Collector Library.
 
 # Overview
 This repository contains the AWS JavaScript Lambda function and CloudFormation 
-Template (CFT) for deploying a log collector in AWS which will poll Carbonblack (Audit Log Events, Search Alerts, Search Alerts CBAnalytics, Search Alerts Vmware, Search Alerts Watchlist) service API to collect and 
+Template (CFT) for deploying a log collector in AWS which will poll Carbonblack (Audit Log Events, Search Alerts, Search Alerts CBAnalytics, Search Alerts Watchlist) service API to collect and 
 forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
