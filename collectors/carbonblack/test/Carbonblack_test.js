@@ -107,7 +107,7 @@ describe('Unit Tests', function () {
                 const sampleEvent = { ResourceProperties: { StackName: 'a-stack-name' } };
                 collector.pawsGetRegisterParameters(sampleEvent, (err, regValues) => {
                     const expectedRegValues = {
-                        carbonblackAPINames: '["AuditLogEvents", "SearchAlerts","SearchAlertsCBAnalytics", "SearchAlertsVmware", "SearchAlertsWatchlist"]',
+                        carbonblackAPINames: '["AuditLogEvents", "SearchAlerts","SearchAlertsCBAnalytics", "SearchAlertsWatchlist"]',
                         carbonblackOrgKey: 'carbonblackOrgKey'
                     };
                     assert.deepEqual(regValues, expectedRegValues);

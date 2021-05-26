@@ -3,7 +3,6 @@ const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClie
 const Audit_Log_Events = 'AuditLogEvents';
 const Search_Alerts = 'SearchAlerts';
 const Search_Alerts_CB_Analytics = 'SearchAlertsCBAnalytics';
-const Search_Alerts_Vmware = 'SearchAlertsVmware';
 const Search_Alerts_Watchlist = 'SearchAlertsWatchlist';
 
 function getAPILogs(apiDetails, accumulator, apiEndpoint, state, clientSecret, clientId, maxPagesPerInvocation) {
@@ -95,22 +94,6 @@ function getAPIDetails(state, orgKey) {
             break;
         case Search_Alerts_CB_Analytics:
             url = `/appservices/v6/orgs/${orgKey}/alerts/cbanalytics/_search`;
-            typeIdPaths = [{ path: ["id"] }];
-            tsPaths = [{ path: ["last_update_time"] }];
-            method = "POST";
-            requestBody = {
-                "criteria": {
-                    "create_time": {
-                        "end": state.until,
-                        "start": state.since
-                    },
-                },
-                "rows": 0,
-                "start": 0
-            };
-            break;
-        case Search_Alerts_Vmware:
-            url = `/appservices/v6/orgs/${orgKey}/alerts/vmware/_search`;
             typeIdPaths = [{ path: ["id"] }];
             tsPaths = [{ path: ["last_update_time"] }];
             method = "POST";
