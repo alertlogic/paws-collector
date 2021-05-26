@@ -44,12 +44,12 @@ describe('Unit Tests', function() {
         it('Paws Init Collection State', function (done) {
             MimecastCollector.load().then(function (creds) {
                 var collector = new MimecastCollector(ctx, creds, 'mimecast');
-                const startDate = moment().toISOString();
+                const startDate = moment().utc().format();
                 process.env.paws_collection_start_ts = startDate;
                 collector.pawsInitCollectionState({}, (err, initialStates, nextPoll) => {
                     initialStates.forEach((state) => {
                         assert.equal(state.poll_interval_sec, 1);
-                        if (state.stream !== "SiemLogs") {
+                        if (state.stream !== "SiemLogs" && state.stream !== "MalwareFeed") {
                             assert.equal(moment(state.until).diff(state.since, 'seconds'), 60);
                         }
                     });
@@ -77,9 +77,7 @@ describe('Unit Tests', function() {
                 const sampleEvent = { ResourceProperties: { StackName: 'a-stack-name' } };
                 collector.pawsGetRegisterParameters(sampleEvent, (err, regValues) => {
                     const expectedRegValues = {
-                        mimecastApplicationID: "APPLICATION_ID",
-                        mimecastApplicationKey: 'APPLICATION_KEY',
-                        mimecastApplicationNames: '[\"SiemLogs\", \"AttachmentProtectLogs\", \"URLProtectLogs\", \"MalwareFeed\" ]',
+                        mimecastApplicationNames: '[\"SiemLogs\", \"AttachmentProtectLogs\", \"URLProtectLogs\", \"MalwareFeed\" ]'
                     };
                     assert.deepEqual(regValues, expectedRegValues);
                     done();
@@ -108,8 +106,8 @@ describe('Unit Tests', function() {
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
                     stream: "AttachmentProtectLogs",
-                    since: startDate.toISOString(),
-                    until: startDate.add(2, 'days').toISOString(),
+                    since: startDate.utc().format(),
+                    until: startDate.add(2, 'days').utc().format(),
                     nextPage: null,
                     poll_interval_sec: 1
                 };
@@ -135,8 +133,8 @@ describe('Unit Tests', function() {
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
                     stream: "AttachmentProtectLogs",
-                    since: startDate.toISOString(),
-                    until: startDate.add(2, 'days').toISOString(),
+                    since: startDate.utc().format(),
+                    until: startDate.add(2, 'days').utc().format(),
                     nextPage: null,
                     poll_interval_sec: 1
                 };
@@ -163,8 +161,8 @@ describe('Unit Tests', function() {
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
                     stream: "SiemLogs",
-                    since: startDate.toISOString(),
-                    until: startDate.add(2, 'days').toISOString(),
+                    since: startDate.utc().format(),
+                    until: startDate.add(2, 'days').utc().format(),
                     nextPage: null,
                     poll_interval_sec: 1
                 };
@@ -208,8 +206,8 @@ describe('Unit Tests', function() {
                 const startDate = moment();
                 const curState = {
                     stream: "AttachmentProtectLogs",
-                    since: startDate.toISOString(),
-                    until: startDate.add(collector.pollInterval, 'seconds').toISOString(),
+                    since: startDate.utc().format(),
+                    until: startDate.add(collector.pollInterval, 'seconds').utc().format(),
                     nextPage: null,
                     poll_interval_sec: 1
                 };
@@ -271,8 +269,8 @@ describe('Unit Tests', function() {
             const startDate = moment().subtract(5, 'minutes');
             const curState = {
                 stream: "AttachmentProtectLogs",
-                since: startDate.toISOString(),
-                until: startDate.add(5, 'minutes').toISOString(),
+                since: startDate.utc().format(),
+                until: startDate.add(5, 'minutes').utc().format(),
                 poll_interval_sec: 1
             };
             const nextPage = "nextPage";

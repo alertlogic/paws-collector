@@ -22,6 +22,7 @@ let typeIdPaths = [];
 let tsPaths = [];
 
 const Siem_Logs = 'SiemLogs';
+const Malware_Feed = 'MalwareFeed';
 
 
 class MimecastCollector extends PawsCollector {
@@ -33,11 +34,11 @@ class MimecastCollector extends PawsCollector {
         const startTs = process.env.paws_collection_start_ts ?
             process.env.paws_collection_start_ts :
             moment().toISOString();
-        const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
+        const endTs = moment(startTs).add(this.pollInterval, 'seconds').utc().format();
 
         const applicationNames = JSON.parse(process.env.collector_streams);
         const initialStates = applicationNames.map(stream => {
-            if (stream === Siem_Logs) {
+            if (stream === Siem_Logs || stream === Malware_Feed) {
                 return {
                     stream,
                     nextPage: null,
@@ -59,9 +60,7 @@ class MimecastCollector extends PawsCollector {
 
     pawsGetRegisterParameters(event, callback) {
         const regValues = {
-            mimecastApplicationNames: process.env.collector_streams,
-            mimecastApplicationID: process.env.paws_collector_param_string_1,
-            mimecastApplicationKey: process.env.paws_collector_param_string_2
+            mimecastApplicationNames: process.env.collector_streams
         };
         callback(null, regValues);
     }
@@ -132,7 +131,7 @@ class MimecastCollector extends PawsCollector {
     }
 
     _getNextCollectionState(curState) {
-        if (curState.stream === Siem_Logs) {
+        if (curState.stream === Siem_Logs || curState.stream === Malware_Feed) {
             return {
                 stream: curState.stream,
                 nextPage: null,
@@ -147,8 +146,8 @@ class MimecastCollector extends PawsCollector {
             
             return {
                 stream: curState.stream,
-                since: nextSinceMoment.toISOString(),
-                until: nextUntilMoment.toISOString(),
+                since: nextSinceMoment.utc().format(),
+                until: nextUntilMoment.utc().format(),
                 nextPage: null,
                 poll_interval_sec: nextPollInterval
             };
@@ -156,7 +155,7 @@ class MimecastCollector extends PawsCollector {
     }
 
     _getNextCollectionStateWithNextPage(curState, nextPage) {
-        if (curState.stream === Siem_Logs) {
+        if (curState.stream === Siem_Logs || curState.stream === Malware_Feed) {
             return {
                 stream: curState.stream,
                 nextPage: nextPage,

@@ -16,8 +16,8 @@ describe('Unit Tests', function () {
             const startDate = moment().subtract(5, 'days');
             let state = {
                 stream: "AttachmentProtectLogs",
-                since: startDate.toISOString(),
-                until: startDate.add(2, 'days').toISOString(),
+                since: startDate.utc().format(),
+                until: startDate.add(2, 'days').utc().format(),
                 nextPage: null,
                 poll_interval_sec: 1
             };
@@ -44,8 +44,8 @@ describe('Unit Tests', function () {
             const startDate = moment().subtract(5, 'days');
             let state = {
                 stream: "AttachmentProtectLogs",
-                since: startDate.toISOString(),
-                until: startDate.add(2, 'days').toISOString(),
+                since: startDate.utc().format(),
+                until: startDate.add(2, 'days').utc().format(),
                 nextPage: null,
                 poll_interval_sec: 1
             };
@@ -72,8 +72,8 @@ describe('Unit Tests', function () {
             const startDate = moment().subtract(5, 'days');
             let state = {
                 stream: "URLProtectLogs",
-                since: startDate.toISOString(),
-                until: startDate.add(2, 'days').toISOString(),
+                since: startDate.utc().format(),
+                until: startDate.add(2, 'days').utc().format(),
                 nextPage: null,
                 poll_interval_sec: 1
             };
@@ -100,8 +100,8 @@ describe('Unit Tests', function () {
             const startDate = moment().subtract(5, 'days');
             let state = {
                 stream: "URLProtectLogs",
-                since: startDate.toISOString(),
-                until: startDate.add(2, 'days').toISOString(),
+                since: startDate.utc().format(),
+                until: startDate.add(2, 'days').utc().format(),
                 nextPage: null,
                 poll_interval_sec: 1
             };
@@ -122,14 +122,11 @@ describe('Unit Tests', function () {
 
     describe('Get API Logs (MalwareFeed) with no logs', function () {
         it('Get API Logs (MalwareFeed) with no logs success', function (done) {
-            alserviceStub.post = sinon.stub(request, 'post').yields(null,null,JSON.stringify({ id: "bundle--bf8be578-3953-4b80-ae84-312d149b91e8", objects: [] } ));
+            alserviceStub.post = sinon.stub(request, 'post').yields(null, { "headers": { "x-mc-threat-feed-next-token": "token" } },JSON.stringify({ id: "bundle--bf8be578-3953-4b80-ae84-312d149b91e8", objects: [] } ));
             let maxPagesPerInvocation = 5;
             let accumulator = [];
-            const startDate = moment().subtract(5, 'days');
             let state = {
                 stream: "MalwareFeed",
-                since: startDate.toISOString(),
-                until: startDate.add(2, 'days').toISOString(),
                 nextPage: null,
                 poll_interval_sec: 1
             };
@@ -150,14 +147,11 @@ describe('Unit Tests', function () {
 
     describe('Get API Logs (MalwareFeed)', function () {
         it('Get API Logs (MalwareFeed) success', function (done) {
-            alserviceStub.post = sinon.stub(request, 'post').yields(null,null,JSON.stringify({ id: "bundle--bf8be578-3953-4b80-ae84-312d149b91e8", objects: [mimecastMock.MALWARE_FEED_LOGS_EVENT] } ));
+            alserviceStub.post = sinon.stub(request, 'post').yields(null, { "headers": { "x-mc-threat-feed-next-token": "token" } },JSON.stringify({ id: "bundle--bf8be578-3953-4b80-ae84-312d149b91e8", objects: [mimecastMock.MALWARE_FEED_LOGS_EVENT] } ));
             let maxPagesPerInvocation = 5;
             let accumulator = [];
-            const startDate = moment().subtract(5, 'days');
             let state = {
                 stream: "MalwareFeed",
-                since: startDate.toISOString(),
-                until: startDate.add(2, 'days').toISOString(),
                 nextPage: null,
                 poll_interval_sec: 1
             };

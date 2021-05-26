@@ -52,12 +52,14 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                             }
                             break;
                         case Malware_Feed:
-                            if (body.objects.length === 0) {
-                                nextPage = undefined;
+                            if (body.objects.length === 0) {                          
                                 return resolve({ accumulator, nextPage });
                             }
-                            if (body.id) {
-                                nextPage = body.id;
+                            if (response.headers && response.headers['x-mc-threat-feed-next-token']) {
+                                nextPage = response.headers['x-mc-threat-feed-next-token'];
+                            }
+                            else{
+                                nextPage = undefined;
                             }
                             accumulator.push(...body.objects);
                             break;
@@ -140,7 +142,6 @@ function getAPIDetails(state, nextPage) {
                             "from": state.since,
                             "route": "all",
                             "to": state.until
-                            // "result": "all"
                         }
                     ]
                 };
@@ -159,7 +160,6 @@ function getAPIDetails(state, nextPage) {
                             "from": state.since,
                             "route": "all",
                             "to": state.until
-                            // "result": "all"
                         }
                     ]
                 };
@@ -171,10 +171,7 @@ function getAPIDetails(state, nextPage) {
                 payload = {
                     "data": [
                         {
-                            "end": state.until,
-                            "fileType": "stix",
-                            "start": state.since,
-                            "feedType": "malware_customer"
+                            "fileType": "stix"
                         }
                     ]
                 };
@@ -183,11 +180,8 @@ function getAPIDetails(state, nextPage) {
                 payload = {
                     "data": [
                         {
-                            "end": state.until,
                             "fileType": "stix",
-                            "start": state.since,
-                            "token": nextPage,
-                            "feedType": "malware_customer"
+                            "token": nextPage
                         }
                     ]
                 };
