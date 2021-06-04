@@ -1,6 +1,6 @@
 {
   "name": "ciscoamp-collector",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "Alert Logic AWS based Ciscoamp Log Collector",
   "repository": {},
   "private": true,

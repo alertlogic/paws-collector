@@ -181,7 +181,7 @@ class CiscoduoCollector extends PawsCollector {
             progName: 'CiscoduoCollector',
             message: JSON.stringify(msg),
             messageType: 'json/ciscoduo',
-            application_id: collector.application_id
+            applicationId: collector.application_id
         };
 
         if (typeId !== null && typeId !== undefined) {

@@ -173,7 +173,7 @@ class SophosCollector extends PawsCollector {
             progName: 'SophosCollector',
             message: JSON.stringify(msg),
             messageType: 'json/sophos',
-            application_id: collector.application_id
+            applicationId: collector.application_id
         };
 
         if (typeId !== null && typeId !== undefined) {

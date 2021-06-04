@@ -215,7 +215,7 @@ class SalesforceCollector extends PawsCollector {
             progName: 'SalesforceCollector',
             message: JSON.stringify(msg),
             messageType: 'json/salesforce',
-            application_id: collector.application_id
+            applicationId: collector.application_id
         };
 
         if (typeId !== null && typeId !== undefined) {
