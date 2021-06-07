@@ -157,7 +157,7 @@ class CarbonblackCollector extends PawsCollector {
             progName: 'CarbonblackCollector',
             message: JSON.stringify(msg),
             messageType: 'json/carbonblack',
-            application_id: collector.application_id
+            applicationId: collector.application_id
         };
 
         if (typeId !== null && typeId !== undefined) {

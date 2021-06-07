@@ -170,7 +170,7 @@ timestamp < "${state.until}"`;
             progName: 'GooglestackdriverCollector',
             message: JSON.stringify(msg),
             messageType: 'json/googlestackdriver',
-            application_id: collector.application_id
+            applicationId: collector.application_id
 
         };
 

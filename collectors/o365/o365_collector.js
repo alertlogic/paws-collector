@@ -230,7 +230,7 @@ class O365Collector extends PawsCollector {
             progName: 'O365Collector',
             message: JSON.stringify(msg),
             messageType: 'json/azure.o365',
-            application_id: collector.application_id
+            applicationId: collector.application_id
         };
 
         if (typeId !== null && typeId !== undefined) {
