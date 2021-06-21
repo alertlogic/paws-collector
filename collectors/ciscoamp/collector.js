@@ -190,7 +190,7 @@ class CiscoampCollector extends PawsCollector {
             progName: 'CiscoampCollector',
             message: JSON.stringify(msg),
             messageType: 'json/ciscoamp',
-            application_id: collector.application_id
+            applicationId: collector.application_id
         };
 
         if (typeId !== null && typeId !== undefined) {

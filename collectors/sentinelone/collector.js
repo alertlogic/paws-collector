@@ -112,7 +112,7 @@ class SentineloneCollector extends PawsCollector {
             progName: 'SentineloneCollector',
             message: JSON.stringify(msg),
             messageType: 'json/sentinelone',
-            application_id: collector.application_id
+            applicationId: collector.application_id
         };
 
         if (typeId !== null && typeId !== undefined) {
