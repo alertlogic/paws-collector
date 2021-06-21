@@ -6,7 +6,7 @@ Alert Logic Mimecast Log Collector CloudFormation template.
 # Before you begin
 
 This procedure requires administrative permissions in AWS and your Alert Logic 
-Cloud Insight account. You also need to download the Alert Logic custom [CFT](https://github.com/alertlogic/paws-collector/blob/master/collectors/mimecast/cfn/mimecast-collector.template).
+Cloud Insight account. You also need to download the Alert Logic custom [CFT](https://s3.amazonaws.com/alertlogic-collectors-us-east-1/cfn/mimecast-collector.template).
 
 
 # Installation

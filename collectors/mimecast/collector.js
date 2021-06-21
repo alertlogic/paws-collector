@@ -185,7 +185,7 @@ class MimecastCollector extends PawsCollector {
             progName: 'MimecastCollector',
             message: JSON.stringify(msg),
             messageType: 'json/mimecast',
-            application_id: collector.application_id
+            applicationId: collector.application_id
         };
 
         if (typeId !== null && typeId !== undefined) {

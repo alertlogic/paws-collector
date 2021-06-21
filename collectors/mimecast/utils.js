@@ -52,16 +52,18 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                             }
                             break;
                         case Malware_Feed:
-                            if (body.objects.length === 0) {                          
-                                return resolve({ accumulator, nextPage });
-                            }
                             if (response.headers && response.headers['x-mc-threat-feed-next-token']) {
+                                accumulator.push(...body.objects);
                                 nextPage = response.headers['x-mc-threat-feed-next-token'];
                             }
                             else{
                                 nextPage = undefined;
+                                //if next token is not present in responce then it will set last request token value to nextPage
+                                if(applicationDetails.payload.data[0].token){
+                                    nextPage = applicationDetails.payload.data[0].token;
+                                }               
+                                return resolve({ accumulator, nextPage });
                             }
-                            accumulator.push(...body.objects);
                             break;
                         case Attachment_Protect_Logs:
                         case URL_Protect_Logs:
@@ -230,8 +232,8 @@ function getTypeIdAndTsPaths(stream) {
             tsPaths = [{ path: ["date"] }];
             break;
         case Malware_Feed:
-            typeIdPaths = [{ path: ["id"] }];
-            tsPaths = [{ path: ["modified"] }];
+            typeIdPaths = [{ path: ["type"] }];
+            tsPaths = [{ path: ["created"] }];
             break;
     }
 

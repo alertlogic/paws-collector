@@ -27,29 +27,40 @@ const AIMS_TEST_CREDS = {
 };
 
 const LOG_EVENT = {
-    "result": "result",
-    "date": "2020-10-01T23:59:59+0000",
-    "senderAddress": "senderAddress",
-    "fileName": "fileName",
-    "actiontriggered": "actiontriggered",
-    "route": "route",
-    "details": "details",
-    "recipientAddress": "recipientAddress",
-    "fileType": "fileType"
+    "senderAddress":"senderAddress",
+    "recipientAddress":"recipientAddress",
+    "fileName":"Test CIS Report 2021-05-25 00:00 Test.pdf",
+    "fileType":"application/pdf",
+    "result":"safe",
+    "actionTriggered":"none",
+    "date":"2021-05-25T00:00:09+0000",
+    "details":"Safe Time taken: 0 hrs, 0 min, 4 sec",
+    "route":"inbound",
+    "messageId":"messageId@email.sssss.com",
+    "subject":"Scheduled Report Test",
+    "fileHash":"fileHash",
+    "definition":"Default Attachment Scanning Definition"
 };
 
 const CLICK_LOGS_EVENT = {
-    "category": "String",
-    "userEmailAddress": "String",
-    "url": "String",
-    "userAwarenessAction": "String",
-    "route": "String",
-    "adminOverride": "String",
-    "date": "String",
-    "scanResult": "String",
-    "action": "String",
-    "ttpDefinition": "String",
-    "userOverride": "String"
+    "userEmailAddress":"userEmailAddress",
+    "fromUserEmailAddress":"fromUserEmailAddress",
+    "url":"url",
+    "ttpDefinition":"Default URL Scanning Definition",
+    "subject":"subject",
+    "action":"allow",
+    "adminOverride":"N/A",
+    "userOverride":"None",
+    "scanResult":"clean",
+    "category":"Computers Technology",
+    "sendingIp":"149.72.61.166",
+    "userAwarenessAction":"N/A",
+    "date":"2021-05-15T15:56:48+0000",
+    "actions":"Allow",
+    "route":"inbound",
+    "creationMethod":"User Click",
+    "emailPartsDescription":"Body",
+    "messageId":"messageId"
 };
 
 const MALWARE_FEED_LOGS_EVENT = {
