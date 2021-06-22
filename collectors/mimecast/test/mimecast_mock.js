@@ -26,7 +26,7 @@ const AIMS_TEST_CREDS = {
     secret_key: 'test-secret-key'
 };
 
-const LOG_EVENT = {
+const ATTACHMENT_PROTECT_LOGS_EVENT = {
     "senderAddress":"senderAddress",
     "recipientAddress":"recipientAddress",
     "fileName":"Test CIS Report 2021-05-25 00:00 Test.pdf",
@@ -42,7 +42,7 @@ const LOG_EVENT = {
     "definition":"Default Attachment Scanning Definition"
 };
 
-const CLICK_LOGS_EVENT = {
+const URL_PROTECT_LOGS_EVENT = {
     "userEmailAddress":"userEmailAddress",
     "fromUserEmailAddress":"fromUserEmailAddress",
     "url":"url",
@@ -98,8 +98,8 @@ module.exports = {
     AIMS_TEST_CREDS: AIMS_TEST_CREDS,
     FUNCTION_ARN: FUNCTION_ARN,
     FUNCTION_NAME: FUNCTION_NAME,
-    LOG_EVENT: LOG_EVENT,
-    CLICK_LOGS_EVENT: CLICK_LOGS_EVENT,
+    ATTACHMENT_PROTECT_LOGS_EVENT: ATTACHMENT_PROTECT_LOGS_EVENT,
+    URL_PROTECT_LOGS_EVENT: URL_PROTECT_LOGS_EVENT,
     MALWARE_FEED_LOGS_EVENT:MALWARE_FEED_LOGS_EVENT,
     SIEM_LOGS_EVENT:SIEM_LOGS_EVENT
 };

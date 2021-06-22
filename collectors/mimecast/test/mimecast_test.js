@@ -98,7 +98,7 @@ describe('Unit Tests', function() {
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(authDetails, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
-                        return resolve({ accumulator: [mimecastMock.LOG_EVENT, mimecastMock.LOG_EVENT] });
+                        return resolve({ accumulator: [mimecastMock.ATTACHMENT_PROTECT_LOGS_EVENT, mimecastMock.ATTACHMENT_PROTECT_LOGS_EVENT] });
                     });
                 });
                 MimecastCollector.load().then(function (creds) {
@@ -125,7 +125,7 @@ describe('Unit Tests', function() {
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(authDetails, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
-                        return resolve({ accumulator: [mimecastMock.LOG_EVENT, mimecastMock.LOG_EVENT], nextPage: "nextPage" });
+                        return resolve({ accumulator: [mimecastMock.ATTACHMENT_PROTECT_LOGS_EVENT, mimecastMock.ATTACHMENT_PROTECT_LOGS_EVENT], nextPage: "nextPage" });
                     });
                 });
                 MimecastCollector.load().then(function (creds) {
@@ -234,7 +234,7 @@ describe('Unit Tests', function() {
             
             MimecastCollector.load().then(function(creds) {
                 var collector = new MimecastCollector(ctx, creds, 'mimecast');
-                let fmt = collector.pawsFormatLog(mimecastMock.LOG_EVENT);
+                let fmt = collector.pawsFormatLog(mimecastMock.ATTACHMENT_PROTECT_LOGS_EVENT);
                 assert.equal(fmt.progName, 'MimecastCollector');
                 assert.ok(fmt.message);
                 done();

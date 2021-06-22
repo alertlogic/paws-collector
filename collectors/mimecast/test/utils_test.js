@@ -66,7 +66,7 @@ describe('Unit Tests', function () {
 
     describe('Get API Logs (URLProtectLogs)', function () {
         it('Get API Logs (URLProtectLogs) success', function (done) {
-            alserviceStub.post = sinon.stub(request, 'post').yields(null,null,JSON.stringify({ fail: [], data: [{ clickLogs: [mimecastMock.CLICK_LOGS_EVENT] }], meta: { pagination: {} } }));
+            alserviceStub.post = sinon.stub(request, 'post').yields(null,null,JSON.stringify({ fail: [], data: [{ clickLogs: [mimecastMock.URL_PROTECT_LOGS_EVENT] }], meta: { pagination: {} } }));
             let maxPagesPerInvocation = 5;
             let accumulator = [];
             const startDate = moment().subtract(5, 'days');
@@ -94,7 +94,7 @@ describe('Unit Tests', function () {
 
     describe('Get API Logs (URLProtectLogs) with nextpage', function () {
         it('Get API Logs (URLProtectLogs) with nextpage success', function (done) {
-            alserviceStub.post = sinon.stub(request, 'post').yields(null,null,JSON.stringify({ fail: [], data: [{ clickLogs: [mimecastMock.CLICK_LOGS_EVENT] }], meta: { pagination: { next: "next" } } }));
+            alserviceStub.post = sinon.stub(request, 'post').yields(null,null,JSON.stringify({ fail: [], data: [{ clickLogs: [mimecastMock.URL_PROTECT_LOGS_EVENT] }], meta: { pagination: { next: "next" } } }));
             let maxPagesPerInvocation = 5;
             let accumulator = [];
             const startDate = moment().subtract(5, 'days');
