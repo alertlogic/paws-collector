@@ -236,7 +236,7 @@ describe('O365 Collector Tests', function() {
                 collector.pawsInitCollectionState(o365Mock.LOG_EVENT, (err, initialStates, nextPoll) => {
                     initialStates.forEach((state) => {
                         assert.notEqual(state.since, startDate, "Date is more than 7 days in the past");
-                        assert.equal(moment(state.until).diff(state.since, 'hours'), 24);
+                        assert.equal(moment(state.until).diff(state.since, 'hours'), 3);
                     });
                     done();
                 });
@@ -264,7 +264,7 @@ describe('O365 Collector Tests', function() {
 
                 collector.pawsInitCollectionState(o365Mock.LOG_EVENT, (err, initialStates, nextPoll) => {
                     initialStates.forEach((state) => {
-                        assert.equal(moment(state.until).diff(state.since, 'hours'), 24);
+                        assert.equal(moment(state.until).diff(state.since, 'hours'), 3);
                     });
                     done();
                 });
@@ -368,7 +368,7 @@ describe('O365 Collector Tests', function() {
 
                     assert.equal(callArgs[0], curState.stream);
                     assert.equal(moment().diff(callArgs[1], 'days'), 7);
-                    assert.equal(moment(callArgs[2]).diff(callArgs[1], 'hours'), 1);
+                    assert.equal(moment(callArgs[2]).diff(callArgs[1], 'minutes'), 15);
                     restoreO365ManagemntStub();
                     done();
                 });
@@ -393,7 +393,7 @@ describe('O365 Collector Tests', function() {
 
                     assert.equal(callArgs[0], curState.stream);
                     assert.equal(moment().diff(callArgs[1], 'days'), 7);
-                    assert.equal(moment(callArgs[2]).diff(callArgs[1], 'hours'), 1);
+                    assert.equal(moment(callArgs[2]).diff(callArgs[1], 'minutes'), 15);
                     assert.equal(getPreFormedUrlStub.calledWith(curState.nextPage), false);
                     restoreO365ManagemntStub();
                     done();

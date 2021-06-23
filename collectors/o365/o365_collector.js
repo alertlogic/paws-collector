@@ -50,7 +50,7 @@ class O365Collector extends PawsCollector {
         }
 
         if(moment().diff(startTs, 'hours') > 24){
-            endTs = moment(startTs).add(24, 'hours').toISOString();
+            endTs = moment(startTs).add(3, 'hours').toISOString();
         }
         else {
             endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
@@ -103,7 +103,7 @@ class O365Collector extends PawsCollector {
         if(moment().diff(state.since, 'days', true) > 7){
             const newStart = moment().subtract(PARTIAL_WEEK, 'days');
             state.since = newStart.toISOString();
-            state.until = newStart.add(1, 'hours').toISOString();
+            state.until = newStart.add(15, 'minutes').toISOString();
             // remove next page token if the state is out of date as well.
             state.nextPage = null;
             console.warn(
