@@ -104,11 +104,11 @@ class MimecastCollector extends PawsCollector {
         typeIdPaths = typeIdAndTsPaths.typeIdPaths;
         tsPaths = typeIdAndTsPaths.tsPaths;
 
-        if (state.stream === Siem_Logs) {
+        if (state.stream === Siem_Logs || state.stream === Malware_Feed) {
             console.info(`MIME000001 Collecting data for ${state.stream}`);
         }
         else{
-            console.info(`MIME000001 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
+            console.info(`MIME000002 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
         }
         
         utils.getAPILogs(authDetails, state, [], process.env.paws_max_pages_per_invocation)
@@ -119,7 +119,7 @@ class MimecastCollector extends PawsCollector {
                 } else {
                     newState = this._getNextCollectionStateWithNextPage(state, nextPage);
                 }
-                console.info(`MIME000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                console.info(`MIME000003 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             }).catch((error) => {
                 // set errorCode if not available in error object to showcase client error on DDMetrics
