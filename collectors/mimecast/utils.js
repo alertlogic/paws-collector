@@ -227,8 +227,11 @@ function getTypeIdAndTsPaths(stream) {
             tsPaths = [{ path: ["datetime"] }];
             break;
         case Attachment_Protect_Logs:
+            typeIdPaths = [{ path: ["definition"] }];
+            tsPaths = [{ path: ["date"] }];
+            break;
         case URL_Protect_Logs:
-            typeIdPaths = [{ path: ["messageId"] }];
+            typeIdPaths = [{ path: ["category"] }];
             tsPaths = [{ path: ["date"] }];
             break;
         case Malware_Feed:
