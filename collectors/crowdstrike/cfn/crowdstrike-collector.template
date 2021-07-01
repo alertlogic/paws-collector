@@ -51,10 +51,6 @@
             "Type": "String",
             "Default": "none"
         },
-        "PawsEndpoint": {
-            "Description": "URL to poll",
-            "Type": "String"
-        },
         "PawsAuthType": {
             "Description": "Target API authentication type. Supported types: ssws, oauth2",
             "Type": "String",
@@ -96,7 +92,7 @@
             "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
             "CollectorId" : { "Ref":"CollectorId" },
             "PollingInterval" : 60,
-            "PawsEndpoint" : { "Ref":"PawsEndpoint" },
+            "PawsEndpoint" : "https://api.crowdstrike.com/",
             "PawsAuthType" : { "Ref":"PawsAuthType" },
             "PawsClientId" : "",
             "PawsSecret" : { "Ref":"PawsSecret" },

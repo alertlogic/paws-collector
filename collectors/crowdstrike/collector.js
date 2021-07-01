@@ -13,7 +13,7 @@ const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const parse = require('@alertlogic/al-collector-js').Parse;
 const packageJson = require('./package.json');
-
+const utils = require("./utils");
 
 const typeIdPaths = [
     // enter your type paths in the form { path: ['myKey'] }
@@ -46,6 +46,22 @@ class CrowdstrikeCollector extends PawsCollector {
     
     pawsGetLogs(state, callback) {
         let collector = this;
+
+        const clientSecret = collector.secret;
+        if (!clientSecret) {
+            return callback("The Client Secret was not found!");
+        }
+        const clientId = collector.clientId;
+        if (!clientId) {
+            return callback("The Client ID was not found!");
+        }
+
+        const APIHostName = collector.pawsDomainEndpoint;
+
+        utils.authenticate(APIHostName, clientId, clientSecret).then((token) => {
+            console.log(token);
+        });
+
         console.info(`CROW000001 Collecting data from ${state.since} till ${state.until}`);
         const newState = collector._getNextCollectionState(state);
         console.info(`CROW000002 Next collection in ${newState.poll_interval_sec} seconds`);
