@@ -325,6 +325,22 @@ describe('O365 Collector Tests', function() {
                 done();
             });
         });
+        it('get next state if more than 7 days in the past', function (done) {
+            const startDate = moment().subtract(8, 'day');
+            const curState = {
+                since: startDate.toISOString(),
+                until: startDate.add(1, 'days').toISOString(),
+                poll_interval_sec: 1
+            };
+            O365Collector.load().then(function (creds) {
+                var collector = new O365Collector(ctx, creds, 'o365');
+                const newState = collector._getNextCollectionState(curState);
+                assert.equal(moment(newState.until).diff(newState.since, 'hours'), 1);
+                assert.equal(newState.poll_interval_sec, 1);
+                done();
+            });
+        });
+
         it('get next state if within polling interval', function(done) {
             O365Collector.load().then(function(creds) {
                 var collector = new O365Collector(ctx, creds, 'o365');
@@ -653,6 +669,54 @@ describe('O365 Collector Tests', function() {
                     assert.ok(getPreFormedUrlStub.getCall(1).calledWithExactly('a fake next page'));
                     assert.equal(logs.length, parseInt(process.env.paws_max_pages_per_invocation) + 1);
                     assert.equal(newState.nextPage, 'a fake next page');
+                    restoreO365ManagemntStub();
+                    done();
+                });
+            });
+        });
+
+        it('Get next state with hourCap when  Start timestamp is more than 7 days in the past', function (done) {
+            subscriptionsContentStub = sinon.stub(m_o365mgmnt, 'subscriptionsContent');
+            subscriptionsContentStub.callsFake(
+                function fakeFn(path, extraOptions) {
+                    return new Promise(function (resolve, reject) {
+                        var result = {
+                            contentUri: "https://joeiscool.com/joeiscool"
+                        };
+                        return resolve({
+                            nextPageUri: 'a fake next page',
+                            parsedBody: [result]
+                        });
+                    });
+                });
+            getPreFormedUrlStub = sinon.stub(m_o365mgmnt, 'getPreFormedUrl');
+            getPreFormedUrlStub.callsFake(
+                function (path, extraOptions) {
+                    return new Promise(function (resolve, reject) {
+                        var result = {
+                            contentUri: "https://joeiscool.com/nextpage"
+                        };
+                        return resolve({
+                            nextPageUri: undefined,
+                            parsedBody: [result]
+                        });
+                    });
+                });
+
+            O365Collector.load().then(function (creds) {
+                var collector = new O365Collector(ctx, creds, 'o365');
+                const startDate = moment().subtract(10, 'days');
+                const curState = {
+                    stream: "FakeStream",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(moment(newState.until).diff(newState.since, 'hours'), 1);
+                    assert.equal(newState.poll_interval_sec, 1);
+                    assert.equal(logs.length, 2);
                     restoreO365ManagemntStub();
                     done();
                 });
