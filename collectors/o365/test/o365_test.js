@@ -236,7 +236,7 @@ describe('O365 Collector Tests', function() {
                 collector.pawsInitCollectionState(o365Mock.LOG_EVENT, (err, initialStates, nextPoll) => {
                     initialStates.forEach((state) => {
                         assert.notEqual(state.since, startDate, "Date is more than 7 days in the past");
-                        assert.equal(moment(state.until).diff(state.since, 'hours'), 24);
+                        assert.equal(moment(state.until).diff(state.since, 'hours'), 1);
                     });
                     done();
                 });
@@ -264,7 +264,7 @@ describe('O365 Collector Tests', function() {
 
                 collector.pawsInitCollectionState(o365Mock.LOG_EVENT, (err, initialStates, nextPoll) => {
                     initialStates.forEach((state) => {
-                        assert.equal(moment(state.until).diff(state.since, 'hours'), 24);
+                        assert.equal(moment(state.until).diff(state.since, 'hours'), 1);
                     });
                     done();
                 });
