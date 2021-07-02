@@ -49,8 +49,8 @@ class O365Collector extends PawsCollector {
             console.info("O365000004 Start timestamp is more than 7 days in the past. This is not allowed in the MS managment API. setting the start time to 7 days in the past");
         }
 
-        if(moment().diff(startTs, 'hours') > 24){
-            endTs = moment(startTs).add(24, 'hours').toISOString();
+        if(moment().diff(startTs, 'hours') > 1){
+            endTs = moment(startTs).add(1, 'hours').toISOString();
         }
         else {
             endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
@@ -90,7 +90,7 @@ class O365Collector extends PawsCollector {
         }
 
         if (!moment(state.since).isValid() || !moment(state.until).isValid() || state.since === undefined || state.until === undefined) {
-            const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-day-progression', moment(), this.pollInterval);
+            const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-cap', moment(), this.pollInterval);
             state.since = nextSinceMoment.toISOString();
             state.until = nextUntilMoment.toISOString();
             state.nextPage = null;
@@ -173,7 +173,7 @@ class O365Collector extends PawsCollector {
                 // set errorCode if not available in error object to showcase client error on DDMetric
                 try {
                     let error = JSON.parse(message.slice(message.indexOf('{'), message.lastIndexOf('}') + 1));
-                    err.errorCode = error.error;
+                    err.errorCode = error.error ? error.error : error.error_codes[0];
                     if (error.error_codes) {
                         if (error.error_codes[0] === 7000215) {
                             return callback("Error code [7000215]. Invalid client secret is provided.");
@@ -198,7 +198,7 @@ class O365Collector extends PawsCollector {
     _getNextCollectionState(curState) {
         const untilMoment = moment(curState.until);
 
-        const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-day-progression', untilMoment, this.pollInterval);
+        const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-cap', untilMoment, this.pollInterval);
 
         return  {
             stream: curState.stream,
