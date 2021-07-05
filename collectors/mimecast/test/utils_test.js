@@ -171,11 +171,11 @@ describe('Unit Tests', function () {
     });
 
     describe('Get API Logs (SiemLogs)', function () {
-        it('Get API Logs (SiemLogs) success', function (done) {
+        it('Get API Logs (SiemLogs) success with last token', function (done) {
             alserviceStub.post = sinon.stub(request, 'post').yields(null, {
                 "meta": {
                     "isLastToken": true
-                }},JSON.stringify(mimecastMock.SIEM_LOGS_EVENT));
+                }},JSON.stringify({ "data": [] }));
             let maxPagesPerInvocation = 5;
             let accumulator = [];
             let state = {
@@ -191,7 +191,7 @@ describe('Unit Tests', function () {
                 "appKey": "appKey"
             };
             utils.getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation).then(data => {
-                assert(accumulator.length == 1, "accumulator length is wrong");
+                assert(accumulator.length == 0, "accumulator length is wrong");
                 alserviceStub.post.restore();
                 done();
             });
