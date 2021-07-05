@@ -45,6 +45,9 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                             }
                             if (response.meta && response.meta.isLastToken) {
                                 nextPage = undefined;
+                                if(applicationDetails.payload.data[0].token){
+                                    nextPage = applicationDetails.payload.data[0].token;
+                                }
                                 return resolve({ accumulator, nextPage });
                             }
                             if (response.headers && response.headers['mc-siem-token']) {
