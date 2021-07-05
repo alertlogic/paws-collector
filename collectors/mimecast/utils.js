@@ -40,7 +40,7 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                     pageCount++;
                     switch (state.stream) {
                         case Siem_Logs:
-                            if (body.data.length > 0) {
+                            if (body.data && body.data.length > 0) {
                                 accumulator.push(...body.data);
                             }
                             if (response.meta && response.meta.isLastToken) {
