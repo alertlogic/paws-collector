@@ -154,7 +154,7 @@ class MimecastCollector extends PawsCollector {
             
             const untilMoment = moment(curState.until);
 
-            const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
+            const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-day-progression', untilMoment, this.pollInterval);
             
             return {
                 stream: curState.stream,
