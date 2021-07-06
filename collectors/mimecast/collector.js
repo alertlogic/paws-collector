@@ -41,7 +41,7 @@ class MimecastCollector extends PawsCollector {
             if (stream === Siem_Logs || stream === Malware_Feed) {
                 return {
                     stream,
-                    currentMoment: moment().toISOString(),
+                    currentTs: moment().toISOString(),
                     nextPage: null,
                     poll_interval_sec: 1
                 }
@@ -128,7 +128,6 @@ class MimecastCollector extends PawsCollector {
                     error.errorCode = error.code;
                 }
                 if (error.statusCode && error.statusCode == 429) {
-                    error.errorCode = error.statusCode;
                     state.poll_interval_sec = 900;
                     console.log("The Mimecast service you're trying to access is temporarily busy. Please try again in a few minutes and then contact your IT helpdesk if you still have problems.");
                     collector.reportApiThrottling(function () {
@@ -146,7 +145,7 @@ class MimecastCollector extends PawsCollector {
         if (curState.stream === Siem_Logs || curState.stream === Malware_Feed) {
             return {
                 stream: curState.stream,
-                currentMoment: moment().toISOString(),
+                currentTs: moment().toISOString(),
                 nextPage: null,
                 poll_interval_sec: 1
             }
@@ -171,7 +170,7 @@ class MimecastCollector extends PawsCollector {
         if (curState.stream === Siem_Logs || curState.stream === Malware_Feed) {
             return {
                 stream: curState.stream,
-                currentMoment: moment().toISOString(),
+                currentTs: moment().toISOString(),
                 nextPage: nextPage,
                 poll_interval_sec: 1
             }
