@@ -129,7 +129,7 @@ class MimecastCollector extends PawsCollector {
                 }
                 if (error.statusCode && error.statusCode == 429) {
                     state.poll_interval_sec = 900;
-                    console.log("The Mimecast service you're trying to access is temporarily busy. Please try again in a few minutes and then contact your IT helpdesk if you still have problems.");
+                    console.warn("The Mimecast service you're trying to access is temporarily busy. Please try again in a few minutes and then contact your IT helpdesk if you still have problems.");
                     collector.reportApiThrottling(function () {
                         return callback(null, [], state, state.poll_interval_sec);
                     });
