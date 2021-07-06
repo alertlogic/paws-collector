@@ -174,6 +174,29 @@ describe('Unit Tests', function() {
             });
         });
 
+        it('Paws Get Logs with Api Throttling error Success', function (done) {
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(authDetails, state, accumulator, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ "statusCode": 429 });
+                    });
+                });
+                MimecastCollector.load().then(function (creds) {
+                var collector = new MimecastCollector(ctx, creds, 'mimecast');
+                const curState = {
+                    stream: "MalwareFeed",
+                    nextPage: null,
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(logs.length, 0);
+                    assert.equal(newState.poll_interval_sec, 900);
+                    getAPILogs.restore();
+                    done();
+                });
+            });
+        });
+
     });
 
     describe('Next state tests', function () {
