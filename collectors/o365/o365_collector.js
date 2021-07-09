@@ -173,14 +173,9 @@ class O365Collector extends PawsCollector {
             if (typeof err === 'object') {
                 err.errorCode = err.code ? err.code : (err.statusCode ? err.statusCode : err.status);
             }
-            // Handle the MS management api maximum palyload issue
-            if (err.message && err.message.indexOf('Maximum payload size exceeded') !== -1) {
-                let min = moment(state.until).diff(state.since, 'minutes');
-                if (min > 1) {
-                    state.until = moment(state.since).add(min / 2, 'minutes').toISOString();
-                }
-                console.warn(`Reduce the time duration by ${min / 2} min due to Maximum payload issue`);
-                return callback(null, [], state, state.poll_interval_sec);
+            let newState = this._handleMSManagementApiError(err, state);
+            if (newState) {
+                return callback(null, [], newState, newState.poll_interval_sec);
             }
             if (!err.code && err.message) {
                 let message = err.message;
@@ -254,6 +249,44 @@ class O365Collector extends PawsCollector {
             formattedMsg.messageTsUs = ts.usec;
         }
         return formattedMsg;
+    }
+
+    /**
+     * 1.Handle the Maxpayload exceeded error;reduce the pull duration by 2 and set new time in state.untill
+     * 2.Expired content error can be occur when start date is older than 7day and we reset the date to last 7days
+     * If data for 1st 1hr is huge and within time it will not able to pull the data from array of contentUri using asyncPool;
+     * Then set the satrt time to 15 min later,in this case we loss the data for 15 min but will resolve the issue and get remaining data without any error
+     * @param {*} err 
+     * @param {*} state
+     * @returns 
+     */
+    _handleMSManagementApiError(err, state) {
+        if (err.message && err.message.indexOf('Maximum payload size exceeded') !== -1) {
+            let min = moment(state.until).diff(state.since, 'minutes');
+            if (min > 1) {
+                state.until = moment(state.since).add(min / 2, 'minutes').toISOString();
+                state.poll_interval_sec = 1;
+            }
+            console.warn(`Collecting data from ${state.since} to ${state.until} to handle Maximum payload issue`);
+            return state;
+        }
+
+        if (err.response && err.response.body) {
+            let responseBody = JSON.parse(err.response.body);
+            if (responseBody.error.code === 'AF20051') {
+                let min = moment(state.until).diff(state.since, 'minutes');
+                if (min >= 1) {
+                    const newStart = moment(state.since).add(15, 'minutes');
+                    state.since = newStart.toISOString();
+                    state.until = moment(newStart).add(min, 'minutes').toISOString();
+                    state.poll_interval_sec = 1;
+                }
+                console.warn(`Now collecting data from ${state.since} to ${state.until} to handle Expired content in older than 7 days`);
+                return state
+            }
+            return null;
+        }
+        return null;
     }
 }
 
