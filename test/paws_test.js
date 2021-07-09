@@ -494,6 +494,39 @@ describe('Unit Tests', function() {
             });
         });
         
+        it('poll request error, single state', function(done) {
+            const fakeFun = function(_params, callback){return callback(null, {data:null});};
+            const updateItemStub = sinon.stub().callsFake(fakeFun);
+            mockDDB(null, null, updateItemStub);
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail('Invocation should succeed.');
+                },
+                succeed : function() {
+                    AWS.restore('DynamoDB');
+                    sinon.assert.calledOnce(updateItemStub);
+                    done();
+                    
+                }
+            };
+
+            const testEvent = {
+                Records: [
+                    {
+                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
+                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
+                    }
+                ]
+            };
+            
+            TestCollector.load().then(function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                collector.mockGetLogsError = 'Error getting logs';
+                collector.handleEvent(testEvent);
+            });
+        });
+        
         it('poll request success, multiple state', function(done) {
             mockDDB();
 

@@ -460,7 +460,7 @@ class PawsCollector extends AlAwsCollector {
                 collector.done(null, pawsState, false);
             } else {
                const ddbStatus = handleError ? STATE_RECORD_FAILED : STATE_RECORD_COMPLETE;
-                collector.updateStateDBEntry(stateSqsMsg, ddbStatus, function(e) {
+                collector.updateStateDBEntry(stateSqsMsg, ddbStatus, function() {
                     if(handleError) {
                         // If collector failed to handle poll state we'd like to refresh the state message in SQS
                         // in order to avoid expiration of that message due to retention period.
