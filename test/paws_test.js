@@ -287,10 +287,12 @@ describe('Unit Tests', function() {
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,
                 fail : function(error) {
+                    console.log('!!!Error', error);
                     assert.fail(error);
                     done();
                 },
                 succeed : function() {
+                    console.log('!!!OK');
                     const putItemArgs = putItemStub.args[0][0];
                     const updateItemArgs = updateItemStub.args[0][0];
                     assert.equal(putItemStub.called, true, 'should put a new item in');
@@ -342,14 +344,16 @@ describe('Unit Tests', function() {
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,
                 fail : function(error) {
-                    assert.fail(error);
-                    done();
-                },
-                succeed : function() {
                     assert.equal(getItemStub.called, true, 'should get new item');
                     assert.equal(putItemStub.notCalled, true, 'should not put a new item in');
                     assert.equal(updateItemStub.notCalled, true, 'should not update the item to complete');
-                    
+                    if (error === '{"errorCode":"DUPLICATE_STATE"}')
+                        done();
+                    else
+                        assert.fail("invocation have another error code");
+                },
+                succeed : function() {
+                    assert.fail("invocation should fail");
                     done();
                 }
             };
@@ -394,11 +398,10 @@ describe('Unit Tests', function() {
                     assert.equal(getItemStub.called, true, 'should get new item');
                     assert.equal(putItemStub.notCalled, true, 'should not put a new item in');
                     assert.equal(updateItemStub.notCalled, true, 'should not update the item to complete');
-                   
                     done();
                 },
                 succeed : function() {
-                    assert.fail("invocation should not succeed while state is being processed by another invocation");
+                    assert.fail("invocation should fail while state is being processed by another invocation becasue we don't want to remove SQS message which is processed by another invocation");
                 }
             };
 
