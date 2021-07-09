@@ -113,12 +113,20 @@ class TestCollector extends PawsCollector {
         super(ctx, creds);
     }
     
+    set mockGetLogsError(msg = null) {
+        this._mockGetLogsError = msg;
+    }
+    
+    get mockGetLogsError() {
+        return this._mockGetLogsError;
+    }
+    
     pawsInitCollectionState(event, callback) {
         return callback(null, {state: 'initial-state'}, 900);
     }   
     
     pawsGetLogs(state, callback) {
-        return callback(null, ['log1', 'log2'], {state: 'new-state'}, 900);
+        return callback(this.mockGetLogsError, ['log1', 'log2'], {state: 'new-state'}, 900);
     }
     
     pawsGetRegisterParameters(event, callback) {
@@ -287,12 +295,10 @@ describe('Unit Tests', function() {
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,
                 fail : function(error) {
-                    console.log('!!!Error', error);
                     assert.fail(error);
                     done();
                 },
                 succeed : function() {
-                    console.log('!!!OK');
                     const putItemArgs = putItemStub.args[0][0];
                     const updateItemArgs = updateItemStub.args[0][0];
                     assert.equal(putItemStub.called, true, 'should put a new item in');
@@ -344,6 +350,8 @@ describe('Unit Tests', function() {
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,
                 fail : function(error) {
+                    assert.fail("invocation should fail");
+                    done();
                     assert.equal(getItemStub.called, true, 'should get new item');
                     assert.equal(putItemStub.notCalled, true, 'should not put a new item in');
                     assert.equal(updateItemStub.notCalled, true, 'should not update the item to complete');
@@ -352,8 +360,11 @@ describe('Unit Tests', function() {
                     else
                         assert.fail("invocation have another error code");
                 },
-                succeed : function() {
-                    assert.fail("invocation should fail");
+                succeed : function(error) {
+                    assert.equal(error, null);
+                    assert.equal(getItemStub.called, true, 'should get new item');
+                    assert.equal(putItemStub.notCalled, true, 'should not put a new item in');
+                    assert.equal(updateItemStub.notCalled, true, 'should not update the item to complete');
                     done();
                 }
             };

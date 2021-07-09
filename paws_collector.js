@@ -451,7 +451,6 @@ class PawsCollector extends AlAwsCollector {
                 return collector._storeCollectionState(pawsState, privCollectorState, nextInvocationTimeout, asyncCallback);
             }
         ], function(handleError) {
-            console.log('#####handleError: ', handleError);
             if( handleError && handleError.errorCode === ERROR_CODE_DUPLICATE_STATE) {
                 // We need to fail invocation for duplicate state handling
                 // because we don't want delete SQS message which is being handled by another invocation
@@ -460,8 +459,8 @@ class PawsCollector extends AlAwsCollector {
                 // For already completed states we need to just remove the state message from SQS
                 collector.done(null, pawsState, false);
             } else {
-                let ddbStatus = error ? STATE_RECORD_FAILED : STATE_RECORD_COMPLETE;
-                collector.updateStateDBEntry(stateSqsMsg, ddbStatus, function() {
+               const ddbStatus = handleError ? STATE_RECORD_FAILED : STATE_RECORD_COMPLETE;
+                collector.updateStateDBEntry(stateSqsMsg, ddbStatus, function(e) {
                     if(handleError) {
                         // If collector failed to handle poll state we'd like to refresh the state message in SQS
                         // in order to avoid expiration of that message due to retention period.
@@ -477,8 +476,9 @@ class PawsCollector extends AlAwsCollector {
                                 collector.done(storeError);
                             }
                         });
+                    } else {
+                        collector.done(null, pawsState);
                     }
-                    collector.done(null, pawsState);
                 });
             }
         });
