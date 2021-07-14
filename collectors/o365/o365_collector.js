@@ -177,11 +177,16 @@ class O365Collector extends PawsCollector {
             if (newState) {
                 return callback(null, [], newState, newState.poll_interval_sec);
             }
-            
-            this._setUserUnderstandableErrorMessage(err, callback);
-           
-        })
-
+ 
+            if (!err.code && err.message) {
+              const formatedError = this._formatErrorMessage(err);
+              console.error(`O365000003 Error in collection: ${err.message}`);
+              return callback(formatedError);
+            } else {
+                // if error is string or don't have err.code  in error object, then return complete error object/string.
+                return callback(err);
+            }
+        });
     }
 
     _getNextCollectionState(curState) {
@@ -268,30 +273,32 @@ class O365Collector extends PawsCollector {
         return null;
     }
 
-    _setUserUnderstandableErrorMessage(err, callback){
-        if (!err.code && err.message) {
-            let message = err.message;
-            // set errorCode if not available in error object to showcase client error on DDMetric
-            try {
-                let error = JSON.parse(message.slice(message.indexOf('{'), message.lastIndexOf('}') + 1));
-                err.errorCode = error.error ? error.error : error.error_codes[0];
-                if (error.error_codes) {
-                    if (error.error_codes[0] === 7000215) {
-                        return callback("Error code [7000215]. Invalid client secret is provided.");
-                    }
-                    if (error.error_codes[0] === 700016) {
-                        return callback("Error code [700016]. Invalid client ID is provided.");
-                    }
-                    if (error.error_codes[0] === 90002) {
-                        return callback("Error code [90002]. Please make sure you have the correct tenant ID or this may happen if there are no active subscriptions for the tenant. Check with your subscription administrator.");
-                    }
+    /**
+     * Format the error message to user understandable message
+     * @param {*} err 
+     * @returns 
+     */
+    _formatErrorMessage(err) {
+        const message = err.message;
+        // set errorCode if not available in error object to showcase client error on DDMetric
+        try {
+            const error = JSON.parse(message.slice(message.indexOf('{'), message.lastIndexOf('}') + 1));
+            err.errorCode = error.error ? error.error : error.error_codes[0];
+            if (error.error_codes) {
+                if (error.error_codes[0] === 7000215) {
+                    err.message = 'Error code [7000215]. Invalid client secret is provided.';
+                }
+                if (error.error_codes[0] === 700016) {
+                    err.message = 'Error code [700016]. Invalid client ID is provided.';
+                }
+                if (error.error_codes[0] === 90002) {
+                    err.message = 'Error code [90002]. Please make sure you have the correct tenant ID or this may happen if there are no active subscriptions for the tenant. Check with your subscription administrator.';
                 } 
-            } catch (exception) {
-                return callback(err);
             }
+            return err;
+        } catch (exception) {
+            return err;
         }
-        console.error(`O365000003 Error in collection: ${err.message}`);
-        return callback(err);
     }
 }
 
