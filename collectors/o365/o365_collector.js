@@ -177,29 +177,9 @@ class O365Collector extends PawsCollector {
             if (newState) {
                 return callback(null, [], newState, newState.poll_interval_sec);
             }
-            if (!err.code && err.message) {
-                let message = err.message;
-                // set errorCode if not available in error object to showcase client error on DDMetric
-                try {
-                    let error = JSON.parse(message.slice(message.indexOf('{'), message.lastIndexOf('}') + 1));
-                    err.errorCode = error.error ? error.error : error.error_codes[0];
-                    if (error.error_codes) {
-                        if (error.error_codes[0] === 7000215) {
-                            return callback("Error code [7000215]. Invalid client secret is provided.");
-                        }
-                        if (error.error_codes[0] === 700016) {
-                            return callback("Error code [700016]. Invalid client ID is provided.");
-                        }
-                        if (error.error_codes[0] === 90002) {
-                            return callback("Error code [90002]. Please make sure you have the correct tenant ID or this may happen if there are no active subscriptions for the tenant. Check with your subscription administrator.");
-                        }
-                    } 
-                } catch (exception) {
-                    return callback(err);
-                }
-            }
-            console.error(`O365000003 Error in collection: ${err.message}`);
-            return callback(err);
+            
+            this._setUserUnderstandableErrorMessage(err, callback);
+           
         })
 
     }
@@ -262,9 +242,9 @@ class O365Collector extends PawsCollector {
      */
     _handleMSManagementApiError(err, state) {
         if (err.message && err.message.indexOf('Maximum payload size exceeded') !== -1) {
-            let min = moment(state.until).diff(state.since, 'minutes');
-            if (min > 1) {
-                state.until = moment(state.since).add(min / 2, 'minutes').toISOString();
+            const currentInterval = moment(state.until).diff(state.since, 'minutes');
+            if (currentInterval > 1) {
+                state.until = moment(state.since).add(currentInterval / 2, 'minutes').toISOString();
                 state.poll_interval_sec = 1;
             }
             console.warn(`Collecting data from ${state.since} to ${state.until} to handle Maximum payload issue`);
@@ -272,21 +252,46 @@ class O365Collector extends PawsCollector {
         }
 
         if (err.response && err.response.body) {
-            let responseBody = JSON.parse(err.response.body);
-            if (responseBody.error.code === 'AF20051') {
-                let min = moment(state.until).diff(state.since, 'minutes');
-                if (min >= 1) {
-                    const newStart = moment(state.since).add(15, 'minutes');
-                    state.since = newStart.toISOString();
-                    state.until = moment(newStart).add(min, 'minutes').toISOString();
-                    state.poll_interval_sec = 1;
-                }
+            const responseBody = JSON.parse(err.response.body);
+            const contentExpireErrorCode = responseBody.error.code;
+            if (contentExpireErrorCode === 'AF20051') {
+                const currentInterval = moment(state.until).diff(state.since, 'minutes');
+                const newStart = moment(state.since).add(15, 'minutes');
+                state.since = newStart.toISOString();
+                state.until = moment(newStart).add(currentInterval, 'minutes').toISOString();
+                state.poll_interval_sec = 1;
                 console.warn(`Now collecting data from ${state.since} to ${state.until} to handle Expired content in older than 7 days`);
-                return state
+                return state;
             }
             return null;
         }
         return null;
+    }
+
+    _setUserUnderstandableErrorMessage(err, callback){
+        if (!err.code && err.message) {
+            let message = err.message;
+            // set errorCode if not available in error object to showcase client error on DDMetric
+            try {
+                let error = JSON.parse(message.slice(message.indexOf('{'), message.lastIndexOf('}') + 1));
+                err.errorCode = error.error ? error.error : error.error_codes[0];
+                if (error.error_codes) {
+                    if (error.error_codes[0] === 7000215) {
+                        return callback("Error code [7000215]. Invalid client secret is provided.");
+                    }
+                    if (error.error_codes[0] === 700016) {
+                        return callback("Error code [700016]. Invalid client ID is provided.");
+                    }
+                    if (error.error_codes[0] === 90002) {
+                        return callback("Error code [90002]. Please make sure you have the correct tenant ID or this may happen if there are no active subscriptions for the tenant. Check with your subscription administrator.");
+                    }
+                } 
+            } catch (exception) {
+                return callback(err);
+            }
+        }
+        console.error(`O365000003 Error in collection: ${err.message}`);
+        return callback(err);
     }
 }
 
