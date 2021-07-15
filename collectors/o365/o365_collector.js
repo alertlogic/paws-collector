@@ -20,9 +20,10 @@ const parse = require('@alertlogic/al-collector-js').Parse;
 const asyncPool = require("tiny-async-pool");
 
 // Subtracting less than 7 days to avoid weird race conditions with the azure api...
-// Missing about 2 hours of historical logs shouldn't be too bad.
+// Missing about 1 hours of historical logs shouldn't be too bad.
 // If you get an error form the o365 managment api about your date range being more than 7 days in the past, you should remove some 9s from this number.
-const PARTIAL_WEEK = 6.99;
+// Change the value from days to hours(6days 23hrs); subtracting value grater than 6.5 is actaully consider higer value 7.
+const PARTIAL_WEEK_HOURS = 167; 
 
 const typeIdPaths = [
     { path: ['RecordType'] }
@@ -45,7 +46,7 @@ class O365Collector extends PawsCollector {
         let endTs;
 
         if(moment().diff(startTs, 'days') > 7){
-            startTs = moment().subtract(PARTIAL_WEEK, 'days').toISOString();
+            startTs = moment().subtract(PARTIAL_WEEK_HOURS, 'hours').toISOString();
             console.info("O365000004 Start timestamp is more than 7 days in the past. This is not allowed in the MS managment API. setting the start time to 7 days in the past");
         }
 
@@ -101,7 +102,7 @@ class O365Collector extends PawsCollector {
         console.info(`O365000001 Collecting data from ${state.since} till ${state.until} for stream ${state.stream}`);
 
         if(moment().diff(state.since, 'days', true) > 7){
-            const newStart = moment().subtract(PARTIAL_WEEK, 'days');
+            const newStart = moment().subtract(PARTIAL_WEEK_HOURS, 'hours');
             state.since = newStart.toISOString();
             state.until = newStart.add(1, 'hours').toISOString();
             // remove next page token if the state is out of date as well.
@@ -168,31 +169,24 @@ class O365Collector extends PawsCollector {
 
             return callback(null, logs, newState, newState.poll_interval_sec);
         }).catch(err => {
-            if (err.message) {
-                let message = err.message;
-                // set errorCode if not available in error object to showcase client error on DDMetric
-                try {
-                    let error = JSON.parse(message.slice(message.indexOf('{'), message.lastIndexOf('}') + 1));
-                    err.errorCode = error.error ? error.error : error.error_codes[0];
-                    if (error.error_codes) {
-                        if (error.error_codes[0] === 7000215) {
-                            return callback("Error code [7000215]. Invalid client secret is provided.");
-                        }
-                        if (error.error_codes[0] === 700016) {
-                            return callback("Error code [700016]. Invalid client ID is provided.");
-                        }
-                        if (error.error_codes[0] === 90002) {
-                            return callback("Error code [90002]. Please make sure you have the correct tenant ID or this may happen if there are no active subscriptions for the tenant. Check with your subscription administrator.");
-                        }
-                    } 
-                } catch (exception) {
-                    return callback(err);
-                }
+            // set errorCode to showcase client error on DDMetric
+            if (typeof err === 'object') {
+                err.errorCode = err.code ? err.code : (err.statusCode ? err.statusCode : err.status);
             }
-            console.error(`O365000003 Error in collection: ${err.message}`);
-            return callback(err);
-        })
-
+            let newState = this._handleMSManagementApiError(err, state);
+            if (newState) {
+                return callback(null, [], newState, newState.poll_interval_sec);
+            }
+ 
+            if (!err.code && err.message) {
+              const formatedError = this._formatErrorMessage(err);
+              console.error(`O365000003 Error in collection: ${err.message}`);
+              return callback(formatedError);
+            } else {
+                // if error is string or don't have err.code  in error object, then return complete error object/string.
+                return callback(err);
+            }
+        });
     }
 
     _getNextCollectionState(curState) {
@@ -240,6 +234,71 @@ class O365Collector extends PawsCollector {
             formattedMsg.messageTsUs = ts.usec;
         }
         return formattedMsg;
+    }
+
+    /**
+     * 1.Handle the Maxpayload exceeded error;reduce the pull duration by 2 and set new time in state.untill
+     * 2.Expired content error can be occur when start date is older than 7day and we reset the date to last 7days
+     * If data for 1st 1hr is huge and within time it will not able to pull the data from array of contentUri using asyncPool;
+     * Then set the satrt time to 15 min later,in this case we loss the data for 15 min but will resolve the issue and get remaining data without any error
+     * @param {*} err 
+     * @param {*} state
+     * @returns 
+     */
+    _handleMSManagementApiError(err, state) {
+        if (err.message && err.message.indexOf('Maximum payload size exceeded') !== -1) {
+            const currentInterval = moment(state.until).diff(state.since, 'minutes');
+            if (currentInterval > 1) {
+                state.until = moment(state.since).add(currentInterval / 2, 'minutes').toISOString();
+                state.poll_interval_sec = 1;
+            }
+            console.warn(`Collecting data from ${state.since} to ${state.until} to handle Maximum payload issue`);
+            return state;
+        }
+
+        if (err.response && err.response.body) {
+            const responseBody = JSON.parse(err.response.body);
+            const contentExpireErrorCode = responseBody.error.code;
+            if (contentExpireErrorCode === 'AF20051') {
+                const currentInterval = moment(state.until).diff(state.since, 'minutes');
+                const newStart = moment(state.since).add(15, 'minutes');
+                state.since = newStart.toISOString();
+                state.until = moment(newStart).add(currentInterval, 'minutes').toISOString();
+                state.poll_interval_sec = 1;
+                console.warn(`Now collecting data from ${state.since} to ${state.until} to handle Expired content in older than 7 days`);
+                return state;
+            }
+            return null;
+        }
+        return null;
+    }
+
+    /**
+     * Format the error message to user understandable message
+     * @param {*} err 
+     * @returns 
+     */
+    _formatErrorMessage(err) {
+        const message = err.message;
+        // set errorCode if not available in error object to showcase client error on DDMetric
+        try {
+            const error = JSON.parse(message.slice(message.indexOf('{'), message.lastIndexOf('}') + 1));
+            err.errorCode = error.error ? error.error : error.error_codes[0];
+            if (error.error_codes) {
+                if (error.error_codes[0] === 7000215) {
+                    err.message = 'Error code [7000215]. Invalid client secret is provided.';
+                }
+                if (error.error_codes[0] === 700016) {
+                    err.message = 'Error code [700016]. Invalid client ID is provided.';
+                }
+                if (error.error_codes[0] === 90002) {
+                    err.message = 'Error code [90002]. Please make sure you have the correct tenant ID or this may happen if there are no active subscriptions for the tenant. Check with your subscription administrator.';
+                } 
+            }
+            return err;
+        } catch (exception) {
+            return err;
+        }
     }
 }
 
