@@ -113,12 +113,20 @@ class TestCollector extends PawsCollector {
         super(ctx, creds);
     }
     
+    set mockGetLogsError(msg = null) {
+        this._mockGetLogsError = msg;
+    }
+    
+    get mockGetLogsError() {
+        return this._mockGetLogsError;
+    }
+    
     pawsInitCollectionState(event, callback) {
         return callback(null, {state: 'initial-state'}, 900);
     }   
     
     pawsGetLogs(state, callback) {
-        return callback(null, ['log1', 'log2'], {state: 'new-state'}, 900);
+        return callback(this.mockGetLogsError, ['log1', 'log2'], {state: 'new-state'}, 900);
     }
     
     pawsGetRegisterParameters(event, callback) {
@@ -342,14 +350,21 @@ describe('Unit Tests', function() {
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,
                 fail : function(error) {
-                    assert.fail(error);
+                    assert.fail("invocation should fail");
                     done();
-                },
-                succeed : function() {
                     assert.equal(getItemStub.called, true, 'should get new item');
                     assert.equal(putItemStub.notCalled, true, 'should not put a new item in');
                     assert.equal(updateItemStub.notCalled, true, 'should not update the item to complete');
-                    
+                    if (error === '{"errorCode":"DUPLICATE_STATE"}')
+                        done();
+                    else
+                        assert.fail("invocation have another error code");
+                },
+                succeed : function(error) {
+                    assert.equal(error, null);
+                    assert.equal(getItemStub.called, true, 'should get new item');
+                    assert.equal(putItemStub.notCalled, true, 'should not put a new item in');
+                    assert.equal(updateItemStub.notCalled, true, 'should not update the item to complete');
                     done();
                 }
             };
@@ -394,11 +409,10 @@ describe('Unit Tests', function() {
                     assert.equal(getItemStub.called, true, 'should get new item');
                     assert.equal(putItemStub.notCalled, true, 'should not put a new item in');
                     assert.equal(updateItemStub.notCalled, true, 'should not update the item to complete');
-                   
                     done();
                 },
                 succeed : function() {
-                    assert.fail("invocation should not succeed while state is being processed by another invocation");
+                    assert.fail("invocation should fail while state is being processed by another invocation becasue we don't want to remove SQS message which is processed by another invocation");
                 }
             };
 
@@ -476,6 +490,39 @@ describe('Unit Tests', function() {
             
             TestCollector.load().then(function(creds) {
                 var collector = new TestCollector(ctx, creds);
+                collector.handleEvent(testEvent);
+            });
+        });
+        
+        it('poll request error, single state', function(done) {
+            const fakeFun = function(_params, callback){return callback(null, {data:null});};
+            const updateItemStub = sinon.stub().callsFake(fakeFun);
+            mockDDB(null, null, updateItemStub);
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail('Invocation should succeed.');
+                },
+                succeed : function() {
+                    AWS.restore('DynamoDB');
+                    sinon.assert.calledOnce(updateItemStub);
+                    done();
+                    
+                }
+            };
+
+            const testEvent = {
+                Records: [
+                    {
+                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
+                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
+                    }
+                ]
+            };
+            
+            TestCollector.load().then(function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                collector.mockGetLogsError = 'Error getting logs';
                 collector.handleEvent(testEvent);
             });
         });
