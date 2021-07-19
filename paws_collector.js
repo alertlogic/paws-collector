@@ -408,9 +408,23 @@ class PawsCollector extends AlAwsCollector {
                 console.info('PAWS000200 Log events received ', logs.length);
                 return collector.processLog(logs, collector.pawsFormatLog.bind(collector), null, (err) => {
                     if (err) {
-                        collector.reportErrorToIngestApi(err, () => {
-                            return asyncCallback(err);
-                        });
+                        // MS api return the logs but if build payload size > 10MB, our buildPayload method return Max payload issue. So we reduce the pull time interval by 2 and again fetch the data from MS api for half interval and process logs to ingest.
+                        // Here we get the nextState but we haven't process previous state data, so subtracting current interval to get previous state start date.
+                        if ((typeof err === 'string' && err.indexOf('Maximum payload size exceeded') !== -1) && privCollectorState.since && privCollectorState.until) {
+
+                            const currentInterval = moment(privCollectorState.until).diff(privCollectorState.since, 'minutes');
+                            if (currentInterval >= 1) {
+                                const startDate = moment(privCollectorState.since).subtract(currentInterval, 'minutes');
+                                privCollectorState.since = startDate.toISOString();
+                                privCollectorState.until = moment(startDate).add(currentInterval / 2, 'minutes').toISOString();
+                            }
+                            console.warn(`Collecting data from ${privCollectorState.since} to ${privCollectorState.until} to handle Maximum payload issue`);
+                            return asyncCallback(null, privCollectorState, 1);
+                        } else {
+                            collector.reportErrorToIngestApi(err, () => {
+                                return asyncCallback(err);
+                            });
+                        }
                     } else {
                         return asyncCallback(null, privCollectorState, nextInvocationTimeout);
                     }

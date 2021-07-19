@@ -9,7 +9,7 @@ const pawsMock = require('./paws_mock');
 var m_alCollector = require('@alertlogic/al-collector-js');
 var PawsCollector = require('../paws_collector').PawsCollector;
 const m_al_aws = require('@alertlogic/al-aws-collector-js').Util;
-
+const moment = require('moment');
 
 var alserviceStub = {};
 var responseStub = {};
@@ -171,6 +171,45 @@ class TestCollectorMultiState extends PawsCollector {
             priority: 11,
             progName: 'OktaCollectorArrayState',
             message: JSON.stringify({test: 'message'}),
+            messageType: 'json/aws.test',
+            applicationId: collector.application_id
+        };
+        
+        return formattedMsg;
+    }
+}
+
+class TestCollectorHandleMaxPayload extends PawsCollector{
+    constructor(ctx, creds) {
+        super(ctx, creds);
+    }
+    
+    pawsInitCollectionState(event, callback) {
+        return callback(null, {state: 'initial-state'}, 900);
+    }
+    
+    pawsGetLogs(state, callback) {
+          const startDate  =  moment(state.until);
+         const newState = {
+            since: startDate.toISOString(),
+            until: startDate.add(60, 'minutes').toISOString(),
+            poll_interval_sec: 1
+        };
+        return callback(null,   ['log1','log2'], newState, 900);
+    }
+
+    pawsGetRegisterParameters(event, callback) {
+        return callback(null, {register: 'test-param'});
+    }
+    
+    pawsFormatLog(msg) {
+        const collector = this;
+        
+        let formattedMsg = {
+            messageTs: 12345678,
+            priority: 11,
+            progName: 'OktaCollectorArrayState',
+            message: JSON.stringify(msg),
             messageType: 'json/aws.test',
             applicationId: collector.application_id
         };
@@ -542,6 +581,41 @@ describe('Unit Tests', function() {
             });
         });
         
+        it('Handle the Maximum payload size exceeded error by reduce the pull time duration', function(done){
+            mockDDB();
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                     assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    AWS.restore('DynamoDB');
+                    alserviceStub.alog.restore();
+                    done();
+                }
+            };
+
+            const testEvent = {
+                Records: [
+                    {
+                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"2021-07-01T02:37:37.617Z\",\n    \"until\": \"2021-07-01T03:37:37.617Z\"\n  }\n}",
+                        "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
+                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
+                    }
+                ]
+            };
+            
+            alserviceStub.alog = sinon.stub(m_alCollector.AlLog, 'buildPayload').callsFake(
+                function fakeFn(hostId, sourceId, hostmetaElems, content, parseCallback, mainCallback) {
+                    return mainCallback('Maximum payload size exceeded :13899727');
+                });
+
+                TestCollectorHandleMaxPayload.load().then(function(creds) {
+                var collector = new TestCollectorHandleMaxPayload(ctx, creds);
+                collector.handleEvent(testEvent);
+            });
+        });
         it('reportApiThrottling', function(done) {
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,
