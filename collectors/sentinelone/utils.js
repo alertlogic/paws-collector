@@ -11,7 +11,7 @@ function getAPILogs(baseUrl, token, params, accumulator, maxPagesPerInvocation) 
         getData(params);
         function getData(params) {
             if (pageCount < maxPagesPerInvocation) {
-                return restServiceClient.get(`/web/api/v2.0/activities?${querystring.stringify(params)}`, {
+                return restServiceClient.get(`/web/api/v2.1/activities?${querystring.stringify(params)}`, {
                     headers: {
                         "Authorization": `ApiToken ${token}`
                     }
