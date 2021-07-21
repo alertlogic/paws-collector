@@ -406,29 +406,7 @@ class PawsCollector extends AlAwsCollector {
             },
             function(logs, privCollectorState, nextInvocationTimeout, asyncCallback) {
                 console.info('PAWS000200 Log events received ', logs.length);
-                return collector.processLog(logs, collector.pawsFormatLog.bind(collector), null, (err) => {
-                    if (err) {
-                        // MS api return the logs but if build payload size > 10MB, our buildPayload method return Max payload issue. So we reduce the pull time interval by 2 and again fetch the data from MS api for half interval and process logs to ingest.
-                        // Here we get the nextState but we haven't process previous state data, so subtracting current interval to get previous state start date.
-                        if ((typeof err === 'string' && err.indexOf('Maximum payload size exceeded') !== -1) && privCollectorState.since && privCollectorState.until) {
-
-                            const currentInterval = moment(privCollectorState.until).diff(privCollectorState.since, 'minutes');
-                            if (currentInterval >= 1) {
-                                const startDate = moment(privCollectorState.since).subtract(currentInterval, 'minutes');
-                                privCollectorState.since = startDate.toISOString();
-                                privCollectorState.until = moment(startDate).add(currentInterval / 2, 'minutes').toISOString();
-                            }
-                            console.warn(`Collecting data from ${privCollectorState.since} to ${privCollectorState.until} to handle Maximum payload issue`);
-                            return asyncCallback(null, privCollectorState, 1);
-                        } else {
-                            collector.reportErrorToIngestApi(err, () => {
-                                return asyncCallback(err);
-                            });
-                        }
-                    } else {
-                        return asyncCallback(null, privCollectorState, nextInvocationTimeout);
-                    }
-                });
+                return collector.batchLogProcess(logs, privCollectorState, nextInvocationTimeout, asyncCallback);
             },
             function(privCollectorState, nextInvocationTimeout, asyncCallback) {
                 // Try to find last collected message ts in collector private state.
@@ -460,6 +438,49 @@ class PawsCollector extends AlAwsCollector {
             }
         });
     };
+
+    batchLogProcess(logs, privCollectorState, nextInvocationTimeout, asyncCallback) {
+        let collector = this;
+        return collector.processLog(logs, collector.pawsFormatLog.bind(collector), null, (err) => {
+           
+            if (err) {
+                // MS api return the logs but if build payload size > 10MB, our buildPayload method return Max payload issue. So we split logs array the in two part and call the processLog again.
+               
+                if ((typeof err === 'string' && err.indexOf('Maximum payload size exceeded') !== -1)) {
+                    let batchLogs = [];
+                    let halfLogs = [];
+                    let loglength = logs.length / 2;
+                    for (const index in logs) {
+                        console.log(index,logs[index]);
+                        if (index < loglength) {
+                            halfLogs.push(logs[index]);
+                            if (parseInt(index) === (loglength - 1)) {
+                                batchLogs.push(halfLogs);
+                            }
+                        }
+                        else {
+                            halfLogs = [];
+                            loglength = logs.length;
+                            halfLogs.push(logs[index]);
+                            if (parseInt(index) == logs.length-1) {
+                                batchLogs.push(halfLogs);
+                            }
+                        }
+                    }
+                    batchLogs.map(batchLog => {
+                         collector.batchLogProcess(batchLog, privCollectorState, nextInvocationTimeout, asyncCallback);
+                    });
+                   
+                } else {
+                    collector.reportErrorToIngestApi(err, () => {
+                        return asyncCallback(err);
+                    });
+                }
+            } else {
+                return asyncCallback(null, privCollectorState, nextInvocationTimeout);
+            }
+        });
+    }
 
     reportApiThrottling(callback) {
         // TODO: report collector status via Ingest/agentstatus

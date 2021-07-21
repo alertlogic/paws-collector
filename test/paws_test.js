@@ -9,7 +9,7 @@ const pawsMock = require('./paws_mock');
 var m_alCollector = require('@alertlogic/al-collector-js');
 var PawsCollector = require('../paws_collector').PawsCollector;
 const m_al_aws = require('@alertlogic/al-aws-collector-js').Util;
-const moment = require('moment');
+const zlib = require('zlib');
 
 var alserviceStub = {};
 var responseStub = {};
@@ -171,45 +171,6 @@ class TestCollectorMultiState extends PawsCollector {
             priority: 11,
             progName: 'OktaCollectorArrayState',
             message: JSON.stringify({test: 'message'}),
-            messageType: 'json/aws.test',
-            applicationId: collector.application_id
-        };
-        
-        return formattedMsg;
-    }
-}
-
-class TestCollectorHandleMaxPayload extends PawsCollector{
-    constructor(ctx, creds) {
-        super(ctx, creds);
-    }
-    
-    pawsInitCollectionState(event, callback) {
-        return callback(null, {state: 'initial-state'}, 900);
-    }
-    
-    pawsGetLogs(state, callback) {
-          const startDate  =  moment(state.until);
-         const newState = {
-            since: startDate.toISOString(),
-            until: startDate.add(60, 'minutes').toISOString(),
-            poll_interval_sec: 1
-        };
-        return callback(null,   ['log1','log2'], newState, 900);
-    }
-
-    pawsGetRegisterParameters(event, callback) {
-        return callback(null, {register: 'test-param'});
-    }
-    
-    pawsFormatLog(msg) {
-        const collector = this;
-        
-        let formattedMsg = {
-            messageTs: 12345678,
-            priority: 11,
-            progName: 'OktaCollectorArrayState',
-            message: JSON.stringify(msg),
             messageType: 'json/aws.test',
             applicationId: collector.application_id
         };
@@ -607,12 +568,23 @@ describe('Unit Tests', function() {
             };
             
             alserviceStub.alog = sinon.stub(m_alCollector.AlLog, 'buildPayload').callsFake(
-                function fakeFn(hostId, sourceId, hostmetaElems, content, parseCallback, mainCallback) {
-                    return mainCallback('Maximum payload size exceeded :13899727');
+                function fakeFn(hostId, sourceId, hostmetaElems, content, parseFun, mainCallback) {
+                    if (content.length > 1) {
+                        return mainCallback('Maximum payload size exceeded :13899727');
+                    }
+                    else {
+                        zlib.deflate(content.toString(), function (compressionErr, compressed) {
+                            return mainCallback(null, {
+                                payload: compressed,
+                                payload_size: compressed.byteLength,
+                                raw_count: 2,
+                                raw_bytes: 36
+                            });
+                        });
+                    }
                 });
-
-                TestCollectorHandleMaxPayload.load().then(function(creds) {
-                var collector = new TestCollectorHandleMaxPayload(ctx, creds);
+                TestCollector.load().then(function(creds) {
+                var collector = new TestCollector(ctx, creds);
                 collector.handleEvent(testEvent);
             });
         });
