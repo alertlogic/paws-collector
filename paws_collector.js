@@ -27,9 +27,16 @@ const DEFAULT_PAWS_SECRET_PARAM_TIER = 'Standard';
 const DOMAIN_REGEXP = /^[htps]*:\/\/|\/$/gi;
 
 const STATE_RECORD_COMPLETE = "COMPLETE";
-const STATE_RECORD_INCOMPLETE ="INCOMPLETE";
+const STATE_RECORD_INCOMPLETE = "INCOMPLETE";
+const STATE_RECORD_FAILED = "FAILED";
+const ERROR_CODE_DUPLICATE_STATE = 'DUPLICATE_STATE';
+const ERROR_CODE_COMPLETED_STATE = 'COMPLETED_STATE';
 const SQS_VISIBILITY_TIMEOUT = 900;
 const DDB_TTL_DAYS = 14;
+const DDB_OPTIONS = {
+    maxRetries: 10,
+    ConsistentRead: true
+};
 
 function getPawsParamStoreParam(){
     return new Promise((resolve, reject) => {
@@ -155,6 +162,14 @@ class PawsCollector extends AlAwsCollector {
         return this._pawsHttpsEndpoint;
     };
 
+    done(error, pawsState, sendStatus = true) {
+        const streamType = pawsState && pawsState.priv_collector_state.stream ?
+            process.env.al_application_id + "_" + pawsState.priv_collector_state.stream :
+            null;
+        
+        super.done(error, streamType, sendStatus);
+    }
+    
     reportDDMetric(name, value, tags = []) {
         // check if the API key is present. This will be a good proxy for if the handler is working
         if (!process.env.DD_API_KEY){
@@ -229,7 +244,7 @@ class PawsCollector extends AlAwsCollector {
         let pawsRegisterProps = this.getProperties();
         collector.pawsGetRegisterParameters(event, function(err, customRegister) {
             if (err) {
-                console.err('PAWS000101 Error during registration', err);
+                console.error('PAWS000101 Error during registration', err);
                 return callback(err);
             } else {
                 let registerProps = Object.assign(pawsRegisterProps, customRegister);
@@ -288,7 +303,7 @@ class PawsCollector extends AlAwsCollector {
     // there is a lot of logic here. not sur eif there is a better way of deduping. trying for an MVP
     checkStateSqsMessage(stateSqsMsg, asyncCallback) {
         const collector = this;
-        const DDB = new AWS.DynamoDB();
+        const DDB = new AWS.DynamoDB(DDB_OPTIONS);
 
         const params = {
             Key: {
@@ -308,11 +323,11 @@ class PawsCollector extends AlAwsCollector {
                 // check to see if record was updated within the visibility timeout of the SQS queue.
                 // if it is within that limit, then it likely to be processed by another invocation and this is a duplicate
                 if(Item.Status.S === STATE_RECORD_INCOMPLETE && moment().unix() - parseInt(Item.Updated.N) < SQS_VISIBILITY_TIMEOUT) {
-                    console.info(`Duplicate state: ${Item.MessageId.S}, already in progress. skipping`);
-                    return asyncCallback('State is currently being processed by another invocation');
+                    console.info(`PAWS000400 Duplicate state: ${Item.MessageId.S}, already in progress. skipping`);
+                    return asyncCallback({errorCode: ERROR_CODE_DUPLICATE_STATE});
                 } else if (Item.Status.S === STATE_RECORD_COMPLETE){
-                    console.info(`Duplicate state: ${Item.MessageId.S}, already processed. skipping`);
-                    return collector.done();
+                    console.info(`PAWS000401 Duplicate state: ${Item.MessageId.S}, already processed. skipping`);
+                    return asyncCallback({errorCode: ERROR_CODE_COMPLETED_STATE});
                 } else {
                     return collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_INCOMPLETE, asyncCallback);
                 }
@@ -344,7 +359,7 @@ class PawsCollector extends AlAwsCollector {
 
     updateStateDBEntry(stateSqsMsg, Status, asyncCallback) {
         const collector = this;
-        const DDB = new AWS.DynamoDB();
+        const DDB = new AWS.DynamoDB(DDB_OPTIONS);
 
         const updateParams = {
             Key: {
@@ -426,18 +441,51 @@ class PawsCollector extends AlAwsCollector {
             },
             function(privCollectorState, nextInvocationTimeout, asyncCallback) {
                 return collector._storeCollectionState(pawsState, privCollectorState, nextInvocationTimeout, asyncCallback);
-            },
-            function(_results, asyncCallback) {
-                return collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_COMPLETE, asyncCallback);
             }
-        ], function(error) {
-            if (pawsState.priv_collector_state.stream) {
-                collector.done(error, process.env.al_application_id + "_" + pawsState.priv_collector_state.stream);
+        ], function(handleError) {
+            if( handleError && handleError.errorCode === ERROR_CODE_DUPLICATE_STATE) {
+                // We need to fail invocation for duplicate state handling
+                // because we don't want delete SQS message which is being handled by another invocation
+                collector.done(handleError, pawsState, false);
+            } else if (handleError && handleError.errorCode === ERROR_CODE_COMPLETED_STATE) {
+                // For already completed states we need to just remove the state message from SQS
+                collector.done(null, pawsState, false);
             } else {
-                collector.done(error);
+               const ddbStatus = handleError ? STATE_RECORD_FAILED : STATE_RECORD_COMPLETE;
+                collector.updateStateDBEntry(stateSqsMsg, ddbStatus, function() {
+                    if(handleError) {
+                        // If collector failed to handle poll state we'd like to refresh the state message in SQS
+                        // in order to avoid expiration of that message due to retention period.
+                        // Here we just upload same state messaged into SQS and  send error status to the backend.
+                        // The invocation is marked as succeed in order to clean up current state message in SQS.
+                        collector._storeCollectionState(pawsState, pawsState.priv_collector_state, 300, function(storeError){
+                            if (!storeError){
+                                collector.reportErrorStatus(handleError, pawsState, (statusSendError, handleErrorString) => {
+                                    console.error('PAWS000304 Error handling poll request: ', handleErrorString);
+                                    collector.done(null, pawsState);
+                                });
+                            } else {
+                                collector.done(storeError);
+                            }
+                        });
+                    } else {
+                        collector.done(null, pawsState);
+                    }
+                });
             }
         });
     };
+    
+    reportErrorStatus(error, pawsState, callback) {
+        const streamType = pawsState && pawsState.priv_collector_state.stream ?
+                process.env.al_application_id + "_" + pawsState.priv_collector_state.stream :
+                null;
+        const errorString = this.stringifyError(error);
+        const status = this.prepareErrorStatus(errorString, 'none', streamType);
+        this.sendStatus(status, (sendError) => {
+            return callback(sendError, errorString);
+        });
+    }
 
     batchLogProcess(logs, privCollectorState, nextInvocationTimeout, asyncCallback) {
         let collector = this;
@@ -715,7 +763,7 @@ class PawsCollector extends AlAwsCollector {
         let collectorStreams = { collector_streams: streams };
         return AlAwsUtil.setEnv(collectorStreams, (err) => {
             if (err) {
-                console.error('Paws error while adding collector_streams in environment variable')
+                console.error('PAWS000301 Paws error while adding collector_streams in environment variable')
             }
         });
     }
