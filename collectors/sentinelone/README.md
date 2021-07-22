@@ -17,13 +17,7 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 ![ScreenShot](./docs/sentinelone_credentials.jpg)
 
-### 2. API Docs
-
-For API docs, You need to login your Management Console. After login, you can access the following links.
-1. [Authentication](https://usea1-swprd1.sentinelone.net/apidoc/#!/Accounts/get_web_api_v2_0_private_accounts_name_available)
-2. [Activities](https://usea1-swprd1.sentinelone.net/apidoc/#!/Activities/get_web_api_v2_0_activities) 
-
-### 3. CloudFormation Template (CFT) 
+### 2. CloudFormation Template (CFT) 
 
 Refer to [CF template readme](./cfn/README-SENTINELONE.md) for installation instructions.
 
@@ -107,4 +101,3 @@ make sam-local
 ```
   4. Please see `local/event.json` for the event payload used for local invocation.
 Please write your readme here
-
