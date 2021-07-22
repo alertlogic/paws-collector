@@ -487,45 +487,33 @@ class PawsCollector extends AlAwsCollector {
         });
     }
 
-    batchLogProcess(logs, privCollectorState, nextInvocationTimeout, asyncCallback) {
+    batchLogProcess(logs, privCollectorState, nextInvocationTimeout, callback) {
         let collector = this;
-        return collector.processLog(logs, collector.pawsFormatLog.bind(collector), null, (err) => {
+        return collector.processLog(logs, collector.pawsFormatLog.bind(collector), null,  (err) => {
            
             if (err) {
-                // MS api return the logs but if build payload size > 10MB, our buildPayload method return Max payload issue. So we split logs array the in two part and call the processLog again.
-               
+                /**
+                 * MS api return the logs but if build payload size > 10MB, and split logs array the in two part.
+                 * Call the processLog again to send Logmsgs to ingest. 
+                 */
                 if ((typeof err === 'string' && err.indexOf('Maximum payload size exceeded') !== -1)) {
-                    let batchLogs = [];
-                    let halfLogs = [];
-                    let loglength = logs.length / 2;
-                    for (const index in logs) {
-                        console.log(index,logs[index]);
-                        if (index < loglength) {
-                            halfLogs.push(logs[index]);
-                            if (parseInt(index) === (loglength - 1)) {
-                                batchLogs.push(halfLogs);
-                            }
-                        }
-                        else {
-                            halfLogs = [];
-                            loglength = logs.length;
-                            halfLogs.push(logs[index]);
-                            if (parseInt(index) == logs.length-1) {
-                                batchLogs.push(halfLogs);
-                            }
-                        }
-                    }
-                    batchLogs.map(batchLog => {
-                         collector.batchLogProcess(batchLog, privCollectorState, nextInvocationTimeout, asyncCallback);
+
+                    let half = logs.length / 2;
+                    const indexArray = [
+                        { start: 0, stop: half },
+                        { start: half, stop: logs.length }
+                    ];
+
+                    async.reduce(indexArray, 0, (memo, logpart, asyncCallback) => {
+                        collector.batchLogProcess(logs.slice(logpart.start, logpart.stop), privCollectorState, nextInvocationTimeout, asyncCallback);
                     });
-                   
                 } else {
                     collector.reportErrorToIngestApi(err, () => {
-                        return asyncCallback(err);
+                        return callback(err);
                     });
                 }
             } else {
-                return asyncCallback(null, privCollectorState, nextInvocationTimeout);
+                return callback(null, privCollectorState, nextInvocationTimeout);
             }
         });
     }
