@@ -421,15 +421,7 @@ class PawsCollector extends AlAwsCollector {
             },
             function(logs, privCollectorState, nextInvocationTimeout, asyncCallback) {
                 console.info('PAWS000200 Log events received ', logs.length);
-                return collector.processLog(logs, collector.pawsFormatLog.bind(collector), null, (err) => {
-                    if (err) {
-                        collector.reportErrorToIngestApi(err, () => {
-                            return asyncCallback(err);
-                        });
-                    } else {
-                        return asyncCallback(null, privCollectorState, nextInvocationTimeout);
-                    }
-                });
+                return collector.batchLogProcess(logs, privCollectorState, nextInvocationTimeout, asyncCallback);
             },
             function(privCollectorState, nextInvocationTimeout, asyncCallback) {
                 // Try to find last collected message ts in collector private state.
@@ -492,6 +484,48 @@ class PawsCollector extends AlAwsCollector {
         const status = this.prepareErrorStatus(errorString, 'none', streamType);
         this.sendStatus(status, (sendError) => {
             return callback(sendError, errorString);
+        });
+    }
+
+    batchLogProcess(logs, privCollectorState, nextInvocationTimeout, callback) {
+        let collector = this;
+        return collector.processLog(logs, collector.pawsFormatLog.bind(collector), null,  async(err) => {
+           
+            if (err) {
+                /**
+                 * MS api return the logs but if build payload size > 10MB, and split logs array the in two part.
+                 * Call the processLog again to send Logmsgs to ingest. 
+                 */
+                if ((typeof err === 'string' && err.indexOf('Maximum payload size exceeded') !== -1)) {
+
+                    const half = Math.floor(logs.length / 2);
+                    const indexArray = [
+                        { start: 0, stop: half },
+                        { start: half, stop: logs.length }
+                    ];
+
+                    let promises = indexArray.map((logpart) => {
+                        return new Promise((resolve, reject) => {
+                            collector.batchLogProcess(logs.slice(logpart.start, logpart.stop), privCollectorState, nextInvocationTimeout, (err, res) => {
+                                if (err) {
+                                    reject(err);
+                                }
+                                else {
+                                    resolve(res);
+                                }
+                            });
+                        });
+                    });
+                    await Promise.all(promises);
+                    return callback(null, privCollectorState, nextInvocationTimeout);
+                } else {
+                    collector.reportErrorToIngestApi(err, () => {
+                        return callback(err);
+                    });
+                }
+            } else {
+                return callback(null, privCollectorState, nextInvocationTimeout);
+            }
         });
     }
 

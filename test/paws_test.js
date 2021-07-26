@@ -9,7 +9,7 @@ const pawsMock = require('./paws_mock');
 var m_alCollector = require('@alertlogic/al-collector-js');
 var PawsCollector = require('../paws_collector').PawsCollector;
 const m_al_aws = require('@alertlogic/al-aws-collector-js').Util;
-
+const zlib = require('zlib');
 
 var alserviceStub = {};
 var responseStub = {};
@@ -589,6 +589,52 @@ describe('Unit Tests', function() {
             });
         });
         
+        it('Handle the Maximum payload size exceeded error by processing in batch', function (done) {
+            mockDDB();
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function (error) {
+                     assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    AWS.restore('DynamoDB');
+                    alserviceStub.alog.restore();
+                    done();
+                }
+            };
+
+            const testEvent = {
+                Records: [
+                    {
+                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"2021-07-01T02:37:37.617Z\",\n    \"until\": \"2021-07-01T03:37:37.617Z\"\n  }\n}",
+                        "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
+                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
+                    }
+                ]
+            };
+
+            alserviceStub.alog = sinon.stub(m_alCollector.AlLog, 'buildPayload').callsFake(
+                function fakeFn(hostId, sourceId, hostmetaElems, content, parseFun, mainCallback) {
+                    if (content.length > 1) {
+                        return mainCallback('Maximum payload size exceeded :13899727');
+                    }
+                    else {
+                        zlib.deflate(content.toString(), function (compressionErr, compressed) {
+                            return mainCallback(null, {
+                                payload: compressed,
+                                payload_size: compressed.byteLength,
+                                raw_count: 2,
+                                raw_bytes: 36
+                            });
+                        });
+                    }
+                });
+            TestCollector.load().then(function (creds) {
+                var collector = new TestCollector(ctx, creds);
+                collector.handleEvent(testEvent);
+            });
+        });
         it('reportApiThrottling', function(done) {
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,
