@@ -755,61 +755,6 @@ describe('O365 Collector Tests', function() {
             });
         });
 
-        it('Handle the `Maximum payload size exceeded` error and reduce the pull time duration', function(done) {
-            subscriptionsContentStub = sinon.stub(m_o365mgmnt, 'subscriptionsContent').callsFake(
-                function fakeFn(path, extraOptions) {
-                    return new Promise(function(resolve, reject) {
-                        var result = {
-                            contentUri: "https://joeiscool.com/joeiscool"
-                        };
-                        return resolve({
-                            nextPageUri: 'a fake next page',
-                            parsedBody: [result]
-                        });
-                    });
-                });
-            getPreFormedUrlStub = sinon.stub(m_o365mgmnt, 'getPreFormedUrl').callsFake(
-                    function fakeFn(path, extraOptions) {
-                        return new Promise(function(resolve, reject) {
-                            return reject({message:'Maximum payload size exceeded :13899727'});
-                        });
-                    });
-
-            O365Collector.load().then(function(creds) {
-                var collector = new O365Collector(ctx, creds, 'o365');
-                const startDate = moment();
-                const curState = {
-                    since: startDate.toISOString(),
-                    until: startDate.add(1, 'hours').toISOString(),
-                    poll_interval_sec: 1
-                };
-
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
-                    assert.equal(moment(newState.until).diff(newState.since, 'minutes'), 30);
-                    assert.equal(logs.length,0);
-                    assert.equal(newPollInterval,curState.poll_interval_sec);
-                });
-            });
-            // check if time duration is 7.5 min it will set 3.5 min to state.until
-            O365Collector.load().then(function(creds) {
-                var collector = new O365Collector(ctx, creds, 'o365');
-                const startDate = moment();
-                const curState = {
-                    since: startDate.toISOString(),
-                    until: startDate.add(7.5, 'minutes').toISOString(), // it consider 7min
-                    poll_interval_sec: 1
-                };
-
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
-                    assert.equal(moment(newState.until).diff(newState.since, 'minutes'), 3); // it return lower value if value is <=3.5
-                    assert.equal(logs.length,0);
-                    assert.equal(newPollInterval,curState.poll_interval_sec);
-                    restoreO365ManagemntStub();
-                    done();
-                });
-            });
-        });
-
         it('Handle the `_handleExpiredContentError` error and reduce state.since by 15 min', function(done) {
             subscriptionsContentStub = sinon.stub(m_o365mgmnt, 'subscriptionsContent').callsFake(
                 function fakeFn(path, extraOptions) {
