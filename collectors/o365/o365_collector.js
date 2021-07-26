@@ -237,8 +237,7 @@ class O365Collector extends PawsCollector {
     }
 
     /**
-     * 1.Handle the Maxpayload exceeded error;reduce the pull duration by 2 and set new time in state.untill
-     * 2.Expired content error can be occur when start date is older than 7day and we reset the date to last 7days
+     * 1.Expired content error can be occur when start date is older than 7day and we reset the date to last 7days
      * If data for 1st 1hr is huge and within time it will not able to pull the data from array of contentUri using asyncPool;
      * Then set the satrt time to 15 min later,in this case we loss the data for 15 min but will resolve the issue and get remaining data without any error
      * @param {*} err 
@@ -246,16 +245,6 @@ class O365Collector extends PawsCollector {
      * @returns 
      */
     _handleMSManagementApiError(err, state) {
-        if (err.message && err.message.indexOf('Maximum payload size exceeded') !== -1) {
-            const currentInterval = moment(state.until).diff(state.since, 'minutes');
-            if (currentInterval > 1) {
-                state.until = moment(state.since).add(currentInterval / 2, 'minutes').toISOString();
-                state.poll_interval_sec = 1;
-            }
-            console.warn(`Collecting data from ${state.since} to ${state.until} to handle Maximum payload issue`);
-            return state;
-        }
-
         if (err.response && err.response.body) {
             const responseBody = JSON.parse(err.response.body);
             const contentExpireErrorCode = responseBody.error.code;
