@@ -516,8 +516,8 @@ class PawsCollector extends AlAwsCollector {
                             });
                         });
                     });
-                    const results = await Promise.all(promises);
-                    return callback(null, results[results.length-1], nextInvocationTimeout);
+                    await Promise.all(promises);
+                    return callback(null, privCollectorState, nextInvocationTimeout);
                 } else {
                     collector.reportErrorToIngestApi(err, () => {
                         return callback(err);
