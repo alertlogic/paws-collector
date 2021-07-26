@@ -489,7 +489,7 @@ class PawsCollector extends AlAwsCollector {
 
     batchLogProcess(logs, privCollectorState, nextInvocationTimeout, callback) {
         let collector = this;
-        return collector.processLog(logs, collector.pawsFormatLog.bind(collector), null,  (err) => {
+        return collector.processLog(logs, collector.pawsFormatLog.bind(collector), null,  async(err) => {
            
             if (err) {
                 /**
@@ -498,15 +498,26 @@ class PawsCollector extends AlAwsCollector {
                  */
                 if ((typeof err === 'string' && err.indexOf('Maximum payload size exceeded') !== -1)) {
 
-                    let half = logs.length / 2;
+                    const half = Math.floor(logs.length / 2);
                     const indexArray = [
                         { start: 0, stop: half },
                         { start: half, stop: logs.length }
                     ];
 
-                    async.reduce(indexArray, 0, (memo, logpart, asyncCallback) => {
-                        collector.batchLogProcess(logs.slice(logpart.start, logpart.stop), privCollectorState, nextInvocationTimeout, asyncCallback);
+                    let promises = indexArray.map((logpart) => {
+                        return new Promise((resolve, reject) => {
+                            collector.batchLogProcess(logs.slice(logpart.start, logpart.stop), privCollectorState, nextInvocationTimeout, (err, res) => {
+                                if (err) {
+                                    reject(err);
+                                }
+                                else {
+                                    resolve(res);
+                                }
+                            });
+                        });
                     });
+                    const results = await Promise.all(promises);
+                    return callback(null, results[results.length-1], nextInvocationTimeout);
                 } else {
                     collector.reportErrorToIngestApi(err, () => {
                         return callback(err);

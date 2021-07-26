@@ -589,15 +589,15 @@ describe('Unit Tests', function() {
             });
         });
         
-        it('Handle the Maximum payload size exceeded error by reduce the pull time duration', function(done){
+        it('Handle the Maximum payload size exceeded error by processing in batch', function (done) {
             mockDDB();
             let ctx = {
-                invokedFunctionArn : pawsMock.FUNCTION_ARN,
-                fail : function(error) {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function (error) {
                      assert.fail(error);
                     done();
                 },
-                succeed : function() {
+                succeed: function () {
                     AWS.restore('DynamoDB');
                     alserviceStub.alog.restore();
                     done();
@@ -613,7 +613,7 @@ describe('Unit Tests', function() {
                     }
                 ]
             };
-            
+
             alserviceStub.alog = sinon.stub(m_alCollector.AlLog, 'buildPayload').callsFake(
                 function fakeFn(hostId, sourceId, hostmetaElems, content, parseFun, mainCallback) {
                     if (content.length > 1) {
@@ -630,7 +630,7 @@ describe('Unit Tests', function() {
                         });
                     }
                 });
-                TestCollector.load().then(function(creds) {
+            TestCollector.load().then(function (creds) {
                 var collector = new TestCollector(ctx, creds);
                 collector.handleEvent(testEvent);
             });
