@@ -270,6 +270,23 @@ describe('O365 Collector Tests', function() {
                 });
             });
         });
+
+        it('get inital state when paws_collection_interval exist in env', function(done) {
+            O365Collector.load().then(function(creds) {
+                var collector = new O365Collector(ctx, creds, 'o365');
+                const startDate = moment().subtract(2, 'days').toISOString();
+                process.env.paws_collection_start_ts = startDate;
+                process.env.paws_collection_interval = 900;
+
+                collector.pawsInitCollectionState(o365Mock.LOG_EVENT, (err, initialStates, nextPoll) => {
+                    initialStates.forEach((state) => { 
+                        assert.equal(moment(state.until).diff(state.since, 'minutes'), 15);
+                    });
+                    process.env.paws_collection_interval = 0;
+                    done();
+                });
+            });
+        });
     });
 
     describe('_getNextCollectionState', function() {
@@ -307,6 +324,24 @@ describe('O365 Collector Tests', function() {
                 const newState = collector._getNextCollectionState(curState);
                 assert.equal(moment(newState.until).diff(newState.since, 'hours'), 1);
                 assert.equal(newState.poll_interval_sec, 1);
+                done();
+            });
+        });
+        it('get next state if collection duration more than an hour and paws_colection_interval exist in env', function(done) {
+            const startDate = moment().subtract(3, 'hours');
+            const curState = {
+                since: startDate.toISOString(),
+                until: startDate.add(1, 'hours').toISOString(),
+                poll_interval_sec: 1
+            };
+
+            process.env.paws_collection_interval = 900;
+            O365Collector.load().then(function(creds) {
+                var collector = new O365Collector(ctx, creds, 'o365');
+                const newState = collector._getNextCollectionState(curState);
+                assert.equal(moment(newState.until).diff(newState.since, 'minutes'), 15);
+                assert.equal(newState.poll_interval_sec, 1);
+                process.env.paws_collection_interval = 0;
                 done();
             });
         });
@@ -718,6 +753,57 @@ describe('O365 Collector Tests', function() {
                     assert.equal(newState.poll_interval_sec, 1);
                     assert.equal(logs.length, 2);
                     restoreO365ManagemntStub();
+                    done();
+                });
+            });
+        });
+
+        it('Get next state with custom collection interval when  Start timestamp is more than 7 days in the past and paws_collection_interval exist in env', function (done) {
+            subscriptionsContentStub = sinon.stub(m_o365mgmnt, 'subscriptionsContent');
+            subscriptionsContentStub.callsFake(
+                function fakeFn(path, extraOptions) {
+                    return new Promise(function (resolve, reject) {
+                        var result = {
+                            contentUri: "https://joeiscool.com/joeiscool"
+                        };
+                        return resolve({
+                            nextPageUri: 'a fake next page',
+                            parsedBody: [result]
+                        });
+                    });
+                });
+            getPreFormedUrlStub = sinon.stub(m_o365mgmnt, 'getPreFormedUrl');
+            getPreFormedUrlStub.callsFake(
+                function (path, extraOptions) {
+                    return new Promise(function (resolve, reject) {
+                        var result = {
+                            contentUri: "https://joeiscool.com/nextpage"
+                        };
+                        return resolve({
+                            nextPageUri: undefined,
+                            parsedBody: [result]
+                        });
+                    });
+                });
+
+            O365Collector.load().then(function (creds) {
+                var collector = new O365Collector(ctx, creds, 'o365');
+                const startDate = moment().subtract(10, 'days');
+                const curState = {
+                    stream: "FakeStream",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                process.env.paws_collection_interval = 1200;
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(moment(newState.until).diff(newState.since, 'minutes'), 20);
+                    assert.equal(newState.poll_interval_sec, 1);
+                    assert.equal(logs.length, 2);
+                    restoreO365ManagemntStub();
+                    // reset the paws_collection_interval to 0 to not break other scenario
+                    process.env.paws_collection_interval = 0;
                     done();
                 });
             });
