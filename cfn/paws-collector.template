@@ -80,6 +80,11 @@
             "Type": "Number",
             "Default": 60
         },
+        "CollectionInterval": {
+            "Description": "Collection interval in seconds to set end/until date value in SQS state",
+            "Type": "Number",
+            "Default": 0
+        },
         "PawsEndpoint": {
             "Description": "URL to poll",
             "Type": "String"
@@ -791,6 +796,9 @@
                   },
                   "paws_poll_interval": {
                       "Ref":"PollingInterval"
+                  },
+                  "paws_collector_interval": {
+                    "Ref": "CollectionInterval"
                   },
                   "paws_endpoint":{
                       "Ref":"PawsEndpoint"
