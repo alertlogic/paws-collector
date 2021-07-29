@@ -98,16 +98,10 @@ class O365Collector extends PawsCollector {
             return callback(null, [], state, state.poll_interval_sec);
         }
 
-        if ((process.env.paws_collection_interval && process.env.paws_collection_interval > 0 ) && state ) {
-            state.until = moment(state.since).add(process.env.paws_collection_interval, 'seconds').toISOString();
-        }
-        console.info(`O365000001 Collecting data from ${state.since} till ${state.until} for stream ${state.stream}`);
-
         if(moment().diff(state.since, 'days', true) > 7){
             const newStart = moment().subtract(PARTIAL_WEEK_HOURS, 'hours');
             state.since = newStart.toISOString();
-            state.until = process.env.paws_collection_interval && process.env.paws_collection_interval > 0 ? newStart.add(process.env.paws_collection_interval, 'seconds').toISOString()
-                : newStart.add(1, 'hours').toISOString();
+            state.until = newStart.add(1, 'hours').toISOString();
             // remove next page token if the state is out of date as well.
             state.nextPage = null;
             console.warn(
@@ -117,6 +111,11 @@ class O365Collector extends PawsCollector {
                 `Now collecting data from ${state.since} till ${state.until} for stream ${state.stream}`
             );
         }
+
+        if ((process.env.paws_collection_interval && process.env.paws_collection_interval > 0 ) && state ) {
+            state.until = moment(state.since).add(process.env.paws_collection_interval, 'seconds').toISOString();
+        }
+        console.info(`O365000001 Collecting data from ${state.since} till ${state.until} for stream ${state.stream}`);
 
         let pageCount = 0;
 
