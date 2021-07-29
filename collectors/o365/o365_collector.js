@@ -49,10 +49,7 @@ class O365Collector extends PawsCollector {
             startTs = moment().subtract(PARTIAL_WEEK_HOURS, 'hours').toISOString();
             console.info("O365000004 Start timestamp is more than 7 days in the past. This is not allowed in the MS managment API. setting the start time to 7 days in the past");
         }
-        if (process.env.paws_collection_interval && process.env.paws_collection_interval > 0) {
-            endTs = moment(startTs).add(process.env.paws_collection_interval, 'seconds').toISOString();
-        }
-        else if (moment().diff(startTs, 'hours') > 1) {
+        if (moment().diff(startTs, 'hours') > 1) {
             endTs = moment(startTs).add(1, 'hours').toISOString();
         }
         else {
@@ -101,12 +98,16 @@ class O365Collector extends PawsCollector {
             return callback(null, [], state, state.poll_interval_sec);
         }
 
+        if ((process.env.paws_collection_interval && process.env.paws_collection_interval > 0 ) && state ) {
+            state.until = moment(state.since).add(process.env.paws_collection_interval, 'seconds').toISOString();
+        }
         console.info(`O365000001 Collecting data from ${state.since} till ${state.until} for stream ${state.stream}`);
 
         if(moment().diff(state.since, 'days', true) > 7){
             const newStart = moment().subtract(PARTIAL_WEEK_HOURS, 'hours');
             state.since = newStart.toISOString();
-            state.until = (process.env.paws_collection_interval && process.env.paws_collection_interval > 0) ? newStart.add(process.env.paws_collection_interval, 'seconds').toISOString() : newStart.add(1, 'hours').toISOString();
+            state.until = process.env.paws_collection_interval && process.env.paws_collection_interval > 0 ? newStart.add(process.env.paws_collection_interval, 'seconds').toISOString()
+                : newStart.add(1, 'hours').toISOString();
             // remove next page token if the state is out of date as well.
             state.nextPage = null;
             console.warn(
@@ -194,8 +195,7 @@ class O365Collector extends PawsCollector {
     _getNextCollectionState(curState) {
         const untilMoment = moment(curState.until);
 
-        const { nextUntilMoment, nextSinceMoment, nextPollInterval } = (process.env.paws_collection_interval && process.env.paws_collection_interval > 0) ? this.calcNextCustomCollectionInterval(process.env.paws_collection_interval, untilMoment, this.pollInterval)
-            : calcNextCollectionInterval('hour-cap', untilMoment, this.pollInterval);
+        const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-cap', untilMoment, this.pollInterval);
 
         return  {
             stream: curState.stream,
@@ -291,22 +291,6 @@ class O365Collector extends PawsCollector {
         } catch (exception) {
             return err;
         }
-    }
-
-    calcNextCustomCollectionInterval(pawsCollectionInterval, curUntilMoment, pollInterval) {
-        const nowMoment = moment();
-        const nextSinceMoment = curUntilMoment.isAfter(nowMoment) ? nowMoment : curUntilMoment;
-        let nextUntilMoment;
-
-        if (nowMoment.diff(nextSinceMoment, 'hours') > 1) {
-            nextUntilMoment = moment(nextSinceMoment).add(pawsCollectionInterval, 'seconds');
-        }
-        else {
-            nextUntilMoment = moment(nextSinceMoment).add(pollInterval, 'seconds');
-        }
-        const nextPollInterval = nowMoment.diff(nextUntilMoment, 'seconds') > pollInterval ?
-            1 : pollInterval;
-        return { nextSinceMoment, nextUntilMoment, nextPollInterval };
     }
 }
 
