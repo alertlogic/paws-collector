@@ -723,6 +723,59 @@ describe('O365 Collector Tests', function() {
             });
         });
 
+        it('Get next state with custom collection interval when  Start timestamp is more than 7 days in the past and paws_collection_interval exist in env', function (done) {
+            subscriptionsContentStub = sinon.stub(m_o365mgmnt, 'subscriptionsContent');
+            subscriptionsContentStub.callsFake(
+                function fakeFn(path, extraOptions) {
+                    return new Promise(function (resolve, reject) {
+                        var result = {
+                            contentUri: "https://joeiscool.com/joeiscool"
+                        };
+                        return resolve({
+                            nextPageUri: 'a fake next page',
+                            parsedBody: [result]
+                        });
+                    });
+                });
+            getPreFormedUrlStub = sinon.stub(m_o365mgmnt, 'getPreFormedUrl');
+            getPreFormedUrlStub.callsFake(
+                function (path, extraOptions) {
+                    return new Promise(function (resolve, reject) {
+                        var result = {
+                            contentUri: "https://joeiscool.com/nextpage"
+                        };
+                        return resolve({
+                            nextPageUri: undefined,
+                            parsedBody: [result]
+                        });
+                    });
+                });
+
+            O365Collector.load().then(function (creds) {
+                var collector = new O365Collector(ctx, creds, 'o365');
+                const startDate = moment().subtract(10, 'days');
+                const curState = {
+                    stream: "FakeStream",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                process.env.paws_collection_interval = 1200;
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    if (newState) {
+                        assert.equal(moment(newState.until).diff(newState.since, 'minutes'), 20);
+                        assert.equal(newState.poll_interval_sec, 1);
+                        assert.equal(logs.length, 2);
+                    }
+                    restoreO365ManagemntStub();
+                    // reset the paws_collection_interval to 0 to not break other scenario
+                    process.env.paws_collection_interval = 0;
+                    done();
+                });
+            });
+        });
+
         it('Get Logs check client error', function(done) {
             subscriptionsContentStub = sinon.stub(m_o365mgmnt, 'subscriptionsContent').callsFake(
                 function fakeFn(path, extraOptions) {

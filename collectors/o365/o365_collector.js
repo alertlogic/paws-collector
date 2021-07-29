@@ -49,8 +49,7 @@ class O365Collector extends PawsCollector {
             startTs = moment().subtract(PARTIAL_WEEK_HOURS, 'hours').toISOString();
             console.info("O365000004 Start timestamp is more than 7 days in the past. This is not allowed in the MS managment API. setting the start time to 7 days in the past");
         }
-
-        if(moment().diff(startTs, 'hours') > 1){
+        if (moment().diff(startTs, 'hours') > 1) {
             endTs = moment(startTs).add(1, 'hours').toISOString();
         }
         else {
@@ -99,8 +98,6 @@ class O365Collector extends PawsCollector {
             return callback(null, [], state, state.poll_interval_sec);
         }
 
-        console.info(`O365000001 Collecting data from ${state.since} till ${state.until} for stream ${state.stream}`);
-
         if(moment().diff(state.since, 'days', true) > 7){
             const newStart = moment().subtract(PARTIAL_WEEK_HOURS, 'hours');
             state.since = newStart.toISOString();
@@ -114,6 +111,11 @@ class O365Collector extends PawsCollector {
                 `Now collecting data from ${state.since} till ${state.until} for stream ${state.stream}`
             );
         }
+
+        if ((process.env.paws_collection_interval && process.env.paws_collection_interval > 0 ) && state ) {
+            state.until = moment(state.since).add(process.env.paws_collection_interval, 'seconds').toISOString();
+        }
+        console.info(`O365000001 Collecting data from ${state.since} till ${state.until} for stream ${state.stream}`);
 
         let pageCount = 0;
 
