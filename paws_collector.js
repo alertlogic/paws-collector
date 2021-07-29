@@ -393,87 +393,92 @@ class PawsCollector extends AlAwsCollector {
     
     handlePollRequest(stateSqsMsg) {
         let collector = this;
-        let pawsState = JSON.parse(stateSqsMsg.body);
-
-        async.waterfall([
-            function(asyncCallback) {
-                if (!collector.registered) {
-                    return asyncCallback('PAWS000103 Collection attempt for unregistrered collector');
-                } else {
-                    return asyncCallback();
-                }
-            },
-            function(asyncCallback) {
-                return collector.checkStateSqsMessage(stateSqsMsg, asyncCallback);
-            },
-            function(asyncCallback) {
-                return collector.pawsGetLogs(pawsState.priv_collector_state, (err, ...remainingParams) => {
-                    if (err) {
-                        collector.reportClientError(err, () => {
-                            return asyncCallback(err);
-                        });
+        
+        try {
+            let pawsState = JSON.parse(stateSqsMsg.body);
+            async.waterfall([
+                function(asyncCallback) {
+                    if (!collector.registered) {
+                        return asyncCallback('PAWS000103 Collection attempt for unregistrered collector');
                     } else {
-                        collector.reportClientOK(() => {
-                            return asyncCallback(null, ...remainingParams)
-                        });
+                        return asyncCallback();
                     }
-                });
-            },
-            function(logs, privCollectorState, nextInvocationTimeout, asyncCallback) {
-                console.info('PAWS000200 Log events received ', logs.length);
-                return collector.batchLogProcess(logs, privCollectorState, nextInvocationTimeout, asyncCallback);
-            },
-            function(privCollectorState, nextInvocationTimeout, asyncCallback) {
-                // Try to find last collected message ts in collector private state.
-                const lastCollectedTs = 
-                    privCollectorState.last_collected_ts ? privCollectorState.last_collected_ts :
-                    privCollectorState.since ? privCollectorState.since :
-                    privCollectorState.until ? privCollectorState.until :
-                    null;
-                
-                if (lastCollectedTs) {
-                    collector.reportCollectionDelay(lastCollectedTs, () => {
-                        return asyncCallback(null, privCollectorState, nextInvocationTimeout);
+                },
+                function(asyncCallback) {
+                    return collector.checkStateSqsMessage(stateSqsMsg, asyncCallback);
+                },
+                function(asyncCallback) {
+                    return collector.pawsGetLogs(pawsState.priv_collector_state, (err, ...remainingParams) => {
+                        if (err) {
+                            collector.reportClientError(err, () => {
+                                return asyncCallback(err);
+                            });
+                        } else {
+                            collector.reportClientOK(() => {
+                                return asyncCallback(null, ...remainingParams)
+                            });
+                        }
                     });
-                } else {
-                    return asyncCallback(null, privCollectorState, nextInvocationTimeout);
-                }
-            },
-            function(privCollectorState, nextInvocationTimeout, asyncCallback) {
-                return collector._storeCollectionState(pawsState, privCollectorState, nextInvocationTimeout, asyncCallback);
-            }
-        ], function(handleError) {
-            if( handleError && handleError.errorCode === ERROR_CODE_DUPLICATE_STATE) {
-                // We need to fail invocation for duplicate state handling
-                // because we don't want delete SQS message which is being handled by another invocation
-                collector.done(handleError, pawsState, false);
-            } else if (handleError && handleError.errorCode === ERROR_CODE_COMPLETED_STATE) {
-                // For already completed states we need to just remove the state message from SQS
-                collector.done(null, pawsState, false);
-            } else {
-               const ddbStatus = handleError ? STATE_RECORD_FAILED : STATE_RECORD_COMPLETE;
-                collector.updateStateDBEntry(stateSqsMsg, ddbStatus, function() {
-                    if(handleError) {
-                        // If collector failed to handle poll state we'd like to refresh the state message in SQS
-                        // in order to avoid expiration of that message due to retention period.
-                        // Here we just upload same state messaged into SQS and  send error status to the backend.
-                        // The invocation is marked as succeed in order to clean up current state message in SQS.
-                        collector._storeCollectionState(pawsState, pawsState.priv_collector_state, 300, function(storeError){
-                            if (!storeError){
-                                collector.reportErrorStatus(handleError, pawsState, (statusSendError, handleErrorString) => {
-                                    console.error('PAWS000304 Error handling poll request: ', handleErrorString);
-                                    collector.done(null, pawsState);
-                                });
-                            } else {
-                                collector.done(storeError);
-                            }
+                },
+                function(logs, privCollectorState, nextInvocationTimeout, asyncCallback) {
+                    console.info('PAWS000200 Log events received ', logs.length);
+                    return collector.batchLogProcess(logs, privCollectorState, nextInvocationTimeout, asyncCallback);
+                },
+                function(privCollectorState, nextInvocationTimeout, asyncCallback) {
+                    // Try to find last collected message ts in collector private state.
+                    const lastCollectedTs = 
+                        privCollectorState.last_collected_ts ? privCollectorState.last_collected_ts :
+                        privCollectorState.since ? privCollectorState.since :
+                        privCollectorState.until ? privCollectorState.until :
+                        null;
+                    
+                    if (lastCollectedTs) {
+                        collector.reportCollectionDelay(lastCollectedTs, () => {
+                            return asyncCallback(null, privCollectorState, nextInvocationTimeout);
                         });
                     } else {
-                        collector.done(null, pawsState);
+                        return asyncCallback(null, privCollectorState, nextInvocationTimeout);
                     }
-                });
-            }
-        });
+                },
+                function(privCollectorState, nextInvocationTimeout, asyncCallback) {
+                    return collector._storeCollectionState(pawsState, privCollectorState, nextInvocationTimeout, asyncCallback);
+                }
+            ], function(handleError) {
+                if( handleError && handleError.errorCode === ERROR_CODE_DUPLICATE_STATE) {
+                    // We need to fail invocation for duplicate state handling
+                    // because we don't want delete SQS message which is being handled by another invocation
+                    collector.done(handleError, pawsState, false);
+                } else if (handleError && handleError.errorCode === ERROR_CODE_COMPLETED_STATE) {
+                    // For already completed states we need to just remove the state message from SQS
+                    collector.done(null, pawsState, false);
+                } else {
+                   const ddbStatus = handleError ? STATE_RECORD_FAILED : STATE_RECORD_COMPLETE;
+                    collector.updateStateDBEntry(stateSqsMsg, ddbStatus, function() {
+                        if(handleError) {
+                            // If collector failed to handle poll state we'd like to refresh the state message in SQS
+                            // in order to avoid expiration of that message due to retention period.
+                            // Here we just upload same state messaged into SQS and  send error status to the backend.
+                            // The invocation is marked as succeed in order to clean up current state message in SQS.
+                            collector._storeCollectionState(pawsState, pawsState.priv_collector_state, 300, function(storeError){
+                                if (!storeError){
+                                    collector.reportErrorStatus(handleError, pawsState, (statusSendError, handleErrorString) => {
+                                        console.error('PAWS000304 Error handling poll request: ', handleErrorString);
+                                        collector.done(null, pawsState);
+                                    });
+                                } else {
+                                    collector.done(storeError);
+                                }
+                            });
+                        } else {
+                            collector.done(null, pawsState);
+                        }
+                    });
+                }
+            });
+        } catch(exception) {
+            console.error('PAWS000201 Exception handling poll request: ', exception);
+            return collector.done(exception, null, false);
+        }
     };
     
     reportErrorStatus(error, pawsState, callback) {
