@@ -36,7 +36,11 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                     if (response.statusCode && response.statusCode == 429) {
                         return reject(response);
                     }
-                    body = JSON.parse(body);
+                    try {
+                        body = JSON.parse(body);
+                    } catch (exception) {
+                        return reject(exception);
+                    }
                     if (body.fail && body.fail[0] && body.fail[0].errors) {
                         return reject(body.fail[0].errors[0]);
                     }
