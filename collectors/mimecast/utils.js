@@ -39,6 +39,7 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                     try {
                         body = JSON.parse(body);
                     } catch (exception) {
+                        console.error("MIME000010 Error parsing response. ", body);
                         return reject(exception);
                     }
                     if (body.fail && body.fail[0] && body.fail[0].errors) {
