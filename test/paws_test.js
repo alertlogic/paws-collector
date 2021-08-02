@@ -635,6 +635,44 @@ describe('Unit Tests', function() {
                 collector.handleEvent(testEvent);
             });
         });
+
+        it('Handle the ingest 307 error', function (done) {
+            mockDDB();
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function (error) {
+                     assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    AWS.restore('DynamoDB');
+                    alserviceStub.sendLogmsgs.restore();
+                    done();
+                }
+            };
+
+            const testEvent = {
+                Records: [
+                    {
+                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"2021-07-01T02:37:37.617Z\",\n    \"until\": \"2021-07-01T03:37:37.617Z\"\n  }\n}",
+                        "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
+                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
+                    }
+                ]
+            };
+
+            alserviceStub.sendLogmsgs = sinon.stub(m_alCollector.IngestC.prototype, 'sendLogmsgs').callsFake(
+                function fakeFn(data, callback) {
+                    return new Promise(function (resolve, reject) {
+                        reject({ "name": "StatusCodeError", "statusCode": 307, "message": "307 - \"\"", "error": "", "options": { "method": "POST", "url": "https://api.global-services.us-east-1.global.alertlogic.com/ingest/v1/134278821/data/logmsgs", "json": false } });
+                    });
+                });
+            process.env.paws_collection_interval = 60;
+            TestCollector.load().then(function (creds) {
+                var collector = new TestCollector(ctx, creds);
+                collector.handleEvent(testEvent);
+            });
+        });
         it('reportApiThrottling', function(done) {
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,

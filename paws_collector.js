@@ -523,7 +523,14 @@ class PawsCollector extends AlAwsCollector {
                     });
                     await Promise.all(promises);
                     return callback(null, privCollectorState, nextInvocationTimeout);
-                } else {
+                } else if (err.statusCode && err.statusCode === 307 && process.env.paws_collection_interval && process.env.paws_collection_interval > 0) {
+                    const paws_collection_interval = Math.floor(process.env.paws_collection_interval / 2);
+
+                    AlAwsUtil.setEnv({ paws_collection_interval: paws_collection_interval }, (err, res) => {
+                        return callback(null, privCollectorState, nextInvocationTimeout);
+                    });
+                }
+                else {
                     collector.reportErrorToIngestApi(err, () => {
                         return callback(err);
                     });
