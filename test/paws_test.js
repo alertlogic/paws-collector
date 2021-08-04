@@ -148,6 +148,50 @@ class TestCollector extends PawsCollector {
     }
 }
 
+class TestMaxLogSizeCollector extends PawsCollector {
+    constructor(ctx, creds) {
+        super(ctx, creds);
+    }
+    
+    set mockGetLogsError(msg = null) {
+        this._mockGetLogsError = msg;
+    }
+    
+    get mockGetLogsError() {
+        return this._mockGetLogsError;
+    }
+    
+    pawsInitCollectionState(event, callback) {
+        return callback(null, {state: 'initial-state'}, 900);
+    }   
+    
+    pawsGetLogs(state, callback) {
+        const logs = [];
+        for (let i = 0; i < 25000; i++) {
+            logs.push('log'+Math.random());
+       }
+        return callback(this.mockGetLogsError, logs, {state: 'new-state'}, 900);
+    }
+    
+    pawsGetRegisterParameters(event, callback) {
+        return callback(null, {register: 'test-param'});
+    }
+    
+    pawsFormatLog(msg) {
+        const collector = this;
+        
+        let formattedMsg = {
+            messageTs: 12345678,
+            priority: 11,
+            progName: 'OktaCollector',
+            message: JSON.stringify(msg),
+            messageType: 'json/aws.test',
+            applicationId: collector.application_id
+        };
+        return formattedMsg;
+    }
+}
+
 class TestCollectorNoOverrides extends PawsCollector {
     constructor(ctx, creds) {
         super(ctx, creds);
@@ -616,7 +660,7 @@ describe('Unit Tests', function() {
 
             alserviceStub.alog = sinon.stub(m_alCollector.AlLog, 'buildPayload').callsFake(
                 function fakeFn(hostId, sourceId, hostmetaElems, content, parseFun, mainCallback) {
-                    if (content.length > 1) {
+                    if (content.length > 5000) {
                         return mainCallback('Maximum payload size exceeded :13899727');
                     }
                     else {
@@ -630,8 +674,8 @@ describe('Unit Tests', function() {
                         });
                     }
                 });
-            TestCollector.load().then(function (creds) {
-                var collector = new TestCollector(ctx, creds);
+                TestMaxLogSizeCollector.load().then(function (creds) {
+                var collector = new TestMaxLogSizeCollector(ctx, creds);
                 collector.handleEvent(testEvent);
             });
         });
@@ -667,9 +711,9 @@ describe('Unit Tests', function() {
                         reject({ "name": "StatusCodeError", "statusCode": 307, "message": "307 - \"\"", "error": "", "options": { "method": "POST", "url": "https://api.global-services.us-east-1.global.alertlogic.com/ingest/v1/134278821/data/logmsgs", "json": false } });
                     });
                 });
-            process.env.paws_collection_interval = 60;
-            TestCollector.load().then(function (creds) {
-                var collector = new TestCollector(ctx, creds);
+            // process.env.paws_collection_interval = 60;
+            TestMaxLogSizeCollector.load().then(function (creds) {
+                var collector = new TestMaxLogSizeCollector(ctx, creds);
                 collector.handleEvent(testEvent);
             });
         });

@@ -38,6 +38,7 @@ const DDB_OPTIONS = {
     ConsistentRead: true
 };
 
+const MAX_LOG_SIZE = 10000;
 function getPawsParamStoreParam(){
     return new Promise((resolve, reject) => {
         if(fs.existsSync(CREDS_FILE_PATH)){
@@ -498,17 +499,20 @@ class PawsCollector extends AlAwsCollector {
            
             if (err) {
                 /**
-                 * MS api return the logs but if build payload size > 10MB, and split logs array the in two part.
+                 * MS api return the logs but if build payload size > 10MB or if ingest return status code 307;
+                 * Split data per 10K message batches.
                  * Call the processLog again to send Logmsgs to ingest. 
                  */
-                if ((typeof err === 'string' && err.indexOf('Maximum payload size exceeded') !== -1)) {
-
-                    const half = Math.floor(logs.length / 2);
-                    const indexArray = [
-                        { start: 0, stop: half },
-                        { start: half, stop: logs.length }
-                    ];
-
+                if ((typeof err === 'string' && err.indexOf('Maximum payload size exceeded') !== -1) || (err.statusCode && err.statusCode === 307)) {
+                    const indexArray = [];
+                    if (logs.length > MAX_LOG_SIZE) {
+                        const oneBatch = Math.ceil(logs.length / MAX_LOG_SIZE);
+                        for (let i = 0; i < oneBatch; i++) {
+                            indexArray.push({ start: MAX_LOG_SIZE * i, stop: MAX_LOG_SIZE * (i + 1) });
+                        }
+                    } else {
+                        indexArray[{ start: 0, stop: logs.length }];
+                    }
                     let promises = indexArray.map((logpart) => {
                         return new Promise((resolve, reject) => {
                             collector.batchLogProcess(logs.slice(logpart.start, logpart.stop), privCollectorState, nextInvocationTimeout, (err, res) => {
@@ -523,14 +527,7 @@ class PawsCollector extends AlAwsCollector {
                     });
                     await Promise.all(promises);
                     return callback(null, privCollectorState, nextInvocationTimeout);
-                } else if (err.statusCode && err.statusCode === 307 && process.env.paws_collection_interval && process.env.paws_collection_interval > 1) {
-                    const paws_collection_interval = Math.floor(process.env.paws_collection_interval / 2);
-
-                    AlAwsUtil.setEnv({ paws_collection_interval: paws_collection_interval }, (err, res) => {
-                        return callback(null, privCollectorState, nextInvocationTimeout);
-                    });
-                }
-                else {
+                } else {
                     collector.reportErrorToIngestApi(err, () => {
                         return callback(err);
                     });
