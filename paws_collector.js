@@ -38,7 +38,7 @@ const DDB_OPTIONS = {
     ConsistentRead: true
 };
 
-const MAX_LOG_SIZE = 10000;
+const MAX_LOG_BATCH_SIZE = 10000;
 function getPawsParamStoreParam(){
     return new Promise((resolve, reject) => {
         if(fs.existsSync(CREDS_FILE_PATH)){
@@ -492,49 +492,44 @@ class PawsCollector extends AlAwsCollector {
             return callback(sendError, errorString);
         });
     }
-
+    /**
+     * Split data per 10K messages batch.
+     * Call the processLog to send Logmsgs to ingest
+     * @param {*} logs 
+     * @param {*} privCollectorState 
+     * @param {*} nextInvocationTimeout 
+     * @param {*} callback 
+     */
     batchLogProcess(logs, privCollectorState, nextInvocationTimeout, callback) {
         let collector = this;
-        return collector.processLog(logs, collector.pawsFormatLog.bind(collector), null,  async(err) => {
-           
-            if (err) {
-                /**
-                 * MS api return the logs but if build payload size > 10MB or if ingest return status code 307;
-                 * Split data per 10K message batches.
-                 * Call the processLog again to send Logmsgs to ingest. 
-                 */
-                if ((typeof err === 'string' && err.indexOf('Maximum payload size exceeded') !== -1) || (err.statusCode && err.statusCode === 307)) {
-                    const indexArray = [];
-                    if (logs.length > MAX_LOG_SIZE) {
-                        const oneBatch = Math.ceil(logs.length / MAX_LOG_SIZE);
-                        for (let i = 0; i < oneBatch; i++) {
-                            indexArray.push({ start: MAX_LOG_SIZE * i, stop: MAX_LOG_SIZE * (i + 1) });
-                        }
-                    } else {
-                        indexArray[{ start: 0, stop: logs.length }];
-                    }
-                    let promises = indexArray.map((logpart) => {
-                        return new Promise((resolve, reject) => {
-                            collector.batchLogProcess(logs.slice(logpart.start, logpart.stop), privCollectorState, nextInvocationTimeout, (err, res) => {
-                                if (err) {
-                                    reject(err);
-                                }
-                                else {
-                                    resolve(res);
-                                }
-                            });
-                        });
-                    });
-                    await Promise.all(promises);
-                    return callback(null, privCollectorState, nextInvocationTimeout);
-                } else {
-                    collector.reportErrorToIngestApi(err, () => {
-                        return callback(err);
-                    });
-                }
-            } else {
-                return callback(null, privCollectorState, nextInvocationTimeout);
+        let indexArray = [];
+        if (logs.length > MAX_LOG_BATCH_SIZE) {
+            const batches = Math.ceil(logs.length / MAX_LOG_BATCH_SIZE);
+            for (let i = 0; i < batches; i++) {
+                indexArray.push({ start: MAX_LOG_BATCH_SIZE * i, stop: MAX_LOG_BATCH_SIZE * (i + 1) });
             }
+        } else {
+            indexArray = [{ start: 0, stop: logs.length }];
+        }
+        let promises = indexArray.map((logpart) => {
+            return new Promise((resolve, reject) => {
+                collector.processLog(logs.slice(logpart.start, logpart.stop), collector.pawsFormatLog.bind(collector), null, (err, res) => {
+                    if (err) {
+                        reject(err);
+                    }
+                    else {
+                        resolve(res);
+                    }
+                });
+            });
+        });
+
+        Promise.all(promises).then((res) => {
+            return callback(null, privCollectorState, nextInvocationTimeout);
+        }).catch((err) => {
+            collector.reportErrorToIngestApi(err, () => {
+                return callback(err);
+            });
         });
     }
 
