@@ -8,7 +8,7 @@ const ddLambda = require('datadog-lambda-js');
 const pawsMock = require('./paws_mock');
 var m_alCollector = require('@alertlogic/al-collector-js');
 var PawsCollector = require('../paws_collector').PawsCollector;
-const m_al_aws = require('@alertlogic/al-aws-collector-js').Util;
+const m_al_aws = require('@alertlogic/al-aws-collector-js');
 
 var alserviceStub = {};
 var responseStub = {};
@@ -61,7 +61,7 @@ function restoreAlServiceStub() {
 
 
 function mockSetEnvStub() {
-    setEnvStub = sinon.stub(m_al_aws, 'setEnv').callsFake((vars, callback)=>{
+    setEnvStub = sinon.stub(m_al_aws.Util, 'setEnv').callsFake((vars, callback)=>{
         const {
             ingest_api,
             azcollect_api
@@ -637,15 +637,28 @@ describe('Unit Tests', function() {
             let ctx = {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
                 fail: function (error) {
-                     assert.fail(error);
+                    assert.fail(error);
                     done();
                 },
                 succeed: function () {
-                   
+                    sinon.assert.calledThrice(mockSendLogmsgs);
+                    sinon.assert.calledThrice(mockSendLmcstats);
                     done();
                 }
             };
+            let mockSendLogmsgs = sinon.stub(m_alCollector.IngestC.prototype, 'sendLogmsgs').callsFake(
+                function fakeFn(data, callback) {
+                    return new Promise(function (resolve, reject) {
+                        resolve(null);
+                    });
+                });
 
+            let mockSendLmcstats = sinon.stub(m_alCollector.IngestC.prototype, 'sendLmcstats').callsFake(
+                function fakeFn(data, callback) {
+                    return new Promise(function (resolve, reject) {
+                        resolve(null);
+                    });
+                });
             const testEvent = {
                 Records: [
                     {
