@@ -33,7 +33,9 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                     if (error) {
                         return reject(error);
                     }
-                    if (response.statusCode && response.statusCode == 429) {
+                    if (response.statusCode &&
+                         (response.statusCode === 429 ||
+                          response.statusCode >= 500 )) {
                         return reject(response);
                     }
                     try {
