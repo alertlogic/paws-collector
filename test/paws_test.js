@@ -8,8 +8,7 @@ const ddLambda = require('datadog-lambda-js');
 const pawsMock = require('./paws_mock');
 var m_alCollector = require('@alertlogic/al-collector-js');
 var PawsCollector = require('../paws_collector').PawsCollector;
-const m_al_aws = require('@alertlogic/al-aws-collector-js').Util;
-const zlib = require('zlib');
+const m_al_aws = require('@alertlogic/al-aws-collector-js');
 
 var alserviceStub = {};
 var responseStub = {};
@@ -62,7 +61,7 @@ function restoreAlServiceStub() {
 
 
 function mockSetEnvStub() {
-    setEnvStub = sinon.stub(m_al_aws, 'setEnv').callsFake((vars, callback)=>{
+    setEnvStub = sinon.stub(m_al_aws.Util, 'setEnv').callsFake((vars, callback)=>{
         const {
             ingest_api,
             azcollect_api
@@ -127,6 +126,50 @@ class TestCollector extends PawsCollector {
     
     pawsGetLogs(state, callback) {
         return callback(this.mockGetLogsError, ['log1', 'log2'], {state: 'new-state'}, 900);
+    }
+    
+    pawsGetRegisterParameters(event, callback) {
+        return callback(null, {register: 'test-param'});
+    }
+    
+    pawsFormatLog(msg) {
+        const collector = this;
+        
+        let formattedMsg = {
+            messageTs: 12345678,
+            priority: 11,
+            progName: 'OktaCollector',
+            message: JSON.stringify(msg),
+            messageType: 'json/aws.test',
+            applicationId: collector.application_id
+        };
+        return formattedMsg;
+    }
+}
+
+class TestMaxLogSizeCollector extends PawsCollector {
+    constructor(ctx, creds) {
+        super(ctx, creds);
+    }
+    
+    set mockGetLogsError(msg = null) {
+        this._mockGetLogsError = msg;
+    }
+    
+    get mockGetLogsError() {
+        return this._mockGetLogsError;
+    }
+    
+    pawsInitCollectionState(event, callback) {
+        return callback(null, {state: 'initial-state'}, 900);
+    }   
+    
+    pawsGetLogs(state, callback) {
+        const logs = [];
+        for (let i = 0; i < 25000; i++) {
+            logs.push('log'+Math.random());
+       }
+        return callback(this.mockGetLogsError, logs, {state: 'new-state'}, 900);
     }
     
     pawsGetRegisterParameters(event, callback) {
@@ -589,21 +632,33 @@ describe('Unit Tests', function() {
             });
         });
         
-        it('Handle the Maximum payload size exceeded error by processing in batch', function (done) {
+        it('Process the logs in batch if logs size >10000', function (done) {
             mockDDB();
             let ctx = {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
                 fail: function (error) {
-                     assert.fail(error);
+                    assert.fail(error);
                     done();
                 },
                 succeed: function () {
-                    AWS.restore('DynamoDB');
-                    alserviceStub.alog.restore();
+                    sinon.assert.calledThrice(mockSendLogmsgs);
+                    sinon.assert.calledThrice(mockSendLmcstats);
                     done();
                 }
             };
+            let mockSendLogmsgs = sinon.stub(m_alCollector.IngestC.prototype, 'sendLogmsgs').callsFake(
+                function fakeFn(data, callback) {
+                    return new Promise(function (resolve, reject) {
+                        resolve(null);
+                    });
+                });
 
+            let mockSendLmcstats = sinon.stub(m_alCollector.IngestC.prototype, 'sendLmcstats').callsFake(
+                function fakeFn(data, callback) {
+                    return new Promise(function (resolve, reject) {
+                        resolve(null);
+                    });
+                });
             const testEvent = {
                 Records: [
                     {
@@ -613,28 +668,12 @@ describe('Unit Tests', function() {
                     }
                 ]
             };
-
-            alserviceStub.alog = sinon.stub(m_alCollector.AlLog, 'buildPayload').callsFake(
-                function fakeFn(hostId, sourceId, hostmetaElems, content, parseFun, mainCallback) {
-                    if (content.length > 1) {
-                        return mainCallback('Maximum payload size exceeded :13899727');
-                    }
-                    else {
-                        zlib.deflate(content.toString(), function (compressionErr, compressed) {
-                            return mainCallback(null, {
-                                payload: compressed,
-                                payload_size: compressed.byteLength,
-                                raw_count: 2,
-                                raw_bytes: 36
-                            });
-                        });
-                    }
-                });
-            TestCollector.load().then(function (creds) {
-                var collector = new TestCollector(ctx, creds);
+                TestMaxLogSizeCollector.load().then(function (creds) {
+                var collector = new TestMaxLogSizeCollector(ctx, creds);
                 collector.handleEvent(testEvent);
             });
         });
+
         it('reportApiThrottling', function(done) {
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,
