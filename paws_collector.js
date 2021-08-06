@@ -503,14 +503,11 @@ class PawsCollector extends AlAwsCollector {
     batchLogProcess(logs, privCollectorState, nextInvocationTimeout, callback) {
         let collector = this;
         let indexArray = [];
-        if (logs.length > MAX_LOG_BATCH_SIZE) {
-            const batches = Math.ceil(logs.length / MAX_LOG_BATCH_SIZE);
-            for (let i = 0; i < batches; i++) {
-                indexArray.push({ start: MAX_LOG_BATCH_SIZE * i, stop: MAX_LOG_BATCH_SIZE * (i + 1) });
-            }
-        } else {
-            indexArray = [{ start: 0, stop: logs.length }];
+        const batches = Math.ceil(logs.length / MAX_LOG_BATCH_SIZE);
+        for (let i = 0; i < batches; i++) {
+            indexArray.push({ start: MAX_LOG_BATCH_SIZE * i, stop: MAX_LOG_BATCH_SIZE * (i + 1) });
         }
+
         let promises = indexArray.map((logpart) => {
             return new Promise((resolve, reject) => {
                 collector.processLog(logs.slice(logpart.start, logpart.stop), collector.pawsFormatLog.bind(collector), null, (err, res) => {
