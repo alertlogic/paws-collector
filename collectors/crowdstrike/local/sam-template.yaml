@@ -29,8 +29,8 @@ Resources:
           paws_endpoint:
           collector_streams:
           customer_id:
-      CodeUri: 
+      CodeUri: /Users/sameerbagade/alert-logic/paws-collector/collectors/crowdstrike
       Runtime: nodejs10.x
       Handler: index.handler
-      Timeout: 300 
+      Timeout: 300
       MemorySize: 1024

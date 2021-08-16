@@ -14,14 +14,12 @@ const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const parse = require('@alertlogic/al-collector-js').Parse;
 const packageJson = require('./package.json');
 const utils = require("./utils");
+const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 
-const typeIdPaths = [
-    // enter your type paths in the form { path: ['myKey'] }
-];
 
-const tsPaths = [
-    // enter your timestamp paths in the form { path: ['myKey'] }
-];
+let typeIdPaths = [];
+
+let tsPaths = [];
 
 
 class CrowdstrikeCollector extends PawsCollector {
@@ -34,14 +32,25 @@ class CrowdstrikeCollector extends PawsCollector {
                 process.env.paws_collection_start_ts :
                     moment().toISOString();
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
-        const initialState = {
-            // TODO: define initial collection state specific to your collector.
-            // You will get this state back with each invocation
-            since: startTs,
-            until: endTs,
-            poll_interval_sec: 1
+        const apiNames = JSON.parse(process.env.collector_streams);
+        const initialStates = apiNames.map(stream => {
+            return {
+                stream,
+                since: startTs,
+                until: endTs,
+                offset: 0,
+                poll_interval_sec: 1
+            }
+        });
+        return callback(null, initialStates, 1);
+    }
+
+    pawsGetRegisterParameters(event, callback) {
+        const regValues = {
+            crowdstrikeAPINames: process.env.collector_streams
         };
-        return callback(null, initialState, 1);
+
+        callback(null, regValues);
     }
     
     pawsGetLogs(state, callback) {
@@ -56,38 +65,59 @@ class CrowdstrikeCollector extends PawsCollector {
             return callback("The Client ID was not found!");
         }
 
-        const APIHostName = collector.pawsDomainEndpoint;
+        const APIHostName = collector.pawsDomainEndpoint.replace(/^https:\/\/|\/$/g, '');
+        const apiDetails = utils.getAPIDetails(state);
+        typeIdPaths = apiDetails.typeIdPaths;
+        tsPaths = apiDetails.tsPaths;
+
+        console.info(`CROW000001 Collecting data from ${state.since} till ${state.until} from ${state.stream}`);
 
         utils.authenticate(APIHostName, clientId, clientSecret).then((token) => {
-            console.log(token);
-        });
-
-        console.info(`CROW000001 Collecting data from ${state.since} till ${state.until}`);
-        const newState = collector._getNextCollectionState(state);
-        console.info(`CROW000002 Next collection in ${newState.poll_interval_sec} seconds`);
-        return callback(null, [], newState, newState.poll_interval_sec);
+            utils.getList(apiDetails, [], APIHostName, token).then(({accumulator, total}) => {             
+                const receivedAll = (state.offset + accumulator.length) >= total ? true : false;
+                const offset = receivedAll ? 0 : (state.offset + accumulator.length);
+                if (state.stream === 'Incident') {
+                    return utils.getIncidents(accumulator, APIHostName, token).then((data) => {
+                        const newState = collector._getNextCollectionStateWithoffset(state, offset, receivedAll);
+                        console.info(`CROW000004 Next collection in ${newState.poll_interval_sec} seconds for ${state.stream}`);
+                        return callback(null, data.resources, newState, newState.poll_interval_sec);
+                    }).catch((error) => {
+                        console.error(`CROW000004 Error while getting incident details`);
+                        error.errorCode = error.statusCode;
+                        return callback(error);
+                    });
+                } else if (state.stream === 'Detection') {
+                    return utils.getDetections(accumulator, APIHostName, token).then((data) => {
+                        const newState = collector._getNextCollectionStateWithoffset(state, offset, receivedAll);
+                        console.info(`CROW000004 Next collection in ${newState.poll_interval_sec} seconds for ${state.stream}`);
+                        return callback(null, data.resources, newState, newState.poll_interval_sec);
+                    }).catch((error) => {
+                        console.error(`CROW000004 Error while getting detection details`);
+                        error.errorCode = error.statusCode;
+                        return callback(error);
+                    });
+                }
+            }).catch((error) => {
+                console.error(`CROW000003 Error while getting API details`);
+                error.errorCode = error.statusCode;
+                return callback(error);
+            });
+        }).catch((error) => {
+            console.error(`CROW000002 Error while getting Authentication`);
+            error.errorCode = error.statusCode;
+            return callback(error);
+        });        
     }
-    
-    _getNextCollectionState(curState) {
-        const nowMoment = moment();
-        const curUntilMoment = moment(curState.until);
-        
-        // Check if current 'until' is in the future.
-        const nextSinceTs = curUntilMoment.isAfter(nowMoment) ?
-                nowMoment.toISOString() :
-                curState.until;
 
-        const nextUntilMoment = moment(nextSinceTs).add(this.pollInterval, 'seconds');
-        // Check if we're behind collection schedule and need to catch up.
-        const nextPollInterval = nowMoment.diff(nextUntilMoment, 'seconds') > this.pollInterval ?
-                1 : this.pollInterval;
-        
-        return  {
-            // TODO: define the next collection state.
-            // This needs to be in the smae format as the intial colletion state above
-             since: nextSinceTs,
-             until: nextUntilMoment.toISOString(),
-             poll_interval_sec: nextPollInterval
+    _getNextCollectionStateWithoffset(curState, offset, receivedAll) {
+        const untilMoment = moment(curState.until);
+        const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
+        return {
+            stream: curState.stream,
+            since: receivedAll ? nextSinceMoment.toISOString() : curState.since,
+            until: receivedAll ? nextUntilMoment.toISOString() : curState.until,
+            offset: offset,
+            poll_interval_sec: nextPollInterval
         };
     }
     
@@ -104,7 +134,7 @@ class CrowdstrikeCollector extends PawsCollector {
             progName: 'CrowdstrikeCollector',
             message: JSON.stringify(msg),
             messageType: 'json/crowdstrike',
-            application_id: collector.application_id
+            applicationId: collector.application_id
         };
         
         if (typeId !== null && typeId !== undefined) {

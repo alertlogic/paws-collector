@@ -51,6 +51,30 @@
             "Type": "String",
             "Default": "none"
         },
+        "CrowdstrikeEndpoint": {
+            "Description": "Crowdstrike API URL. For example, https://api.crowdstrike.com/",
+            "Type": "String"
+        },
+        "CrowdstrikeClientId": {
+            "Description": "Crowdstrike Client ID for authentication.",
+            "Type": "String"
+        },
+        "CrowdstrikeSecret": {
+            "Description": "Crowdstrike Client secret for authentication.",
+            "Type": "String",
+            "NoEcho": true
+        },
+        "CrowdstrikeAPINames": {
+            "Description": "Define API names. Please pass JSON formatted list. Possible values are [\"AuditLogEvents\", \"SearchAlerts\", \"SearchAlertsCBAnalytics\", \"SearchAlertsVmware\", \"SearchAlertsWatchlist\"]",
+            "Type": "String",
+            "Default": "[\"Incident\", \"Detection\"]"
+        },
+        "CollectionStartTs": {
+            "Description": "Timestamp when log collection starts. For example, 2019-11-21T16:00:00Z",
+            "Type": "String",
+            "Default" : "",
+            "AllowedPattern" : "(?:^\\d{4}(-\\d{2}){2}T(\\d{2}:){2}\\d{2}Z$)?"
+        }
         "PawsAuthType": {
             "Description": "Target API authentication type. Supported types: ssws, oauth2",
             "Type": "String",
@@ -92,10 +116,11 @@
             "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
             "CollectorId" : { "Ref":"CollectorId" },
             "PollingInterval" : 60,
-            "PawsEndpoint" : "https://api.crowdstrike.com/",
-            "PawsAuthType" : { "Ref":"PawsAuthType" },
-            "PawsClientId" : "",
-            "PawsSecret" : { "Ref":"PawsSecret" },
+            "PawsEndpoint" : { "Ref":"CrowdstrikeEndpoint" },
+            "PawsAuthType" : "oauth2",
+            "PawsClientId" : { "Ref":"CrowdstrikeClientId" },
+            "PawsSecret" : { "Ref":"CrowdstrikeSecret" },
+            "CollectorParamString2" : { "Ref":"CarbonblackOrgKey" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }
         }
