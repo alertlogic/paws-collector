@@ -102,7 +102,7 @@ function getAPIDetails(state) {
             break;
         case Detection:
             url = `/detects/queries/detects/v1?limit=1000&offset=${state.offset}&filter=device.first_seen:>'${state.since}'&device.last_seen:<'${state.until}`;
-            typeIdPaths = [{ path: ["detection_id"] }];
+            typeIdPaths = [];
             tsPaths = [{ path: ["created_timestamp"] }];
             break;
         default:
