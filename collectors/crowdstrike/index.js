@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * @copyright (C) 2019, Alert Logic, Inc
+ * @copyright (C) 2021, Alert Logic, Inc
  * @doc
  *
  * Crowdstrike System logs extension.

@@ -220,7 +220,7 @@ describe('Unit Tests', function () {
             const receivedAll = false;
             CrowdstrikeCollector.load().then(function (creds) {
                 var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
-                let nextState = collector._getNextCollectionStateWithoffset(curState, offset, receivedAll);
+                let nextState = collector._getNextCollectionStateWithOffset(curState, offset, receivedAll);
                 assert.ok(nextState.offset);
                 assert.equal(nextState.offset, offset);
                 done();

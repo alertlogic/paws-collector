@@ -78,21 +78,21 @@ class CrowdstrikeCollector extends PawsCollector {
                 const offset = receivedAll ? 0 : (state.offset + accumulator.length);
                 if (state.stream === 'Incident') {
                     return utils.getIncidents(accumulator, APIHostName, token).then((data) => {
-                        const newState = collector._getNextCollectionStateWithoffset(state, offset, receivedAll);
+                        const newState = collector._getNextCollectionStateWithOffset(state, offset, receivedAll);
                         console.info(`CROW000004 Next collection in ${newState.poll_interval_sec} seconds for ${state.stream}`);
                         return callback(null, data.resources, newState, newState.poll_interval_sec);
                     }).catch((error) => {
-                        console.error(`CROW000004 Error while getting incident details`);
+                        console.error(`CROW000005 Error while getting incident details`);
                         error.errorCode = error.statusCode;
                         return callback(error);
                     });
                 } else if (state.stream === 'Detection') {
                     return utils.getDetections(accumulator, APIHostName, token).then((data) => {
-                        const newState = collector._getNextCollectionStateWithoffset(state, offset, receivedAll);
+                        const newState = collector._getNextCollectionStateWithOffset(state, offset, receivedAll);
                         console.info(`CROW000004 Next collection in ${newState.poll_interval_sec} seconds for ${state.stream}`);
                         return callback(null, data.resources, newState, newState.poll_interval_sec);
                     }).catch((error) => {
-                        console.error(`CROW000004 Error while getting detection details`);
+                        console.error(`CROW000005 Error while getting detection details`);
                         error.errorCode = error.statusCode;
                         return callback(error);
                     });
@@ -109,7 +109,7 @@ class CrowdstrikeCollector extends PawsCollector {
         });        
     }
 
-    _getNextCollectionStateWithoffset(curState, offset, receivedAll) {
+    _getNextCollectionStateWithOffset(curState, offset, receivedAll) {
         const untilMoment = moment(curState.until);
         const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
         return {
@@ -122,7 +122,6 @@ class CrowdstrikeCollector extends PawsCollector {
     }
     
     pawsFormatLog(msg) {
-        // TODO: double check that this message parsing fits your use case
         let collector = this;
 
         const ts = parse.getMsgTs(msg, tsPaths);

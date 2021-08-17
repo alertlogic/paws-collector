@@ -36,11 +36,6 @@
             "Type": "String",
             "Default": "alertlogic-collectors"
         },
-        "PawsCollectorTypeName": {
-            "Description": "A collector type name. For example, okta, auth0",
-            "Type": "String",
-            "Default": "crowdstrike"
-        },
         "AlertlogicCustomerId": {
             "Description": "Optional. Alert Logic customer ID which collected data should be reported for. If not set customer ID is derived from AIMs tokens",
             "Type": "String",
@@ -65,7 +60,7 @@
             "NoEcho": true
         },
         "CrowdstrikeAPINames": {
-            "Description": "Define API names. Please pass JSON formatted list. Possible values are [\"AuditLogEvents\", \"SearchAlerts\", \"SearchAlertsCBAnalytics\", \"SearchAlertsVmware\", \"SearchAlertsWatchlist\"]",
+            "Description": "Define API names. Please pass JSON formatted list. Possible values are [\"Incident\", \"Detection\"]",
             "Type": "String",
             "Default": "[\"Incident\", \"Detection\"]"
         },
@@ -75,20 +70,6 @@
             "Default" : "",
             "AllowedPattern" : "(?:^\\d{4}(-\\d{2}){2}T(\\d{2}:){2}\\d{2}Z$)?"
         }
-        "PawsAuthType": {
-            "Description": "Target API authentication type. Supported types: ssws, oauth2",
-            "Type": "String",
-            "Default": "ssws"
-        },
-        "PawsClientId": {
-            "Description": "Client ID for oauth2 authentication type",
-            "Type": "String"
-        },
-        "PawsSecret": {
-            "Description": "Client secret for oauth2 or secret token for ssws.",
-            "Type": "String",
-            "NoEcho": true
-        },
         "CollectionStartTs": {
             "Description": "Timestamp when log collection starts. For example, 2019-11-21T16:00:00Z",
             "Type": "String",
@@ -120,7 +101,6 @@
             "PawsAuthType" : "oauth2",
             "PawsClientId" : { "Ref":"CrowdstrikeClientId" },
             "PawsSecret" : { "Ref":"CrowdstrikeSecret" },
-            "CollectorParamString2" : { "Ref":"CarbonblackOrgKey" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }
         }

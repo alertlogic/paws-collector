@@ -1,7 +1,7 @@
 const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClient;
 
-const Incident = 'Incident';
-const Detection = 'Detection';
+const INCIDENT = 'Incident';
+const DETECTION = 'Detection';
 
 function authenticate(baseUrl, client_id, client_secret) {
     let restServiceClient = new RestServiceClient(baseUrl);
@@ -45,8 +45,10 @@ function getList(apiDetails, accumulator, apiEndpoint, token) {
 function getIncidents(ids, APIHostName, token) {
     let restServiceClient = new RestServiceClient(`${APIHostName}/incidents/entities/incidents/GET/v1`);
     if (!ids || !ids.length) {
-        return Promise.resolve({
-            resources: []
+        return new Promise((resolve, reject) => {
+            resolve({
+                resources: []
+            });
         });
     }
     return new Promise(function (resolve, reject) {
@@ -68,8 +70,10 @@ function getIncidents(ids, APIHostName, token) {
 function getDetections(ids, APIHostName, token) {
     let restServiceClient = new RestServiceClient(`${APIHostName}/detects/entities/summaries/GET/v1`);
     if (!ids || !ids.length) {
-        return Promise.resolve({
-            resources: []
+        return new Promise((resolve, reject) => {
+            resolve({
+                resources: []
+            });
         });
     }
     return new Promise(function (resolve, reject) {
@@ -95,18 +99,19 @@ function getAPIDetails(state) {
     let typeIdPaths = [];
     let tsPaths = [];
     switch (state.stream) {
-        case Incident:
+        case INCIDENT:
             url = `/incidents/queries/incidents/v1?limit=500&offset=${state.offset}&filter=start:>'${state.since}'&end:<'${state.until}'`;
             typeIdPaths = [{ path: ["incident_type"] }];
             tsPaths = [{ path: ["created"] }];
             break;
-        case Detection:
-            url = `/detects/queries/detects/v1?limit=1000&offset=${state.offset}&filter=device.first_seen:>'${state.since}'&device.last_seen:<'${state.until}`;
+        case DETECTION:
+            url = `/detects/queries/detects/v1?limit=1000&offset=${state.offset}&filter=device.first_seen:>'${state.since}'&device.last_seen:<'${state.until}'`;
             typeIdPaths = [];
             tsPaths = [{ path: ["created_timestamp"] }];
             break;
         default:
             url = null;
+            console.error(`CROW000006 Not supported stream: `, state.stream);
     }
     return {
         url,
