@@ -8,6 +8,26 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
 
+### 1. How to obtain an API Secret Key and API ID
+
+#### Before you begin
+
+Role required: CrowdStrike Falcon administrator
+
+#### Procedure
+
+1. On the CrowdStrike Falcon Platform, navigate to API Clients and Keys.
+2. In the OAuth2 API Clients table, click Add new API client.
+3. Enter the following details to define your API client:
+
+| Field        | Description           |
+| ------------- |:-------------|
+| Client Name     | Enter the client name. This is a required field. |
+| Description     | Enter the description for the client name.      |
+| API Scopes |<ul>Defining the scopes is required. Enable the following API scopes:<li>Enable Read and Write scopes for Hosts API</li><li>Enable Read scope for Indicators API</li></ul>|
+
+4. Click Add to save the API client and generate the client ID and secret key.
+
 Refer to [CF template readme](./cfn/README.md) for installation instructions.
 
 # How it works

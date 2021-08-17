@@ -70,12 +70,6 @@
             "Default" : "",
             "AllowedPattern" : "(?:^\\d{4}(-\\d{2}){2}T(\\d{2}:){2}\\d{2}Z$)?"
         }
-        "CollectionStartTs": {
-            "Description": "Timestamp when log collection starts. For example, 2019-11-21T16:00:00Z",
-            "Type": "String",
-            "Default" : "",
-            "AllowedPattern" : "(?:^\\d{4}(-\\d{2}){2}T(\\d{2}:){2}\\d{2}Z$)?"
-        }
     },
     "Resources":{
       "CrowdstrikeCollectorStack" : {
