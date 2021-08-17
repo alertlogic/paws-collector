@@ -44,7 +44,7 @@ function getList(apiDetails, accumulator, apiEndpoint, token) {
 
 function getIncidents(ids, APIHostName, token) {
     let restServiceClient = new RestServiceClient(`${APIHostName}/incidents/entities/incidents/GET/v1`);
-    if (!ids.length) {
+    if (!ids || !ids.length) {
         return Promise.resolve({
             resources: []
         });
@@ -67,7 +67,7 @@ function getIncidents(ids, APIHostName, token) {
 
 function getDetections(ids, APIHostName, token) {
     let restServiceClient = new RestServiceClient(`${APIHostName}/detects/entities/summaries/GET/v1`);
-    if (!ids.length) {
+    if (!ids || !ids.length) {
         return Promise.resolve({
             resources: []
         });
