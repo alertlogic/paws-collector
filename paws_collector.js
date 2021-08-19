@@ -463,7 +463,7 @@ class PawsCollector extends AlAwsCollector {
                             // Here we just upload same state messaged into SQS and  send error status to the backend.
                             // The invocation is marked as succeed in order to clean up current state message in SQS.
                             // Increment/reset the retry count if error occured. 
-                            pawsState.retry_count = (!pawsState.retry_count || pawsState.retry_count >= 5) ? 1 : pawsState.retry_count + 1;
+                            pawsState.retry_count = (!pawsState.retry_count || pawsState.retry_count >= MAX_ERROR_RETRIES) ? 1 : pawsState.retry_count + 1;
                             collector._storeCollectionState(pawsState, pawsState.priv_collector_state, 300, function(storeError){
                                 if (!storeError){
                                     collector.reportErrorStatus(handleError, pawsState, (statusSendError, handleErrorString) => {
