@@ -37,7 +37,7 @@ const DDB_OPTIONS = {
     maxRetries: 10,
     ConsistentRead: true
 };
-
+const MAX_ERROR_RETRIES = 5;
 const MAX_LOG_BATCH_SIZE = 10000;
 function getPawsParamStoreParam(){
     return new Promise((resolve, reject) => {
@@ -442,6 +442,8 @@ class PawsCollector extends AlAwsCollector {
                     }
                 },
                 function(privCollectorState, nextInvocationTimeout, asyncCallback) {
+                    // Reset the retry count to 0 on successful log processing. 
+                    pawsState.retry_count = 0;
                     return collector._storeCollectionState(pawsState, privCollectorState, nextInvocationTimeout, asyncCallback);
                 }
             ], function(handleError) {
@@ -460,6 +462,8 @@ class PawsCollector extends AlAwsCollector {
                             // in order to avoid expiration of that message due to retention period.
                             // Here we just upload same state messaged into SQS and  send error status to the backend.
                             // The invocation is marked as succeed in order to clean up current state message in SQS.
+                            // Increment/reset the retry count if error occured. 
+                            pawsState.retry_count = (!pawsState.retry_count || pawsState.retry_count >= MAX_ERROR_RETRIES) ? 1 : pawsState.retry_count + 1;
                             collector._storeCollectionState(pawsState, pawsState.priv_collector_state, 300, function(storeError){
                                 if (!storeError){
                                     collector.reportErrorStatus(handleError, pawsState, (statusSendError, handleErrorString) => {
@@ -488,9 +492,15 @@ class PawsCollector extends AlAwsCollector {
                 null;
         const errorString = this.stringifyError(error);
         const status = this.prepareErrorStatus(errorString, 'none', streamType);
-        this.sendStatus(status, (sendError) => {
-            return callback(sendError, errorString);
-        });
+        // Send the error status to assets only if retry count reached to 5. 
+        // To reduce the status fluctuation from healthy  to unhealthy.
+        if (pawsState.retry_count === MAX_ERROR_RETRIES) {
+            this.sendStatus(status, (sendError) => {
+                return callback(sendError, errorString);
+            });
+        } else {
+            return callback(null, errorString);
+        }
     }
     /**
      * Split data per 10K messages batch.
