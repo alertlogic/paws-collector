@@ -753,6 +753,47 @@ describe('Unit Tests', function() {
                 collector.handleEvent(testEvent);
             });
         });
+
+        it('Check if retry_count get added in state for existing collector and it will not call sendStatus method', function (done) {
+            mockDDB();
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    sinon.assert.callCount(mockSendStatus, 0);
+                    sinon.assert.calledOnce(mockPawsGetLogs);
+                    mockPawsGetLogs.restore();
+                    mockSendStatus.restore();
+                    done();
+                }
+            };
+            let mockSendStatus = sinon.stub(m_al_aws.AlAwsCollector.prototype, 'sendStatus').callsFake(
+                function fakeFn(status, callback) {
+                    return callback(null);
+                });
+
+            let mockPawsGetLogs = sinon.stub(TestCollector.prototype, "pawsGetLogs").callsFake(
+                function fakeFn(state, callback) {
+                    return callback({ name: 'OktaApiError', status: 401, errorCode: 'E0000011', errorSummary: 'Invalid token provided' });
+                });
+            const testEvent = {
+                Records: [
+                    {
+                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"2021-07-01T02:37:37.617Z\",\n    \"until\": \"2021-07-01T03:37:37.617Z\"\n  }\n}",
+                        "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
+                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
+                    }
+                ]
+            };
+            TestCollector.load().then(function (creds) {
+                var collector = new TestCollector(ctx, creds);
+                collector.handleEvent(testEvent);
+                
+            });
+        });
         it('reportApiThrottling', function(done) {
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,
