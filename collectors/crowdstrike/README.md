@@ -24,7 +24,7 @@ Role required: CrowdStrike Falcon administrator
 | ------------- |:-------------|
 | Client Name     | Enter the client name. This is a required field. |
 | Description     | Enter the description for the client name.      |
-| API Scopes |<ul>Defining the scopes is required. Enable the following API scopes:<li>Enable Read and Write scopes for Hosts API</li><li>Enable Read scope for Indicators API</li></ul>|
+| API Scopes |<ul>Defining the scopes is required. Enable the following API scopes:<li>Enable Read scope for Incident API</li><li>Enable Read scope for Detection API</li></ul>|
 
 4. Click Add to save the API client and generate the client ID and secret key.
 
