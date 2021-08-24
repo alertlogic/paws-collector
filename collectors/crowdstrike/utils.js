@@ -98,14 +98,17 @@ function getAPIDetails(state) {
     let requestBody = "";
     let typeIdPaths = [];
     let tsPaths = [];
+    let filter = '';
     switch (state.stream) {
         case INCIDENT:
-            url = `/incidents/queries/incidents/v1?limit=500&offset=${state.offset}&filter=start:>'${state.since}'&end:<'${state.until}'`;
+            filter = `end:>'${state.since}'+end:<'${state.until}`;
+            url = `/incidents/queries/incidents/v1?limit=500&offset=${state.offset}&filter=${encodeURIComponent(filter)}'`;
             typeIdPaths = [{ path: ["incident_type"] }];
             tsPaths = [{ path: ["created"] }];
             break;
         case DETECTION:
-            url = `/detects/queries/detects/v1?limit=1000&offset=${state.offset}&filter=device.first_seen:>'${state.since}'&device.last_seen:<'${state.until}'`;
+            filter = `last_behavior:>'${state.since}'+last_behavior:<'${state.until}`;
+            url = `/detects/queries/detects/v1?limit=1000&offset=${state.offset}&filter=${encodeURIComponent(filter)}'`;
             typeIdPaths = [];
             tsPaths = [{ path: ["created_timestamp"] }];
             break;

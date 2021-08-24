@@ -14,7 +14,7 @@
         "AlApplicationId": {
             "Description": "Alert Logic Application Id for collector logs",
             "Type": "String",
-            "Default": "Crowdstrike"
+            "Default": "crowdstrike"
         },
         "AlApiEndpoint": {
             "Description": "Alert Logic API endpoint",
