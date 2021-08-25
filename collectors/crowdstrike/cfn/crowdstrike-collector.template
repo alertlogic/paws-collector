@@ -95,6 +95,7 @@
             "PawsAuthType" : "oauth2",
             "PawsClientId" : { "Ref":"CrowdstrikeClientId" },
             "PawsSecret" : { "Ref":"CrowdstrikeSecret" },
+            "CollectorStreams" : { "Ref":"CrowdstrikeAPINames" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }
         }
