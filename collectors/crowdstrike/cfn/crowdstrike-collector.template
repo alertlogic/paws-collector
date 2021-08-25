@@ -47,7 +47,7 @@
             "Default": "none"
         },
         "CrowdstrikeEndpoint": {
-            "Description": "Crowdstrike API URL. For example, https://api.crowdstrike.com/",
+            "Description": "Crowdstrike API URL. For example, https://api.crowdstrike.com",
             "Type": "String"
         },
         "CrowdstrikeClientId": {
