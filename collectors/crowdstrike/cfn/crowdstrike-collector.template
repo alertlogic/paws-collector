@@ -1,0 +1,104 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Alert Logic template for creating a Crowdstrike log collector",
+    "Parameters": {
+        "AlertlogicAccessKeyId": {
+            "Description": "Alert Logic Access Key Id obtained from AIMS",
+            "Type": "String"
+        },
+        "AlertlogicSecretKey": {
+            "Description": "Alert Logic Secret Key returned from AIMS for the Access Key Id",
+            "Type": "String",
+            "NoEcho": true
+        },
+        "AlApplicationId": {
+            "Description": "Alert Logic Application Id for collector logs",
+            "Type": "String",
+            "Default": "crowdstrike"
+        },
+        "AlApiEndpoint": {
+            "Description": "Alert Logic API endpoint",
+            "Type": "String",
+            "Default": "api.global-services.global.alertlogic.com",
+            "AllowedValues": [
+                "api.global-services.global.alertlogic.com",
+                "api.global-integration.product.dev.alertlogic.com"
+            ]
+        },
+        "AlDataResidency": {
+            "Description": "Alert Logic Data Residency",
+            "Type": "String",
+            "Default": "default",
+            "AllowedValues": ["default"]
+        },
+        "PackagesBucketPrefix": {
+            "Description": "S3 bucket name prefix where collector packages are located.",
+            "Type": "String",
+            "Default": "alertlogic-collectors"
+        },
+        "AlertlogicCustomerId": {
+            "Description": "Optional. Alert Logic customer ID which collected data should be reported for. If not set customer ID is derived from AIMs tokens",
+            "Type": "String",
+            "Default": ""
+        },
+        "CollectorId": {
+            "Description": "Optional. A collector UUID if known.",
+            "Type": "String",
+            "Default": "none"
+        },
+        "CrowdstrikeEndpoint": {
+            "Description": "Crowdstrike API URL. For example, https://api.crowdstrike.com",
+            "Type": "String"
+        },
+        "CrowdstrikeClientId": {
+            "Description": "Crowdstrike Client ID for authentication.",
+            "Type": "String"
+        },
+        "CrowdstrikeSecret": {
+            "Description": "Crowdstrike Client secret for authentication.",
+            "Type": "String",
+            "NoEcho": true
+        },
+        "CrowdstrikeAPINames": {
+            "Description": "Define API names. Please pass JSON formatted list. Possible values are [\"Incident\", \"Detection\"]",
+            "Type": "String",
+            "Default": "[\"Incident\", \"Detection\"]"
+        },
+        "CollectionStartTs": {
+            "Description": "Timestamp when log collection starts. For example, 2019-11-21T16:00:00Z",
+            "Type": "String",
+            "Default" : "",
+            "AllowedPattern" : "(?:^\\d{4}(-\\d{2}){2}T(\\d{2}:){2}\\d{2}Z$)?"
+        }
+    },
+    "Resources":{
+      "CrowdstrikeCollectorStack" : {
+        "Type" : "AWS::CloudFormation::Stack",
+        "Properties" : {
+          "TemplateURL" : {"Fn::Join" : ["", [
+                    "https://s3.amazonaws.com/",
+                    {"Ref":"PackagesBucketPrefix"}, "-us-east-1",
+                    "/cfn/paws-collector.template"
+               ]]},
+          "Parameters" : {
+            "AlertlogicAccessKeyId" : { "Ref":"AlertlogicAccessKeyId" },
+            "AlertlogicSecretKey" : { "Ref":"AlertlogicSecretKey" },
+            "AlApplicationId" : { "Ref":"AlApplicationId" },
+            "AlApiEndpoint" : { "Ref":"AlApiEndpoint" },
+            "AlDataResidency" : { "Ref":"AlDataResidency" },
+            "PackagesBucketPrefix" : { "Ref":"PackagesBucketPrefix" },
+            "PawsCollectorTypeName" : "crowdstrike",
+            "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
+            "CollectorId" : { "Ref":"CollectorId" },
+            "PollingInterval" : 60,
+            "PawsEndpoint" : { "Ref":"CrowdstrikeEndpoint" },
+            "PawsAuthType" : "oauth2",
+            "PawsClientId" : { "Ref":"CrowdstrikeClientId" },
+            "PawsSecret" : { "Ref":"CrowdstrikeSecret" },
+            "CollectorStreams" : { "Ref":"CrowdstrikeAPINames" },
+            "CollectionStartTs" : { "Ref":"CollectionStartTs" }
+          }
+        }
+      }
+   }
+}
