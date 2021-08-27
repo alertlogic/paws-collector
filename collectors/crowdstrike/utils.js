@@ -3,13 +3,13 @@ const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClie
 const INCIDENT = 'Incident';
 const DETECTION = 'Detection';
 
-function authenticate(baseUrl, client_id, client_secret) {
+function authenticate(baseUrl, clientId, clientSecret) {
     let restServiceClient = new RestServiceClient(baseUrl);
     return new Promise(function (resolve, reject) {
         return restServiceClient.post(`/oauth2/token`, {
             form: {
-                client_id: client_id,
-                client_secret: client_secret
+                client_id: clientId,
+                client_secret: clientSecret
             }
         }).then(response => {
             resolve(response.access_token);
@@ -42,8 +42,8 @@ function getList(apiDetails, accumulator, apiEndpoint, token) {
     }
 }
 
-function getIncidents(ids, APIHostName, token) {
-    let restServiceClient = new RestServiceClient(`${APIHostName}/incidents/entities/incidents/GET/v1`);
+function getIncidents(ids, apiHostName, token) {
+    let restServiceClient = new RestServiceClient(`${apiHostName}/incidents/entities/incidents/GET/v1`);
     if (!ids || !ids.length) {
         return new Promise((resolve, reject) => {
             resolve({

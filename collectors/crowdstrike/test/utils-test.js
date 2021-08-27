@@ -3,7 +3,7 @@ const assert = require('assert');
 const sinon = require('sinon');
 const moment = require('moment');
 const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClient;
-const crowdstrikeMock = require('./Crowdstrike-mock');
+const crowdstrikeMock = require('./crowd-strike-mock');
 
 var alserviceStub = {};
 

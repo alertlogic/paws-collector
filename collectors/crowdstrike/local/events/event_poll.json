@@ -3,7 +3,7 @@
         {
             "messageId": "f67a45fc-ab43-4df1-9f2f-585bb2043122",
             "receiptHandle": "AQEB78LmKaaZ+uj8DVnc/O2zQcAe+qKSi3ZGTSBFssIRSmpwwzUEi2vhPTaIBnhOoh0aoRxVjWdoXO3ZloINfMxmcjycP3KC0WXwcWokoOc3iMCdqhYg0NcOhQW1X0ixc79C9/5/XF1xGd79vLhFL7KvRjjiT4sOaSxlAv6v2fJ5eDETnp7CRa5pocCF4EO2su0M4/TnlLreGfsY+C+/tH+r19AM+d3Jt5dbNMrKMWRRZ7/PTjczkIM7U38AHPuusuBz9uzA5yMQGOMI8FPXfqgcafEN17JqKuNSd/l54v1+s9rBQSzL/MH9wZ0XpZditcpe5pTc+dGuRHOXbFK2A0YUQCvRq1Ed8tfr68uELTQK5jWHH/zPnEMWsTyco9VuNCKr",
-            "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"2021-08-10T10:01:00.000Z\",\n    \"until\": \"2021-08-10T11:01:00.000Z\",\n  \"stream\": \"Detection\",\n  \"offset\":3000 \n   }\n}",
+            "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"2021-08-10T10:01:00.000Z\",\n    \"until\": \"2021-08-10T11:01:00.000Z\",\n  \"stream\": \"Detection\",\n  \"offset\":0 \n   }\n}",
             "attributes": {
                 "ApproximateReceiveCount": "1",
                 "SentTimestamp": "1574159909907",
@@ -11,9 +11,9 @@
                 "ApproximateFirstReceiveTimestamp": "1574159909968"
             },
             "messageAttributes": {},
-            "md5OfBody": "1845296051d4cfe2e6175358bd40",
+            "md5OfBody": "1845296051d4cfe2e6175358co40",
             "eventSource": "aws:sqs",
-            "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:paws-state-queue",
+            "eventSourceARN": "arn:aws:sqs:ap-south-1:959951947423:al_crowdstrike_collector",
             "awsRegion": "eu-west-1"
         }
     ]
