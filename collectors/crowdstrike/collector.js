@@ -111,7 +111,7 @@ class CrowdstrikeCollector extends PawsCollector {
 
     _getNextCollectionStateWithOffset(curState, offset, receivedAll) {
         const untilMoment = moment(curState.until);
-        const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
+        const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-cap', untilMoment, this.pollInterval);
         return {
             stream: curState.stream,
             since: receivedAll ? nextSinceMoment.toISOString() : curState.since,
