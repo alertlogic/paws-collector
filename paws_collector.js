@@ -19,6 +19,7 @@ const ddLambda = require('datadog-lambda-js');
 
 const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector;
 const AlAwsUtil = require('@alertlogic/al-aws-collector-js').Util;
+const AlAwsStatsTmpls = require('@alertlogic/al-aws-collector-js').Stats;
 const packageJson = require('./package.json');
 
 const CREDS_FILE_PATH = '/tmp/paws_creds';
@@ -116,6 +117,21 @@ class PawsCollector extends AlAwsCollector {
         }
     }
 
+    /**
+    * To fetch the custom metrics data
+    * @param {*} asyncCallback 
+    * @returns 
+    */
+    static customStats(asyncCallback) {
+        const customDimentions =
+        {
+            Name: 'CollectorType',
+            Value: this._pawsCollectorType
+        }
+        return AlAwsStatsTmpls.getCustomMetrics(
+            process.env.AWS_LAMBDA_FUNCTION_NAME, 'PawsClientError', 'PawsCollectors', customDimentions, asyncCallback
+        );
+    }
     constructor(context, {aimsCreds, pawsCreds}, childVersion, healthChecks = [], statsChecks = []) {
         const version = childVersion ? childVersion : packageJson.version;
         const endpointDomain = process.env.paws_endpoint.replace(DOMAIN_REGEXP, '');
