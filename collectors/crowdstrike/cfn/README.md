@@ -34,7 +34,6 @@ Currently, we support US regions only: `us-east-1`, `us-east-2`, `us-west-1`,
    - `CollectionStartTs` - example `2019-11-21T16:00:00Z` Timestamp when log collection starts
    - `CollectorId` - default `none` Optional. A collector UUID if known.
    - `PackagesBucketPrefix` - example `alertlogic-collectors` S3 bucket name prefix where collector packages are located.
-   - `PawsCollectorTypeName` - use `crowdstrike`
 
 1. Continue to finish the stack.
 
@@ -44,6 +43,3 @@ Currently, we support US regions only: `us-east-1`, `us-east-2`, `us-west-1`,
 There should not be any errors on Invocation errors.
 - Go to the CloudWatch Logs and select `/aws/lambda/<function-name>` Log 
 Group. Open the newest Log Stream and verify it doesn't contain any errors.
-
-
-# Known issues
