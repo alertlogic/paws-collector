@@ -120,7 +120,9 @@ class PawsCollector extends AlAwsCollector {
         const version = childVersion ? childVersion : packageJson.version;
         const endpointDomain = process.env.paws_endpoint.replace(DOMAIN_REGEXP, '');
         // add the customHealthCheck for all paws collectors
-        healthChecks.push(HealthChecks.customHealthCheck);
+        if (healthChecks.length === 0) {
+            healthChecks.push(HealthChecks.customHealthCheck);
+        }
         let collectorStreams = process.env.collector_streams && Array.isArray(JSON.parse(process.env.collector_streams)) ? JSON.parse(process.env.collector_streams) : [];
         super(context, 'paws',
               AlAwsCollector.IngestTypes.LOGMSGS,
