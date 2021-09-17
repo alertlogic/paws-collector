@@ -28,7 +28,7 @@ function customHealthCheck(asyncCallback) {
         process.env.AWS_LAMBDA_FUNCTION_NAME, 'PawsClientError', 'PawsCollectors', customDimentions, (err, res) => {
             const datapointSum = res && res.Datapoints.length > 0 && res.Datapoints[0].Sum ? res.Datapoints[0].Sum : 0;
             if (datapointSum > 0) {
-                return asyncCallback(al_health.errorMsg('PAWS000403','Something wrong with streams or client configuration'));
+                return asyncCallback(al_health.errorMsg('PAWS000403','Please check stream status errors and collector configuration'));
             }
             return asyncCallback(null);
         }
