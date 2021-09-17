@@ -119,7 +119,7 @@ class PawsCollector extends AlAwsCollector {
     constructor(context, {aimsCreds, pawsCreds}, childVersion, healthChecks = [], statsChecks = []) {
         const version = childVersion ? childVersion : packageJson.version;
         const endpointDomain = process.env.paws_endpoint.replace(DOMAIN_REGEXP, '');
-        // add the customHealthCheck for all paws collectors
+        // add the customHealthCheck for those collectors which does not have its own health check.
         if (healthChecks.length === 0) {
             healthChecks.push(HealthChecks.customHealthCheck);
         }
