@@ -10,6 +10,7 @@
 'use strict';
 
 const moment = require('moment');
+const NEXT_POLL_INTERVAL_DELAY = process.env.paws_poll_interval_delay && process.env.paws_poll_interval_delay <= 900 ? process.env.paws_poll_interval_delay : 600;
 
 function calcNextCollectionInterval(strategy, curUntilMoment, pollInterval) {
     const nowMoment = moment();
@@ -64,9 +65,17 @@ function calcNextCollectionInterval(strategy, curUntilMoment, pollInterval) {
             throw new Error("Unknow strategy for capping next until timestamp!");
     }
 
-    const nextPollInterval = nowMoment.diff(nextUntilMoment, 'seconds') > pollInterval ?
-            1 : pollInterval;
+    /**
+     * If current time and nextUntilMoment difference is less the NEXT_POLL_INTERVAL_DELAY seconds,
+     * then pull the data for 1 min to keep the poll interval delay consistance and get whole data and not missed anything.
+     */
+    if (nowMoment.diff(nextUntilMoment, 'seconds') < NEXT_POLL_INTERVAL_DELAY) {
+        nextUntilMoment = moment(nextSinceMoment).add(60, 'seconds');
+    }
 
+    // If current time and nextUntilMoment difference is less the 10 min then set nextPollInterval to 10 min(600 sec) else 1 sec.
+    const nextPollInterval = nowMoment.diff(nextUntilMoment, 'seconds') > NEXT_POLL_INTERVAL_DELAY ?
+        1 : NEXT_POLL_INTERVAL_DELAY;
     return { nextSinceMoment, nextUntilMoment, nextPollInterval };
 }
 
