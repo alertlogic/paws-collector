@@ -19,6 +19,7 @@ const ddLambda = require('datadog-lambda-js');
 
 const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector;
 const AlAwsUtil = require('@alertlogic/al-aws-collector-js').Util;
+const HealthChecks = require('./paws_health_checks');
 const packageJson = require('./package.json');
 
 const CREDS_FILE_PATH = '/tmp/paws_creds';
@@ -115,10 +116,13 @@ class PawsCollector extends AlAwsCollector {
             return handlerFunc;
         }
     }
-
     constructor(context, {aimsCreds, pawsCreds}, childVersion, healthChecks = [], statsChecks = []) {
         const version = childVersion ? childVersion : packageJson.version;
         const endpointDomain = process.env.paws_endpoint.replace(DOMAIN_REGEXP, '');
+        // add the customHealthCheck for those collectors which does not have its own health check.
+        if (healthChecks.length === 0) {
+            healthChecks.push(HealthChecks.customHealthCheck);
+        }
         let collectorStreams = process.env.collector_streams && Array.isArray(JSON.parse(process.env.collector_streams)) ? JSON.parse(process.env.collector_streams) : [];
         super(context, 'paws',
               AlAwsCollector.IngestTypes.LOGMSGS,
