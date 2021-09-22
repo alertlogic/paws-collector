@@ -10,21 +10,22 @@
 'use strict';
 
 const moment = require('moment');
-const NEXT_POLL_INTERVAL_DELAY = process.env.paws_poll_interval_delay && process.env.paws_poll_interval_delay <= 900 ? process.env.paws_poll_interval_delay : 600;
 
 function calcNextCollectionInterval(strategy, curUntilMoment, pollInterval) {
+    const NEXT_POLL_INTERVAL_DELAY = process.env.paws_poll_interval_delay && process.env.paws_poll_interval_delay <= 900 ? process.env.paws_poll_interval_delay : 600;
     const nowMoment = moment();
-    const nextSinceMoment = curUntilMoment.isAfter(nowMoment) ?
+    let nextSinceMoment = curUntilMoment.isAfter(nowMoment) ?
         nowMoment : curUntilMoment;
-
+    const daysDiff = nowMoment.diff(nextSinceMoment, 'days');
+    const hoursDiff = nowMoment.diff(nextSinceMoment, 'hours');
     let nextUntilMoment;
 
     switch(strategy) {
         case 'day-week-progression':
-            if (nowMoment.diff(nextSinceMoment, 'days') > 7) {
+            if (daysDiff > 7) {
                 nextUntilMoment = moment(nextSinceMoment).add(7, 'days');
             }
-            else if (nowMoment.diff(nextSinceMoment, 'days') > 1) {
+            else if (daysDiff > 1) {
                 nextUntilMoment = moment(nextSinceMoment).add(24, 'hours');
             }
             else {
@@ -32,10 +33,10 @@ function calcNextCollectionInterval(strategy, curUntilMoment, pollInterval) {
             }
             break;
         case 'hour-day-progression':
-            if (nowMoment.diff(nextSinceMoment, 'hours') > 24) {
+            if (hoursDiff > 24) {
                 nextUntilMoment = moment(nextSinceMoment).add(24, 'hours');
             }
-            else if (nowMoment.diff(nextSinceMoment, 'hours') > 1) {
+            else if (hoursDiff > 1) {
                 nextUntilMoment = moment(nextSinceMoment).add(1, 'hours');
             }
             else {
@@ -43,7 +44,7 @@ function calcNextCollectionInterval(strategy, curUntilMoment, pollInterval) {
             }
             break;
         case 'hour-cap':
-            if (nowMoment.diff(nextSinceMoment, 'hours') > 1) {
+            if (hoursDiff > 1) {
                 nextUntilMoment = moment(nextSinceMoment).add(1, 'hours');
             }
             else {
@@ -51,7 +52,7 @@ function calcNextCollectionInterval(strategy, curUntilMoment, pollInterval) {
             }
             break;
         case 'day-cap':
-            if (nowMoment.diff(nextSinceMoment, 'hours') > 24) {
+            if (hoursDiff > 24) {
                 nextUntilMoment = moment(nextSinceMoment).add(24, 'hours');
             }
             else {
@@ -67,15 +68,31 @@ function calcNextCollectionInterval(strategy, curUntilMoment, pollInterval) {
 
     /**
      * If current time and nextUntilMoment difference is less the NEXT_POLL_INTERVAL_DELAY seconds,
-     * then pull the data for 1 min to keep the poll interval delay consistance and get whole data and not missed anything.
+     * then nextUntilMoment value will be given poll_interval_delay second ago;
+     * and if sinceMoment > UntilMoment then set both value to same so API will not pull any data.
      */
     if (nowMoment.diff(nextUntilMoment, 'seconds') < NEXT_POLL_INTERVAL_DELAY) {
-        nextUntilMoment = moment(nextSinceMoment).add(60, 'seconds');
+        nextUntilMoment = nowMoment.subtract(NEXT_POLL_INTERVAL_DELAY, 'seconds');
+        if (nextSinceMoment.isAfter(nextUntilMoment)) {
+            nextSinceMoment = nextUntilMoment;
+        }
+    }
+    // set nextPollInterval in seconds base on different scenario.
+    let nextPollInterval;
+    if (nowMoment.diff(nextUntilMoment, 'hours') > 1) {
+        nextPollInterval = 1;
+    }
+    else if (nowMoment.diff(nextUntilMoment, 'seconds') > NEXT_POLL_INTERVAL_DELAY) {
+        nextPollInterval = pollInterval;
+    }
+    else {
+        nextPollInterval = NEXT_POLL_INTERVAL_DELAY;
     }
 
-    // If current time and nextUntilMoment difference is less the 10 min then set nextPollInterval to 10 min(600 sec) else 1 sec.
-    const nextPollInterval = nowMoment.diff(nextUntilMoment, 'seconds') > NEXT_POLL_INTERVAL_DELAY ?
-        1 : NEXT_POLL_INTERVAL_DELAY;
+    if (nextSinceMoment === nextUntilMoment) {
+        console.info(`Since and untill moment is same and Next collection in ${nextPollInterval} seconds`);
+    }
+
     return { nextSinceMoment, nextUntilMoment, nextPollInterval };
 }
 
