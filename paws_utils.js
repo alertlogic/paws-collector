@@ -12,9 +12,9 @@
 const moment = require('moment');
 
 function calcNextCollectionInterval(strategy, curUntilMoment, pollInterval) {
-    const NEXT_POLL_INTERVAL_DELAY = process.env.paws_poll_interval_delay && process.env.paws_poll_interval_delay <= 900 ? process.env.paws_poll_interval_delay : 600;
+    const NEXT_POLL_INTERVAL_DELAY = process.env.paws_poll_interval_delay && process.env.paws_poll_interval_delay <= 900 ? process.env.paws_poll_interval_delay : 300;
     const nowMoment = moment();
-    let nextSinceMoment = curUntilMoment.isAfter(nowMoment) ?
+    const nextSinceMoment = curUntilMoment.isAfter(nowMoment) ?
         nowMoment : curUntilMoment;
     const daysDiff = nowMoment.diff(nextSinceMoment, 'days');
     const hoursDiff = nowMoment.diff(nextSinceMoment, 'hours');
@@ -67,17 +67,9 @@ function calcNextCollectionInterval(strategy, curUntilMoment, pollInterval) {
     }
 
     /**
-     * If current time and nextUntilMoment difference is less the NEXT_POLL_INTERVAL_DELAY seconds,
-     * then nextUntilMoment value will be given poll_interval_delay second ago;
-     * and if sinceMoment > UntilMoment then set both value to same so API will not pull any data.
+     * If current moment and nextUntilMoment difference is less than given poll_interval_delay then set nextPollInterval = poll_interval_delay;
+     * make next API call after 5 to 10 min to avoid any loss of data.
      */
-    if (nowMoment.diff(nextUntilMoment, 'seconds') < NEXT_POLL_INTERVAL_DELAY) {
-        nextUntilMoment = nowMoment.subtract(NEXT_POLL_INTERVAL_DELAY, 'seconds');
-        if (nextSinceMoment.isAfter(nextUntilMoment)) {
-            nextSinceMoment = nextUntilMoment;
-        }
-    }
-    // set nextPollInterval in seconds base on different scenario.
     let nextPollInterval;
     if (nowMoment.diff(nextUntilMoment, 'hours') > 1) {
         nextPollInterval = 1;
@@ -87,10 +79,6 @@ function calcNextCollectionInterval(strategy, curUntilMoment, pollInterval) {
     }
     else {
         nextPollInterval = NEXT_POLL_INTERVAL_DELAY;
-    }
-
-    if (nextSinceMoment === nextUntilMoment) {
-        console.info(`Since and untill moment is same and Next collection in ${nextPollInterval} seconds`);
     }
 
     return { nextSinceMoment, nextUntilMoment, nextPollInterval };
