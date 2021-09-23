@@ -1,6 +1,6 @@
 {
   "name": "gsuite-collector",
-  "version": "1.2.18",
+  "version": "1.2.19",
   "description": "Alert Logic AWS based Gsuite Log Collector",
   "repository": {},
   "private": true,
@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@alertlogic/al-collector-js": "^2.0.4",
-    "@alertlogic/paws-collector": "^2.0.14",
+    "@alertlogic/paws-collector": "^2.0.16",
     "async": "3.1.0",
     "debug": "4.1.1",
     "googleapis": "39.2.0",

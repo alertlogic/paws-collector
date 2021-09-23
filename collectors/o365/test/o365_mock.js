@@ -18,6 +18,7 @@ process.env.collector_id = 'collector-id';
 process.env.al_application_id = 'o365';
 process.env.paws_poll_interval = 60;
 process.env.paws_max_pages_per_invocation = 2;
+process.env.paws_poll_interval_delay = 300;
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',

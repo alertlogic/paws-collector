@@ -235,7 +235,7 @@ describe('Unit Tests', function() {
                     poll_interval_sec: 1
                 };
                 let nextState = collector._getNextCollectionState(curState);
-                assert.equal(nextState.poll_interval_sec, collector.pollInterval);
+                assert.equal(nextState.poll_interval_sec, 300);
                 assert.equal(nextState.stream, "AttachmentProtectLogs");
                 done();
             });

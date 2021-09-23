@@ -18,6 +18,7 @@ process.env.paws_api_secret = "secret";
 process.env.paws_endpoint = "ciscoduo.com";
 process.env.collector_streams = "[\"Authentication\", \"Administrator\",\"Telephony\", \"OfflineEnrollment\"]";
 process.env.paws_api_client_id = "client-id";
+process.env.paws_poll_interval_delay = 300;
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',

@@ -173,7 +173,7 @@ describe('Unit Tests', function () {
                 };
                 let nextState = collector._getNextCollectionState(curState);
                 assert.equal(moment(nextState.until).diff(nextState.since, 'seconds'), collector.pollInterval);
-                assert.equal(nextState.poll_interval_sec, collector.pollInterval);
+                assert.equal(nextState.poll_interval_sec, 300);
                 done();
             });
         });

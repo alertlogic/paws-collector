@@ -139,7 +139,7 @@ describe('Unit Tests', function() {
         
         it('sets up intial state (now - pollInterval < startDate < now)', function(done) {
             OktaCollector.load().then(function(creds) {
-                const testPollInterval = 60;
+                const testPollInterval = 300;
                 var collector = new OktaCollector(ctx, creds);
                 const startDate = moment().subtract(20, 'seconds').toISOString();
                 process.env.paws_collection_start_ts = startDate;
@@ -157,7 +157,7 @@ describe('Unit Tests', function() {
         
         it('sets up intial state (startDate = now)', function(done) {
             OktaCollector.load().then(function(creds) {
-                const testPollInterval = 60;
+                const testPollInterval = 300;
                 var collector = new OktaCollector(ctx, creds);
                 const startDate = moment().toISOString();
                 process.env.paws_collection_start_ts = startDate;
@@ -280,7 +280,7 @@ describe('Unit Tests', function() {
                 poll_interval_sec: 1
             };
             OktaCollector.load().then(function(creds) {
-                const testPollInterval = 55;
+                const testPollInterval = 300;
                 var collector = new OktaCollector(ctx, creds, 'okta');
                 collector.pollInterval = testPollInterval;
                 const newState = collector._getNextCollectionState(curState);
