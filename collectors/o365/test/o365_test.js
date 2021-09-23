@@ -321,7 +321,7 @@ describe('O365 Collector Tests', function() {
                 };
                 const newState = collector._getNextCollectionState(curState);
                 assert.equal(moment(newState.until).diff(newState.since, 'seconds'), collector.pollInterval);
-                assert.equal(newState.poll_interval_sec, 1);
+                assert.equal(newState.poll_interval_sec, collector.pollInterval);
                 done();
             });
         });
@@ -352,7 +352,7 @@ describe('O365 Collector Tests', function() {
                 };
                 const newState = collector._getNextCollectionState(curState);
                 assert.equal(moment(newState.until).diff(newState.since, 'seconds'), collector.pollInterval);
-                assert.equal(newState.poll_interval_sec, collector.pollInterval);
+                assert.equal(newState.poll_interval_sec, process.env.paws_poll_interval_delay);
                 done();
             });
         });
@@ -431,7 +431,7 @@ describe('O365 Collector Tests', function() {
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
                     assert.equal(logs.length, 0);
                     assert.equal(moment(newState.until).diff(newState.since, 'seconds'), collector.pollInterval);
-                    assert.equal(newState.poll_interval_sec, collector.pollInterval);
+                    assert.equal(newState.poll_interval_sec, process.env.paws_poll_interval_delay);
                     restoreO365ManagemntStub();
                     done();
                 });
@@ -452,7 +452,7 @@ describe('O365 Collector Tests', function() {
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
                     assert.equal(logs.length, 0);
                     assert.equal(moment(newState.until).diff(newState.since, 'seconds'), collector.pollInterval);
-                    assert.equal(newState.poll_interval_sec, collector.pollInterval);
+                    assert.equal(newState.poll_interval_sec, process.env.paws_poll_interval_delay);
                     restoreO365ManagemntStub();
                     done();
                 });

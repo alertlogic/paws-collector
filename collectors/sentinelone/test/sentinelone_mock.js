@@ -16,6 +16,7 @@ process.env.paws_poll_interval = 60;
 process.env.paws_type_name = "sentinelone";
 process.env.paws_api_secret = "secret";
 process.env.paws_endpoint = "https://sentinelone.com";
+process.env.paws_poll_interval_delay = 300;
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',

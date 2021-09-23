@@ -315,7 +315,7 @@ describe('Unit Tests', function() {
                 };
                 const newState = collector._getNextCollectionState(curState);
                 assert.equal(moment(newState.until).diff(newState.since, 'seconds'), collector.pollInterval);
-                assert.equal(newState.poll_interval_sec, 1);
+                assert.equal(newState.poll_interval_sec, collector.pollInterval);
                 done();
             });
         });
@@ -330,7 +330,7 @@ describe('Unit Tests', function() {
                 };
                 const newState = collector._getNextCollectionState(curState);
                 assert.equal(moment(newState.until).diff(newState.since, 'seconds'), collector.pollInterval);
-                assert.equal(newState.poll_interval_sec, collector.pollInterval);
+                assert.equal(newState.poll_interval_sec, 300);
                 done();
             });
         });
