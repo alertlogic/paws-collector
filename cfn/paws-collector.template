@@ -80,6 +80,11 @@
             "Type": "Number",
             "Default": 60
         },
+        "PollingIntervalDelay": {
+            "Description": "Interval in seconds between two consecutive poll requests to avoid loss of any data",
+            "Type": "Number",
+            "Default": 600
+        },
         "PawsEndpoint": {
             "Description": "URL to poll",
             "Type": "String"
@@ -791,6 +796,9 @@
                   },
                   "paws_poll_interval": {
                       "Ref":"PollingInterval"
+                  },
+                  "paws_poll_interval_delay": {
+                    "Ref":"PollingIntervalDelay"
                   },
                   "paws_endpoint":{
                       "Ref":"PawsEndpoint"
