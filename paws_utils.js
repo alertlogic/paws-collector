@@ -12,7 +12,7 @@
 const moment = require('moment');
 
 function calcNextCollectionInterval(strategy, curUntilMoment, pollInterval) {
-    const INTERVAL_IN_MINUTES = 15;
+    const DELAY_IN_MINUTES = 15;
     const pollIntervalDelay = process.env.paws_poll_interval_delay && process.env.paws_poll_interval_delay <= 900 ? process.env.paws_poll_interval_delay : 300;
     const nowMoment = moment();
     const nextSinceMoment = curUntilMoment.isAfter(nowMoment) ?
@@ -72,7 +72,7 @@ function calcNextCollectionInterval(strategy, curUntilMoment, pollInterval) {
      * make next API call after 5 to 10 min to avoid any loss of data.
      */
     let nextPollInterval;
-    if (nowMoment.diff(nextUntilMoment, 'minutes') > INTERVAL_IN_MINUTES) {
+    if (nowMoment.diff(nextUntilMoment, 'minutes') > DELAY_IN_MINUTES) {
         nextPollInterval = 1;
     }
     else if (nowMoment.diff(nextUntilMoment, 'seconds') > pollIntervalDelay) {
