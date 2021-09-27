@@ -71,7 +71,7 @@ function calcNextCollectionInterval(strategy, curUntilMoment, pollInterval) {
      * make next API call after 5 to 10 min to avoid any loss of data.
      */
     let nextPollInterval;
-    if (nowMoment.diff(nextUntilMoment, 'minutes') > 30) {
+    if (nowMoment.diff(nextUntilMoment, 'minutes') > 15) {
         nextPollInterval = 1;
     }
     else if (nowMoment.diff(nextUntilMoment, 'seconds') > pollIntervalDelay) {
