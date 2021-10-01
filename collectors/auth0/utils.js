@@ -2,8 +2,8 @@ const moment = require('moment');
 
 function getAPILogs(auth0Client, state, accumulator, maxPagesPerInvocation) {
     let pageCount = 0;
-
-    let params = state.last_log_id ? { from: state.last_log_id, take:100 } : { q: "date:[" + moment(state.since).toISOString() + " TO *]", per_page:100, sort: "date:1" };
+    const lastTs = state.last_collected_ts ? state.last_collected_ts : state.since;
+    let params = state.last_log_id ? { from: state.last_log_id, take:100 } : { q: "date:[" + moment(lastTs).toISOString() + " TO *]", per_page:100, sort: "date:1" };
     let nextLogId = state.last_log_id ? state.last_log_id : null;
     let lastLogTs = null;
 

@@ -72,9 +72,10 @@ class Auth0Collector extends PawsCollector {
                 1 : this.pollInterval;
 
         if (nextLogId === null) {
-            //If collector initial call and get empty logs then this condition will work
+            // If collector initial call and get empty logs then this condition will work
+            const lastTs = lastLogTs ? lastLogTs : curState.since;
             return {
-                since: curState.since,
+                since: lastTs,
                 poll_interval_sec: 1
             };
         }
