@@ -313,7 +313,7 @@ class PawsCollector extends AlAwsCollector {
         const params = {
             Key: {
                 "CollectorId": {S: collector._collectorId},
-                "MessageId": {S: stateSqsMsg.md5OfBody}
+                "MessageId": {S: stateSqsMsg.messageId}
             },
             TableName: this._pawsDdbTableName,
             ConsistentRead: true
@@ -341,7 +341,7 @@ class PawsCollector extends AlAwsCollector {
                 const newRecord = {
                     Item: {
                         CollectorId: {S: collector._collectorId},
-                        MessageId: {S: stateSqsMsg.md5OfBody},
+                        MessageId: {S: stateSqsMsg.messageId},
                         Updated: {N: moment().unix().toString()},
                         Cid: {S: collector.cid ? collector.cid : 'none'},
                         Status: {S: STATE_RECORD_INCOMPLETE},
@@ -369,7 +369,7 @@ class PawsCollector extends AlAwsCollector {
         const updateParams = {
             Key: {
                 CollectorId: {S: collector._collectorId},
-                MessageId: {S: stateSqsMsg.md5OfBody}
+                MessageId: {S: stateSqsMsg.messageId}
             },
             AttributeUpdates: {
                 Updated: {

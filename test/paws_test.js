@@ -346,8 +346,8 @@ describe('Unit Tests', function() {
                     const updateItemArgs = updateItemStub.args[0][0];
                     assert.equal(putItemStub.called, true, 'should put a new item in');
                     assert.equal(updateItemStub.called, true, 'should update the item to complete');
-                    assert.equal(putItemArgs.Item.MessageId.S, "5d172f741470c05e3d2a45c8ffcd9ab3");
-                    assert.equal(updateItemArgs.Key.MessageId.S, "5d172f741470c05e3d2a45c8ffcd9ab3");
+                    assert.equal(putItemArgs.Item.MessageId.S, "5fea7756-0ea4-451a-a703-a558b933e274");
+                    assert.equal(updateItemArgs.Key.MessageId.S, "5fea7756-0ea4-451a-a703-a558b933e274");
                     done();
                 }
             };
@@ -357,6 +357,7 @@ describe('Unit Tests', function() {
                     {
                         "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
                         "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
+                        "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
                         "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
                     }
                 ]
@@ -371,12 +372,13 @@ describe('Unit Tests', function() {
             const mockRecord = {
                 "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
                 "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
+                "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
                 "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
             };
             const fakeGetFun = function (_params, callback) {
                 const mockItem = {
                     Item: {
-                        MessageId: { S: mockRecord.md5OfBody },
+                        MessageId: { S: mockRecord.messageId },
                         Status: {S: 'COMPLETE'},
                         Updated: {N: `${Date.now()/1000 - 100 }`}
                     }
@@ -427,12 +429,13 @@ describe('Unit Tests', function() {
             const mockRecord = {
                 "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
                 "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
+                "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
                 "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
             };
             const fakeGetFun = function (_params, callback) {
                 const mockItem = {
                     Item: {
-                        MessageId: { S: mockRecord.md5OfBody },
+                        MessageId: { S: mockRecord.messageId },
                         Status: {S: 'INCOMPLETE'},
                         Updated: {N: `${Date.now()/1000 - 100 }`}
                     }
@@ -485,7 +488,7 @@ describe('Unit Tests', function() {
                 succeed : function() {
                     const updateItemArgs = updateItemStub.args[0][0];
                     assert.equal(updateItemStub.called, true, 'should update the item to complete');
-                    assert.equal(updateItemArgs.Key.MessageId.S, "5d172f741470c05e3d2a45c8ffcd9ab3");
+                    assert.equal(updateItemArgs.Key.MessageId.S, "5fea7756-0ea4-451a-a703-a558b933e274");
                    
                     done();
                 }
@@ -496,6 +499,7 @@ describe('Unit Tests', function() {
                     {
                         "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
                         "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
+                        "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
                         "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
                     }
                 ]
@@ -664,6 +668,7 @@ describe('Unit Tests', function() {
                     {
                         "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"2021-07-01T02:37:37.617Z\",\n    \"until\": \"2021-07-01T03:37:37.617Z\"\n  }\n}",
                         "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
+                        "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
                         "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
                     }
                 ]
@@ -704,6 +709,7 @@ describe('Unit Tests', function() {
                     {
                         "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"2021-07-01T02:37:37.617Z\",\n    \"until\": \"2021-07-01T03:37:37.617Z\"\n  }\n, \"retry_count\":4}",
                         "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
+                        "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
                         "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
                     }
                 ]
@@ -744,6 +750,7 @@ describe('Unit Tests', function() {
                     {
                         "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"2021-07-01T02:37:37.617Z\",\n    \"until\": \"2021-07-01T03:37:37.617Z\"\n  }\n, \"retry_count\":3}",
                         "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
+                        "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
                         "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
                     }
                 ]
@@ -784,6 +791,7 @@ describe('Unit Tests', function() {
                     {
                         "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"2021-07-01T02:37:37.617Z\",\n    \"until\": \"2021-07-01T03:37:37.617Z\"\n  }\n}",
                         "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
+                        "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
                         "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
                     }
                 ]
