@@ -229,6 +229,24 @@ describe('Unit Tests', function () {
                 let lastLogTs = null;
                 let nextState = collector._getNextCollectionState(curState, nextLogId, lastLogTs);
                 assert.ok(nextState.since);
+                assert.equal(nextState.since, curState.since);
+                assert.equal(nextState.poll_interval_sec, 1);
+                done();
+            });
+        });
+        it('log format success with nextLogId null and lastLogTs is not null', function (done) {
+            Auth0Collector.load().then(function (creds) {
+                var collector = new Auth0Collector(ctx, creds);
+                const startDate = moment();
+                const curState = {
+                    since: startDate.toISOString(),
+                    poll_interval_sec: 1
+                };
+                let nextLogId = null;
+                let lastLogTs = startDate.toISOString();
+                let nextState = collector._getNextCollectionState(curState, nextLogId, lastLogTs);
+                assert.ok(nextState.since);
+                assert.equal(nextState.since, lastLogTs);
                 assert.equal(nextState.poll_interval_sec, 1);
                 done();
             });
