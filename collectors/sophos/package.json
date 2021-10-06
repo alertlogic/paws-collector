@@ -1,6 +1,6 @@
 {
   "name": "sophos-collector",
-  "version": "1.0.22",
+  "version": "1.0.23",
   "description": "Alert Logic AWS based Sophos Log Collector",
   "repository": {},
   "private": true,
@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@alertlogic/al-collector-js": "^2.0.4",
-    "@alertlogic/paws-collector": "^2.0.17",
+    "@alertlogic/paws-collector": "^2.0.18",
     "async": "3.1.0",
     "debug": "4.1.1",
     "moment": "2.24.0"
