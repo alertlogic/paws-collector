@@ -142,33 +142,27 @@
         },
         "ExistingDDBTableName" :{
             "Description": "The table name the collector will use for state deduplication. This should be common for all collectors",
-            "Type": "String",
-            "Default": "PawsCollectorStates"
+            "Type": "String"
         },
         "ExistingEncryptLambdaArn" :{
             "Description": "Lambda function ARN for secret encryption",
-            "Type": "String",
-            "Default": ""
+            "Type": "String"
         },
         "ExistingEncryptLambdaRoleArn" :{
             "Description": "IAM role ARN for secret encryption",
-            "Type": "String",
-            "Default": ""
+            "Type": "String"
         },
         "ExistingKmsKeyArn" :{
             "Description": "KMS key for secret encryption",
-            "Type": "String",
-            "Default": ""
+            "Type": "String"
         },
         "ExistingSsmParamLambdaArn" :{
             "Description": "Lambda function ARN for SSM parameter storage",
-            "Type": "String",
-            "Default": ""
+            "Type": "String"
         },
         "ExistingCollectLambdaRoleArn" :{
             "Description": "",
-            "Type": "String",
-            "Default": ""
+            "Type": "String"
         }
     },
     "Resources":{
