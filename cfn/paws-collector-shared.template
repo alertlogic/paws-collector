@@ -1,0 +1,536 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Alert Logic template for creating a Poll based log collector",
+    "Parameters": {
+        "DatadogApiKey" :{
+            "Description": "API Key for DataDog Metric collection. Use this OR DatadogKMSKey",
+            "Type": "String",
+            "Default": ""
+        },
+        "DatadogKMSKey" :{
+            "Description": "KMS ID for DataDog API Key. Use this OR DatadogApiKey",
+            "Type": "String",
+            "Default": ""
+        },
+        "AlertlogicAccessKeyId": {
+            "Description": "Alert Logic Access Key Id obtained from AIMS",
+            "Type": "String"
+        },
+        "AlertlogicSecretKey": {
+            "Description": "Alert Logic Secret Key returned from AIMS for the Access Key Id",
+            "Type": "String",
+            "NoEcho": true
+        },
+        "AlApplicationId": {
+            "Description": "Alert Logic Application Id for collector logs",
+            "Type": "String",
+            "Default": "paws"
+        },
+        "AlApiEndpoint": {
+            "Description": "Alert Logic API endpoint",
+            "Type": "String",
+            "Default": "api.global-services.global.alertlogic.com",
+            "AllowedValues": [
+                "api.global-services.global.alertlogic.com",
+                "api.global-integration.product.dev.alertlogic.com"
+            ]
+        },
+        "AlDataResidency": {
+            "Description": "Alert Logic Data Residency",
+            "Type": "String",
+            "Default": "default",
+            "AllowedValues": ["default"]
+        },
+        "PackagesBucketPrefix": {
+            "Description": "S3 bucket name prefix where collector packages are located.",
+            "Type": "String",
+            "Default": "alertlogic-collectors"
+        },
+        "PawsCollectorTypeName": {
+            "Description": "A collector type name. For example, okta, auth0",
+            "Type": "String"
+        },
+        "CollectorFunctionMemorySize": {
+            "Description": "Memory size for a collector function",
+            "Type": "Number",
+            "Default": 256
+        },
+        "CollectorFunctionTimeout": {
+            "Description": "Invocation timeout for a collector function.",
+            "Type": "Number",
+            "Default" : 300
+        },
+        "AlertlogicCustomerId": {
+            "Description": "Optional. Alert Logic customer ID which collected data should be reported for. If not set customer ID is derived from AIMs tokens",
+            "Type": "String",
+            "Default": ""
+        },
+        "CollectorId": {
+            "Description": "Optional. A collector UUID if known.",
+            "Type": "String",
+            "Default": "none"
+        },
+        "PollingInterval": {
+            "Description": "Interval in seconds between two consecutive poll requests.",
+            "Type": "Number",
+            "Default": 60
+        },
+        "PollingIntervalDelay": {
+            "Description": "Interval in seconds between two consecutive poll requests to avoid loss of any data",
+            "Type": "Number",
+            "Default": 600
+        },
+        "PawsEndpoint": {
+            "Description": "URL to poll",
+            "Type": "String"
+        },
+        "PawsAuthType": {
+            "Description": "Target API authentication type. Supported types: ssws, oauth2",
+            "Type": "String",
+            "Default": "ssws"
+        },
+        "PawsClientId": {
+            "Description": "Client ID for oauth2 authentication type",
+            "Type": "String",
+            "Default": ""
+        },
+        "PawsSecret": {
+            "Description": "Client secret for oauth2 or secret token for ssws.",
+            "Type": "String",
+            "NoEcho": true
+        },
+        "PawsSecretParamTier": {
+            "Description": "Tier for AWS Param store param. Change this to advanced if the size of the PAws secrets is over 4kb",
+            "Type": "String",
+            "Default": "Intelligent-Tiering",
+            "AllowedValues": [
+                "Standard",
+                "Advanced",
+                "Intelligent-Tiering"
+            ]
+        },
+        "PawsMaxPagesPerInvocation" :{
+            "Description": "The maximum number of pages of content data retrieved per invocation",
+            "Type": "Number",
+            "Default": 10
+        },
+        "CollectionStartTs": {
+            "Description": "Optional. Timestamp when log collection starts. For example, 2020-01-13T16:00:00Z.",
+            "Type": "String",
+            "AllowedPattern" : "(?:^\\d{4}(-\\d{2}){2}T(\\d{2}:){2}\\d{2}Z$)?"
+        },
+        "CollectorParamString1" :{
+            "Description": "Collector specific string type parameter 1.",
+            "Type": "String",
+            "Default": ""
+        },
+        "CollectorParamString2" :{
+            "Description": "Collector specific string type parameter 2.",
+            "Type": "String",
+            "Default": ""
+        },
+        "CollectorStreams" :{
+            "Description": "Collector specific streams",
+            "Type": "String",
+            "Default": ""
+        },
+        "SsmDirect" :{
+            "Description": "Used System manger secure string",
+            "Type": "String",
+            "Default": "true",
+            "AllowedValues":["true"]
+        },
+        "ExistingDDBTableName" :{
+            "Description": "The table name the collector will use for state deduplication. This should be common for all collectors",
+            "Type": "String"
+        },
+        "ExistingEncryptLambdaArn" :{
+            "Description": "Lambda function ARN for secret encryption",
+            "Type": "String"
+        },
+        "ExistingEncryptLambdaRoleArn" :{
+            "Description": "IAM role ARN for secret encryption",
+            "Type": "String"
+        },
+        "ExistingKmsKeyArn" :{
+            "Description": "KMS key for secret encryption",
+            "Type": "String"
+        },
+        "ExistingSsmParamLambdaArn" :{
+            "Description": "Lambda function ARN for SSM parameter storage",
+            "Type": "String"
+        },
+        "ExistingCollectLambdaRoleArn" :{
+            "Description": "",
+            "Type": "String"
+        }
+    },
+    "Resources":{
+        "EncryptSecretKeyCustomResource": {
+            "Type": "AWS::CloudFormation::CustomResource",
+            "Properties": {
+                "ServiceToken": {"Ref": "ExistingEncryptLambdaArn"},
+                "KeyId": {"Ref": "ExistingKmsKeyArn"},
+                "Plaintext": {
+                    "Ref": "AlertlogicSecretKey"
+                }
+            }
+        },
+        "StorePawsSecretInSsm": {
+            "Type": "AWS::CloudFormation::CustomResource",
+            "Properties": {
+                "ServiceToken": {"Ref": "ExistingSsmParamLambdaArn"},
+                "Name": {"Fn::Join": [
+                    "",
+                    [
+                        "PAWS-SECRET-",
+                        {"Ref": "PawsCollectorTypeName"},
+                        "-",
+                        {"Ref": "AWS::StackName"}
+                    ]
+                ]},
+                "KeyId": {
+                    "Ref": "ExistingKmsKeyArn"
+                },
+                "Plaintext": {
+                    "Ref": "PawsSecret"
+                },
+                "Tier": {
+                    "Ref": "PawsSecretParamTier"
+                },
+                "Tags": [
+                    {
+                        "Key": "StackId",
+                        "Value": {
+                            "Ref": "AWS::StackId"
+                        }
+                    }
+                ]
+            }
+        },
+      "PawsPollStateQueue":{
+        "Type":"AWS::SQS::Queue",
+         "Properties":{
+            "VisibilityTimeout": 900,
+            "MessageRetentionPeriod": 1209600,
+            "Tags": [
+                {
+                    "Key": "QueueName",
+                    "Value": {
+                     "Fn::Join": [
+                       "-",
+                       [
+                         {
+                           "Ref": "AWS::StackName"
+                         },
+                         "paws-collection-state"
+                       ]
+                     ]
+                    }
+                }
+            ]
+         }
+      },
+      "CollectLambdaFunction":{
+         "Type":"AWS::Lambda::Function",
+         "DependsOn":[
+            "EncryptSecretKeyCustomResource",
+            "StorePawsSecretInSsm",
+            "PawsPollStateQueue"
+         ],
+         "Properties":{
+            "Description":"Alert Logic Poll based collector",
+            "Role":{"Ref": "ExistingCollectLambdaRoleArn"},
+            "KmsKeyArn":{"Ref": "ExistingKmsKeyArn"},
+            "Code":{
+               "S3Bucket":{"Fn::Join" : ["", [
+                    {"Ref":"PackagesBucketPrefix"}, "-",
+                    { "Ref" : "AWS::Region" }
+               ]]},
+               "S3Key": {"Fn::Join" : ["", [
+                    "packages/lambda/al-",
+                    { "Ref" : "PawsCollectorTypeName" },
+                    "-collector.zip"
+               ]]}
+            },
+            "Handler":"index.handler",
+            "Runtime":"nodejs12.x",
+            "MemorySize": { "Ref" : "CollectorFunctionMemorySize" },
+            "Timeout": { "Ref" : "CollectorFunctionTimeout" },
+            "Environment":{
+               "Variables":{
+                  "aims_access_key_id": {
+                      "Ref":"AlertlogicAccessKeyId"
+                  },
+                  "aims_secret_key":{
+                      "Fn::GetAtt": ["EncryptSecretKeyCustomResource", "EncryptedText"]
+                  },
+                  "aws_lambda_s3_bucket":{"Fn::Join" : ["", [
+                      {"Ref":"PackagesBucketPrefix"}, "-",
+                      {"Ref":"AWS::Region"}
+                  ]]},
+                  "aws_lambda_zipfile_name": {"Fn::Join" : ["", [
+                      "packages/lambda/al-",
+                      { "Ref" : "PawsCollectorTypeName" },
+                      "-collector.zip"
+                   ]]}, 
+                  "aws_lambda_update_config_name": {"Fn::Join" : ["", [
+                      "configs/lambda/al-",
+                      { "Ref" : "PawsCollectorTypeName" },
+                      "-collector.json"
+                  ]]},
+                  "DD_API_KEY": {
+                      "Ref": "DatadogApiKey"
+                  },
+                  "DD_KMS_API_KEY": {
+                      "Ref": "DatadogKMSKey"
+                  },
+                  "paws_ddb_table_name": {
+                      "Ref": "ExistingDDBTableName"
+                  },
+                  "al_application_id":{
+                      "Ref":"AlApplicationId"
+                  },
+                  "al_api":{
+                      "Ref":"AlApiEndpoint"
+                  },
+                  "al_data_residency":{
+                      "Ref":"AlDataResidency"
+                  },
+                  "customer_id": {
+                      "Ref":"AlertlogicCustomerId"
+                  },
+                  "collector_id": {
+                      "Ref":"CollectorId"
+                  },
+                  "paws_state_queue_arn":{
+                      "Fn::GetAtt" : ["PawsPollStateQueue", "Arn"]
+                  },
+                  "paws_state_queue_url":{
+                      "Ref" : "PawsPollStateQueue"
+                  },
+                  "paws_poll_interval": {
+                      "Ref":"PollingInterval"
+                  },
+                  "paws_poll_interval_delay": {
+                    "Ref":"PollingIntervalDelay"
+                  },
+                  "paws_endpoint":{
+                      "Ref":"PawsEndpoint"
+                  },
+                  "paws_api_auth_type":{
+                      "Ref":"PawsAuthType"
+                  },
+                  "paws_api_client_id":{
+                      "Ref":"PawsClientId"
+                  },
+                  "paws_kms_key_arn":{
+                      "Ref": "ExistingKmsKeyArn"
+                  },
+                  "paws_secret_param_name":{
+                      "Fn::GetAtt": ["StorePawsSecretInSsm", "PawsSecretParamName"]
+                  },
+                  "paws_secret_param_tier": {
+                      "Ref": "PawsSecretParamTier"
+                  },
+                  "paws_collection_start_ts":{
+                      "Ref":"CollectionStartTs"
+                  },
+                  "stack_name": {
+                      "Ref":"AWS::StackName"
+                  },
+                  "paws_type_name":{
+                      "Ref":"PawsCollectorTypeName"
+                  },
+                  "paws_max_pages_per_invocation": {
+                    "Ref":"PawsMaxPagesPerInvocation"
+                  },
+                  "paws_collector_param_string_1": {
+                    "Ref": "CollectorParamString1"
+                  },
+                  "paws_collector_param_string_2": {
+                    "Ref": "CollectorParamString2"
+                  },
+                  "collector_streams": {
+                    "Ref": "CollectorStreams"
+                  },
+                  "ssm_direct": {
+                    "Ref": "SsmDirect"
+                }
+               }
+            },
+            "Tags": [
+                {
+                    "Key": "AlertLogic",
+                    "Value": "Collect"
+                },
+                {
+                    "Key":"FunctionName",
+                    "Value":{ "Ref":"AWS::StackName" }
+                }
+            ]
+         }
+      },
+      "CollectLambdaEventSourceMapping":{
+         "Type":"AWS::Lambda::EventSourceMapping",
+         "DependsOn":[
+            "CollectLambdaFunction",
+            "PawsPollStateQueue"
+         ],
+         "Properties":{
+            "BatchSize": 1,
+            "EventSourceArn" : { "Fn::GetAtt" : ["PawsPollStateQueue", "Arn"] },
+            "FunctionName" : { "Ref":"CollectLambdaFunction" }
+         }
+      },
+      "UpdaterScheduledRule": {
+         "Type": "AWS::Events::Rule",
+         "DependsOn": [
+            "CollectLambdaFunction"
+         ],
+         "Properties": {
+            "Description": "Scheduled rule for updater function",
+            "ScheduleExpression": "rate(12 hours)",
+            "State": "ENABLED",
+            "Targets":[
+                {
+                    "Id":"1",
+                    "Arn":{
+                        "Fn::GetAtt":[
+                            "CollectLambdaFunction",
+                            "Arn"
+                        ]
+                    },
+                    "Input": "{\"RequestType\": \"ScheduledEvent\", \"Type\": \"SelfUpdate\"}"
+                }
+            ]
+         }
+      },
+      "UpdaterScheduledRuleLambdaInvokePermission": {
+          "Type": "AWS::Lambda::Permission",
+          "DependsOn": [
+            "CollectLambdaFunction",
+            "UpdaterScheduledRule"
+          ],
+          "Properties": {
+            "Action": "lambda:InvokeFunction",
+            "FunctionName": {
+              "Ref": "CollectLambdaFunction"
+            },
+            "Principal": "events.amazonaws.com",
+            "SourceArn":{
+              "Fn::GetAtt": [
+                "UpdaterScheduledRule",
+                "Arn"
+              ]
+            }
+          }
+      },
+      "CloudWatchEventsRole":{
+         "Type": "AWS::IAM::Role",
+         "DependsOn":[
+            "CollectLambdaFunction"
+         ],
+         "Properties": {
+            "AssumeRolePolicyDocument": {
+               "Version" : "2012-10-17",
+               "Statement": [ {
+                  "Effect": "Allow",
+                  "Principal": {
+                     "Service": [ "events.amazonaws.com" ]
+                  },
+                  "Action": [ "sts:AssumeRole" ]
+               } ]
+            },
+            "Path": "/",
+            "Policies": [ {
+               "PolicyName": "root",
+               "PolicyDocument": {
+                  "Version" : "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect":"Allow",
+                      "Action":[
+                         "lambda:*"
+                      ],
+                      "Resource":[{
+                          "Fn::GetAtt":[
+                              "CollectLambdaFunction",
+                              "Arn"
+                          ]
+                      }]
+                    }
+                  ]
+               }
+            }]
+         }
+      },
+      "CheckinScheduledRule": {
+         "Type": "AWS::Events::Rule",
+         "DependsOn": [
+            "CollectLambdaFunction"
+         ],
+         "Properties": {
+            "Description": "Scheduled rule for checkin function",
+            "ScheduleExpression": "rate(15 minutes)",
+            "State": "ENABLED",
+            "Targets":[
+                {
+                    "Id":"1",
+                    "Arn":{
+                        "Fn::GetAtt":[
+                            "CollectLambdaFunction",
+                            "Arn"
+                        ]
+                    },
+                    "Input": {
+                        "Fn::Join":[
+                            "",
+                            [
+                                "{\"RequestType\": \"ScheduledEvent\", \"Type\": \"Checkin\", \"AwsAccountId\": \"",
+                                { "Ref":"AWS::AccountId" },
+                                "\", \"Region\": \"",
+                                { "Ref": "AWS::Region" },
+                                "\", \"StackName\": \"",
+                                { "Ref":"AWS::StackName" },
+                                "\"}"
+                            ]
+                        ]
+                    }
+                }
+            ]
+         }
+      },
+      "CheckinScheduledRuleLambdaInvokePermission": {
+          "Type": "AWS::Lambda::Permission",
+          "DependsOn": [
+            "CollectLambdaFunction",
+            "CheckinScheduledRule"
+          ],
+          "Properties": {
+            "Action": "lambda:InvokeFunction",
+            "FunctionName": {
+              "Ref": "CollectLambdaFunction"
+            },
+            "Principal": "events.amazonaws.com",
+            "SourceArn":{
+              "Fn::GetAtt": [
+                "CheckinScheduledRule",
+                "Arn"
+              ]
+            }
+          }
+      },
+      "RegistrationResource": {
+         "Type": "Custom::RegistrationResource",
+         "DependsOn": [
+            "CollectLambdaFunction"
+         ],
+         "Properties": {
+            "ServiceToken": { "Fn::GetAtt" : ["CollectLambdaFunction", "Arn"] },
+            "StackName": { "Ref" : "AWS::StackName" },
+            "AwsAccountId": { "Ref": "AWS::AccountId"}
+         }
+      }
+   }
+}

@@ -2,6 +2,7 @@ AWS_LAMBDA_S3_BUCKET ?= alertlogic-collectors
 AWS_LAMBDA_PAWS_FUNCTION_NAME ?= alertlogic-paws-collector
 AWS_LAMBDA_PAWS_PACKAGE_NAME ?= al-paws-collector.zip
 AWS_CFN_TEMPLATE_PATH ?= ./cfn/paws-collector.template
+AWS_CFN_TEMPLATE_SHARED_PATH ?= ./cfn/paws-collector-shared.template
 COLLECTOR_DIRS ?= $(shell find collectors/ -type d -maxdepth 1 -mindepth 1)
 
 .PHONY: test
@@ -40,6 +41,7 @@ deploy:
 
 upload:
 	aws s3 cp $(AWS_CFN_TEMPLATE_PATH) s3://$(AWS_LAMBDA_S3_BUCKET)/cfn/
+	aws s3 cp $(AWS_CFN_TEMPLATE_SHARED_PATH) s3://$(AWS_LAMBDA_S3_BUCKET)/cfn/
 
 sam-local:
 	@echo "Invoking ${AWS_LAMBDA_PAWS_FUNCTION_NAME} locally."
