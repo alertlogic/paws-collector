@@ -98,8 +98,9 @@ class CiscoduoCollector extends PawsCollector {
         tsPaths = objectDetails.tsPaths;
 
         const stateMaxtime = state.maxtime ? `till ${moment(parseInt(state.maxtime)).toISOString()}` : ``;
+        const stateMintime = state.stream === Authentication ? moment(parseInt(state.mintime)).toISOString() : moment(parseInt(state.mintime * 1000)).toISOString(); // Convert Epoch timestamp to milliseconds to get date in correct format
 
-        console.info(`CDUO000001 Collecting data for ${state.stream} from ${moment(parseInt(state.mintime)).toISOString()} ${stateMaxtime}`);
+        console.info(`CDUO000001 Collecting data for ${state.stream} from ${stateMintime} ${stateMaxtime}`);
 
         utils.getAPILogs(client, objectDetails, state, [], process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextPage }) => {

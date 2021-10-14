@@ -39,7 +39,8 @@ function getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvoca
                                 getData();
                             }
                             else {
-                                nextPage = objectDetails.query.mintime;
+                                // Moving time stamp by 1 sec if there is no records;
+                                nextPage = parseInt(objectDetails.query.mintime) + 1;
                                 return resolve({ accumulator, nextPage });
                             }
                         }
@@ -51,7 +52,7 @@ function getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvoca
                     nextPage = objectDetails.query.next_offset;
                 }
                 else {
-                    nextPage = objectDetails.query.mintime;
+                    nextPage = parseInt(objectDetails.query.mintime) + 1;
                 }
                 return resolve({ accumulator, nextPage });
             }
