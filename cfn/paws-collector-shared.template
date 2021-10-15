@@ -166,7 +166,7 @@
         }
     },
     "Resources":{
-        "EncryptSecretKeyCustomResource": {
+        "EncryptSecretKeySharedCustomResource": {
             "Type": "AWS::CloudFormation::CustomResource",
             "Properties": {
                 "ServiceToken": {"Ref": "ExistingEncryptLambdaArn"},
@@ -176,14 +176,14 @@
                 }
             }
         },
-        "StorePawsSecretInSsm": {
+        "StorePawsSecretInSsmSharedCustomResource": {
             "Type": "AWS::CloudFormation::CustomResource",
             "Properties": {
                 "ServiceToken": {"Ref": "ExistingSsmParamLambdaArn"},
                 "Name": {"Fn::Join": [
                     "",
                     [
-                        "PAWS-SECRET-",
+                        "PAWS-SECRET-V1-",
                         {"Ref": "PawsCollectorTypeName"},
                         "-",
                         {"Ref": "AWS::StackName"}
@@ -234,8 +234,8 @@
       "CollectLambdaFunction":{
          "Type":"AWS::Lambda::Function",
          "DependsOn":[
-            "EncryptSecretKeyCustomResource",
-            "StorePawsSecretInSsm",
+            "EncryptSecretKeySharedCustomResource",
+            "StorePawsSecretInSsmSharedCustomResource",
             "PawsPollStateQueue"
          ],
          "Properties":{
@@ -263,7 +263,7 @@
                       "Ref":"AlertlogicAccessKeyId"
                   },
                   "aims_secret_key":{
-                      "Fn::GetAtt": ["EncryptSecretKeyCustomResource", "EncryptedText"]
+                      "Fn::GetAtt": ["EncryptSecretKeySharedCustomResource", "EncryptedText"]
                   },
                   "aws_lambda_s3_bucket":{"Fn::Join" : ["", [
                       {"Ref":"PackagesBucketPrefix"}, "-",
@@ -328,7 +328,7 @@
                       "Ref": "ExistingKmsKeyArn"
                   },
                   "paws_secret_param_name":{
-                      "Fn::GetAtt": ["StorePawsSecretInSsm", "PawsSecretParamName"]
+                      "Fn::GetAtt": ["StorePawsSecretInSsmSharedCustomResource", "PawsSecretParamName"]
                   },
                   "paws_secret_param_tier": {
                       "Ref": "PawsSecretParamTier"
