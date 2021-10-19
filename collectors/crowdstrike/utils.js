@@ -13,7 +13,7 @@ function authenticate(baseUrl, clientId, clientSecret) {
                 client_secret: clientSecret
             },
             headers: {
-                user_agent: USERAGENT
+                'User-Agent': USERAGENT
             }
         }).then(response => {
             resolve(response.access_token);
@@ -30,7 +30,7 @@ function getList(apiDetails, accumulator, apiEndpoint, token) {
             restServiceClient.get(apiDetails.url, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    user_agent: USERAGENT
+                    'User-Agent': USERAGENT
                 }
             }).then(response => {
                 const total = response.meta.pagination.total;
@@ -59,8 +59,8 @@ function getIncidents(ids, apiHostName, token) {
     return new Promise(function (resolve, reject) {
         return restServiceClient.post('', {
             headers: {
-                Authorization: 'Bearer ' + token,
-                user_agent: USERAGENT
+                'Authorization': 'Bearer ' + token,
+                'User-Agent': USERAGENT
             },
             json: {
                 ids: ids
@@ -85,8 +85,8 @@ function getDetections(ids, APIHostName, token) {
     return new Promise(function (resolve, reject) {
         return restServiceClient.post('', {
             headers: {
-                Authorization: 'Bearer ' + token,
-                user_agent: USERAGENT
+                'Authorization': 'Bearer ' + token,
+                'User-Agent': USERAGENT
             },
             json: {
                 ids: ids
