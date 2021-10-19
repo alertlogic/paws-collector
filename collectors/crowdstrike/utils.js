@@ -10,7 +10,9 @@ function authenticate(baseUrl, clientId, clientSecret) {
         return restServiceClient.post(`/oauth2/token`, {
             form: {
                 client_id: clientId,
-                client_secret: clientSecret,
+                client_secret: clientSecret
+            },
+            headers: {
                 user_agent: USERAGENT
             }
         }).then(response => {
