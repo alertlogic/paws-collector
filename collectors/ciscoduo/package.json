@@ -1,6 +1,6 @@
 {
   "name": "ciscoduo-collector",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "description": "Alert Logic AWS based Ciscoduo Log Collector",
   "repository": {},
   "private": true,

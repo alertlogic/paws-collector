@@ -162,10 +162,14 @@ class CiscoduoCollector extends PawsCollector {
             };
         } else {
             //There is no next page concept for this API, So Setting up the next state mintime using the last log (Unix timestamp + 1).
+            const nowMoment = moment();
+            const nextMintime = moment(parseInt(nextPage * 1000));
+            const nextPollInterval = nowMoment.diff(nextMintime, 'seconds') > this.pollInterval ?
+            1 : this.pollInterval;
             return {
                 stream: curState.stream,
                 mintime: nextPage,
-                poll_interval_sec: 1
+                poll_interval_sec: nextPollInterval
             };
         }
     }

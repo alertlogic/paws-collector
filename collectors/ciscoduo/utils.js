@@ -39,8 +39,8 @@ function getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvoca
                                 getData();
                             }
                             else {
-                                // Moving time stamp by 1 sec if there is no records;
-                                nextPage = parseInt(objectDetails.query.mintime) + 1;
+                                // Moving time stamp by 60 sec if there is no records;
+                                nextPage = parseInt(objectDetails.query.mintime) + 60;
                                 return resolve({ accumulator, nextPage });
                             }
                         }
