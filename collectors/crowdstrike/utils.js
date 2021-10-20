@@ -2,6 +2,7 @@ const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClie
 
 const INCIDENT = 'Incident';
 const DETECTION = 'Detection';
+const USERAGENT = 'alertlogic_security_1.0';
 
 function authenticate(baseUrl, clientId, clientSecret) {
     let restServiceClient = new RestServiceClient(baseUrl);
@@ -10,6 +11,9 @@ function authenticate(baseUrl, clientId, clientSecret) {
             form: {
                 client_id: clientId,
                 client_secret: clientSecret
+            },
+            headers: {
+                'User-Agent': USERAGENT
             }
         }).then(response => {
             resolve(response.access_token);
@@ -25,7 +29,8 @@ function getList(apiDetails, accumulator, apiEndpoint, token) {
         return new Promise(function (resolve, reject) {
             restServiceClient.get(apiDetails.url, {
                 headers: {
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}`,
+                    'User-Agent': USERAGENT
                 }
             }).then(response => {
                 const total = response.meta.pagination.total;
@@ -54,7 +59,8 @@ function getIncidents(ids, apiHostName, token) {
     return new Promise(function (resolve, reject) {
         return restServiceClient.post('', {
             headers: {
-                Authorization: 'Bearer ' + token
+                'Authorization': 'Bearer ' + token,
+                'User-Agent': USERAGENT
             },
             json: {
                 ids: ids
@@ -79,7 +85,8 @@ function getDetections(ids, APIHostName, token) {
     return new Promise(function (resolve, reject) {
         return restServiceClient.post('', {
             headers: {
-                Authorization: 'Bearer ' + token
+                'Authorization': 'Bearer ' + token,
+                'User-Agent': USERAGENT
             },
             json: {
                 ids: ids
