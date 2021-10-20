@@ -39,8 +39,10 @@ function getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvoca
                                 getData();
                             }
                             else {
-                                // Moving time stamp by 60 sec if there is no records;
-                                nextPage = parseInt(objectDetails.query.mintime) + 60;
+                                // If there is no data check if min time stamp is less than 1 hr move by 1 sec else set the last hour time stamp as nextPage
+                                const lastHourMoment = moment().subtract(1, 'hours').unix();
+                                const mintime = parseInt(objectDetails.query.mintime);
+                                nextPage = lastHourMoment > mintime ? lastHourMoment : mintime + 1;
                                 return resolve({ accumulator, nextPage });
                             }
                         }
