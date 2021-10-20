@@ -169,10 +169,10 @@ class PawsCollector extends AlAwsCollector {
 
     done(error, pawsState, sendStatus = true) {
         // If stream exist in state then post the error status as part of stream specific ; 
-        // In check-in or self-update we don't get state ,so check collector_streams env variable and post error as part of paws_{applicationId}_status else post the error paws_logmsgs_status
+        // In check-in or self-update we don't get state ,so check collector_streams env variable and post error as part of paws_{applicationId}_status
         const streamType = pawsState && pawsState.priv_collector_state.stream ?
             process.env.al_application_id + "_" + pawsState.priv_collector_state.stream :
-            process.env.collector_streams ? process.env.al_application_id : null;
+            process.env.al_application_id;
         
         super.done(error, streamType, sendStatus);
     }
