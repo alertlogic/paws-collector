@@ -39,7 +39,10 @@ function getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvoca
                                 getData();
                             }
                             else {
-                                nextPage = objectDetails.query.mintime;
+                                // If there is no data check if min time stamp is less than 1 hr move by 1 sec else set the last hour time stamp as nextPage
+                                const lastHourMoment = moment().subtract(1, 'hours').unix();
+                                const mintime = parseInt(objectDetails.query.mintime);
+                                nextPage = Math.max(mintime + 1, lastHourMoment);
                                 return resolve({ accumulator, nextPage });
                             }
                         }
@@ -51,7 +54,7 @@ function getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvoca
                     nextPage = objectDetails.query.next_offset;
                 }
                 else {
-                    nextPage = objectDetails.query.mintime;
+                    nextPage = parseInt(objectDetails.query.mintime) + 1;
                 }
                 return resolve({ accumulator, nextPage });
             }
