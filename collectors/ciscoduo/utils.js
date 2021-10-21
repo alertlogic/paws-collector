@@ -42,7 +42,7 @@ function getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvoca
                                 // If there is no data check if min time stamp is less than 1 hr move by 1 sec else set the last hour time stamp as nextPage
                                 const lastHourMoment = moment().subtract(1, 'hours').unix();
                                 const mintime = parseInt(objectDetails.query.mintime);
-                                nextPage = lastHourMoment > mintime ? lastHourMoment : mintime + 1;
+                                nextPage = Math.max(mintime + 1, lastHourMoment);
                                 return resolve({ accumulator, nextPage });
                             }
                         }
