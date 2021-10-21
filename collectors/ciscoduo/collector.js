@@ -162,15 +162,10 @@ class CiscoduoCollector extends PawsCollector {
             };
         } else {
             //There is no next page concept for this API, So Setting up the next state mintime using the last log (Unix timestamp + 1).
-            // Added 5 min interval if there is no data and mintime is less than 5min. Wait for 5 min and then try again for next page.
-            const nowMoment = moment();
-            const nextMintime = moment(parseInt(nextPage * 1000));
-            const nextPollInterval = nowMoment.diff(nextMintime, 'seconds') > 300 ?
-            1 : 300;
             return {
                 stream: curState.stream,
                 mintime: nextPage,
-                poll_interval_sec: nextPollInterval
+                poll_interval_sec: 1
             };
         }
     }
