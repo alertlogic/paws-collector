@@ -495,7 +495,7 @@ class PawsCollector extends AlAwsCollector {
     reportErrorStatus(error, pawsState, callback) {
         const streamType = pawsState && pawsState.priv_collector_state.stream ?
                 process.env.al_application_id + "_" + pawsState.priv_collector_state.stream :
-                null;
+                process.env.al_application_id;
         const errorString = this.stringifyError(error);
         const status = this.prepareErrorStatus(errorString, 'none', streamType);
         // Send the error status to assets only if retry count reached to 5. 
