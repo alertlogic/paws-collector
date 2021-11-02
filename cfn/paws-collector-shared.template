@@ -253,6 +253,7 @@
                     "-collector.zip"
                ]]}
             },
+            "Architectures": ["arm64"],
             "Handler":"index.handler",
             "Runtime":"nodejs12.x",
             "MemorySize": { "Ref" : "CollectorFunctionMemorySize" },
