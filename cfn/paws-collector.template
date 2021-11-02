@@ -452,6 +452,7 @@
                         "Arn"
                     ]
                 },
+                "Architectures": ["arm64"],
                 "Code":{
                     "ZipFile": {
                        "Fn::Join": [
@@ -517,6 +518,7 @@
                         "Arn"
                      ]
                 },
+                "Architectures": ["arm64"],
                 "Code":{
                     "ZipFile": {
                        "Fn::Join": [
@@ -735,6 +737,7 @@
                     "-collector.zip"
                ]]}
             },
+            "Architectures": ["arm64"],
             "Handler":"index.handler",
             "Runtime":"nodejs12.x",
             "MemorySize": { "Ref" : "CollectorFunctionMemorySize" },
