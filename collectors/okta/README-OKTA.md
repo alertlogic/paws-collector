@@ -38,3 +38,6 @@ Group. Open the newest Log Stream and verify it doesn't contain any errors.
 
 
 # Known issues
+
+# Error code
+1. ale00011: No error code returned.
