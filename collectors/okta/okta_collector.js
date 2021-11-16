@@ -85,7 +85,7 @@ class OktaCollector extends PawsCollector {
     }
 
     _isNoErrorCode(error) {
-        return error.errorCode ? error.errorCode : "ale00011";
+        return error.errorCode ? error.errorCode : error.status;
     }
 
     _isThrottlingError(error) {
