@@ -73,6 +73,7 @@ class OktaCollector extends PawsCollector {
             return callback(null, logAcc, newState, newState.poll_interval_sec);
         })
         .catch((error) => {
+            error.errorCode = this._isNoErrorCode(error);
             if (this._isThrottlingError(error)) {
                 collector.reportApiThrottling(function() {
                     return callback(error);
@@ -81,6 +82,10 @@ class OktaCollector extends PawsCollector {
                 return callback(error);
             }
         });
+    }
+
+    _isNoErrorCode(error) {
+        return error.errorCode ? error.errorCode : error.status;
     }
 
     _isThrottlingError(error) {

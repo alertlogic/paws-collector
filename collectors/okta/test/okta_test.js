@@ -356,5 +356,47 @@ describe('Unit Tests', function() {
                 done();
             });
         });
+
+        it('no error code', function(done) {
+            const {Client} = okta;
+            let errorObj = {
+                status: 401,
+                url: "https://ft-test.oktapreview.com/api/v1/logs?since=2020-08-13T20%3A00%3A04.000Z&until=2020-08-13T20%3A01%3A04.000Z"
+            };
+            let ctx = {
+                invokedFunctionArn : oktaMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+            const oktaSdkMock = sinon.stub(Client.prototype, 'getLogs').callsFake(() => {
+                return {
+                    each: (callback) => {
+                        ['foo', 'bar', 'baz'].forEach(callback);
+                        return new Promise((res, rej) => {
+                            rej(errorObj);
+                        });
+                    }
+                };
+            });
+            OktaCollector.load().then(function(creds) {
+                var collector = new OktaCollector(ctx, creds);
+                const startDate = moment().subtract(1, 'days').toISOString();
+                const mockState = {
+                    since: startDate,
+                    until: moment().toISOString()
+                };
+
+                collector.pawsGetLogs(mockState, (err, logs, newState, nextPoll) => {
+                    oktaSdkMock.restore();
+                    assert.equal(err.status, "401");
+                    done();
+                });
+            });
+        });
     });
 });
