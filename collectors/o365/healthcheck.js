@@ -12,13 +12,14 @@
 
 const o365_mgmnt = require('./lib/o365_mgmnt');
 const al_health = require('@alertlogic/al-aws-collector-js').Health
-
+const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 /*
  * Checks the subscriptions against the configured content type. Starts the subscriptions if th
  */
 
 function checkO365Subscriptions(callback){
-    return o365_mgmnt.listSubscriptions()
+    return PawsCollector.load().then(({pawsCreds}) => {
+        return o365_mgmnt.listSubscriptions(pawsCreds)
         .then(filterSubscriptions)
         .then(filteredStreams => {
             if(filteredStreams.length > 0){
@@ -26,7 +27,7 @@ function checkO365Subscriptions(callback){
             } else{
                 console.info(`O365000102: No streams need restarted.`);
             }
-            const streamPromises = filteredStreams.map(stream => o365_mgmnt.startSubscription(stream));
+            const streamPromises = filteredStreams.map(stream => o365_mgmnt.startSubscription(stream, pawsCreds));
             return Promise.all(streamPromises);
         })
         .then(res => callback(null))
@@ -42,6 +43,7 @@ function checkO365Subscriptions(callback){
             }
             callback(al_health.errorMsg('O365000103', 'Bad O365 stream status: ' + errorString));
         });
+    });
 }
 
 function filterSubscriptions(result){
