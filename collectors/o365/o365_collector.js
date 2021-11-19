@@ -71,8 +71,9 @@ class O365Collector extends PawsCollector {
                 poll_interval_sec: 1
             }
         });
-
-        return checkO365Subscriptions((err) => {
+        // bind the this to checkO365Subscriptions to acces the pawsCreds
+        const checkSubscriptions = checkO365Subscriptions.bind(this);
+        return checkSubscriptions((err) => {
             return callback(err, initialStates, 1);
         });
     }
@@ -128,7 +129,7 @@ class O365Collector extends PawsCollector {
 
             if(nextPageUri && pageCount < process.env.paws_max_pages_per_invocation){
                 pageCount++;
-                return m_o365mgmnt.getPreFormedUrl(nextPageUri, collector.pawsCred)
+                return m_o365mgmnt.getPreFormedUrl(collector.pawsCred, nextPageUri)
                     .then((nextPageRes) => {
                         return {
                             parsedBody: [...parsedBody, ...nextPageRes.parsedBody],
@@ -147,13 +148,13 @@ class O365Collector extends PawsCollector {
 
         // If the state has a next page value, then just start with that.
         const initialListContent = state.nextPage ?
-            m_o365mgmnt.getPreFormedUrl(state.nextPage, collector.pawsCred):
-            m_o365mgmnt.subscriptionsContent(state.stream, state.since, state.until, collector.pawsCred);
+            m_o365mgmnt.getPreFormedUrl(collector.pawsCred, state.nextPage):
+            m_o365mgmnt.subscriptionsContent(collector.pawsCred, state.stream, state.since, state.until);
 
         // Call out to get content pages and form result
         const contentPromise = initialListContent.then(listContentCallback)
             .then(({parsedBody, nextPageUri}) => {
-                const contentUriFun = ({contentUri}) => m_o365mgmnt.getPreFormedUrl(contentUri, collector.pawsCred);
+                const contentUriFun = ({contentUri}) => m_o365mgmnt.getPreFormedUrl(collector.pawsCred, contentUri);
                 const poolLimit = 20;
 
                 return asyncPool(poolLimit, parsedBody, contentUriFun).then(content => {
