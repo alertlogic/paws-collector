@@ -9,25 +9,25 @@
  */
 
 const util = require('util');
-const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 
 const m_o365mgmnt = require('./o365management');
 
 const {ApplicationTokenCredentials} = require('@azure/ms-rest-nodeauth');
 
-function getO365ManagmentClient(){
-    return PawsCollector.load().then(({pawsCreds}) => {
+function getO365ManagmentClient(creds) {
+    return new Promise((resolve, reject) => {
         const AzureTenantId = process.env.paws_collector_param_string_1;
-        
         var g_appAdCreds = new ApplicationTokenCredentials(
-            pawsCreds.client_id,
+            creds.client_id,
             AzureTenantId,
-            pawsCreds.secret,
+            creds.secret,
             'https://manage.office.com'
         );
-
-        return new m_o365mgmnt.O365Management(g_appAdCreds, AzureTenantId)
-    })
+        if (creds.client_id && creds.secret && AzureTenantId) {
+            resolve(new m_o365mgmnt.O365Management(g_appAdCreds, AzureTenantId));
+        }
+        else reject("Paws credential or AzureTenantId should not be empty")
+    });
 }
 
 /**
@@ -39,8 +39,8 @@ function getO365ManagmentClient(){
  * @returns {Promise}
  *
  */
-var _listSubscriptions = function() {
-    return getO365ManagmentClient().then((client) => {
+var _listSubscriptions = function(creds) {
+    return getO365ManagmentClient(creds).then((client) => {
         return client.listSubscriptions(null)
     });
 };
@@ -57,8 +57,8 @@ var _listSubscriptions = function() {
  * @returns {Promise}
  *
  */
-var _startSubscription = function(contentType) {
-    return getO365ManagmentClient().then((client) => {
+var _startSubscription = function(creds, contentType) {
+    return getO365ManagmentClient(creds).then((client) => {
         return client.startSubscription(contentType, null)
     });
 };
@@ -77,8 +77,8 @@ var _startSubscription = function(contentType) {
  * @returns {Promise}
  *
  */
-var _subscriptionsContent = function(contentType, startTs, endTs) {
-    return getO365ManagmentClient().then((client) => {
+var _subscriptionsContent = function(creds, contentType, startTs, endTs) {
+    return getO365ManagmentClient(creds).then((client) => {
         return client.subscriptionsContent(contentType, startTs, endTs, null)
     });
 };
@@ -94,8 +94,8 @@ var _subscriptionsContent = function(contentType, startTs, endTs) {
  * @returns {Promise}
  *
  */
-var _getPreFormedUrl = function(contentUri) {
-    return getO365ManagmentClient().then((client) => {
+var _getPreFormedUrl = function(creds, contentUri) {
+    return getO365ManagmentClient(creds).then((client) => {
         return client.getPreFormedUrl(contentUri, null);
     });
 };

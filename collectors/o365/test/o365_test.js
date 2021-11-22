@@ -177,29 +177,45 @@ describe('O365 Collector Tests', function() {
     });
 
     describe('healthcheck', function() {
+        let ctx = {
+                    invokedFunctionArn : o365Mock.FUNCTION_ARN,
+                    fail : function(error) {
+                        assert.fail(error);
+                    },
+                    succeed : function() {}
+                };
+        
         it('does not start subscriptions when streams are enabled', function(done) {
             setO365MangementStub();
-            const tempStreams = process.env.collector_streams;
-            process.env.collector_streams = "[\"Audit.Exchange\", \"Audit.General\"]";
-            checkO365Subscriptions((err) => {
-                assert.equal(err, null);
-                assert.equal(startSubscriptionStub.called, false);
-                restoreO365ManagemntStub();
-                process.env.collector_streams = tempStreams;
-                done();
+            O365Collector.load().then(function (creds) {
+                var collector = new O365Collector(ctx, creds, 'o365');
+                const tempStreams = process.env.collector_streams;
+                process.env.collector_streams = "[\"Audit.Exchange\", \"Audit.General\"]";
+                const checkSubscriptions = checkO365Subscriptions.bind(collector);
+                checkSubscriptions((err) => {
+                    assert.equal(err, null);
+                    assert.equal(startSubscriptionStub.called, false);
+                    restoreO365ManagemntStub();
+                    process.env.collector_streams = tempStreams;
+                    done();
+                });
             });
         });
 
         it('starts subscriptions when streams are not enabled', function(done) {
             setO365MangementStub();
-            const tempStreams = process.env.collector_streams;
-            process.env.collector_streams = "[\"Audit.Exchange\", \"Audit.Sharepoint\", \"Audit.General\"]";
-            checkO365Subscriptions((err) => {
-                assert.equal(err, null);
-                assert.equal(startSubscriptionStub.called, true);
-                restoreO365ManagemntStub();
-                process.env.collector_streams = tempStreams;
-                done();
+            O365Collector.load().then(function (creds) {
+                var collector = new O365Collector(ctx, creds, 'o365');
+                const tempStreams = process.env.collector_streams;
+                process.env.collector_streams = "[\"Audit.Exchange\", \"Audit.Sharepoint\", \"Audit.General\"]";
+                const checkSubscriptions = checkO365Subscriptions.bind(collector);
+                checkSubscriptions((err) => {
+                    assert.equal(err, null);
+                    assert.equal(startSubscriptionStub.called, true);
+                    restoreO365ManagemntStub();
+                    process.env.collector_streams = tempStreams;
+                    done();
+                });
             });
         });
     });
@@ -382,9 +398,9 @@ describe('O365 Collector Tests', function() {
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
                     const callArgs = subscriptionsContentStub.getCall(0).args;
 
-                    assert.equal(callArgs[0], curState.stream);
-                    assert.equal(moment().diff(callArgs[1], 'hours'), 167);
-                    assert.equal(moment(callArgs[2]).diff(callArgs[1], 'hours'), 1);
+                    assert.equal(callArgs[1], curState.stream);
+                    assert.equal(moment().diff(callArgs[2], 'hours'), 167);
+                    assert.equal(moment(callArgs[3]).diff(callArgs[2], 'hours'), 1);
                     restoreO365ManagemntStub();
                     done();
                 });
@@ -407,9 +423,9 @@ describe('O365 Collector Tests', function() {
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
                     const callArgs = subscriptionsContentStub.getCall(0).args;
 
-                    assert.equal(callArgs[0], curState.stream);
-                    assert.equal(moment().diff(callArgs[1], 'hours'), 167);
-                    assert.equal(moment(callArgs[2]).diff(callArgs[1], 'hours'), 1);
+                    assert.equal(callArgs[1], curState.stream);
+                    assert.equal(moment().diff(callArgs[2], 'hours'), 167);
+                    assert.equal(moment(callArgs[3]).diff(callArgs[2], 'hours'), 1);
                     assert.equal(getPreFormedUrlStub.calledWith(curState.nextPage), false);
                     restoreO365ManagemntStub();
                     done();
@@ -572,7 +588,8 @@ describe('O365 Collector Tests', function() {
                 };
 
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
-                    assert.ok(getPreFormedUrlStub.calledWith("https://joeiscool.com/joeiscool"));
+                    assert.ok(getPreFormedUrlStub.calledWith({ secret: 'decrypted-aims-sercret-key', client_id: 'a-client-id' },
+                        'https://joeiscool.com/joeiscool'));
                     assert.equal(logs.length, 2);
                     restoreO365ManagemntStub();
                     done();
@@ -595,7 +612,6 @@ describe('O365 Collector Tests', function() {
                 });
             getPreFormedUrlStub = sinon.stub(m_o365mgmnt, 'getPreFormedUrl').callsFake(
                 function(path, extraOptions) {
-                    console.log("calling stub", path);
                     return new Promise(function(resolve, reject) {
                         var result = {
                             contentUri: "https://joeiscool.com/nextpage"
@@ -617,8 +633,10 @@ describe('O365 Collector Tests', function() {
                 };
 
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
-                    assert.ok(getPreFormedUrlStub.getCall(0).calledWithExactly('a fake next page'));
-                    assert.ok(getPreFormedUrlStub.getCall(1).calledWithExactly('a fake next page'));
+                    assert.ok(getPreFormedUrlStub.getCall(0).calledWithExactly({ secret: 'decrypted-aims-sercret-key', client_id: 'a-client-id' },
+                        'a fake next page'));
+                    assert.ok(getPreFormedUrlStub.getCall(1).calledWithExactly({ secret: 'decrypted-aims-sercret-key', client_id: 'a-client-id' },
+                        'a fake next page'));
                     assert.equal(logs.length, parseInt(process.env.paws_max_pages_per_invocation) + 1);
                     assert.equal(newState.nextPage, 'a fake next page');
                     restoreO365ManagemntStub();
@@ -641,7 +659,6 @@ describe('O365 Collector Tests', function() {
                 });
             getPreFormedUrlStub = sinon.stub(m_o365mgmnt, 'getPreFormedUrl').callsFake(
                 function(path, extraOptions) {
-                    console.log("calling stub", path);
                     return new Promise(function(resolve, reject) {
                         var result = {
                             contentUri: "https://joeiscool.com/nextpage"
@@ -665,8 +682,8 @@ describe('O365 Collector Tests', function() {
 
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
                     assert.equal(subscriptionsContentStub.called, false);
-                    assert.ok(getPreFormedUrlStub.getCall(0).calledWithExactly('next page from state'));
-                    assert.ok(getPreFormedUrlStub.getCall(1).calledWithExactly('a fake next page'));
+                    assert.ok(getPreFormedUrlStub.getCall(0).calledWithExactly({ secret: 'decrypted-aims-sercret-key', client_id: 'a-client-id' },'next page from state'));
+                    assert.ok(getPreFormedUrlStub.getCall(1).calledWithExactly({ secret: 'decrypted-aims-sercret-key', client_id: 'a-client-id' },'a fake next page'));
                     assert.equal(logs.length, parseInt(process.env.paws_max_pages_per_invocation) + 1);
                     assert.equal(newState.nextPage, 'a fake next page');
                     restoreO365ManagemntStub();

@@ -17,8 +17,9 @@ const al_health = require('@alertlogic/al-aws-collector-js').Health
  * Checks the subscriptions against the configured content type. Starts the subscriptions if th
  */
 
-function checkO365Subscriptions(callback){
-    return o365_mgmnt.listSubscriptions()
+function checkO365Subscriptions(callback) {
+    let collector = this;
+    return o365_mgmnt.listSubscriptions(collector.pawsCred)
         .then(filterSubscriptions)
         .then(filteredStreams => {
             if(filteredStreams.length > 0){
@@ -26,7 +27,7 @@ function checkO365Subscriptions(callback){
             } else{
                 console.info(`O365000102: No streams need restarted.`);
             }
-            const streamPromises = filteredStreams.map(stream => o365_mgmnt.startSubscription(stream));
+            const streamPromises = filteredStreams.map(stream => o365_mgmnt.startSubscription(collector.pawsCred, stream));
             return Promise.all(streamPromises);
         })
         .then(res => callback(null))
