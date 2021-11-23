@@ -1,8 +1,8 @@
 {
     "method": "GET",
-    "url": "{{paws_endpoint}}/appservices/v6/orgs/{{collector_param_string2}}/alerts/search_suggestions?suggest.q=",
+    "url": "{{endpoint}}/appservices/v6/orgs/{{collector_param_string2}}/alerts/search_suggestions?suggest.q=",
     "headers": {
-        "X-Auth-Token": "{{paws_secret}}/{{paws_client_id}}"
+        "X-Auth-Token": "{{secret}}/{{client_id}}"
     },
     "body": "",
     "expect": {
