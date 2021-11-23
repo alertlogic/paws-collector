@@ -1,8 +1,8 @@
 {
     "method": "GET",
-    "url": "{{paws_endpoint}}/integrationServices/v3/event?searchWindow=1d&rows=1",
+    "url": "{{endpoint}}/integrationServices/v3/event?searchWindow=1d&rows=1",
     "headers": {
-        "X-Auth-Token": "{{paws_secret}}/{{paws_client_id}}"
+        "X-Auth-Token": "{{secret}}/{{client_id}}"
     },
     "body": "",
     "expect": {
