@@ -249,8 +249,8 @@ describe('Unit Tests', function() {
         });
 
         ssmStub = sinon.stub().callsFake(function (params, callback) {
-            const data = Buffer.from('test-secret');
-            return callback(null, {Parameter : { Value: data.toString('base64')}});
+            const data = process.env.ssm_direct ? 'test-secret': Buffer.from('test-secret');
+            return callback(null, {Parameter : { Value: process.env.ssm_direct ? data : data.toString('base64')}});
         });
 
         AWS.mock('SSM', 'getParameter', ssmStub);
@@ -280,12 +280,32 @@ describe('Unit Tests', function() {
     
     describe('Credential file caching tests', function(){
         const TMP_CREDS_PATH = '/tmp/paws_creds';
-        it('Gets a cached file correctly', function(done){
+        it('Gets a creds and set into file', function(done){
+            TestCollector.load().then(function(creds) {
+                const testCred =  Buffer.from('test-secret').toString('base64');
+                assert.equal(ssmStub.called, true);
+                assert.equal(fs.existsSync(TMP_CREDS_PATH), true);
+                assert.equal(fs.readFileSync(TMP_CREDS_PATH, 'base64'), testCred);  
+                done();
+            });
+        });
+
+        it('Caches the file correctly if ssm-direct true', function(done){
+            TestCollector.load().then(function(creds) {   
+            const testCred = 'test-secret';
+                process.env.ssm_direct = 'true';
+                assert.equal(ssmStub.called, true);
+                assert.equal(fs.existsSync(TMP_CREDS_PATH), true);
+                assert.equal(fs.readFileSync(TMP_CREDS_PATH, 'utf-8'), testCred);
+                process.env.ssm_direct = 'false';
+                done();
+            });
+        });
+        it('Gets a cached file correctly and ssm getParameter not called if file exist ', function(done){
             fs.writeFileSync(TMP_CREDS_PATH, 'alwaysdrinkyourovaltine', 'base64');
             TestCollector.load().then(function(creds) {
-                const testCred = Buffer.from('alwaysdrinkyourovaltine', 'base64');
-                assert.equal(Buffer.compare(testCred, decryptStub.args[1][0].CiphertextBlob), 0);
                 assert.equal(ssmStub.notCalled, true);
+                assert.notEqual(fs.readFileSync(TMP_CREDS_PATH, 'base64').length, 0);
                 done();
             });
         });
