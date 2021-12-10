@@ -42,9 +42,9 @@ const MAX_ERROR_RETRIES = 5;
 const MAX_LOG_BATCH_SIZE = 10000;
 function getPawsParamStoreParam(){
     return new Promise((resolve, reject) => {
-        if (fs.existsSync(CREDS_FILE_PATH) && fs.readFileSync(CREDS_FILE_PATH).length !== 0) {
-            let fileContent = process.env.ssm_direct ? fs.readFileSync(CREDS_FILE_PATH, 'utf-8') : fs.readFileSync(CREDS_FILE_PATH);
-            return resolve(fileContent);
+        if (fs.existsSync(CREDS_FILE_PATH) && fs.statSync(CREDS_FILE_PATH).size !== 0) {
+            if (process.env.ssm_direct) return resolve(fs.readFileSync(CREDS_FILE_PATH, 'utf-8'));
+            else return resolve(fs.readFileSync(CREDS_FILE_PATH, 'base64'));
         }
         var ssm = new AWS.SSM();
         var params = {
