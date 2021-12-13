@@ -44,7 +44,7 @@ function getPawsParamStoreParam(){
     return new Promise((resolve, reject) => {
         if (fs.existsSync(CREDS_FILE_PATH) && fs.statSync(CREDS_FILE_PATH).size !== 0) {
             if (process.env.ssm_direct) return resolve(fs.readFileSync(CREDS_FILE_PATH, 'utf-8'));
-            else return resolve(fs.readFileSync(CREDS_FILE_PATH, 'base64'));
+            else return resolve(fs.readFileSync(CREDS_FILE_PATH));
         }
         var ssm = new AWS.SSM();
         var params = {
