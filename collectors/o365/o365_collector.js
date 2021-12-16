@@ -125,7 +125,7 @@ class O365Collector extends PawsCollector {
 
             if(nextPageUri && pageCount < process.env.paws_max_pages_per_invocation){
                 pageCount++;
-                return m_o365mgmnt.getPreFormedUrl(collector.o365_mgmnt_client, nextPageUri)
+                return collector.o365_mgmnt_client.getPreFormedUrl(nextPageUri)
                     .then((nextPageRes) => {
                         return {
                             parsedBody: [...parsedBody, ...nextPageRes.parsedBody],
@@ -144,13 +144,13 @@ class O365Collector extends PawsCollector {
 
         // If the state has a next page value, then just start with that.
         const initialListContent = state.nextPage ?
-            m_o365mgmnt.getPreFormedUrl(collector.o365_mgmnt_client, state.nextPage):
-            m_o365mgmnt.subscriptionsContent(collector.o365_mgmnt_client, state.stream, state.since, state.until);
+            collector.o365_mgmnt_client.getPreFormedUrl(state.nextPage):
+            collector.o365_mgmnt_client.subscriptionsContent( state.stream, state.since, state.until);
 
         // Call out to get content pages and form result
         const contentPromise = initialListContent.then(listContentCallback)
             .then(({parsedBody, nextPageUri}) => {
-                const contentUriFun = ({contentUri}) => m_o365mgmnt.getPreFormedUrl(collector.o365_mgmnt_client, contentUri);
+                const contentUriFun = ({contentUri}) => collector.o365_mgmnt_client.getPreFormedUrl(contentUri);
                 const poolLimit = 20;
 
                 return asyncPool(poolLimit, parsedBody, contentUriFun).then(content => {

@@ -8,8 +8,6 @@
  * -----------------------------------------------------------------------------
  */
 
-const util = require('util');
-
 const m_o365mgmnt = require('./o365management');
 
 const {ApplicationTokenCredentials} = require('@azure/ms-rest-nodeauth');
@@ -28,77 +26,6 @@ function getO365ManagmentClient(creds) {
     } else throw new Error("client secret or client id must be a non empty string.");
 }
 
-/**
- * @summary Office 365 Management API subscription/list.
- *
- * Office 365 Management API subscription/content.
- * {@link https://docs.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-reference#list-current-subscriptions Reference.}
- * 
- * @param {O365Management} client - MSAzureObject for communicating with O365 management APIs
- * @returns {Promise}
- *
- */
-var _listSubscriptions = function(client) {
-     return client.listSubscriptions(null);
-};
-
-/**
- * @summary Office 365 Management API subscription/.
- *
- * Office 365 Management API subscription/content.
- * {@link https://docs.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-reference#start-a-subscription Reference.}
- * 
- * @param {O365Management} client - MSAzureObject for communicating with O365 management APIs
- * @param {string} contentType - Offices 365 management API activity content types: 
- * Audit.AzureActiveDirectory, Audit.Exchange, Audit.SharePoint, Audit.General, DLP.All
- *
- * @returns {Promise}
- *
- */
-var _startSubscription = function(client, contentType) {
-    return client.startSubscription(contentType, null);
-};
-
-/**
- * @summary Office 365 Management API subscription/content.
- *
- * Office 365 Management API subscription/content.
- * {@link https://msdn.microsoft.com/office-365/office-365-management-activity-api-reference#list-available-content Reference.}
- *
- * @param {O365Management} client - MSAzureObject for communicating with O365 management APIs.
- * @param {string} contentType - Offices 365 management API activity content types: 
- * Audit.AzureActiveDirectory, Audit.Exchange, Audit.SharePoint, Audit.General, DLP.All
- * @param {timestamp} startTs - Optional datetimes (UTC) indicating the time range of content to return.
- * @param {timestamp} endTs - Optional datetimes (UTC) indicating the time range of content to return.
- *
- * @returns {Promise}
- *
- */
-var _subscriptionsContent = function(client, contentType, startTs, endTs) {
-    return client.subscriptionsContent(contentType, startTs, endTs, null);
-};
-
-/**
- * @summary Office 365 Management API fetch content.
- *
- * Office 365 Management API fetch content.
- * {@link https://msdn.microsoft.com/office-365/office-365-management-activity-api-reference#retrieving-content Reference.}
- *
- * @param {O365Management} client - MSAzureObject for communicating with O365 management APIs
- * @param {string} contentUri - content URI specified in notification or subscriptions/content API call results.
- *
- * @returns {Promise}
- *
- */
-var _getPreFormedUrl = function(client, contentUri) {
-    return client.getPreFormedUrl(contentUri, null);
-};
-
-
 module.exports = {
-    getO365ManagmentClient: getO365ManagmentClient,
-    listSubscriptions: _listSubscriptions,
-    startSubscription: _startSubscription,
-    subscriptionsContent : _subscriptionsContent,
-    getPreFormedUrl : _getPreFormedUrl
+    getO365ManagmentClient: getO365ManagmentClient
 };
