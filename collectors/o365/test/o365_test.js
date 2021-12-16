@@ -588,7 +588,7 @@ describe('O365 Collector Tests', function() {
                 };
 
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
-                    assert.ok(getPreFormedUrlStub.calledWith({ secret: 'decrypted-aims-sercret-key', client_id: 'a-client-id' },
+                    assert.ok(getPreFormedUrlStub.calledWith(collector.o365_mgmnt_client,
                         'https://joeiscool.com/joeiscool'));
                     assert.equal(logs.length, 2);
                     restoreO365ManagemntStub();
@@ -633,9 +633,9 @@ describe('O365 Collector Tests', function() {
                 };
 
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
-                    assert.ok(getPreFormedUrlStub.getCall(0).calledWithExactly({ secret: 'decrypted-aims-sercret-key', client_id: 'a-client-id' },
+                    assert.ok(getPreFormedUrlStub.getCall(0).calledWithExactly(collector.o365_mgmnt_client,
                         'a fake next page'));
-                    assert.ok(getPreFormedUrlStub.getCall(1).calledWithExactly({ secret: 'decrypted-aims-sercret-key', client_id: 'a-client-id' },
+                    assert.ok(getPreFormedUrlStub.getCall(1).calledWithExactly(collector.o365_mgmnt_client,
                         'a fake next page'));
                     assert.equal(logs.length, parseInt(process.env.paws_max_pages_per_invocation) + 1);
                     assert.equal(newState.nextPage, 'a fake next page');
@@ -682,8 +682,8 @@ describe('O365 Collector Tests', function() {
 
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
                     assert.equal(subscriptionsContentStub.called, false);
-                    assert.ok(getPreFormedUrlStub.getCall(0).calledWithExactly({ secret: 'decrypted-aims-sercret-key', client_id: 'a-client-id' },'next page from state'));
-                    assert.ok(getPreFormedUrlStub.getCall(1).calledWithExactly({ secret: 'decrypted-aims-sercret-key', client_id: 'a-client-id' },'a fake next page'));
+                    assert.ok(getPreFormedUrlStub.getCall(0).calledWithExactly(collector.o365_mgmnt_client,'next page from state'));
+                    assert.ok(getPreFormedUrlStub.getCall(1).calledWithExactly(collector.o365_mgmnt_client,'a fake next page'));
                     assert.equal(logs.length, parseInt(process.env.paws_max_pages_per_invocation) + 1);
                     assert.equal(newState.nextPage, 'a fake next page');
                     restoreO365ManagemntStub();

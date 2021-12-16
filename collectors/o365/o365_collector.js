@@ -37,12 +37,8 @@ class O365Collector extends PawsCollector {
 
     constructor(context, creds) {
         super(context, creds, packageJson.version, [checkO365Subscriptions], []);
-        this.pawsCred = {
-            secret: this.secret,
-            client_id: this.clientId
-        }
+        this.o365_mgmnt_client =  m_o365mgmnt.getO365ManagmentClient(creds.pawsCreds);
     }
-    
     pawsInitCollectionState(event, callback) {
         let startTs = process.env.paws_collection_start_ts ?
                 process.env.paws_collection_start_ts :
@@ -129,7 +125,7 @@ class O365Collector extends PawsCollector {
 
             if(nextPageUri && pageCount < process.env.paws_max_pages_per_invocation){
                 pageCount++;
-                return m_o365mgmnt.getPreFormedUrl(collector.pawsCred, nextPageUri)
+                return m_o365mgmnt.getPreFormedUrl(collector.o365_mgmnt_client, nextPageUri)
                     .then((nextPageRes) => {
                         return {
                             parsedBody: [...parsedBody, ...nextPageRes.parsedBody],
@@ -148,13 +144,13 @@ class O365Collector extends PawsCollector {
 
         // If the state has a next page value, then just start with that.
         const initialListContent = state.nextPage ?
-            m_o365mgmnt.getPreFormedUrl(collector.pawsCred, state.nextPage):
-            m_o365mgmnt.subscriptionsContent(collector.pawsCred, state.stream, state.since, state.until);
+            m_o365mgmnt.getPreFormedUrl(collector.o365_mgmnt_client, state.nextPage):
+            m_o365mgmnt.subscriptionsContent(collector.o365_mgmnt_client, state.stream, state.since, state.until);
 
         // Call out to get content pages and form result
         const contentPromise = initialListContent.then(listContentCallback)
             .then(({parsedBody, nextPageUri}) => {
-                const contentUriFun = ({contentUri}) => m_o365mgmnt.getPreFormedUrl(collector.pawsCred, contentUri);
+                const contentUriFun = ({contentUri}) => m_o365mgmnt.getPreFormedUrl(collector.o365_mgmnt_client, contentUri);
                 const poolLimit = 20;
 
                 return asyncPool(poolLimit, parsedBody, contentUriFun).then(content => {

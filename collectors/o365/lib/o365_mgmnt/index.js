@@ -15,19 +15,14 @@ const m_o365mgmnt = require('./o365management');
 const {ApplicationTokenCredentials} = require('@azure/ms-rest-nodeauth');
 
 function getO365ManagmentClient(creds) {
-    return new Promise((resolve, reject) => {
-        const AzureTenantId = process.env.paws_collector_param_string_1;
-        var g_appAdCreds = new ApplicationTokenCredentials(
-            creds.client_id,
-            AzureTenantId,
-            creds.secret,
-            'https://manage.office.com'
-        );
-        if (creds.client_id && creds.secret && AzureTenantId) {
-            resolve(new m_o365mgmnt.O365Management(g_appAdCreds, AzureTenantId));
-        }
-        else reject("Paws credential or AzureTenantId should not be empty")
-    });
+    const AzureTenantId = process.env.paws_collector_param_string_1;
+    var g_appAdCreds = new ApplicationTokenCredentials(
+        creds.client_id,
+        AzureTenantId,
+        creds.secret,
+        'https://manage.office.com'
+    );
+    return new m_o365mgmnt.O365Management(g_appAdCreds, AzureTenantId);
 }
 
 /**
@@ -36,13 +31,12 @@ function getO365ManagmentClient(creds) {
  * Office 365 Management API subscription/content.
  * {@link https://docs.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-reference#list-current-subscriptions Reference.}
  * 
+ * @param {O365Management} client - MSAzureObject for communicating with O365 management APIs
  * @returns {Promise}
  *
  */
-var _listSubscriptions = function(creds) {
-    return getO365ManagmentClient(creds).then((client) => {
-        return client.listSubscriptions(null)
-    });
+var _listSubscriptions = function(client) {
+     return client.listSubscriptions(null);
 };
 
 /**
@@ -51,16 +45,15 @@ var _listSubscriptions = function(creds) {
  * Office 365 Management API subscription/content.
  * {@link https://docs.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-reference#start-a-subscription Reference.}
  * 
+ * @param {O365Management} client - MSAzureObject for communicating with O365 management APIs
  * @param {string} contentType - Offices 365 management API activity content types: 
  * Audit.AzureActiveDirectory, Audit.Exchange, Audit.SharePoint, Audit.General, DLP.All
  *
  * @returns {Promise}
  *
  */
-var _startSubscription = function(creds, contentType) {
-    return getO365ManagmentClient(creds).then((client) => {
-        return client.startSubscription(contentType, null)
-    });
+var _startSubscription = function(client, contentType) {
+    return client.startSubscription(contentType, null);
 };
 
 /**
@@ -69,6 +62,7 @@ var _startSubscription = function(creds, contentType) {
  * Office 365 Management API subscription/content.
  * {@link https://msdn.microsoft.com/office-365/office-365-management-activity-api-reference#list-available-content Reference.}
  *
+ * @param {O365Management} client - MSAzureObject for communicating with O365 management APIs.
  * @param {string} contentType - Offices 365 management API activity content types: 
  * Audit.AzureActiveDirectory, Audit.Exchange, Audit.SharePoint, Audit.General, DLP.All
  * @param {timestamp} startTs - Optional datetimes (UTC) indicating the time range of content to return.
@@ -77,10 +71,8 @@ var _startSubscription = function(creds, contentType) {
  * @returns {Promise}
  *
  */
-var _subscriptionsContent = function(creds, contentType, startTs, endTs) {
-    return getO365ManagmentClient(creds).then((client) => {
-        return client.subscriptionsContent(contentType, startTs, endTs, null)
-    });
+var _subscriptionsContent = function(client, contentType, startTs, endTs) {
+    return client.subscriptionsContent(contentType, startTs, endTs, null);
 };
 
 /**
@@ -89,19 +81,19 @@ var _subscriptionsContent = function(creds, contentType, startTs, endTs) {
  * Office 365 Management API fetch content.
  * {@link https://msdn.microsoft.com/office-365/office-365-management-activity-api-reference#retrieving-content Reference.}
  *
+ * @param {O365Management} client - MSAzureObject for communicating with O365 management APIs
  * @param {string} contentUri - content URI specified in notification or subscriptions/content API call results.
  *
  * @returns {Promise}
  *
  */
-var _getPreFormedUrl = function(creds, contentUri) {
-    return getO365ManagmentClient(creds).then((client) => {
-        return client.getPreFormedUrl(contentUri, null);
-    });
+var _getPreFormedUrl = function(client, contentUri) {
+    return client.getPreFormedUrl(contentUri, null);
 };
 
 
 module.exports = {
+    getO365ManagmentClient: getO365ManagmentClient,
     listSubscriptions: _listSubscriptions,
     startSubscription: _startSubscription,
     subscriptionsContent : _subscriptionsContent,
