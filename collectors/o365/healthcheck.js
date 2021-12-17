@@ -19,7 +19,7 @@ const al_health = require('@alertlogic/al-aws-collector-js').Health
 
 function checkO365Subscriptions(callback) {
     let collector = this;
-    return o365_mgmnt.listSubscriptions(collector.pawsCred)
+    return collector.o365_mgmnt_client.listSubscriptions(null)
         .then(filterSubscriptions)
         .then(filteredStreams => {
             if(filteredStreams.length > 0){
@@ -27,7 +27,7 @@ function checkO365Subscriptions(callback) {
             } else{
                 console.info(`O365000102: No streams need restarted.`);
             }
-            const streamPromises = filteredStreams.map(stream => o365_mgmnt.startSubscription(collector.pawsCred, stream));
+            const streamPromises = filteredStreams.map(stream => collector.o365_mgmnt_client.startSubscription(stream));
             return Promise.all(streamPromises);
         })
         .then(res => callback(null))

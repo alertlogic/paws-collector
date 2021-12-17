@@ -17,5 +17,8 @@ exports.handler = O365Collector.makeHandler(function(event, context) {
     O365Collector.load().then(function(creds) {
         var o365c = new O365Collector(context, creds);
         o365c.handleEvent(event);
+    }).catch(error => {
+        console.error(`O365000006 error in creating object ${error}`);
+        return error;
     });
 });
