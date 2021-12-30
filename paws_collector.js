@@ -19,6 +19,7 @@ const ddLambda = require('datadog-lambda-js');
 
 const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector;
 const AlAwsUtil = require('@alertlogic/al-aws-collector-js').Util;
+const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const HealthChecks = require('./paws_health_checks');
 const packageJson = require('./package.json');
 
@@ -136,7 +137,7 @@ class PawsCollector extends AlAwsCollector {
               version,
               aimsCreds,
               null, healthChecks, statsChecks, collectorStreams);
-        console.info('PAWS000100 Loading collector', process.env.paws_type_name);
+              AlLogger.info(`PAWS000100 Loading collector ${process.env.paws_type_name}`);
         this._pawsCreds = pawsCreds;
         this._pawsCollectorType = process.env.paws_type_name;
         this.pollInterval = process.env.paws_poll_interval;
@@ -247,7 +248,7 @@ class PawsCollector extends AlAwsCollector {
                     else     return resolve(data);
                 });
             }).catch(err => {
-                console.error('PAWS000300 Error setting new secret', err);
+                AlLogger.error('PAWS000300 Error setting new secret', err);
                 return err;
             });
         })
@@ -258,7 +259,7 @@ class PawsCollector extends AlAwsCollector {
         let pawsRegisterProps = this.getProperties();
         collector.pawsGetRegisterParameters(event, function(err, customRegister) {
             if (err) {
-                console.error('PAWS000101 Error during registration', err);
+                AlLogger.error(`PAWS000101 Error during registration ${collector.stringifyError(err)}`);
                 return callback(err);
             } else {
                 let registerProps = Object.assign(pawsRegisterProps, customRegister);
@@ -292,7 +293,7 @@ class PawsCollector extends AlAwsCollector {
         };
         let custom = collector.pawsGetRegisterParameters(event, function(err, customRegister) {
             if (err) {
-                console.warn('PAWS000102 Error during deregistration', err);
+                AlLogger.warn(`PAWS000102 Error during deregistration ${collector.stringifyError(err)}`);
             }
             let registerProps = Object.assign(pawsRegisterProps, customRegister);
             return AlAwsCollector.prototype.deregister.call(collector, event, registerProps, callback);
@@ -337,10 +338,10 @@ class PawsCollector extends AlAwsCollector {
                 // check to see if record was updated within the visibility timeout of the SQS queue.
                 // if it is within that limit, then it likely to be processed by another invocation and this is a duplicate
                 if(Item.Status.S === STATE_RECORD_INCOMPLETE && moment().unix() - parseInt(Item.Updated.N) < SQS_VISIBILITY_TIMEOUT) {
-                    console.info(`PAWS000400 Duplicate state: ${Item.MessageId.S}, already in progress. skipping`);
+                    AlLogger.info(`PAWS000400 Duplicate state: ${Item.MessageId.S}, already in progress. skipping`);
                     return asyncCallback({errorCode: ERROR_CODE_DUPLICATE_STATE});
                 } else if (Item.Status.S === STATE_RECORD_COMPLETE){
-                    console.info(`PAWS000401 Duplicate state: ${Item.MessageId.S}, already processed. skipping`);
+                    AlLogger.info(`PAWS000401 Duplicate state: ${Item.MessageId.S}, already processed. skipping`);
                     return asyncCallback({errorCode: ERROR_CODE_COMPLETED_STATE});
                 } else {
                     return collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_INCOMPLETE, asyncCallback);
@@ -435,7 +436,7 @@ class PawsCollector extends AlAwsCollector {
                     });
                 },
                 function(logs, privCollectorState, nextInvocationTimeout, asyncCallback) {
-                    console.info('PAWS000200 Log events received ', logs.length);
+                    AlLogger.info(`PAWS000200 Log events received ${logs.length}`);
                     return collector.batchLogProcess(logs, privCollectorState, nextInvocationTimeout, asyncCallback);
                 },
                 function(privCollectorState, nextInvocationTimeout, asyncCallback) {
@@ -480,7 +481,7 @@ class PawsCollector extends AlAwsCollector {
                             collector._storeCollectionState(pawsState, pawsState.priv_collector_state, 300, function(storeError){
                                 if (!storeError){
                                     collector.reportErrorStatus(handleError, pawsState, (statusSendError, handleErrorString) => {
-                                        console.error('PAWS000304 Error handling poll request: ', handleErrorString);
+                                        AlLogger.error(`PAWS000304 Error handling poll request: ${handleErrorString}`);
                                         collector.done(null, pawsState);
                                     });
                                 } else {
@@ -494,7 +495,7 @@ class PawsCollector extends AlAwsCollector {
                 }
             });
         } catch(exception) {
-            console.error('PAWS000201 Exception handling poll request: ', exception);
+            AlLogger.error(`PAWS000201 Exception handling poll request: ${collector.stringifyError(exception)}`);
             return collector.done(exception, null, false);
         }
     };
@@ -786,7 +787,7 @@ class PawsCollector extends AlAwsCollector {
         let collectorStreams = { collector_streams: streams };
         return AlAwsUtil.setEnv(collectorStreams, (err) => {
             if (err) {
-                console.error('PAWS000301 Paws error while adding collector_streams in environment variable')
+                AlLogger.error('PAWS000301 Paws error while adding collector_streams in environment variable')
             }
         });
     }
