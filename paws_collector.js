@@ -137,7 +137,7 @@ class PawsCollector extends AlAwsCollector {
               version,
               aimsCreds,
               null, healthChecks, statsChecks, collectorStreams);
-              AlLogger.info(`PAWS000100 Loading collector ${process.env.paws_type_name}`);
+        AlLogger.info(`PAWS000100 Loading collector ${process.env.paws_type_name}`);
         this._pawsCreds = pawsCreds;
         this._pawsCollectorType = process.env.paws_type_name;
         this.pollInterval = process.env.paws_poll_interval;
