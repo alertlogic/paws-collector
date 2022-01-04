@@ -12,6 +12,7 @@
 const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const parse = require('@alertlogic/al-collector-js').Parse;
+const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const utils = require("./utils");
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const packageJson = require('./package.json');
@@ -48,7 +49,7 @@ class SentineloneCollector extends PawsCollector {
 
         const baseUrl = process.env.paws_endpoint.replace(/^https:\/\/|\/$/g, '');
 
-        console.info(`SONE000001 Collecting data from ${state.since} till ${state.until}`);
+        AlLogger.info(`SONE000001 Collecting data from ${state.since} till ${state.until}`);
 
         let params = state.nextPage ? {
             cursor: state.nextPage
@@ -68,7 +69,7 @@ class SentineloneCollector extends PawsCollector {
                 } else {
                     newState = this._getNextCollectionStateWithNextPage(state, nextPage);
                 }
-                console.info(`SONE000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                AlLogger.info(`SONE000002 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             }).catch((error) => {
                 error.errorCode = error.statusCode;

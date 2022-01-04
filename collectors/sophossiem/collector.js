@@ -12,6 +12,7 @@
 const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const parse = require('@alertlogic/al-collector-js').Parse;
+const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const packageJson = require('./package.json');
 const utils = require("./utils");
 
@@ -72,7 +73,7 @@ class SophossiemCollector extends PawsCollector {
         if (moment().diff((moment.unix(parseInt(state.from_date))), 'hours') >= 24) {
             const previuosDate = state.from_date;
             state.from_date = moment().subtract(23.75, 'hours').unix();
-            console.warn(`Adjusted date from  ${moment.unix(parseInt(previuosDate)).format("YYYY-MM-DDTHH:mm:ssZ")} to ${moment.unix(parseInt(state.from_date)).format("YYYY-MM-DDTHH:mm:ssZ")} as api require date must be within last 24 hours`);
+            AlLogger.warn(`Adjusted date from  ${moment.unix(parseInt(previuosDate)).format("YYYY-MM-DDTHH:mm:ssZ")} to ${moment.unix(parseInt(state.from_date)).format("YYYY-MM-DDTHH:mm:ssZ")} as api require date must be within last 24 hours`);
             const skipDuration = moment.unix(parseInt(state.from_date)).diff(moment.unix(parseInt(previuosDate)),'hours');
             if (skipDuration > 24) {
                 collector.reportDDMetric("adjust_collection_interval", 1, [`skip_hrs:24h`]);
@@ -103,23 +104,23 @@ class SophossiemCollector extends PawsCollector {
 
         let messageString = state.nextPage ? collector.decodebase64string(state.nextPage) : `from ${moment.unix(parseInt(state.from_date)).format("YYYY-MM-DDTHH:mm:ssZ")}`;
 
-        console.info(`SIEM000001 Collecting data for ${state.stream} ${messageString}`);
+        AlLogger.info(`SIEM000001 Collecting data for ${state.stream} ${messageString}`);
 
         utils.getAPILogs(APIHostName, headers, state, [], process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextPage, has_more }) => {
                 const newState = collector._getNextCollectionState(state, nextPage, has_more);
-                console.info(`SIEM000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                AlLogger.info(`SIEM000002 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             }).catch((error) => {
                 // set errorCode if not available in error object to showcase client error on DDMetric
                 error.errorCode = error.statusCode;
                 if (error.statusCode && error.statusCode === 401) {
-                    console.log('Token expired or customer not authorized to make api call');
+                    AlLogger.info('Token expired or customer not authorized to make api call');
                     return callback(error);
                 }
                 else if (error.statusCode && error.statusCode === 429) {
                     state.poll_interval_sec = 900;
-                    console.log('API Request Limit Exceeded.');
+                    AlLogger.info('API Request Limit Exceeded.');
                     collector.reportApiThrottling(function () {
                         return callback(null, [], state, state.poll_interval_sec);
                     });

@@ -12,6 +12,7 @@
 const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const parse = require('@alertlogic/al-collector-js').Parse;
+const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const packageJson = require('./package.json');
 const utils = require("./utils");
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
@@ -56,10 +57,10 @@ class SophosCollector extends PawsCollector {
             return callback("The Client ID was not found!");
         }
         
-        console.info(`SOPH000001 Collecting data from ${state.since} till ${state.until}`);
+        AlLogger.info(`SOPH000001 Collecting data from ${state.since} till ${state.until}`);
 
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
-            console.log('API Request Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
+            AlLogger.info(`API Request Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
             collector.reportApiThrottling(function () {
                 return callback(null, [], state, state.poll_interval_sec);
             });
@@ -81,13 +82,13 @@ class SophosCollector extends PawsCollector {
                             } else {
                                 newState = this._getNextCollectionStateWithNextPage(state, nextPage);
                             }
-                            console.info(`SOPH000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                            AlLogger.info(`SOPH000002 Next collection in ${newState.poll_interval_sec} seconds`);
                             return callback(null, accumulator, newState, newState.poll_interval_sec);
                         }).catch((error) => {
                             if (error.error.error && error.error.error === "TooManyRequests") {
                                 state.apiQuotaResetDate = moment().add(1, "hours").toISOString();
                                 state.poll_interval_sec = 900;
-                                console.log('API Request Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
+                                AlLogger.info(`API Request Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
                                 collector.reportApiThrottling(function () {
                                     return callback(null, [], state, state.poll_interval_sec);
                                 });

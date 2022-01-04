@@ -12,6 +12,7 @@
 
 const o365_mgmnt = require('./lib/o365_mgmnt');
 const al_health = require('@alertlogic/al-aws-collector-js').Health
+const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 
 /*
  * Checks the subscriptions against the configured content type. Starts the subscriptions if th
@@ -23,9 +24,9 @@ function checkO365Subscriptions(callback) {
         .then(filterSubscriptions)
         .then(filteredStreams => {
             if(filteredStreams.length > 0){
-                console.info(`O365000101: Starting subscriptions for streams ${filteredStreams.join(', ')}`);
+                AlLogger.info(`O365000101: Starting subscriptions for streams ${filteredStreams.join(', ')}`);
             } else{
-                console.info(`O365000102: No streams need restarted.`);
+                AlLogger.info(`O365000102: No streams need restarted.`);
             }
             const streamPromises = filteredStreams.map(stream => collector.o365_mgmnt_client.startSubscription(stream));
             return Promise.all(streamPromises);

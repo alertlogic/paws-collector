@@ -13,6 +13,7 @@ const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const parse = require('@alertlogic/al-collector-js').Parse;
+const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const utils = require("./utils");
 const packageJson = require('./package.json');
 
@@ -98,7 +99,7 @@ class CarbonblackCollector extends PawsCollector {
         typeIdPaths = apiDetails.typeIdPaths;
         tsPaths = apiDetails.tsPaths;
 
-        console.info(`CABL000001 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
+        AlLogger.info(`CABL000001 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
 
         utils.getAPILogs(apiDetails, [], apiEndpoint, state, clientSecret, clientId, process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextPage }) => {
@@ -108,7 +109,7 @@ class CarbonblackCollector extends PawsCollector {
                 } else {
                     newState = this._getNextCollectionStateWithNextPage(state, nextPage);
                 }
-                console.info(`CABL000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                AlLogger.info(`CABL000002 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, accumulator, newState, newState.poll_interval_sec);  
             })
             .catch((error) => {

@@ -12,6 +12,7 @@
 const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const parse = require('@alertlogic/al-collector-js').Parse;
+const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const packageJson = require('./package.json');
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const utils = require("./utils");
@@ -90,10 +91,10 @@ class CiscoampCollector extends PawsCollector {
 
         let apiUrl = state.nextPage ? state.nextPage : resourceDetails.url;
 
-        console.info(`CAMP000001 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
+        AlLogger.info(`CAMP000001 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
 
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
-            console.log('CAMP000002 API hourly Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
+            AlLogger.info(`CAMP000002 API hourly Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
             state.poll_interval_sec = 900;
             collector.reportApiThrottling(function () {
                 return callback(null, [], state, state.poll_interval_sec);
@@ -107,7 +108,7 @@ class CiscoampCollector extends PawsCollector {
                     const extraBufferSeconds = 60;
                     resetSeconds = resetSeconds + extraBufferSeconds;
                     state.apiQuotaResetDate = moment().add(resetSeconds, "seconds").toISOString();
-                    console.log('CAMP000003 API hourly Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
+                    AlLogger.info(`CAMP000003 API hourly Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
                 }
                 else {
                     state.apiQuotaResetDate = null;
@@ -139,7 +140,7 @@ class CiscoampCollector extends PawsCollector {
                 } else {
                     newState = this._getNextCollectionStateWithNextPage(state, nextPage, totalLogsCount);
                 }
-                console.info(`CAMP000004 Next collection in ${newState.poll_interval_sec} seconds`);
+                AlLogger.info(`CAMP000004 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             }).catch((error) => {
                 // set errorCode if not available in error object to showcase client error on DDMetric

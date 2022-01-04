@@ -12,6 +12,7 @@
 const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const parse = require('@alertlogic/al-collector-js').Parse;
+const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const packageJson = require('./package.json');
 const utils = require("./utils");
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
@@ -70,7 +71,7 @@ class CrowdstrikeCollector extends PawsCollector {
         typeIdPaths = apiDetails.typeIdPaths;
         tsPaths = apiDetails.tsPaths;
 
-        console.info(`CROW000001 Collecting data from ${state.since} till ${state.until} from ${state.stream}`);
+        AlLogger.info(`CROW000001 Collecting data from ${state.since} till ${state.until} from ${state.stream}`);
 
         utils.authenticate(APIHostName, clientId, clientSecret).then((token) => {
             utils.getList(apiDetails, [], APIHostName, token).then(({accumulator, total}) => {             
@@ -79,31 +80,31 @@ class CrowdstrikeCollector extends PawsCollector {
                 if (state.stream === 'Incident') {
                     return utils.getIncidents(accumulator, APIHostName, token).then((data) => {
                         const newState = collector._getNextCollectionStateWithOffset(state, offset, receivedAll);
-                        console.info(`CROW000004 Next collection in ${newState.poll_interval_sec} seconds for ${state.stream}`);
+                        AlLogger.info(`CROW000004 Next collection in ${newState.poll_interval_sec} seconds for ${state.stream}`);
                         return callback(null, data.resources, newState, newState.poll_interval_sec);
                     }).catch((error) => {
-                        console.error(`CROW000005 Error while getting incident details`);
+                        AlLogger.error(`CROW000005 Error while getting incident details`);
                         error.errorCode = error.statusCode;
                         return callback(error);
                     });
                 } else if (state.stream === 'Detection') {
                     return utils.getDetections(accumulator, APIHostName, token).then((data) => {
                         const newState = collector._getNextCollectionStateWithOffset(state, offset, receivedAll);
-                        console.info(`CROW000004 Next collection in ${newState.poll_interval_sec} seconds for ${state.stream}`);
+                        AlLogger.info(`CROW000004 Next collection in ${newState.poll_interval_sec} seconds for ${state.stream}`);
                         return callback(null, data.resources, newState, newState.poll_interval_sec);
                     }).catch((error) => {
-                        console.error(`CROW000005 Error while getting detection details`);
+                        AlLogger.error(`CROW000005 Error while getting detection details`);
                         error.errorCode = error.statusCode;
                         return callback(error);
                     });
                 }
             }).catch((error) => {
-                console.error(`CROW000003 Error while getting API details`);
+                AlLogger.error(`CROW000003 Error while getting API details`);
                 error.errorCode = error.statusCode;
                 return callback(error);
             });
         }).catch((error) => {
-            console.error(`CROW000002 Error while getting Authentication`);
+            AlLogger.error(`CROW000002 Error while getting Authentication`);
             error.errorCode = error.statusCode;
             return callback(error);
         });        

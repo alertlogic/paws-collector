@@ -13,6 +13,7 @@ const moment = require('moment');
 const okta = require('@okta/okta-sdk-nodejs');
 const parse = require('@alertlogic/al-collector-js').Parse;
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
+const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 
 const packageJson = require('./package.json');
@@ -58,7 +59,7 @@ class OktaCollector extends PawsCollector {
             orgUrl: collector.pawsHttpsEndpoint,
             token: collector.secret
         });
-        console.info(`OKTA000001 Collecting data from ${state.since} till ${state.until}`);
+        AlLogger.info(`OKTA000001 Collecting data from ${state.since} till ${state.until}`);
         const collection = oktaClient.getLogs({
             since: state.since,
             until: state.until
@@ -69,7 +70,7 @@ class OktaCollector extends PawsCollector {
         })
         .then(() => {
             const newState = collector._getNextCollectionState(state);
-            console.info(`OKTA000002 Next collection in ${newState.poll_interval_sec} seconds`);
+            AlLogger.info(`OKTA000002 Next collection in ${newState.poll_interval_sec} seconds`);
             return callback(null, logAcc, newState, newState.poll_interval_sec);
         })
         .catch((error) => {

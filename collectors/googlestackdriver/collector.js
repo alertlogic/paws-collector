@@ -13,6 +13,7 @@ const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const parse = require('@alertlogic/al-collector-js').Parse;
+const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const logging = require('@google-cloud/logging');
 const packageJson = require('./package.json');
 
@@ -71,7 +72,7 @@ class GooglestackdriverCollector extends PawsCollector {
         });
 
 
-        console.info(`GSTA000001 Collecting data from ${state.since} till ${state.until} for ${state.stream}`);
+        AlLogger.info(`GSTA000001 Collecting data from ${state.since} till ${state.until} for ${state.stream}`);
 
         // TODO: figure out a better way to format this. I'm pretty sure that it needs the newlines in it.
         const filter = `timestamp >= "${state.since}"
@@ -81,12 +82,12 @@ timestamp < "${state.until}"`;
         const options = {autoPaginate: false};
 
         const paginationCallback = (result, acc = []) => {
-            console.log('Getting page: ', pagesRetireved + 1, ' Logs retrieved:',result[0].length);
+            AlLogger.info(`Getting page: ${pagesRetireved + 1} Logs retrieved: ${result[0].length}`);
             pagesRetireved++;
             const logs = result[0];
             const nextPage = result[1];
             const newAcc = [...acc, ...logs];
-            console.log('Total Logs', newAcc.length);
+            AlLogger.info(`Total Logs ${newAcc.length}`);
 
             if(nextPage && pagesRetireved < process.env.paws_max_pages_per_invocation){
 
@@ -109,12 +110,12 @@ timestamp < "${state.until}"`;
             .then(paginationCallback)
             .then(({logs, nextPage}) => {
                 const newState = collector._getNextCollectionState(state, nextPage);
-                console.info(`GSTA000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                AlLogger.info(`GSTA000002 Next collection in ${newState.poll_interval_sec} seconds`);
 
                 return callback(null, logs, newState, newState.poll_interval_sec);
             })
             .catch(err => {
-                console.error(`GSTA000003 err in collection ${err}`);
+                AlLogger.error(`GSTA000003 err in collection ${err}`);
 
                 // Stackdriver Logging api has some rate limits that we might run into.
                 // If we run inot a rate limit error, instead of returning the error,
