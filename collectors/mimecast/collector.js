@@ -12,6 +12,7 @@
 const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const parse = require('@alertlogic/al-collector-js').Parse;
+const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const packageJson = require('./package.json');
 const utils = require("./utils");
@@ -106,10 +107,10 @@ class MimecastCollector extends PawsCollector {
         tsPaths = typeIdAndTsPaths.tsPaths;
 
         if (state.stream === Siem_Logs || state.stream === Malware_Feed) {
-            console.info(`MIME000001 Collecting data for ${state.stream}`);
+            AlLogger.info(`MIME000001 Collecting data for ${state.stream}`);
         }
         else{
-            console.info(`MIME000002 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
+            AlLogger.info(`MIME000002 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
         }
         
         utils.getAPILogs(authDetails, state, [], process.env.paws_max_pages_per_invocation)
@@ -120,7 +121,7 @@ class MimecastCollector extends PawsCollector {
                 } else {
                     newState = this._getNextCollectionStateWithNextPage(state, nextPage);
                 }
-                console.info(`MIME000003 Next collection in ${newState.poll_interval_sec} seconds`);
+                AlLogger.info(`MIME000003 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             }).catch((error) => {
                 // set errorCode if not available in error object to showcase client error on DDMetrics
@@ -129,7 +130,7 @@ class MimecastCollector extends PawsCollector {
                 }
                 if (error.statusCode && error.statusCode == 429) {
                     state.poll_interval_sec = 900;
-                    console.warn("MIME000004 The Mimecast service you're trying to access is temporarily busy. Please try again in a few minutes and then contact your IT helpdesk if you still have problems.");
+                    AlLogger.warn("MIME000004 The Mimecast service you're trying to access is temporarily busy. Please try again in a few minutes and then contact your IT helpdesk if you still have problems.");
                     collector.reportApiThrottling(function () {
                         return callback(null, [], state, state.poll_interval_sec);
                     });

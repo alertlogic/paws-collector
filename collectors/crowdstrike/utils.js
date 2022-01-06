@@ -1,4 +1,5 @@
 const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClient;
+const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 
 const INCIDENT = 'Incident';
 const DETECTION = 'Detection';
@@ -121,7 +122,7 @@ function getAPIDetails(state) {
             break;
         default:
             url = null;
-            console.error(`CROW000006 Not supported stream: `, state.stream);
+            AlLogger.error(`CROW000006 Not supported stream: ${state.stream}`);
     }
     return {
         url,

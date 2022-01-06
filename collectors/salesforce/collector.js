@@ -12,6 +12,7 @@
 const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const parse = require('@alertlogic/al-collector-js').Parse;
+const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const utils = require("./utils");
 var jwt = require('jsonwebtoken');
 const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClient;
@@ -87,10 +88,10 @@ class SalesforceCollector extends PawsCollector {
 
         var token = jwt.sign(claim, privateKey, { algorithm: 'RS256' });
 
-        console.info(`SALE000001 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
+        AlLogger.info(`SALE000001 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
 
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
-            console.log('API Request Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
+            AlLogger.info(`API Request Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
             collector.reportApiThrottling(function () {
                 return callback(null, [], state, state.poll_interval_sec);
             });
@@ -98,7 +99,6 @@ class SalesforceCollector extends PawsCollector {
         else {
 
             let restServiceClient = new RestServiceClient(baseUrl);
-
             restServiceClient.post(tokenUrl, {
                 form: {
                     grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
@@ -118,7 +118,7 @@ class SalesforceCollector extends PawsCollector {
                         } else {
                             newState = this._getNextCollectionStateWithNextPage(state, nextPage);
                         }
-                        console.info(`SALE000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                        AlLogger.info(`SALE000002 Next collection in ${newState.poll_interval_sec} seconds`);
                         return callback(null, accumulator, newState, newState.poll_interval_sec);
                     })
                     .catch((error) => {
@@ -127,20 +127,20 @@ class SalesforceCollector extends PawsCollector {
                             // Added extra 1 hours for buffer
                             state.apiQuotaResetDate = moment().add(25, "hours").toISOString();
                             state.poll_interval_sec = 900;
-                            console.log('API Request Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
+                            AlLogger.info(`API Request Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
                             collector.reportApiThrottling(function () {
                                 return callback(null, [], state, state.poll_interval_sec);
                             });
                         }
                         else {
                             if (error.errorCode && error.errorCode === "INVALID_FIELD") {
-                                console.log(`API not able to fetch field for object ${state.stream}`);
+                                AlLogger.info(`API not able to fetch field for object ${state.stream}`);
                             }
                             if (error.errorCode && error.errorCode === "INVALID_TYPE") {
-                                console.log(`API not able to fetch logs for object ${state.stream}`);
+                                AlLogger.info(`API not able to fetch logs for object ${state.stream}`);
                             }
                             if (error.errorCode && error.errorCode === "INVALID_SESSION_ID") {
-                                console.log("User not added 'Access and manage your data (api)' in Oauth scope");
+                                AlLogger.info("User not added 'Access and manage your data (api)' in Oauth scope");
                             }
                             return callback(error);
                         }
@@ -168,11 +168,11 @@ class SalesforceCollector extends PawsCollector {
 
         let nextUntilMoment;
         if (nowMoment.diff(nextSinceTs, 'hours') > 24) {
-            console.log('collection is more than 24 hours behind. Increasing the collection time to catch up')
+            AlLogger.info('collection is more than 24 hours behind. Increasing the collection time to catch up')
             nextUntilMoment = moment(nextSinceTs).add(24, 'hours');
         }
         else if (nowMoment.diff(nextSinceTs, 'hours') > 1) {
-            console.log('collection is more than 1 hour behind. Increasing the collection time to catch up')
+            AlLogger.info('collection is more than 1 hour behind. Increasing the collection time to catch up')
             nextUntilMoment = moment(nextSinceTs).add(1, 'hours');
         }
         else {

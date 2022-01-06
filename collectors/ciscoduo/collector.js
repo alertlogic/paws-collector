@@ -12,6 +12,7 @@
 const moment = require('moment');
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const parse = require('@alertlogic/al-collector-js').Parse;
+const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const packageJson = require('./package.json');
 const duo = require('@duosecurity/duo_api');
 const utils = require("./utils");
@@ -100,7 +101,7 @@ class CiscoduoCollector extends PawsCollector {
         const stateMaxtime = state.maxtime ? `till ${moment(parseInt(state.maxtime)).toISOString()}` : ``;
         const stateMintime = state.stream === Authentication ? moment(parseInt(state.mintime)).toISOString() : moment(parseInt(state.mintime * 1000)).toISOString(); // Convert Epoch timestamp to milliseconds to get date in correct format
 
-        console.info(`CDUO000001 Collecting data for ${state.stream} from ${stateMintime} ${stateMaxtime}`);
+        AlLogger.info(`CDUO000001 Collecting data for ${state.stream} from ${stateMintime} ${stateMaxtime}`);
 
         utils.getAPILogs(client, objectDetails, state, [], process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextPage }) => {
@@ -110,7 +111,7 @@ class CiscoduoCollector extends PawsCollector {
                 } else {
                     newState = this._getNextCollectionStateWithNextPage(state, nextPage);
                 }
-                console.info(`CDUO000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                AlLogger.info(`CDUO000002 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             }).catch((error) => {         
                 // set errorCode if not available in error object to showcase client error on DDMetrics

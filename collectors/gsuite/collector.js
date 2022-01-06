@@ -13,6 +13,7 @@ const moment = require("moment");
 const PawsCollector = require("@alertlogic/paws-collector").PawsCollector;
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const parse = require("@alertlogic/al-collector-js").Parse;
+const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const packageJson = require('./package.json');
 
 const { auth } = require("google-auth-library");
@@ -81,7 +82,7 @@ class GsuiteCollector extends PawsCollector {
         const client = auth.fromJSON(keys);
         client.subject = collector.clientId;
         client.scopes = JSON.parse(process.env.paws_collector_param_string_1);
-        console.info(`GSUI000001 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
+        AlLogger.info(`GSUI000001 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
 
         let params = state.nextPage ? {
             pageToken: state.nextPage
@@ -95,7 +96,7 @@ class GsuiteCollector extends PawsCollector {
         });
 
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
-            console.log('API Daily Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
+            AlLogger.info(`API Daily Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
             collector.reportApiThrottling(function () {
                 return callback(null, [], state, state.poll_interval_sec);
             });
@@ -109,7 +110,7 @@ class GsuiteCollector extends PawsCollector {
                     } else {
                         newState = this._getNextCollectionStateWithNextPage(state, nextPage);
                     }
-                    console.info(
+                    AlLogger.info(
                         `GSUI000002 Next collection in ${newState.poll_interval_sec} seconds`
                     );
                     return callback(null, accumulator, newState, newState.poll_interval_sec);
@@ -126,7 +127,7 @@ class GsuiteCollector extends PawsCollector {
                         // After crossing daily limit calculate PST time difference in seconds. 
                         // Get next day reset date time(midnight Pacific Time (PT)) in utc 
                         state.apiQuotaResetDate = moment().add(pstEndDateTime.diff(pstCurrentDateTime, 'seconds') + extraBufferSeconds, "seconds").toISOString();
-                        console.log('API Daily Limit Exceeded. The quota will be reset at ', state.apiQuotaResetDate);
+                        AlLogger.info(`API Daily Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
                         collector.reportApiThrottling(function () {
                             return callback(null, [], state, state.poll_interval_sec);
                         });

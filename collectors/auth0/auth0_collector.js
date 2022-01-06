@@ -12,6 +12,7 @@
 const moment = require('moment');
 const request = require('request');
 const parse = require('@alertlogic/al-collector-js').Parse;
+const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const ManagementClient = require('auth0').ManagementClient;
 const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const packageJson = require('./package.json');
@@ -54,7 +55,7 @@ class Auth0Collector extends PawsCollector {
         utils.getAPILogs(auth0Client, state, [], process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextLogId, lastLogTs }) => {
                 const newState = collector._getNextCollectionState(state, nextLogId, lastLogTs);
-                console.info(`AUTZ000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                AlLogger.info(`AUTZ000002 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             }).catch((error) => {
                 // set error code for DDMetrics

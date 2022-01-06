@@ -2,6 +2,7 @@ const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 const moment = require('moment');
 var request = require('request');
+const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 
 const Siem_Logs = 'SiemLogs';
 const Attachment_Protect_Logs = 'AttachmentProtectLogs';
@@ -41,7 +42,7 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                     try {
                         body = JSON.parse(body);
                     } catch (exception) {
-                        console.error("MIME000010 Error parsing response. ", body);
+                        AlLogger.error("MIME000010 Error parsing response. ", body);
                         return reject(exception);
                     }
                     if (body.fail && body.fail[0] && body.fail[0].errors) {

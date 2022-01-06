@@ -18,6 +18,7 @@ const packageJson = require('./package.json');
 
 const parse = require('@alertlogic/al-collector-js').Parse;
 const asyncPool = require("tiny-async-pool");
+const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 
 // Subtracting less than 7 days to avoid weird race conditions with the azure api...
 // Missing about 1 hours of historical logs shouldn't be too bad.
@@ -47,7 +48,7 @@ class O365Collector extends PawsCollector {
 
         if(moment().diff(startTs, 'days') > 7){
             startTs = moment().subtract(PARTIAL_WEEK_HOURS, 'hours').toISOString();
-            console.info("O365000004 Start timestamp is more than 7 days in the past. This is not allowed in the MS managment API. setting the start time to 7 days in the past");
+            AlLogger.info("O365000004 Start timestamp is more than 7 days in the past. This is not allowed in the MS managment API. setting the start time to 7 days in the past");
         }
         if (moment().diff(startTs, 'hours') > 1) {
             endTs = moment(startTs).add(1, 'hours').toISOString();
@@ -105,18 +106,15 @@ class O365Collector extends PawsCollector {
             state.until = newStart.add(1, 'hours').toISOString();
             // remove next page token if the state is out of date as well.
             state.nextPage = null;
-            console.warn(
-                "O365000005 Start timestamp is more than 7 days in the past. ",
-                "This is not allowed in the MS managment API. ",
-                "Setting the start time to 7 days in the past. ",
-                `Now collecting data from ${state.since} till ${state.until} for stream ${state.stream}`
+            AlLogger.warn(
+                `O365000005 Start timestamp is more than 7 days in the past. This is not allowed in the MS managment API. Setting the start time to 7 days in the past. Now collecting data from ${state.since} till ${state.until} for stream ${state.stream}`
             );
         }
 
         if ((process.env.paws_collection_interval && process.env.paws_collection_interval > 0 ) && state ) {
             state.until = moment(state.since).add(process.env.paws_collection_interval, 'seconds').toISOString();
         }
-        console.info(`O365000001 Collecting data from ${state.since} till ${state.until} for stream ${state.stream}`);
+        AlLogger.info(`O365000001 Collecting data from ${state.since} till ${state.until} for stream ${state.stream}`);
 
         let pageCount = 0;
 
@@ -183,7 +181,7 @@ class O365Collector extends PawsCollector {
  
             if (!err.code && err.message) {
               const formatedError = this._formatErrorMessage(err);
-              console.error(`O365000003 Error in collection: ${err.message}`);
+              AlLogger.error(`O365000003 Error in collection: ${err.message}`);
               return callback(formatedError);
             } else {
                 // if error is string or don't have err.code  in error object, then return complete error object/string.
@@ -257,7 +255,7 @@ class O365Collector extends PawsCollector {
                 state.since = newStart.toISOString();
                 state.until = moment(newStart).add(currentInterval, 'minutes').toISOString();
                 state.poll_interval_sec = 1;
-                console.warn(`Now collecting data from ${state.since} to ${state.until} to handle Expired content in older than 7 days`);
+                AlLogger.warn(`Now collecting data from ${state.since} to ${state.until} to handle Expired content in older than 7 days`);
                 return state;
             }
             return null;
