@@ -24,7 +24,7 @@ let typeIdPaths = [];
 let tsPaths = [];
 
 const Authentication = 'Authentication';
-
+const API_THROTTLING_ERROR = 42901;
 
 class CiscoduoCollector extends PawsCollector {
     constructor(context, creds) {
@@ -113,10 +113,23 @@ class CiscoduoCollector extends PawsCollector {
                 }
                 AlLogger.info(`CDUO000002 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
-            }).catch((error) => {         
-                // set errorCode if not available in error object to showcase client error on DDMetrics
-                error.errorCode = error.code;
-                return callback(error);
+            }).catch((error) => {
+                // Cisco duo api has some rate limits that we might run into.
+                // If we run into a rate limit error, instead of returning the error,
+                // we return the state back to the queue with an additional  60 second added.
+                if (error.code && error.code === API_THROTTLING_ERROR) {
+                    state.poll_interval_sec = state.poll_interval_sec < 60 ?
+                        60 : state.poll_interval_sec + 1;
+                    AlLogger.warn(`The account has made too many requests of this type recently. Try again after ${state.poll_interval_sec} sec `)
+                    collector.reportApiThrottling(function () {
+                        return callback(null, [], state, state.poll_interval_sec);
+                    });
+                }
+                else {
+                    // set errorCode if not available in error object to showcase client error on DDMetrics
+                    error.errorCode = error.code;
+                    return callback(error);
+                }
             });
     }
 

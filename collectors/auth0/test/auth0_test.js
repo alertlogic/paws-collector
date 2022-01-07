@@ -290,5 +290,32 @@ describe('Unit Tests', function () {
 
             });
         });
+
+        it('Paws Get Logs check throttling error', function (done) {
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(auth0Client, state, accumulator, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({statusCode:429,
+                            message:'Too many requests'});
+                    });
+                });
+            Auth0Collector.load().then(function (creds) {
+                var collector = new Auth0Collector(ctx, creds);
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    since: startDate.toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                var reportSpy = sinon.spy(collector, 'reportApiThrottling');
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(true, reportSpy.calledOnce);
+                    assert.equal(logs.length, 0);
+                    assert.equal(newState.poll_interval_sec, 10);
+                    getAPILogs.restore();
+                    done();
+                });
+            });
+        });
     });
 });

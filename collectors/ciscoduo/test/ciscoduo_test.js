@@ -234,6 +234,52 @@ describe('Unit Tests', function () {
 
             });
         });
+
+        it('Paws Get Logs check throttling error', function (done) {
+
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ code: 42901,
+                            message: 'Too Many Requests',
+                            stat: 'FAIL' ,"errorCode":42901});
+                    });
+                });
+            getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
+                function fakeFn(state) {
+                    const startDate = moment();
+                    return {
+                        url: "api_url",
+                        typeIdPaths: [{ path: ["context"] }],
+                        tsPaths: [{ path: ["timestamp"] }],
+                        query: {
+                            mintime: startDate.unix(),
+                            limit: 1000
+                        },
+                        method: "GET"
+                    };
+                });
+            CiscoduoCollector.load().then(function (creds) {
+                var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
+                const startDate = moment();
+                const curState = {
+                    stream: "telephony",
+                    mintime: startDate.unix(),
+                    poll_interval_sec: 1
+                };
+
+                var reportSpy = sinon.spy(collector, 'reportApiThrottling');
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(true, reportSpy.calledOnce);
+                    assert.equal(logs.length, 0);
+                    assert.equal(newState.poll_interval_sec, 60);
+                    getAPILogs.restore();
+                    getAPIDetails.restore();
+                    done();
+                });
+
+            });
+        });
     });
 
     describe('Next state tests', function () {
