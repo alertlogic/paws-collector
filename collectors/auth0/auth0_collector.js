@@ -27,7 +27,7 @@ const tsPaths = [
 ];
 
 const HOSTNAME_REGEXP = /^[htps]*:\/\/|\/$/gi;
-
+const API_THROTTLING_ERROR = 429;
 
 class Auth0Collector extends PawsCollector {
 
@@ -58,9 +58,24 @@ class Auth0Collector extends PawsCollector {
                 AlLogger.info(`AUTZ000002 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             }).catch((error) => {
-                // set error code for DDMetrics
-                error.errorCode = error.statusCode;
-                return callback(error);
+                // Auth0 Logging api has some rate limits that we might run into.
+                // If we run into a rate limit error, instead of returning the error,
+                // we return the state back to the queue with an additional 10 second added.
+                // https://auth0.com/docs/support/policies/rate-limit-policy/management-api-endpoint-rate-limits
+                // Rate Limit GET /api/v2/logs 10 call per sec
+                if (error.statusCode && error.statusCode === API_THROTTLING_ERROR) {
+                    state.poll_interval_sec = state.poll_interval_sec < 10 ?
+                        10 : state.poll_interval_sec + 1;
+                    AlLogger.warn(`AUTZ000003 API Request Limit Exceeded`, error);
+                    collector.reportApiThrottling(function () {
+                        return callback(null, [], state, state.poll_interval_sec);
+                    });
+                }
+                else {
+                    // set error code for DDMetrics
+                    error.errorCode = error.statusCode;
+                    return callback(error);
+                }
             });
     }
 
