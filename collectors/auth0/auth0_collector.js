@@ -66,6 +66,7 @@ class Auth0Collector extends PawsCollector {
                 if (error.statusCode && error.statusCode === API_THROTTLING_ERROR) {
                     state.poll_interval_sec = state.poll_interval_sec < 10 ?
                         10 : state.poll_interval_sec + 1;
+                    AlLogger.warn(`AUTZ000003 API Request Limit Exceeded`, error);
                     collector.reportApiThrottling(function () {
                         return callback(null, [], state, state.poll_interval_sec);
                     });

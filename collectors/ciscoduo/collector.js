@@ -120,7 +120,7 @@ class CiscoduoCollector extends PawsCollector {
                 if (error.code && error.code === API_THROTTLING_ERROR) {
                     state.poll_interval_sec = state.poll_interval_sec < 60 ?
                         60 : state.poll_interval_sec + 1;
-                    AlLogger.warn(`The account has made too many requests of this type recently. Try again after ${state.poll_interval_sec} sec `)
+                    AlLogger.warn(`CDUO000003 API Request Limit Exceeded`, error);
                     collector.reportApiThrottling(function () {
                         return callback(null, [], state, state.poll_interval_sec);
                     });
