@@ -272,7 +272,7 @@ describe('Unit Tests', function () {
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
                     assert.equal(true, reportSpy.calledOnce);
                     assert.equal(logs.length, 0);
-                    assert.equal(newState.poll_interval_sec, 60);
+                    assert.equal(newState.poll_interval_sec, 120);
                     getAPILogs.restore();
                     getAPIDetails.restore();
                     done();

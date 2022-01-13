@@ -25,6 +25,7 @@ let tsPaths = [];
 
 const Authentication = 'Authentication';
 const API_THROTTLING_ERROR = 42901;
+const MAX_POLL_INTERVAL = 900;
 
 class CiscoduoCollector extends PawsCollector {
     constructor(context, creds) {
@@ -116,10 +117,11 @@ class CiscoduoCollector extends PawsCollector {
             }).catch((error) => {
                 // Cisco duo api has some rate limits that we might run into.
                 // If we run into a rate limit error, instead of returning the error,
-                // we return the state back to the queue with an additional  60 second added.
+                // we return the state back to the queue with an additional 60 second added upto 15 min.
                 if (error.code && error.code === API_THROTTLING_ERROR) {
-                    state.poll_interval_sec = state.poll_interval_sec < 60 ?
-                        60 : state.poll_interval_sec + 1;
+                    const interval = state.poll_interval_sec < 60 ? 60 : state.poll_interval_sec;
+                    state.poll_interval_sec = state.poll_interval_sec < MAX_POLL_INTERVAL ?
+                        interval + 60 : MAX_POLL_INTERVAL;
                     AlLogger.warn(`CDUO000003 API Request Limit Exceeded`, error);
                     collector.reportApiThrottling(function () {
                         return callback(null, [], state, state.poll_interval_sec);
