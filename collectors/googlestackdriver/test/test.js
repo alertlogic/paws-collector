@@ -182,6 +182,39 @@ describe('Unit Tests', function() {
                 var reportSpy = sinon.spy(collector, 'reportApiThrottling');
 
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
+                    assert.equal(moment(curState.until).diff(newState.until, 'days'), 1);
+                    assert.equal(true, reportSpy.calledOnce);
+                    assert.equal(logs.length, 0);
+                    assert.equal(newPollInterval, 2);
+                    restoreLoggingClientStub();
+                    done();
+                });
+            });
+        });
+
+       it('Get Logs check API Throttling if time interval is less than 15 sec then skip the 15 second and forward the since time by same interval', function(done) {
+            logginClientStub = sinon.stub(logging.v2.LoggingServiceV2Client.prototype, 'listLogEntries');
+            
+            logginClientStub.onCall(0).callsFake(() => {
+                return new Promise((res, rej) => {
+                    rej({code:8});
+                });
+            });
+
+            GooglestackdriverCollector.load().then(function(creds) {
+                var collector = new GooglestackdriverCollector(ctx, creds);
+                const startDate = moment().subtract(1, 'hours');
+                const curState = {
+                    since: startDate.toISOString(),
+                    until: startDate.add(15, 'seconds').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                var reportSpy = sinon.spy(collector, 'reportApiThrottling');
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
+                    assert.equal(moment(newState.since).diff(curState.since, 'seconds'), 15); // Skip the 15 sec and forward it by same time interval
+                    assert.equal(moment(newState.until).diff(newState.since, 'seconds'), 15); 
                     assert.equal(true, reportSpy.calledOnce);
                     assert.equal(logs.length, 0);
                     assert.equal(newPollInterval, 2);
