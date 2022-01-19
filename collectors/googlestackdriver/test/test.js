@@ -192,7 +192,7 @@ describe('Unit Tests', function() {
             });
         });
 
-       it('Get Logs check API Throttling if time interval is less than 15 sec then skip the 15 second and forward the since time by same interval', function(done) {
+       it('Get Logs check API Throttling if time interval is less than 15 sec then check for same interval again', function(done) {
             logginClientStub = sinon.stub(logging.v2.LoggingServiceV2Client.prototype, 'listLogEntries');
             
             logginClientStub.onCall(0).callsFake(() => {
@@ -213,7 +213,6 @@ describe('Unit Tests', function() {
                 var reportSpy = sinon.spy(collector, 'reportApiThrottling');
 
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
-                    assert.equal(moment(newState.since).diff(curState.since, 'seconds'), 15); // Skip the 15 sec and forward it by same time interval
                     assert.equal(moment(newState.until).diff(newState.since, 'seconds'), 15); 
                     assert.equal(true, reportSpy.calledOnce);
                     assert.equal(logs.length, 0);
