@@ -121,10 +121,19 @@ timestamp < "${state.until}"`;
                 // If we run inot a rate limit error, instead of returning the error,
                 // we return the state back to the queue with an additional second added, up to 10
                 // https://cloud.google.com/logging/quotas
+                // Error: 8 RESOURCE_EXHAUSTED: Received message larger than max (4518352 vs. 4194304),
+                // so half the given interval and if interval is less than 15 sec then try again with same interval.
                 if(err.code === API_THROTTLING_ERROR){
                     const nextPollInterval = state.poll_interval_sec < 10 ?
                         state.poll_interval_sec + 1:
                         10;
+                    const currentInterval = moment(state.until).diff(state.since, 'seconds');
+                    if (currentInterval <= 15) {
+                        AlLogger.warn(`RESOURCE_EXHAUSTED for ${currentInterval} sec time interval`);
+                    }
+                    else {
+                        state.until = moment(state.since).add(Math.ceil(currentInterval / 2), 'seconds').toISOString();
+                    }
                     const backOffState = Object.assign({}, state, {poll_interval_sec:nextPollInterval});
                     collector.reportApiThrottling(function () {
                         return callback(null, [], backOffState, nextPollInterval);
