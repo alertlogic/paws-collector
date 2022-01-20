@@ -17,7 +17,7 @@ function calcNextCollectionInterval(strategy, curUntilMoment, pollInterval) {
     const nowMoment = moment();
     // If collection start date gt than 30 days, ingest will not accept data, so adjust the date to last 30 days.
     const nextSinceMoment = curUntilMoment.isAfter(nowMoment) ?
-        nowMoment : nowMoment.diff(curUntilMoment, 'days') > 30 ? moment().subtract(30, 'days') : curUntilMoment;
+        nowMoment : nowMoment.diff(curUntilMoment, 'days') > 30 ? moment(nowMoment).subtract(30, 'days') : curUntilMoment;
     const daysDiff = nowMoment.diff(nextSinceMoment, 'days');
     const hoursDiff = nowMoment.diff(nextSinceMoment, 'hours');
     let nextUntilMoment;
