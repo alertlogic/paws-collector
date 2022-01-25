@@ -1,6 +1,6 @@
 {
   "name": "@alertlogic/paws-collector",
-  "version": "2.0.25",
+  "version": "2.0.26",
   "license": "MIT",
   "description": "Alert Logic AWS based API Poll Log Collector Library",
   "repository": {
