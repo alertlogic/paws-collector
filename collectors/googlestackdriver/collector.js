@@ -18,6 +18,8 @@ const logging = require('@google-cloud/logging');
 const packageJson = require('./package.json');
 
 const API_THROTTLING_ERROR = 8;
+const MAX_POLL_INTERVAL = 900;
+const MAX_PAGE_SIZE = 1000;
 
 const typeIdPaths = [
     {path: ['jsonPayload', 'fields', 'event_type', 'stringValue']},
@@ -98,11 +100,12 @@ timestamp < "${state.until}"`;
             }
         };
 
+        const pageSize = state.pageSize > 0 ? state.pageSize : MAX_PAGE_SIZE;
         let params = state.nextPage ?
             state.nextPage:
             {
                 filter,
-                pageSize: 1000,
+                pageSize: pageSize,
                 resourceNames:[state.stream]
             };
 
@@ -119,16 +122,24 @@ timestamp < "${state.until}"`;
 
                 // Stackdriver Logging api has some rate limits that we might run into.
                 // If we run inot a rate limit error, instead of returning the error,
-                // we return the state back to the queue with an additional second added, up to 10
+                // we return the state back to the queue with an additional second added, up to 15 min
                 // https://cloud.google.com/logging/quotas
                 // Error: 8 RESOURCE_EXHAUSTED: Received message larger than max (4518352 vs. 4194304),
-                // so half the given interval and if interval is less than 15 sec then try again with same interval.
+                // so half the given interval and if interval is less than 15 sec then reduce the page size to half.
+
                 if(err.code === API_THROTTLING_ERROR){
-                    const nextPollInterval = state.poll_interval_sec < 10 ?
-                        state.poll_interval_sec + 1:
-                        10;
+                    const interval = state.poll_interval_sec < 60 ? 60 : state.poll_interval_sec;
+                    const nextPollInterval = state.poll_interval_sec < MAX_POLL_INTERVAL ?
+                        interval + 60 : MAX_POLL_INTERVAL;
                     const currentInterval = moment(state.until).diff(state.since, 'seconds');
-                    if (currentInterval <= 15) {
+                    if (currentInterval <= 15 && err.details.includes('Received message larger than max')) {
+                        // Reduce the page size to half to pull the data for throttling interval
+                        if (state.nextPage && state.nextPage.pageSize) {
+                            state.nextPage.pageSize = Math.ceil(state.nextPage.pageSize / 2);
+                        }
+                        else {
+                            state.pageSize = Math.ceil(params.pageSize / 2)
+                        }
                         AlLogger.warn(`RESOURCE_EXHAUSTED for ${currentInterval} sec time interval`);
                     }
                     else {
@@ -150,6 +161,12 @@ timestamp < "${state.until}"`;
     }
 
     _getNextCollectionState(curState, nextPage) {
+        // Reset the page size for next collection as log collection completed for throttling interval
+        if (nextPage && nextPage.pageSize && nextPage.pageSize < MAX_PAGE_SIZE) {
+            nextPage.pageSize = MAX_PAGE_SIZE;
+        } else if (curState.pageSize && curState.pageSize < MAX_PAGE_SIZE) {
+            curState.pageSize = MAX_PAGE_SIZE;
+        }
         const {stream} = curState;
 
         const untilMoment = moment(curState.until);
