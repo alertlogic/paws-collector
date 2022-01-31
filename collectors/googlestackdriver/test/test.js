@@ -368,7 +368,6 @@ describe('Unit Tests', function() {
                 };
                 const nextPage = {"filter":"timestamp >= \"2022-01-21T00:00:15.000Z\"\ntimestamp < \"2022-01-22T00:00:15.000Z\"","pageSize":500,"resourceNames":["projects/test"],"pageToken":"EAA46o"};
                 const newState = collector._getNextCollectionState(curState, nextPage);
-                console.log('newState',newState);
                 assert.equal(moment(newState.until).diff(newState.since, 'seconds'), collector.pollInterval);
                 assert.equal(newState.poll_interval_sec, 1);
                 assert.equal(newState.nextPage.pageSize, 1000);

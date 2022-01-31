@@ -19,6 +19,7 @@ const packageJson = require('./package.json');
 
 const API_THROTTLING_ERROR = 8;
 const MAX_POLL_INTERVAL = 900;
+const MAX_PAGE_SIZE = 1000;
 
 const typeIdPaths = [
     {path: ['jsonPayload', 'fields', 'event_type', 'stringValue']},
@@ -99,7 +100,7 @@ timestamp < "${state.until}"`;
             }
         };
 
-        const pageSize = state.pageSize > 0 ? state.pageSize : 1000;
+        const pageSize = state.pageSize > 0 ? state.pageSize : MAX_PAGE_SIZE;
         let params = state.nextPage ?
             state.nextPage:
             {
@@ -161,10 +162,10 @@ timestamp < "${state.until}"`;
 
     _getNextCollectionState(curState, nextPage) {
         // Reset the page size for next collection as log collection completed for throttling interval
-        if (nextPage && nextPage.pageSize && nextPage.pageSize < 1000) {
-            nextPage.pageSize = 1000;
-        } else if (curState.pageSize && curState.pageSize < 1000) {
-            curState.pageSize = 1000;
+        if (nextPage && nextPage.pageSize && nextPage.pageSize < MAX_PAGE_SIZE) {
+            nextPage.pageSize = MAX_PAGE_SIZE;
+        } else if (curState.pageSize && curState.pageSize < MAX_PAGE_SIZE) {
+            curState.pageSize = MAX_PAGE_SIZE;
         }
         const {stream} = curState;
 
