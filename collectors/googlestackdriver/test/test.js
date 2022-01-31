@@ -166,7 +166,8 @@ describe('Unit Tests', function() {
             
             logginClientStub.onCall(0).callsFake(() => {
                 return new Promise((res, rej) => {
-                    rej({code:8});
+                    rej({code:8,
+                        details: `Quota exceeded for quota metric 'Read requests' and limit 'Read requests per minute' of service 'logging.googleapis.com' for consumer 'project_number:45454'`});
                 });
             });
 
@@ -185,19 +186,20 @@ describe('Unit Tests', function() {
                     assert.equal(moment(curState.until).diff(newState.until, 'days'), 1);
                     assert.equal(true, reportSpy.calledOnce);
                     assert.equal(logs.length, 0);
-                    assert.equal(newPollInterval, 2);
+                    assert.equal(newPollInterval, 120);
                     restoreLoggingClientStub();
                     done();
                 });
             });
         });
 
-       it('Get Logs check API Throttling if time interval is less than 15 sec then check for same interval again', function(done) {
+       it(`Get Logs check API Throttling with 'Received message larger than max (4776477 vs. 4194304)' for time interval less than 15 sec then check with reduce page size able to fetch the data`, function(done) {
             logginClientStub = sinon.stub(logging.v2.LoggingServiceV2Client.prototype, 'listLogEntries');
             
             logginClientStub.onCall(0).callsFake(() => {
                 return new Promise((res, rej) => {
-                    rej({code:8});
+                    rej({code: 8,
+                        details: 'Received message larger than max (4776477 vs. 4194304)'});
                 });
             });
 
@@ -207,7 +209,9 @@ describe('Unit Tests', function() {
                 const curState = {
                     since: startDate.toISOString(),
                     until: startDate.add(15, 'seconds').toISOString(),
-                    poll_interval_sec: 1
+                    poll_interval_sec: 1,
+                    nextPage:{"filter":"timestamp >= \"2022-01-21T00:00:15.000Z\"\ntimestamp < \"2022-01-22T00:00:15.000Z\"","pageSize":1000,"resourceNames":["projects/test"],"pageToken":"EAA46o"},
+                    stream: 'projects/test',
                 };
 
                 var reportSpy = sinon.spy(collector, 'reportApiThrottling');
@@ -215,8 +219,9 @@ describe('Unit Tests', function() {
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
                     assert.equal(moment(newState.until).diff(newState.since, 'seconds'), 15); 
                     assert.equal(true, reportSpy.calledOnce);
+                    assert.equal(newState.nextPage.pageSize, 500);
                     assert.equal(logs.length, 0);
-                    assert.equal(newPollInterval, 2);
+                    assert.equal(newPollInterval, 120);
                     restoreLoggingClientStub();
                     done();
                 });
@@ -348,6 +353,25 @@ describe('Unit Tests', function() {
                 const newState = collector._getNextCollectionState(curState);
                 assert.equal(moment(newState.until).diff(newState.since, 'seconds'), collector.pollInterval);
                 assert.equal(newState.poll_interval_sec, 1);
+                done();
+            });
+        });
+        it('get next state and check if page size less than 1000 ,reset it back', function(done) {
+            const startDate = moment().subtract(20, 'minutes');
+            GooglestackdriverCollector.load().then(function(creds) {
+                var collector = new GooglestackdriverCollector(ctx, creds);
+                const curState = {
+                    since: startDate.toISOString(),
+                    until: startDate.add(collector.pollInterval, 'seconds').toISOString(),
+                    poll_interval_sec: 1,
+                    stream: 'projects/test',
+                };
+                const nextPage = {"filter":"timestamp >= \"2022-01-21T00:00:15.000Z\"\ntimestamp < \"2022-01-22T00:00:15.000Z\"","pageSize":500,"resourceNames":["projects/test"],"pageToken":"EAA46o"};
+                const newState = collector._getNextCollectionState(curState, nextPage);
+                console.log('newState',newState);
+                assert.equal(moment(newState.until).diff(newState.since, 'seconds'), collector.pollInterval);
+                assert.equal(newState.poll_interval_sec, 1);
+                assert.equal(newState.nextPage.pageSize, 1000);
                 done();
             });
         });
