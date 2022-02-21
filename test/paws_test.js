@@ -894,28 +894,6 @@ describe('Unit Tests', function() {
                 });
             });
         });
-        it('reportClientOK', function(done) {
-            let ctx = {
-                invokedFunctionArn : pawsMock.FUNCTION_ARN,
-                fail : function(error) {
-                    assert.fail(error);
-                    done();
-                },
-                succeed : function() {
-                    done();
-                }
-            };
-            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback());
-            TestCollector.load().then(function(creds) {
-                var collector = new TestCollector(ctx, creds);
-                collector.reportClientOK( function(error) {
-                    assert.equal(null, error);
-                    AWS.restore('KMS');
-                    AWS.restore('CloudWatch');
-                    done();
-                });
-            });
-        });
 
         it('reportClientError', function(done) {
             let ctx = {
