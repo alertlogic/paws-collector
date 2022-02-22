@@ -429,9 +429,7 @@ class PawsCollector extends AlAwsCollector {
                                 return asyncCallback(err);
                             });
                         } else {
-                            collector.reportClientOK(() => {
-                                return asyncCallback(null, ...remainingParams)
-                            });
+                            return asyncCallback(null, ...remainingParams);
                         }
                     });
                 },
@@ -649,38 +647,6 @@ class PawsCollector extends AlAwsCollector {
         };
         let errorCode = typeof (error) === 'object' && error.errorCode ? error.errorCode : 'unknown';
         this.reportDDMetric("client", 1, [`result:error`,`error_code:${errorCode}`]);
-        return cloudwatch.putMetricData(params, callback);
-    };
-
-    /**
-    * Collector to report client execute successfully, 
-    * So we can check how often 3rd party APIs get called.
-    * @param callback 
-    */
-    reportClientOK( callback) {
-        var cloudwatch = new AWS.CloudWatch({apiVersion: '2010-08-01'});
-        const params = {
-            MetricData: [
-              {
-                MetricName: "PawsClientOK",
-                Dimensions: [
-                  {
-                    Name: 'CollectorType',
-                    Value: this._pawsCollectorType
-                  },
-                  {
-                    Name: 'FunctionName',
-                    Value: process.env.AWS_LAMBDA_FUNCTION_NAME
-                  }
-                ],
-                Timestamp: new Date(),
-                Unit: 'Count',
-                Value: 1
-              }
-            ],
-            Namespace: 'PawsCollectors'
-        };
-        this.reportDDMetric("client", 1, [`result:ok`]);
         return cloudwatch.putMetricData(params, callback);
     };
     
