@@ -369,7 +369,10 @@ class PawsCollector extends AlAwsCollector {
                 });
             }
             
-        }).catch(asyncCallback)
+        }).catch(err => {
+            AlLogger.error(`PAWS000402 ${this._pawsDdbTableName} table not found`);
+            return asyncCallback(err);
+        });
     }
 
     updateStateDBEntry(stateSqsMsg, Status, asyncCallback) {
