@@ -25,7 +25,7 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 ### 2. API Docs
 
-1. [OKTA Node Library](https://www.npmjs.com/package/@okta/okta-sdk-nodejs/v/3.1.0)
+1. [OKTA Node Library](https://www.npmjs.com/package/@okta/okta-sdk-nodejs/v/4.1.0)
 2. [System Log](https://developer.okta.com/docs/reference/api/system-log/)
 3. [Create the token](https://developer.okta.com/docs/guides/create-an-api-token/create-the-token/)
 
