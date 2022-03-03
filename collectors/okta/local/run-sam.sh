@@ -7,6 +7,7 @@ SRC_SAM_TEMPLATE="${SCRIPT_DIR}/sam-template.yaml"
 SRC_ENV_FILE="${SCRIPT_DIR}/${ENV_FILE_NAME}"
 SRC_EVENT_FILE="${SCRIPT_DIR}/events/${EVENT_FILE_NAME}"
 RUN_DIR=${SCRIPT_DIR}/../
+LOCAL_CREDENTIAL_ALIAS=""
 
 
 command -v sam > /dev/null
@@ -29,7 +30,7 @@ sam local invoke \
     --env-vars ${ENV_FILE_NAME} \
     -t ${SAM_TEMPLATE_NAME} \
     -e ${EVENT_FILE_NAME} \
-    --profile playground \
+    --profile ${LOCAL_CREDENTIAL_ALIAS} \
     --region us-east-1 \
     "LocalLambda"
 
