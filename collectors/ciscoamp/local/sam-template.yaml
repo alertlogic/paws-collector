@@ -9,6 +9,7 @@ Resources:
       KmsKeyArn: your-arn-here
       Environment:
         Variables:
+          ssm_direct:
           AWS_LAMBDA_FUNCTION_NAME:
           aims_secret_key:
           aims_access_key_id:
@@ -28,7 +29,7 @@ Resources:
           collector_id:
           paws_ddb_table_name:
           collector_streams:
-      Runtime: nodejs10.x
+      Runtime: nodejs14.x
       Handler: index.handler
       Timeout: 300 
       MemorySize: 1024
