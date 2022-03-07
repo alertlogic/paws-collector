@@ -255,7 +255,7 @@
             },
             "Architectures": ["arm64"],
             "Handler":"index.handler",
-            "Runtime":"nodejs14.x",
+            "Runtime":"nodejs12.x",
             "MemorySize": { "Ref" : "CollectorFunctionMemorySize" },
             "Timeout": { "Ref" : "CollectorFunctionTimeout" },
             "Environment":{
