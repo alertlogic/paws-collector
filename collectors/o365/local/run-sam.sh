@@ -7,7 +7,7 @@ SRC_SAM_TEMPLATE="${SCRIPT_DIR}/sam-template.yaml"
 SRC_ENV_FILE="${SCRIPT_DIR}/${ENV_FILE_NAME}"
 SRC_EVENT_FILE="${SCRIPT_DIR}/events/${EVENT_FILE_NAME}"
 RUN_DIR=${SCRIPT_DIR}/../
-PROFILE_NAME=""
+PROFILE_NAME="default"
 
 command -v sam > /dev/null
 if [ $? -ne 0 ]; then
