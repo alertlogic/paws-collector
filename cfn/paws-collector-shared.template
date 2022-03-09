@@ -185,6 +185,19 @@
                 "Protocol": "lambda"
             }
         },
+        "SnsLambdaInvokePermission": {
+            "Type": "AWS::Lambda::Permission",
+            "DependsOn": [
+                "CollectLambdaFunction"
+            ],
+            "Properties": {
+                "FunctionName": {
+                    "Fn::GetAtt": ["CollectLambdaFunction", "Arn"]
+                },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "sns.amazonaws.com",
+            }
+        },
         "EncryptSecretKeySharedCustomResource": {
             "Type": "AWS::CloudFormation::CustomResource",
             "Properties": {
