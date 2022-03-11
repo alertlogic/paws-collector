@@ -196,6 +196,7 @@
                 },
                 "Action": "lambda:InvokeFunction",
                 "Principal": "sns.amazonaws.com",
+                "SourceArn": { "Ref": "ExistingControlSnsArn" }
             }
         },
         "EncryptSecretKeySharedCustomResource": {
