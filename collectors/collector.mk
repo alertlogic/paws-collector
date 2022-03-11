@@ -4,7 +4,7 @@ AWS_LAMBDA_PACKAGE_NAME ?= al-collector.zip
 AWS_LAMBDA_CONFIG_PATH ?= ./al-collector.json
 AWS_CFN_TEMPLATE_PATH ?= ./cfn/collector.template
 
-.PHONY: test
+.PHONY: test node_modules
 
 all: test package package.zip
 
@@ -22,6 +22,7 @@ test: compile
 package: test package.zip
 
 package.zip: node_modules/ *.js package.json
+	npm prune --production
 	zip -r $(AWS_LAMBDA_PACKAGE_NAME) $^ > /dev/null
 
 deploy:
