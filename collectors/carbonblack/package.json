@@ -1,6 +1,6 @@
 {
   "name": "carbonblack-collector",
-  "version": "1.0.27",
+  "version": "1.0.28",
   "description": "Alert Logic AWS based Carbonblack Log Collector",
   "repository": {},
   "private": true,
@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@alertlogic/al-collector-js": "^2.0.4",
-    "@alertlogic/paws-collector": "^2.0.25",
+    "@alertlogic/paws-collector": "^2.1.2",
     "async": "3.1.0",
     "debug": "4.1.1",
     "make": "^0.8.1",
