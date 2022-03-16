@@ -161,11 +161,44 @@
             "Type": "String"
         },
         "ExistingCollectLambdaRoleArn" :{
-            "Description": "",
+            "Description": "IAM role ARN for collect function",
+            "Type": "String"
+        },
+        "ExistingControlSnsArn" :{
+            "Description": "SNS topic ARN used for triggering collector checkins an updates",
             "Type": "String"
         }
     },
     "Resources":{
+        "ControlSnsSubscription": {
+            "Type": "AWS::SNS::Subscription",
+            "DependsOn": [
+                "CollectLambdaFunction"
+            ],
+            "Properties": {
+                "TopicArn": {
+                    "Ref": "ExistingControlSnsArn"
+                },
+                "Endpoint": {
+                    "Fn::GetAtt": ["CollectLambdaFunction", "Arn"]
+                },
+                "Protocol": "lambda"
+            }
+        },
+        "SnsLambdaInvokePermission": {
+            "Type": "AWS::Lambda::Permission",
+            "DependsOn": [
+                "CollectLambdaFunction"
+            ],
+            "Properties": {
+                "FunctionName": {
+                    "Fn::GetAtt": ["CollectLambdaFunction", "Arn"]
+                },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "sns.amazonaws.com",
+                "SourceArn": { "Ref": "ExistingControlSnsArn" }
+            }
+        },
         "EncryptSecretKeySharedCustomResource": {
             "Type": "AWS::CloudFormation::CustomResource",
             "Properties": {
@@ -298,6 +331,9 @@
                   "al_data_residency":{
                       "Ref":"AlDataResidency"
                   },
+                  "al_control_sns_arn":{
+                       "Ref":"ExistingControlSnsArn"
+                  },
                   "customer_id": {
                       "Ref":"AlertlogicCustomerId"
                   },
@@ -383,144 +419,6 @@
             "EventSourceArn" : { "Fn::GetAtt" : ["PawsPollStateQueue", "Arn"] },
             "FunctionName" : { "Ref":"CollectLambdaFunction" }
          }
-      },
-      "UpdaterScheduledRule": {
-         "Type": "AWS::Events::Rule",
-         "DependsOn": [
-            "CollectLambdaFunction"
-         ],
-         "Properties": {
-            "Description": "Scheduled rule for updater function",
-            "ScheduleExpression": "rate(12 hours)",
-            "State": "ENABLED",
-            "Targets":[
-                {
-                    "Id":"1",
-                    "Arn":{
-                        "Fn::GetAtt":[
-                            "CollectLambdaFunction",
-                            "Arn"
-                        ]
-                    },
-                    "Input": "{\"RequestType\": \"ScheduledEvent\", \"Type\": \"SelfUpdate\"}"
-                }
-            ]
-         }
-      },
-      "UpdaterScheduledRuleLambdaInvokePermission": {
-          "Type": "AWS::Lambda::Permission",
-          "DependsOn": [
-            "CollectLambdaFunction",
-            "UpdaterScheduledRule"
-          ],
-          "Properties": {
-            "Action": "lambda:InvokeFunction",
-            "FunctionName": {
-              "Ref": "CollectLambdaFunction"
-            },
-            "Principal": "events.amazonaws.com",
-            "SourceArn":{
-              "Fn::GetAtt": [
-                "UpdaterScheduledRule",
-                "Arn"
-              ]
-            }
-          }
-      },
-      "CloudWatchEventsRole":{
-         "Type": "AWS::IAM::Role",
-         "DependsOn":[
-            "CollectLambdaFunction"
-         ],
-         "Properties": {
-            "AssumeRolePolicyDocument": {
-               "Version" : "2012-10-17",
-               "Statement": [ {
-                  "Effect": "Allow",
-                  "Principal": {
-                     "Service": [ "events.amazonaws.com" ]
-                  },
-                  "Action": [ "sts:AssumeRole" ]
-               } ]
-            },
-            "Path": "/",
-            "Policies": [ {
-               "PolicyName": "root",
-               "PolicyDocument": {
-                  "Version" : "2012-10-17",
-                  "Statement": [
-                    {
-                      "Effect":"Allow",
-                      "Action":[
-                         "lambda:*"
-                      ],
-                      "Resource":[{
-                          "Fn::GetAtt":[
-                              "CollectLambdaFunction",
-                              "Arn"
-                          ]
-                      }]
-                    }
-                  ]
-               }
-            }]
-         }
-      },
-      "CheckinScheduledRule": {
-         "Type": "AWS::Events::Rule",
-         "DependsOn": [
-            "CollectLambdaFunction"
-         ],
-         "Properties": {
-            "Description": "Scheduled rule for checkin function",
-            "ScheduleExpression": "rate(15 minutes)",
-            "State": "ENABLED",
-            "Targets":[
-                {
-                    "Id":"1",
-                    "Arn":{
-                        "Fn::GetAtt":[
-                            "CollectLambdaFunction",
-                            "Arn"
-                        ]
-                    },
-                    "Input": {
-                        "Fn::Join":[
-                            "",
-                            [
-                                "{\"RequestType\": \"ScheduledEvent\", \"Type\": \"Checkin\", \"AwsAccountId\": \"",
-                                { "Ref":"AWS::AccountId" },
-                                "\", \"Region\": \"",
-                                { "Ref": "AWS::Region" },
-                                "\", \"StackName\": \"",
-                                { "Ref":"AWS::StackName" },
-                                "\"}"
-                            ]
-                        ]
-                    }
-                }
-            ]
-         }
-      },
-      "CheckinScheduledRuleLambdaInvokePermission": {
-          "Type": "AWS::Lambda::Permission",
-          "DependsOn": [
-            "CollectLambdaFunction",
-            "CheckinScheduledRule"
-          ],
-          "Properties": {
-            "Action": "lambda:InvokeFunction",
-            "FunctionName": {
-              "Ref": "CollectLambdaFunction"
-            },
-            "Principal": "events.amazonaws.com",
-            "SourceArn":{
-              "Fn::GetAtt": [
-                "CheckinScheduledRule",
-                "Arn"
-              ]
-            }
-          }
       },
       "RegistrationResource": {
          "Type": "Custom::RegistrationResource",
