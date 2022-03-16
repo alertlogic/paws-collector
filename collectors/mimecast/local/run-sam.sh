@@ -3,6 +3,7 @@ SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 SAM_TEMPLATE_NAME="sam-template.yaml"
 ENV_FILE_NAME="env.json"
 EVENT_FILE_NAME="event_poll.json"
+PROFILE_NAME=""
 SRC_SAM_TEMPLATE="${SCRIPT_DIR}/sam-template.yaml"
 SRC_ENV_FILE="${SCRIPT_DIR}/${ENV_FILE_NAME}"
 SRC_EVENT_FILE="${SCRIPT_DIR}/events/${EVENT_FILE_NAME}"
@@ -26,9 +27,11 @@ ln -sf ${SRC_ENV_FILE} ${RUN_DIR}/${ENV_FILE_NAME}
 ln -sf ${SRC_EVENT_FILE} ${RUN_DIR}/${EVENT_FILE_NAME}
 cd ${RUN_DIR} && \
 sam local invoke \
+    --profile ${PROFILE_NAME} \
     --env-vars ${ENV_FILE_NAME} \
     -t ${SAM_TEMPLATE_NAME} \
     -e ${EVENT_FILE_NAME} \
+    --region us-east-1 \
     "LocalLambda"
 
 unlink ${RUN_DIR}/${SAM_TEMPLATE_NAME}
