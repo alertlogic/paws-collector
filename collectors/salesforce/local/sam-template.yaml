@@ -31,7 +31,8 @@ Resources:
           paws_max_pages_per_invocation:
           paws_ddb_table_name:        
           collector_id:
-      Runtime: nodejs10.x
+      CodeUri:
+      Runtime: nodejs14.x
       Handler: index.handler
       Timeout: 300 
       MemorySize: 1024
