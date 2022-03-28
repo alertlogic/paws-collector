@@ -26,8 +26,6 @@ Resources:
           paws_api_client_id:   
           paws_api_secret: 
           paws_endpoint:  
-          paws_collector_param_string_2:
-          collector_streams:  
           paws_max_pages_per_invocation:    
           collector_id:  
           paws_ddb_table_name:
