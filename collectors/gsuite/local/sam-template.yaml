@@ -30,7 +30,8 @@ Resources:
           paws_api_secret:
           collector_id:
           paws_ddb_table_name:
-      Runtime: nodejs10.x
+      CodeUri:
+      Runtime: nodejs14.x
       Handler: index.handler
       Timeout: 300 
       MemorySize: 1024
