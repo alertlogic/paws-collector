@@ -7,7 +7,7 @@ SRC_SAM_TEMPLATE="${SCRIPT_DIR}/sam-template.yaml"
 SRC_ENV_FILE="${SCRIPT_DIR}/${ENV_FILE_NAME}"
 SRC_EVENT_FILE="${SCRIPT_DIR}/events/${EVENT_FILE_NAME}"
 RUN_DIR=${SCRIPT_DIR}/../
-
+PROFILE_NAME=""
 
 command -v sam > /dev/null
 if [ $? -ne 0 ]; then
@@ -28,10 +28,11 @@ cd ${RUN_DIR} && \
 # --docker-network host \ added this for accessing Host localhost from docker container.
 # if you are using mac then pass endpoint as a docker.for.mac.localhost
 sam local invoke \
+    --profile ${PROFILE_NAME} \
     --env-vars ${ENV_FILE_NAME} \
-    --docker-network host \
     -t ${SAM_TEMPLATE_NAME} \
     -e ${EVENT_FILE_NAME} \
+    --region us-east-1 \
     "LocalLambda"
 
 unlink ${RUN_DIR}/${SAM_TEMPLATE_NAME}
