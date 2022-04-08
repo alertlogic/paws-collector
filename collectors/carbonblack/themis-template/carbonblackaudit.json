@@ -1,6 +1,6 @@
 {
     "method": "GET",
-    "url": "{{endpoint}}/integrationServices/v3/event?searchWindow=1d&rows=1",
+    "url": "{{endpoint}}/integrationServices/v3/auditlogs?rows=0",
     "headers": {
         "X-Auth-Token": "{{secret}}/{{client_id}}"
     },
