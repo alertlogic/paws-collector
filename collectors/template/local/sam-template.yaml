@@ -22,7 +22,7 @@ Resources:
           paws_poll_interval:
           paws_extension:
           collector_id:
-      Runtime: nodejs10.x
+      Runtime: nodejs14.x
       Handler: index.handler
       Timeout: 300 
       MemorySize: 1024
