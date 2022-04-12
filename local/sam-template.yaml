@@ -23,7 +23,7 @@ Resources:
           okta_endpoint:
           okta_token:
           collector_id:
-      Runtime: nodejs8.10
+      Runtime: nodejs14.x
       Handler: index.handler
       Timeout: 300 
       MemorySize: 1024
