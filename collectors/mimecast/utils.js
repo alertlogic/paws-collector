@@ -25,9 +25,12 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                 }
 
                 let requestHeaders = generateHeaders(authDetails, applicationDetails.uri);
+                let url = `https://${authDetails.baseUrl}${applicationDetails.uri}`;
+
+                AlLogger.debug('MIME00009 calling url: ', url);
 
                 request.post({
-                    url: `https://${authDetails.baseUrl}${applicationDetails.uri}`,
+                    url: url,
                     headers: requestHeaders,
                     body: JSON.stringify(applicationDetails.payload)
                 }, function (error, response, body) {
@@ -59,6 +62,7 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                                 if(applicationDetails.payload.data[0].token){
                                     nextPage = applicationDetails.payload.data[0].token;
                                 }
+                                AlLogger.debug('MIME000011 accumulated first element: ', accumulator[1]);
                                 return resolve({ accumulator, nextPage });
                             }
                             if (response.headers && response.headers['mc-siem-token']) {
@@ -70,10 +74,10 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                                 accumulator.push(...body.objects);
                                 nextPage = response.headers['x-mc-threat-feed-next-token'];
                             }
-                            else{
+                            else {
                                 nextPage = undefined;
                                 //if next token is not present in responce then it will set last request token value to nextPage
-                                if(applicationDetails.payload.data[0].token){
+                                if (applicationDetails.payload.data[0].token) {
                                     nextPage = applicationDetails.payload.data[0].token;
                                 }               
                                 return resolve({ accumulator, nextPage });
@@ -222,13 +226,16 @@ function generateHeaders(authDetails, uri) {
     hmac.end();       // can't read from the stream until you call end()
     signature = hmac.read().toString('base64'); 
 
-    return {
+    let returnObj = {
         "Authorization": `MC ${authDetails.accessKey}:${signature}`,
         "x-mc-app-id": authDetails.appId,
         "x-mc-date": hdrDate,
         "x-mc-req-id": requestId,
         "Content-Type": 'application/json'
     };
+
+    AlLogger.debug('MIME000012 url header: ', returnObj);
+    return returnObj;
 }
 
 function getTypeIdAndTsPaths(stream) {
