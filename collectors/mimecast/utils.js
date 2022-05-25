@@ -234,7 +234,10 @@ function generateHeaders(authDetails, uri) {
         "Content-Type": 'application/json'
     };
 
-    AlLogger.debug('MIME000012 url header: ', returnObj);
+    AlLogger.debug('MIME000012 url App Id: ', returnObj['x-mc-app-id']);
+    AlLogger.debug('MIME000012 url Date: ', returnObj['x-mc-date']);
+    AlLogger.debug('MIME000012 url Request ID: ', returnObj['x-mc-req-id']);
+
     return returnObj;
 }
 
