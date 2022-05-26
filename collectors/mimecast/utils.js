@@ -27,7 +27,7 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                 let requestHeaders = generateHeaders(authDetails, applicationDetails.uri);
                 let url = `https://${authDetails.baseUrl}${applicationDetails.uri}`;
 
-                AlLogger.debug('MIME00009 calling url: ', url);
+                AlLogger.debug(`MIME00009 calling url: ${url}`);
 
                 request.post({
                     url: url,
@@ -62,7 +62,7 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                                 if(applicationDetails.payload.data[0].token){
                                     nextPage = applicationDetails.payload.data[0].token;
                                 }
-                                AlLogger.debug('MIME000011 accumulated first element: ', accumulator[1]);
+                                AlLogger.debug(`MIME000011 accumulated first element: ${accumulator[1]}`);
                                 return resolve({ accumulator, nextPage });
                             }
                             if (response.headers && response.headers['mc-siem-token']) {
@@ -234,9 +234,9 @@ function generateHeaders(authDetails, uri) {
         "Content-Type": 'application/json'
     };
 
-    AlLogger.debug('MIME000012 url App Id: ', returnObj['x-mc-app-id']);
-    AlLogger.debug('MIME000012 url Date: ', returnObj['x-mc-date']);
-    AlLogger.debug('MIME000012 url Request ID: ', returnObj['x-mc-req-id']);
+    AlLogger.debug(`MIME000012 url App Id:  ${returnObj['x-mc-app-id']}`);
+    AlLogger.debug(`MIME000012 url Date:  ${returnObj['x-mc-date']}`);
+    AlLogger.debug(`MIME000012 url Request ID:  ${returnObj['x-mc-req-id']}`);
 
     return returnObj;
 }
