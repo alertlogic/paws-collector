@@ -63,7 +63,6 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                                 if(applicationDetails.payload.data[0].token){
                                     nextPage = applicationDetails.payload.data[0].token;
                                 }
-                                AlLogger.debug(`MIME000011 accumulated first element: ${accumulator[1]}`);
                                 return resolve({ accumulator, nextPage });
                             }
                             if (response.headers && response.headers['mc-siem-token']) {
