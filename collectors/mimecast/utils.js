@@ -57,7 +57,7 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                             if (body.data && body.data.length > 0) {
                                 accumulator.push(...body.data);
                             }
-                            AlLogger.debug(`MIME000011 accumulated first element: ${accumulator[1]}`);
+                            AlLogger.debug(`MIME000011 accumulated first element: ${JSON.stringify(accumulator[1])}`);
                             if (response.meta && response.meta.isLastToken) {
                                 nextPage = undefined;
                                 if(applicationDetails.payload.data[0].token){
