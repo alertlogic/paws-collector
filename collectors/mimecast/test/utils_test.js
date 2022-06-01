@@ -4,6 +4,8 @@ const sinon = require('sinon');
 const mimecastMock = require('./mimecast_mock');
 var request = require('request');
 const moment = require('moment');
+const { fs, vol } = require('memfs');
+const SIEM_LOGS_PATH = '/tmp/mimecast/siemlogs';
 
 var alserviceStub = {};
 
@@ -215,8 +217,18 @@ describe('Unit Tests', function () {
                 "appId": "appId",
                 "appKey": "appKey"
             };
+            const json = {
+                './data1.json': JSON.stringify(mimecastMock.SIEM_LOGS_EVENT),
+                './data2.json': JSON.stringify(mimecastMock.SIEM_LOGS_EVENT)
+              };
+              vol.fromJSON(json, SIEM_LOGS_PATH);
+              fs.readFileSync(SIEM_LOGS_PATH + '/data1.json', 'utf8'); // {name:'imran'}
+              fs.readFileSync(SIEM_LOGS_PATH + '/data2.json', 'utf8'); // {name:'syed'}
+              accumulator.push(fs.readFileSync(SIEM_LOGS_PATH + '/data1.json', 'utf8'));
+              accumulator.push(fs.readFileSync(SIEM_LOGS_PATH + '/data2.json', 'utf8'));
+
             utils.getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation).then(data => {
-                assert(accumulator.length == 5, "accumulator length is wrong");
+                assert(accumulator.length == 2, "accumulator length is wrong");
                 alserviceStub.post.restore();
                 done();
             });

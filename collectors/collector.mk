@@ -3,6 +3,8 @@ AWS_LAMBDA_FUNCTION_NAME ?= alertlogic-collector
 AWS_LAMBDA_PACKAGE_NAME ?= al-collector.zip
 AWS_LAMBDA_CONFIG_PATH ?= ./al-collector.json
 AWS_CFN_TEMPLATE_PATH ?= ./cfn/collector.template
+PROFILE_NAME ?= playground
+
 
 .PHONY: test node_modules
 
@@ -26,12 +28,12 @@ package.zip: node_modules/ *.js package.json
 	zip -r $(AWS_LAMBDA_PACKAGE_NAME) $^ > /dev/null
 
 deploy:
-	aws lambda update-function-code --function-name $(AWS_LAMBDA_FUNCTION_NAME) --zip-file fileb://$(AWS_LAMBDA_PACKAGE_NAME)
+	aws lambda update-function-code --function-name $(AWS_LAMBDA_FUNCTION_NAME) --zip-file fileb://$(AWS_LAMBDA_PACKAGE_NAME) --profile ${PROFILE_NAME}
 
 upload:
-	aws s3 cp ./$(AWS_LAMBDA_PACKAGE_NAME) s3://$(AWS_LAMBDA_S3_BUCKET)/packages/lambda/
-	aws s3 cp $(AWS_LAMBDA_CONFIG_PATH) s3://$(AWS_LAMBDA_S3_BUCKET)/configs/lambda/
-	aws s3 cp $(AWS_CFN_TEMPLATE_PATH) s3://$(AWS_LAMBDA_S3_BUCKET)/cfn/
+	aws s3 cp ./$(AWS_LAMBDA_PACKAGE_NAME) s3://$(AWS_LAMBDA_S3_BUCKET)/packages/lambda/ --profile ${PROFILE_NAME}
+	aws s3 cp $(AWS_LAMBDA_CONFIG_PATH) s3://$(AWS_LAMBDA_S3_BUCKET)/configs/lambda/ --profile ${PROFILE_NAME}
+	aws s3 cp $(AWS_CFN_TEMPLATE_PATH) s3://$(AWS_LAMBDA_S3_BUCKET)/cfn/ --profile ${PROFILE_NAME}
 
 sam-local:
 	@echo "Invoking ${AWS_LAMBDA_FUNCTION_NAME} locally."

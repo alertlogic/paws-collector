@@ -6,7 +6,7 @@ Resources:
   LocalLambda:
     Type: AWS::Serverless::Function
     Properties:
-      KmsKeyArn: your-arn-here
+      KmsKeyArn: arn:aws:kms:us-east-1:352283894008:key/c31cd559-a589-417b-91bb-19bfbcba903f
       Environment:
         Variables:
           AWS_LAMBDA_FUNCTION_NAME:
@@ -31,7 +31,9 @@ Resources:
           collector_id:
           paws_ddb_table_name:
           customer_id:
-      CodeUri:
+          ssm_direct:
+          paws_type_name:
+      CodeUri: /Users/imransyed/Downloads/projects/alertlogic-collectors/paws-collector/collectors/mimecast
       Runtime: nodejs14.x
       Handler: index.handler
       Timeout: 300 

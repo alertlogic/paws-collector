@@ -2,13 +2,17 @@ const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 const moment = require('moment');
 var request = require('request');
+const fs = require('fs');
+const path = require('path');
+const AdmZip = require("adm-zip");
+
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 
+const SIEM_LOGS_PATH = '/tmp/mimecast/siemlogs';
 const Siem_Logs = 'SiemLogs';
 const Attachment_Protect_Logs = 'AttachmentProtectLogs';
 const URL_Protect_Logs = 'URLProtectLogs';
 const Malware_Feed = 'MalwareFeed';
-
 
 function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
     let pageCount = 0;
@@ -20,6 +24,7 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
             if (pageCount < maxPagesPerInvocation) {
 
                 let applicationDetails = getAPIDetails(state, nextPage);
+                let compressFlag = applicationDetails.payload.data[0].compress || false;
                 if (!applicationDetails.uri) {
                     reject("The application name was not found!");
                 }
@@ -28,39 +33,53 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                 let url = `https://${authDetails.baseUrl}${applicationDetails.uri}`;
 
                 AlLogger.debug(`MIME00009 calling url: ${url}`);
-
-                request.post({
+                const tempPayload = {
                     url: url,
                     headers: requestHeaders,
                     body: JSON.stringify(applicationDetails.payload)
-                }, function (error, response, body) {
+                };
+                const payloadData = state.stream === Siem_Logs ? { ...tempPayload, encoding: null } : tempPayload;
+                request.post(payloadData, function (error, response, body) {
                     if (error) {
                         return reject(error);
                     }
                     if (response.statusCode &&
-                         (response.statusCode === 429 ||
-                          response.statusCode >= 500 )) {
+                        (response.statusCode === 429 ||
+                            response.statusCode >= 500)) {
                         return reject(response);
                     }
-                    try {
-                        body = JSON.parse(body);
-                    } catch (exception) {
-                        AlLogger.error("MIME000010 Error parsing response. ", body);
-                        return reject(exception);
+
+                    if (!compressFlag) {
+                        try {
+                            body = JSON.parse(body);
+                        } catch (exception) {
+                            AlLogger.error("MIME000010 Error parsing response. ", body);
+                            return reject(exception);
+                        }
+                        if (body.fail && body.fail[0] && body.fail[0].errors) {
+                            return reject(body.fail[0].errors[0]);
+                        }
                     }
-                    if (body.fail && body.fail[0] && body.fail[0].errors) {
-                        return reject(body.fail[0].errors[0]);
-                    }
+
                     pageCount++;
                     switch (state.stream) {
                         case Siem_Logs:
-                            if (body.data && body.data.length > 0) {
-                                accumulator.push(...body.data);
-                            }
-                            AlLogger.debug(`MIME000011 accumulated first element: ${JSON.stringify(accumulator[1])}`);
+                            //get zip file store it in /tmp/mimecast/siemlog
+                            //unzip in same folder
+                            //for each file in /tmp/mimecast/siemlog get json data into accumator push
+                            fs.mkdir(SIEM_LOGS_PATH, { recursive: true }, (err) => {
+                                if (err) throw err;
+                                unzipBuffer(body).then(function (bodyData) {
+                                    accumulator.push(...bodyData);
+                                    AlLogger.debug(`MIME000011 accumulated first element: ${JSON.stringify(accumulator[1])} and accumaulator length ${accumulator.length}`);
+                                    removeTempDirectory(SIEM_LOGS_PATH);
+                                }).catch((error) => {
+                                    AlLogger.debug(`MIME000011 Error Accumulating Data: ${error} compress flagged: ${compressFlag}`);
+                                });
+                            });
                             if (response.meta && response.meta.isLastToken) {
                                 nextPage = undefined;
-                                if(applicationDetails.payload.data[0].token){
+                                if (applicationDetails.payload.data[0].token) {
                                     nextPage = applicationDetails.payload.data[0].token;
                                 }
                                 return resolve({ accumulator, nextPage });
@@ -79,7 +98,7 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                                 //if next token is not present in responce then it will set last request token value to nextPage
                                 if (applicationDetails.payload.data[0].token) {
                                     nextPage = applicationDetails.payload.data[0].token;
-                                }               
+                                }
                                 return resolve({ accumulator, nextPage });
                             }
                             break;
@@ -109,6 +128,50 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
     });
 }
 
+/**
+   * Unzip the Buffer
+   * 
+   * @param buffer
+   * @returns {Promise}
+   */
+
+function unzipBuffer(buffer) {
+    return new Promise(function (resolve, reject) {
+        var resolved = false;
+        var zip = new AdmZip(buffer);
+        zip.extractAllTo(SIEM_LOGS_PATH, true);
+        // dir path that contains all your json file
+        const files = fs.readdirSync(SIEM_LOGS_PATH);
+        const tempAccumulator = []
+        if (files.length > 0) {
+            files.forEach((file, i) => {
+                if (path.extname(file) === '.json') {
+                    const fileData = JSON.parse(fs.readFileSync(path.join(SIEM_LOGS_PATH, file), 'utf8'));
+                    tempAccumulator.push(...fileData.data);
+                    resolved = true;
+                }
+            });
+            resolve(tempAccumulator);
+        }
+        if (!resolved) {
+            reject(new Error('No files found in zip directory: ' + files.length));
+        }
+    });
+};
+
+function removeTempDirectory(dirPath) {
+    fs.readdir(dirPath, (err, files) => {
+        if (err) throw err;
+        AlLogger.debug(`MIME000014 files to be removed from temp directory successfully ${files.length}`);
+
+        for (const file of files) {
+            fs.unlink(path.join(dirPath, file), err => {
+                if (err) throw err;
+            });
+        }
+    });
+}
+
 function getAPIDetails(state, nextPage) {
     let uri = "";
     let payload = "";
@@ -120,7 +183,8 @@ function getAPIDetails(state, nextPage) {
                     "data": [
                         {
                             'type': 'MTA',
-                            'fileFormat': 'JSON'
+                            'fileFormat': 'JSON',
+                            'compress': true
                         }
                     ]
                 };
@@ -131,7 +195,8 @@ function getAPIDetails(state, nextPage) {
                         {
                             'type': 'MTA',
                             'token': nextPage,
-                            'fileFormat': 'JSON'
+                            'fileFormat': 'JSON',
+                            'compress': true
                         }
                     ]
                 };
@@ -224,7 +289,7 @@ function generateHeaders(authDetails, uri) {
     let hmac = crypto.createHmac("sha1", Buffer.from(authDetails.secretKey, 'base64'));
     hmac.write(`${hdrDate}:${requestId}:${uri}:${authDetails.appKey}`);
     hmac.end();       // can't read from the stream until you call end()
-    signature = hmac.read().toString('base64'); 
+    signature = hmac.read().toString('base64');
 
     let returnObj = {
         "Authorization": `MC ${authDetails.accessKey}:${signature}`,
