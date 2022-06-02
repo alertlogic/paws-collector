@@ -199,42 +199,7 @@ describe('Unit Tests', function () {
             });
         });
     });
-
-    // describe('Get API Logs (SiemLogs)', function () {
-    //     it('Get API Logs (SiemLogs) with nextpage success', function (done) {
-    //         alserviceStub.post = sinon.stub(request, 'post').yields(null, { "headers": { "mc-siem-token": "token" } }, JSON.stringify(mimecastMock.SIEM_LOGS_EVENT));
-    //         let maxPagesPerInvocation = 5;
-    //         let accumulator = [];
-    //         let state = {
-    //             stream: "SiemLogs",
-    //             nextPage: null,
-    //             poll_interval_sec: 1
-    //         };
-    //         let authDetails = {
-    //             "baseUrl": "baseUrl",
-    //             "accessKey": "accessKey",
-    //             "secretKey": "secretKey",
-    //             "appId": "appId",
-    //             "appKey": "appKey"
-    //         };
-    //         const json = {
-    //             './data1.json': JSON.stringify(mimecastMock.SIEM_LOGS_EVENT),
-    //             './data2.json': JSON.stringify(mimecastMock.SIEM_LOGS_EVENT)
-    //         };
-    //         vol.fromJSON(json, SIEM_LOGS_PATH);
-    //         fs.readFileSync(SIEM_LOGS_PATH + '/data1.json', 'utf8'); // {name:'imran'}
-    //         fs.readFileSync(SIEM_LOGS_PATH + '/data2.json', 'utf8'); // {name:'syed'}
-    //         accumulator.push(fs.readFileSync(SIEM_LOGS_PATH + '/data1.json', 'utf8'));
-    //         accumulator.push(fs.readFileSync(SIEM_LOGS_PATH + '/data2.json', 'utf8'));
-
-    //         utils.getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation).then(data => {
-    //             assert(accumulator.length == 2, "accumulator length is wrong");
-    //             alserviceStub.post.restore();
-    //             done();
-    //         });
-    //     });
-    // });
-
+  
     describe('Get API Logs (SiemLogs) Download zip file', function () {
         it('Get API Logs (SiemLogs) extract zip buffer and accumulate logs from json files', function (done) {
             const unzipBufferSpy = sinon.spy(utils.unzipBuffer);
@@ -290,9 +255,7 @@ describe('Unit Tests', function () {
             utils.getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation).then(data => {
                 unzipBufferSpy(path.join(__dirname, "./test1.zip")).then(function (bodyData) {
                     accumulator.push(...bodyData);
-                        console.debug(`MIME000011 accumulated first element: ${JSON.stringify(accumulator)} and accumulator length ${accumulator.length}`);
                 }).catch((error) => {
-                    console.debug(`MIME000011 Error Accumulating Data: ${error.message}`);
                 });
                 assert(accumulator.length == 0, "accumulator length is wrong");
                 assert(errMessage ==='Invalid filename', "Returned Error message");
