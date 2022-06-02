@@ -6,7 +6,7 @@ Resources:
   LocalLambda:
     Type: AWS::Serverless::Function
     Properties:
-      KmsKeyArn:
+      KmsKeyArn: your-arn-here
       Environment:
         Variables:
           AWS_LAMBDA_FUNCTION_NAME:

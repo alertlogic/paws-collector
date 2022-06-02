@@ -337,5 +337,6 @@ function getTypeIdAndTsPaths(stream) {
 
 module.exports = {
     getAPILogs: getAPILogs,
-    getTypeIdAndTsPaths: getTypeIdAndTsPaths
+    getTypeIdAndTsPaths: getTypeIdAndTsPaths,
+    unzipBuffer: unzipBuffer,
 };
