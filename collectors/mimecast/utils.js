@@ -4,11 +4,10 @@ const moment = require('moment');
 var request = require('request');
 const fs = require('fs');
 const path = require('path');
-const AdmZip = require("adm-zip");
+const AdmZip = require('adm-zip');
 
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 
-const SIEM_LOGS_PATH = '/tmp/mimecast/siemlogs';
 const Siem_Logs = 'SiemLogs';
 const Attachment_Protect_Logs = 'AttachmentProtectLogs';
 const URL_Protect_Logs = 'URLProtectLogs';
@@ -38,7 +37,7 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                     headers: requestHeaders,
                     body: JSON.stringify(applicationDetails.payload)
                 };
-                const payloadData = state.stream === Siem_Logs ? { ...tempPayload, encoding: null } : tempPayload;
+                const payloadData = state.stream === Siem_Logs ? { ...tempPayload, encoding: applicationDetails.encoding } : tempPayload;
                 request.post(payloadData, function (error, response, body) {
                     if (error) {
                         return reject(error);
@@ -64,26 +63,21 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                     pageCount++;
                     switch (state.stream) {
                         case Siem_Logs:
-                            //get zip file store it in /tmp/mimecast/siemlog
-                            //unzip in same folder
-                            //for each file in /tmp/mimecast/siemlog get json data into accumator push
-                            fs.mkdir(SIEM_LOGS_PATH, { recursive: true }, (err) => {
-                                if (err) throw err;
-                                unzipBuffer(body).then(function (bodyData) {
-                                    accumulator.push(...bodyData);
-                                    AlLogger.debug(`MIME000011 accumulated first element: ${JSON.stringify(accumulator[1])} and accumaulator length ${accumulator.length}`);
-                                    removeTempDirectory(SIEM_LOGS_PATH);
-                                }).catch((error) => {
-                                    AlLogger.debug(`MIME000011 Error Accumulating Data: ${error} compress flagged: ${compressFlag}`);
-                                });
-                            });
-                            if (response.meta && response.meta.isLastToken) {
-                                nextPage = undefined;
-                                if (applicationDetails.payload.data[0].token) {
-                                    nextPage = applicationDetails.payload.data[0].token;
+                            //get zip file content in the body and unzip it in memory
+                            unzipBufferInMemory(body).then(function (bodyData) {
+                                accumulator.push(...bodyData);
+                                AlLogger.debug(`MIME000011 accumulated first element: ${JSON.stringify(accumulator[1])} and accumaulator length ${accumulator.length}`);
+                                if (response.meta && response.meta.isLastToken) {
+                                    nextPage = undefined;
+                                    if (applicationDetails.payload.data[0].token) {
+                                        nextPage = applicationDetails.payload.data[0].token;
+                                    }
+                                    return resolve({ accumulator, nextPage });
                                 }
-                                return resolve({ accumulator, nextPage });
-                            }
+                            }).catch((error) => {
+                                AlLogger.debug(`MIME000011 Error Accumulating Data: ${error} compress flagged: ${compressFlag}`);
+                            });
+
                             if (response.headers && response.headers['mc-siem-token']) {
                                 nextPage = response.headers['mc-siem-token'];
                             }
@@ -135,49 +129,37 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
    * @returns {Promise}
    */
 
-function unzipBuffer(buffer) {
+function unzipBufferInMemory(buffer) {
     return new Promise(function (resolve, reject) {
-        var resolved = false;
+        var tempAccumulator = []
         var zip = new AdmZip(buffer);
-        zip.extractAllTo(SIEM_LOGS_PATH, true);
-        // dir path that contains all your json file
-        const files = fs.readdirSync(SIEM_LOGS_PATH);
-        const tempAccumulator = []
-        if (files.length > 0) {
-            files.forEach((file, i) => {
-                if (path.extname(file) === '.json') {
-                    const fileData = JSON.parse(fs.readFileSync(path.join(SIEM_LOGS_PATH, file), 'utf8'));
-                    tempAccumulator.push(...fileData.data);
-                    resolved = true;
+        var zipEntries = zip.getEntries();
+        if (zipEntries && zipEntries.length > 0) {
+            zipEntries.forEach(function (entry) {
+                if (entry.name.endsWith('.json')) {
+                    try {
+                        let data = JSON.parse(entry.getData().toString('utf8'));
+                        tempAccumulator.push(...data.data);
+                    } catch (exception) {
+                        AlLogger.error("MIME000010 Error parsing json file data. ", exception);
+                        return reject(exception);
+                    }
                 }
             });
-            resolve(tempAccumulator);
         }
-        if (!resolved) {
-            reject(new Error('No files found in zip directory: ' + files.length));
-        }
-    });
-};
-
-function removeTempDirectory(dirPath) {
-    fs.readdir(dirPath, (err, files) => {
-        if (err) throw err;
-        AlLogger.debug(`MIME000014 files to be removed from temp directory successfully ${files.length}`);
-
-        for (const file of files) {
-            fs.unlink(path.join(dirPath, file), err => {
-                if (err) throw err;
-            });
-        }
-    });
+        AlLogger.debug("MIME000013 templateAccumulator data lengta. ", tempAccumulator.length);
+        resolve(tempAccumulator);
+    })
 }
 
 function getAPIDetails(state, nextPage) {
     let uri = "";
     let payload = "";
+    let encoding = "";
     switch (state.stream) {
         case Siem_Logs:
             uri = `/api/audit/get-siem-logs`;
+            encoding=null;
             if (nextPage === undefined) {
                 payload = {
                     "data": [
@@ -278,7 +260,8 @@ function getAPIDetails(state, nextPage) {
 
     return {
         uri,
-        payload
+        payload,
+        encoding
     };
 }
 
@@ -338,5 +321,5 @@ function getTypeIdAndTsPaths(stream) {
 module.exports = {
     getAPILogs: getAPILogs,
     getTypeIdAndTsPaths: getTypeIdAndTsPaths,
-    unzipBuffer: unzipBuffer,
+    unzipBufferInMemory: unzipBufferInMemory
 };
