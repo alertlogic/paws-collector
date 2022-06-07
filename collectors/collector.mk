@@ -3,7 +3,7 @@ AWS_LAMBDA_FUNCTION_NAME ?= alertlogic-collector
 AWS_LAMBDA_PACKAGE_NAME ?= al-collector.zip
 AWS_LAMBDA_CONFIG_PATH ?= ./al-collector.json
 AWS_CFN_TEMPLATE_PATH ?= ./cfn/collector.template
-PROFILE_NAME ?= 
+PROFILE_NAME ?= default
 
 
 .PHONY: test node_modules
