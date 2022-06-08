@@ -2,8 +2,6 @@ const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 const moment = require('moment');
 var request = require('request');
-const fs = require('fs');
-const path = require('path');
 const AdmZip = require('adm-zip');
 
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
