@@ -45,7 +45,7 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                         return reject(response);
                     }
 
-                    if (!applicationDetails.compressFlag) {
+                    if (!applicationDetails.compress) {
                         try {
                             body = JSON.parse(body);
                         } catch (exception) {
@@ -72,7 +72,7 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                                     return resolve({ accumulator, nextPage });
                                 }
                             }).catch((error) => {
-                                AlLogger.debug(`MIME000011 Error Accumulating Data: ${error} compress flagged: ${applicationDetails.compressFlag}`);
+                                AlLogger.debug(`MIME000011 Error Accumulating Data: ${error} compress flagged: ${applicationDetails.compress}`);
                             });
 
                             if (response.headers && response.headers['mc-siem-token']) {
@@ -153,12 +153,12 @@ function getAPIDetails(state, nextPage) {
     let uri = "";
     let payload = "";
     let encoding = "";
-    let compressFlag = false;
+    let compress = false;
     switch (state.stream) {
         case Siem_Logs:
             uri = `/api/audit/get-siem-logs`;
             encoding = null;
-            compressFlag=true;
+            compress = true;
             if (nextPage === undefined) {
                 payload = {
                     "data": [
@@ -261,7 +261,7 @@ function getAPIDetails(state, nextPage) {
         uri,
         payload,
         encoding,
-        compressFlag
+        compress
     };
 }
 
