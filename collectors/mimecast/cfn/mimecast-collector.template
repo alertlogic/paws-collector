@@ -103,6 +103,7 @@
             "PawsCollectorTypeName" : "mimecast",
             "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
             "CollectorId" : { "Ref":"CollectorId" },
+            "PawsMaxPagesPerInvocation":"5",
             "PollingInterval" : 60,
             "PawsEndpoint" : { "Ref":"MimecastEndpoint" },
             "PawsAuthType" : "oauth2",
