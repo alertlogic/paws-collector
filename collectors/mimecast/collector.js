@@ -108,11 +108,10 @@ class MimecastCollector extends PawsCollector {
 
         if (state.stream === Siem_Logs || state.stream === Malware_Feed) {
             AlLogger.info(`MIME000001 Collecting data for ${state.stream}`);
-        }
-        else{
+        } else {
             AlLogger.info(`MIME000002 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
         }
-        
+
         utils.getAPILogs(authDetails, state, [], process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextPage }) => {
                 let newState;
@@ -138,7 +137,6 @@ class MimecastCollector extends PawsCollector {
                 else{
                     return callback(error);
                 }
-                
             });
     }
 
@@ -152,11 +150,8 @@ class MimecastCollector extends PawsCollector {
             }
         }
         else {
-            
             const untilMoment = moment(curState.until);
-
             const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-day-progression', untilMoment, this.pollInterval);
-            
             return {
                 stream: curState.stream,
                 since: nextSinceMoment.utc().format(),

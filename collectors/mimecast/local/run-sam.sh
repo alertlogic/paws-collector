@@ -9,6 +9,18 @@ SRC_ENV_FILE="${SCRIPT_DIR}/${ENV_FILE_NAME}"
 SRC_EVENT_FILE="${SCRIPT_DIR}/events/${EVENT_FILE_NAME}"
 RUN_DIR=${SCRIPT_DIR}/../
 
+exists(){
+  command -v "$1" >/dev/null 2>&1
+}
+
+if exists jq; then
+    uid=`uuidgen`
+    LOWERUUID=$(echo "$uid" | tr '[:upper:]' '[:lower:]') 
+    echo "generating messageId in event.json: ${LOWERUUID}"
+    jq --arg newRandomvalue $LOWERUUID '(.Records[].messageId) |= $newRandomvalue' ${SRC_EVENT_FILE}  > tmp && mv tmp ${SRC_EVENT_FILE} 
+else
+    echo "jq does not exist please install jq to run command"
+fi
 
 command -v sam > /dev/null
 if [ $? -ne 0 ]; then
