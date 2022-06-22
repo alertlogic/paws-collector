@@ -1,6 +1,6 @@
 {
   "name": "sophossiem-collector",
-  "version": "1.0.29",
+  "version": "1.0.30",
   "description": "Alert Logic AWS based Sophossiem Log Collector",
   "repository": {},
   "private": true,
@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@alertlogic/al-collector-js": "^2.0.4",
-    "@alertlogic/paws-collector": "^2.1.4",
+    "@alertlogic/paws-collector": "^2.1.5",
     "async": "3.2.2",
     "debug": "4.1.1",
     "moment": "2.29.2"
