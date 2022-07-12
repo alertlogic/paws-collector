@@ -1,6 +1,6 @@
 {
   "name": "o365-collector",
-  "version": "1.2.44",
+  "version": "1.2.45",
   "description": "Alert Logic AWS based O365 Log Collector",
   "repository": {},
   "private": true,
@@ -19,9 +19,9 @@
     "sinon": "^7.5.0"
   },
   "dependencies": {
-    "@alertlogic/al-aws-collector-js": "4.1.5",
+    "@alertlogic/al-aws-collector-js": "4.1.6",
     "@alertlogic/al-collector-js": "^2.0.4",
-    "@alertlogic/paws-collector": "^2.1.6",
+    "@alertlogic/paws-collector": "^2.1.7",
     "@azure/ms-rest-azure-js": "2.0.1",
     "@azure/ms-rest-js": "2.0.4",
     "@azure/ms-rest-nodeauth": "3.1.1",

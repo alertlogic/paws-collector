@@ -1,6 +1,6 @@
 {
   "name": "ciscoamp-collector",
-  "version": "1.0.30",
+  "version": "1.0.31",
   "description": "Alert Logic AWS based Ciscoamp Log Collector",
   "repository": {},
   "private": true,
@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@alertlogic/al-collector-js": "^2.0.4",
-    "@alertlogic/paws-collector": "^2.1.6",
+    "@alertlogic/paws-collector": "^2.1.7",
     "async": "3.2.2",
     "debug": "4.1.1",
     "moment": "2.29.2"
