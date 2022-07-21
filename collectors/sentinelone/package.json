@@ -1,6 +1,6 @@
 {
   "name": "sentinelone-collector",
-  "version": "1.0.34",
+  "version": "1.0.35",
   "description": "Alert Logic AWS based Sentinelone Log Collector",
   "repository": {},
   "private": true,
@@ -20,10 +20,10 @@
   },
   "dependencies": {
     "@alertlogic/al-collector-js": "^2.0.4",
-    "@alertlogic/paws-collector": "^2.1.7",
+    "@alertlogic/paws-collector": "^2.1.8",
     "async": "3.2.2",
     "debug": "4.1.1",
-    "moment": "2.29.2"
+    "moment": "2.29.4"
   },
   "author": "Alert Logic Inc."
 }
