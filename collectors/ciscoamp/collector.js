@@ -96,57 +96,62 @@ class CiscoampCollector extends PawsCollector {
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
             AlLogger.info(`CAMP000002 API hourly Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
             state.poll_interval_sec = 900;
+            // Reduce time interval to half till 60 sec and try to fetch data again.
+            const currentInterval = moment(state.until).diff(state.since, 'seconds');
+            if (currentInterval > 60) {
+                state.until = moment(state.since).add(Math.ceil(currentInterval / 2), 'seconds').toISOString();
+            }
             collector.reportApiThrottling(function () {
                 return callback(null, [], state, state.poll_interval_sec);
             });
         }
         else {
 
-        utils.getAPILogs(baseUrl, base64EncodedString, apiUrl, state, [], process.env.paws_max_pages_per_invocation)
-            .then(({ accumulator, nextPage, resetSeconds, totalLogsCount, discardFlag }) => {
-                if (resetSeconds) {
-                    const extraBufferSeconds = 60;
-                    resetSeconds = resetSeconds + extraBufferSeconds;
-                    state.apiQuotaResetDate = moment().add(resetSeconds, "seconds").toISOString();
-                    AlLogger.info(`CAMP000003 API hourly Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
-                }
-                else {
-                    state.apiQuotaResetDate = null;
-                }
-                if (discardFlag && state.stream === Events) {
+            utils.getAPILogs(baseUrl, base64EncodedString, apiUrl, state, [], process.env.paws_max_pages_per_invocation)
+                .then(({ accumulator, nextPage, resetSeconds, totalLogsCount, discardFlag }) => {
+                    if (resetSeconds) {
+                        const extraBufferSeconds = 60;
+                        resetSeconds = resetSeconds + extraBufferSeconds;
+                        state.apiQuotaResetDate = moment().add(resetSeconds, "seconds").toISOString();
+                        AlLogger.info(`CAMP000003 API hourly Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
+                    }
+                    else {
+                        state.apiQuotaResetDate = null;
+                    }
+                    if (discardFlag && state.stream === Events) {
 
-                    if (state.totalLogsCount === 0) {
+                        if (state.totalLogsCount === 0) {
+                            return callback(null, accumulator, state, state.poll_interval_sec);
+                        }
+                        const searchParams = querystring.parse(state.nextPage);
+                        let offset = searchParams.offset;
+
+                        offset = (parseInt(totalLogsCount) - parseInt(state.totalLogsCount)) + parseInt(offset);
+                        searchParams.offset = offset;
+
+                        let newOffsetURL = "";
+                        Object.entries(searchParams).forEach(([key, value]) => {
+                            newOffsetURL = newOffsetURL + (newOffsetURL === "" ? `${key}=${value}` : `&${key}=${value}`);
+                        });
+
+                        state.totalLogsCount = totalLogsCount;
+                        state.nextPage = newOffsetURL;
+
                         return callback(null, accumulator, state, state.poll_interval_sec);
                     }
-                    const searchParams = querystring.parse(state.nextPage);
-                    let offset = searchParams.offset;
-
-                    offset = (parseInt(totalLogsCount) - parseInt(state.totalLogsCount)) + parseInt(offset);
-                    searchParams.offset = offset;
-
-                    let newOffsetURL = "";
-                    Object.entries(searchParams).forEach(([key, value]) => {
-                        newOffsetURL = newOffsetURL + (newOffsetURL === "" ? `${key}=${value}` : `&${key}=${value}`);
-                    });
-
-                    state.totalLogsCount = totalLogsCount;
-                    state.nextPage = newOffsetURL;
-
-                    return callback(null, accumulator, state, state.poll_interval_sec);
-                }
-                let newState;
-                if (nextPage === undefined) {
-                    newState = this._getNextCollectionState(state);
-                } else {
-                    newState = this._getNextCollectionStateWithNextPage(state, nextPage, totalLogsCount);
-                }
-                AlLogger.info(`CAMP000004 Next collection in ${newState.poll_interval_sec} seconds`);
-                return callback(null, accumulator, newState, newState.poll_interval_sec);
-            }).catch((error) => {
-                // set errorCode if not available in error object to showcase client error on DDMetric
-                error.errorCode = error.statusCode;
-                return callback(error);
-            });
+                    let newState;
+                    if (nextPage === undefined) {
+                        newState = this._getNextCollectionState(state);
+                    } else {
+                        newState = this._getNextCollectionStateWithNextPage(state, nextPage, totalLogsCount);
+                    }
+                    AlLogger.info(`CAMP000004 Next collection in ${newState.poll_interval_sec} seconds`);
+                    return callback(null, accumulator, newState, newState.poll_interval_sec);
+                }).catch((error) => {
+                    // set errorCode if not available in error object to showcase client error on DDMetric
+                    error.errorCode = error.statusCode;
+                    return callback(error);
+                });
         }
     }
 
@@ -209,7 +214,7 @@ class CiscoampCollector extends PawsCollector {
             since: curState.since,
             until: curState.until,
             nextPage: curState.nextPage,
-            apiQuotaResetDate:curState.apiQuotaResetDate,
+            apiQuotaResetDate: curState.apiQuotaResetDate,
             totalLogsCount: curState.totalLogsCount,
             poll_interval_sec: curState.poll_interval_sec
         };
