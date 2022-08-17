@@ -155,7 +155,11 @@ class CiscoduoCollector extends PawsCollector {
             // This condition works if next page getting null or undefined
             const untilMoment = moment();
 
-            const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
+            let { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
+            // If timestamp is less than two hr we can add delay of 15min to avoid multiple api call 
+            if (untilMoment.diff(nextUntilMoment, 'minutes') < 120) {
+                nextPollInterval = MAX_POLL_INTERVAL;
+            }
 
             return {
                 stream: curState.stream,
@@ -178,10 +182,11 @@ class CiscoduoCollector extends PawsCollector {
             };
         } else {
             //There is no next page concept for this API, So Setting up the next state mintime using the last log (Unix timestamp + 1).
+            // call after 60 sec to avoid multiple api call
             return {
                 stream: curState.stream,
                 mintime: nextPage,
-                poll_interval_sec: 1
+                poll_interval_sec: 60
             };
         }
     }

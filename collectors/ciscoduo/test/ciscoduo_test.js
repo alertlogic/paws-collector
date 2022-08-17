@@ -318,7 +318,9 @@ describe('Unit Tests', function () {
                     poll_interval_sec: 1
                 };
                 let nextState = collector._getNextCollectionState(curState);
-                assert.equal(nextState.poll_interval_sec, process.env.paws_poll_interval_delay);
+                // If timestamp is less than two hr check next interval is after 15 min
+                assert.equal(nextState.poll_interval_sec, 900);
+
                 done();
             });
         });
