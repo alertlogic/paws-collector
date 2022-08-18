@@ -96,6 +96,11 @@ class CiscoampCollector extends PawsCollector {
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
             AlLogger.info(`CAMP000002 API hourly Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
             state.poll_interval_sec = 900;
+            // Reduce time interval to half till 60 sec and try to fetch data again.
+            const currentInterval = moment(state.until).diff(state.since, 'seconds');
+            if (currentInterval > 60) {
+                state.until = moment(state.since).add(Math.ceil(currentInterval / 2), 'seconds').toISOString();
+            }
             collector.reportApiThrottling(function () {
                 return callback(null, [], state, state.poll_interval_sec);
             });
@@ -154,7 +159,7 @@ class CiscoampCollector extends PawsCollector {
 
         const untilMoment = moment(curState.until);
 
-        const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
+        const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('day-cap', untilMoment, this.pollInterval);
 
         return {
             stream: curState.stream,
@@ -209,7 +214,7 @@ class CiscoampCollector extends PawsCollector {
             since: curState.since,
             until: curState.until,
             nextPage: curState.nextPage,
-            apiQuotaResetDate:curState.apiQuotaResetDate,
+            apiQuotaResetDate: curState.apiQuotaResetDate,
             totalLogsCount: curState.totalLogsCount,
             poll_interval_sec: curState.poll_interval_sec
         };
