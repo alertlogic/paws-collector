@@ -318,8 +318,7 @@ describe('Unit Tests', function () {
                     poll_interval_sec: 1
                 };
                 let nextState = collector._getNextCollectionState(curState);
-                // If timestamp is less than two hr check next interval is after 15 min
-                assert.equal(nextState.poll_interval_sec, 900);
+                assert.equal(nextState.poll_interval_sec, 60);
                 assert.equal(nextState.mintime, curState.mintime + 1);
 
                 done();

@@ -155,7 +155,7 @@ class CiscoduoCollector extends PawsCollector {
             // This condition works if next page getting null or undefined
             const untilMoment = moment();
             if (curState.mintime) {
-                // If next page is null check min time stamp is less than 1 hr move by 1 sec else set the last hour time stamp as newMintime
+                // If next page is null check min time stamp is less than 1 hr move by 1 min else set the last hour time stamp as newMintime
                 const lastHourMoment = moment().subtract(1, 'hours').unix();
                 const newMintime = Math.max(curState.mintime + 1, lastHourMoment);
                 return {
