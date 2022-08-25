@@ -117,11 +117,9 @@ class CiscoduoCollector extends PawsCollector {
             }).catch((error) => {
                 // Cisco duo api has some rate limits that we might run into.
                 // If we run into a rate limit error, instead of returning the error,
-                // we return the state back to the queue with an additional 60 second added upto 15 min.
+                // We return the state back to the queue with an additional 15 min.
                 if (error.code && error.code === API_THROTTLING_ERROR) {
-                    const interval = state.poll_interval_sec < 60 ? 60 : state.poll_interval_sec;
-                    state.poll_interval_sec = state.poll_interval_sec < MAX_POLL_INTERVAL ?
-                        interval + 60 : MAX_POLL_INTERVAL;
+                    state.poll_interval_sec = MAX_POLL_INTERVAL;
                     AlLogger.warn(`CDUO000003 API Request Limit Exceeded`, error);
                     collector.reportApiThrottling(function () {
                         return callback(null, [], state, state.poll_interval_sec);
@@ -155,9 +153,9 @@ class CiscoduoCollector extends PawsCollector {
             // This condition works if next page getting null or undefined
             const untilMoment = moment();
             if (curState.mintime) {
-                // If next page is null check min time stamp is less than 1 hr move by 1 min else set the last hour time stamp as newMintime
-                const lastHourMoment = moment().subtract(1, 'hours').unix();
-                const newMintime = Math.max(curState.mintime + 1, lastHourMoment);
+                // Check mintime stamp is less than 1 hour move by 1 sec else set the last hour time stamp as newMintime
+                const nextUntilMoment = moment().subtract(1, 'hours').unix();
+                const newMintime = Math.max(curState.mintime + 1, nextUntilMoment);
                 return {
                     stream: curState.stream,
                     mintime: newMintime,
