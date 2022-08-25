@@ -45,18 +45,18 @@ class CiscoduoCollector extends PawsCollector {
                     mintime: moment(startTs).valueOf(),
                     maxtime: moment(endTs).valueOf(),
                     nextPage: null,
-                    poll_interval_sec: 1
+                    poll_interval_sec: 60
                 }
             }
             else {
                 return {
                     stream,
                     mintime: moment(startTs).unix(),
-                    poll_interval_sec: 1
+                    poll_interval_sec: 60
                 }
             }
         });
-        return callback(null, initialStates, 1);
+        return callback(null, initialStates, 60);
     }
 
     pawsGetRegisterParameters(event, callback) {
@@ -154,19 +154,24 @@ class CiscoduoCollector extends PawsCollector {
         else {
             // This condition works if next page getting null or undefined
             const untilMoment = moment();
-
-            let { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
-            // If timestamp is less than two hr we can add delay of 15min to avoid multiple api call 
-            if (untilMoment.diff(nextUntilMoment, 'minutes') < 120) {
-                nextPollInterval = MAX_POLL_INTERVAL;
+            if (curState.mintime) {
+                // If next page is null check min time stamp is less than 1 hr move by 1 sec else set the last hour time stamp as newMintime
+                const lastHourMoment = moment().subtract(1, 'hours').unix();
+                const newMintime = Math.max(curState.mintime + 1, lastHourMoment);
+                return {
+                    stream: curState.stream,
+                    mintime: newMintime,
+                    poll_interval_sec: 60
+                };
             }
-
-            return {
-                stream: curState.stream,
-                mintime: nextSinceMoment.unix(),
-                poll_interval_sec: nextPollInterval
-            };
-
+            else {
+                let { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
+                return {
+                    stream: curState.stream,
+                    mintime: nextSinceMoment.unix(),
+                    poll_interval_sec: nextPollInterval
+                };
+            }
         }
     }
 
@@ -178,7 +183,7 @@ class CiscoduoCollector extends PawsCollector {
                 mintime: curState.mintime,
                 maxtime: curState.maxtime,
                 nextPage: nextPage,
-                poll_interval_sec: 1
+                poll_interval_sec: 60
             };
         } else {
             //There is no next page concept for this API, So Setting up the next state mintime using the last log (Unix timestamp + 1).

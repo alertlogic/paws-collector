@@ -56,7 +56,7 @@ describe('Unit Tests', function () {
                             assert.equal(moment(parseInt(state.maxtime)).diff(parseInt(state.mintime), 'seconds'), 60);
                         }
                         else {
-                            assert.equal(state.poll_interval_sec, 1);
+                            assert.equal(state.poll_interval_sec, 60);
                             assert.ok(state.mintime);
                         }
                     });
@@ -179,7 +179,7 @@ describe('Unit Tests', function () {
                 };
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
                     assert.equal(logs.length, 2);
-                    assert.equal(newState.poll_interval_sec, 1);
+                    assert.equal(newState.poll_interval_sec, 60);
                     assert.equal(newState.nextPage, "nextPage");
                     assert.ok(logs[0].txid);
                     getAPILogs.restore();
@@ -311,7 +311,7 @@ describe('Unit Tests', function () {
         it('Next state tests success with OfflineEnrollment', function (done) {
             CiscoduoCollector.load().then(function (creds) {
                 var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
-                const startDate = moment();
+                const startDate = moment().subtract(1, 'hours');
                 const curState = {
                     stream: "OfflineEnrollment",
                     mintime: startDate.unix(),
@@ -320,6 +320,7 @@ describe('Unit Tests', function () {
                 let nextState = collector._getNextCollectionState(curState);
                 // If timestamp is less than two hr check next interval is after 15 min
                 assert.equal(nextState.poll_interval_sec, 900);
+                assert.equal(nextState.mintime, curState.mintime + 1);
 
                 done();
             });
