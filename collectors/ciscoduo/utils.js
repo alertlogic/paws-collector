@@ -33,9 +33,16 @@ function getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvoca
                             if (res.response.length > 0) {
                                 accumulator.push(...res.response);
                                 objectDetails.query.mintime = accumulator[accumulator.length - 1].timestamp + 1;
-                                getData();
+                                let nowMoment = moment();
+                                if (moment(nowMoment.unix()).diff(objectDetails.query.mintime, 'minutes') < 60) {
+                                    return resolve({ accumulator, nextPage });
+                                }
+                                else {
+                                    getData();
+                                }
                             }
                             else {
+                                // Here next page is undefined;
                                 return resolve({ accumulator, nextPage });
                             }
                         }

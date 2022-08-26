@@ -154,6 +154,35 @@ describe('Unit Tests', function () {
                 done();
             });
         });
+        it('Pull Only one page data if Mintime stamp is less than one hour ', function (done) {
+            ciscoduoMock.LOG_EVENT.timestamp = moment().subtract(30, 'minutes').unix();
+            getLogsStub = sinon.stub(client, 'jsonApiCall').yields({
+                response: [ciscoduoMock.LOG_EVENT],
+                stat: 'OK'
+            });
+            let maxPagesPerInvocation = 5;
+            let accumulator = [];
+            const startDate = moment().subtract(30, 'minutes');
+            let state = {
+                stream: "Administrator",
+                mintime: startDate.unix(),
+                poll_interval_sec: 1
+            };
+            let objectDetails = {
+                url: "api_url",
+                typeIdPaths: [{ path: ["action"] }],
+                tsPaths: [{ path: ["timestamp"] }],
+                query: {
+                    mintime: state.mintime
+                },
+                method: "GET"
+            };
+            utils.getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvocation).then(data => {
+                assert(accumulator.length == 1);
+                getLogsStub.restore();
+                done();
+            });
+        });
     });
 
     describe('Get API Details', function () {

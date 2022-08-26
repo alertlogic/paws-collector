@@ -138,8 +138,8 @@ class CiscoduoCollector extends PawsCollector {
         if (curState.stream === Authentication) {
 
             const untilMoment = moment(parseInt(curState.maxtime));
-
-            const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
+             // Used hour-cap instead of making api call for 1 min interval, may help to reduce throtling issue.
+            const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-cap', untilMoment, this.pollInterval);
 
             return {
                 stream: curState.stream,
@@ -153,13 +153,14 @@ class CiscoduoCollector extends PawsCollector {
             // This condition works if next page getting null or undefined
             const untilMoment = moment();
             if (curState.mintime) {
-                // Check mintime stamp is less than 1 hour move by 1 sec else set the last hour time stamp as newMintime
+                // New mintime is either last hour or current.mintime if it is less than one hr.
+                // Set nextPoll interval to 15 min as it collecting data for last one hr
                 const nextUntilMoment = moment().subtract(1, 'hours').unix();
                 const newMintime = Math.max(curState.mintime + 1, nextUntilMoment);
                 return {
                     stream: curState.stream,
                     mintime: newMintime,
-                    poll_interval_sec: 60
+                    poll_interval_sec: MAX_POLL_INTERVAL
                 };
             }
             else {

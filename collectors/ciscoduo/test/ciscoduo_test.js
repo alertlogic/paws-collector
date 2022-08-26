@@ -308,6 +308,24 @@ describe('Unit Tests', function () {
             });
         });
 
+        it('Next state tests success with Authentication call for one hr interval if start date is more than 1 hr', function (done) {
+            CiscoduoCollector.load().then(function (creds) {
+                var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
+                const startDate = moment().subtract(1,'days');
+                const curState = {
+                    stream: "Authentication",
+                    mintime: startDate.valueOf(),
+                    maxtime: startDate.add(collector.pollInterval, 'seconds').valueOf(),
+                    nextPage: null,
+                    poll_interval_sec: 1
+                };
+                let nextState = collector._getNextCollectionState(curState);
+                 assert.equal(nextState.poll_interval_sec, 1);
+                assert.equal(moment(parseInt(nextState.maxtime)).diff(parseInt(nextState.mintime), 'minutes'), 60);
+                done();
+            });
+        });
+
         it('Next state tests success with OfflineEnrollment', function (done) {
             CiscoduoCollector.load().then(function (creds) {
                 var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
@@ -318,7 +336,8 @@ describe('Unit Tests', function () {
                     poll_interval_sec: 1
                 };
                 let nextState = collector._getNextCollectionState(curState);
-                assert.equal(nextState.poll_interval_sec, 60);
+                // If there is no data check next api call is after 15min
+                assert.equal(nextState.poll_interval_sec, 900);
                 assert.equal(nextState.mintime, curState.mintime + 1);
 
                 done();
