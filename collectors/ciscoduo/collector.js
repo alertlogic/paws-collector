@@ -45,18 +45,18 @@ class CiscoduoCollector extends PawsCollector {
                     mintime: moment(startTs).valueOf(),
                     maxtime: moment(endTs).valueOf(),
                     nextPage: null,
-                    poll_interval_sec: 1
+                    poll_interval_sec: 60
                 }
             }
             else {
                 return {
                     stream,
                     mintime: moment(startTs).unix(),
-                    poll_interval_sec: 1
+                    poll_interval_sec: 60
                 }
             }
         });
-        return callback(null, initialStates, 1);
+        return callback(null, initialStates, 60);
     }
 
     pawsGetRegisterParameters(event, callback) {
@@ -117,11 +117,9 @@ class CiscoduoCollector extends PawsCollector {
             }).catch((error) => {
                 // Cisco duo api has some rate limits that we might run into.
                 // If we run into a rate limit error, instead of returning the error,
-                // we return the state back to the queue with an additional 60 second added upto 15 min.
+                // We return the state back to the queue with an additional 15 min.
                 if (error.code && error.code === API_THROTTLING_ERROR) {
-                    const interval = state.poll_interval_sec < 60 ? 60 : state.poll_interval_sec;
-                    state.poll_interval_sec = state.poll_interval_sec < MAX_POLL_INTERVAL ?
-                        interval + 60 : MAX_POLL_INTERVAL;
+                    state.poll_interval_sec = MAX_POLL_INTERVAL;
                     AlLogger.warn(`CDUO000003 API Request Limit Exceeded`, error);
                     collector.reportApiThrottling(function () {
                         return callback(null, [], state, state.poll_interval_sec);
@@ -140,8 +138,8 @@ class CiscoduoCollector extends PawsCollector {
         if (curState.stream === Authentication) {
 
             const untilMoment = moment(parseInt(curState.maxtime));
-
-            const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
+             // Used hour-cap instead of making api call for 1 min interval, may help to reduce throtling issue.
+            const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-cap', untilMoment, this.pollInterval);
 
             return {
                 stream: curState.stream,
@@ -154,15 +152,25 @@ class CiscoduoCollector extends PawsCollector {
         else {
             // This condition works if next page getting null or undefined
             const untilMoment = moment();
-
-            const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
-
-            return {
-                stream: curState.stream,
-                mintime: nextSinceMoment.unix(),
-                poll_interval_sec: nextPollInterval
-            };
-
+            if (curState.mintime) {
+                // New mintime is either last hour or current.mintime if it is less than one hr.
+                // Set nextPoll interval to 15 min as it collecting data for last one hr
+                const nextUntilMoment = moment().subtract(1, 'hours').unix();
+                const newMintime = Math.max(curState.mintime + 1, nextUntilMoment);
+                return {
+                    stream: curState.stream,
+                    mintime: newMintime,
+                    poll_interval_sec: MAX_POLL_INTERVAL
+                };
+            }
+            else {
+                let { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
+                return {
+                    stream: curState.stream,
+                    mintime: nextSinceMoment.unix(),
+                    poll_interval_sec: nextPollInterval
+                };
+            }
         }
     }
 
@@ -174,14 +182,15 @@ class CiscoduoCollector extends PawsCollector {
                 mintime: curState.mintime,
                 maxtime: curState.maxtime,
                 nextPage: nextPage,
-                poll_interval_sec: 1
+                poll_interval_sec: 60
             };
         } else {
             //There is no next page concept for this API, So Setting up the next state mintime using the last log (Unix timestamp + 1).
+            // call after 60 sec to avoid multiple api call
             return {
                 stream: curState.stream,
                 mintime: nextPage,
-                poll_interval_sec: 1
+                poll_interval_sec: 60
             };
         }
     }
