@@ -23,6 +23,7 @@ let typeIdPaths = [];
 let tsPaths = [];
 
 const Events = 'Events';
+const API_THROTTLING_ERROR = 429;
 
 class CiscoampCollector extends PawsCollector {
     constructor(context, creds) {
@@ -110,7 +111,7 @@ class CiscoampCollector extends PawsCollector {
             }).catch((error) => {
                 const errResponse = typeof error !== 'string' ? error.response : null;
 
-                if (errResponse && errResponse.body.errors[0].error_code == 429) {
+                if (errResponse && errResponse.body.errors[0].error_code === API_THROTTLING_ERROR) {
                     const rateLimitResetSecs = parseInt(errResponse['headers']['x-ratelimit-reset']);
                     const extraBufferSeconds = 60;
                     const resetSeconds = rateLimitResetSecs + extraBufferSeconds;
