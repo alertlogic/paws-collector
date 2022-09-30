@@ -140,7 +140,7 @@ class CiscoduoCollector extends PawsCollector {
             const untilMoment = moment(parseInt(curState.maxtime));
              // Used hour-cap instead of making api call for 1 min interval, may help to reduce throtling issue.
             const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-cap', untilMoment, this.pollInterval);
-            const nextPollIntervalSec = nextPollInterval > 1 ? nextPollInterval : 60;
+            const nextPollIntervalSec = nextPollInterval >= 60 ? nextPollInterval : 60;
             return {
                 stream: curState.stream,
                 mintime: nextSinceMoment.valueOf(),
