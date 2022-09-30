@@ -135,7 +135,7 @@ describe('Unit Tests', function () {
                 };
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
                     assert.equal(logs.length, 2);
-                    assert.equal(newState.poll_interval_sec, 1);
+                    assert.equal(newState.poll_interval_sec, 60);
                     assert.ok(logs[0].txid);
                     getAPILogs.restore();
                     getAPIDetails.restore();
@@ -320,7 +320,7 @@ describe('Unit Tests', function () {
                     poll_interval_sec: 1
                 };
                 let nextState = collector._getNextCollectionState(curState);
-                 assert.equal(nextState.poll_interval_sec, 1);
+                 assert.equal(nextState.poll_interval_sec, 60);
                 assert.equal(moment(parseInt(nextState.maxtime)).diff(parseInt(nextState.mintime), 'minutes'), 60);
                 done();
             });
