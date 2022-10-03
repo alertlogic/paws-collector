@@ -120,7 +120,7 @@ class CiscoampCollector extends PawsCollector {
                     state.poll_interval_sec = resetSeconds;
                     // Reduce time interval to half till 60 sec and try to fetch data again.
                     const currentInterval = moment(state.until).diff(state.since, 'seconds');
-                    if (currentInterval > 60) {
+                    if (currentInterval > 120) {
                         state.until = moment(state.since).add(Math.ceil(currentInterval / 2), 'seconds').toISOString();
                     }
                     collector.reportApiThrottling(function () {

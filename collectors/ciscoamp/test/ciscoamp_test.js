@@ -149,7 +149,7 @@ describe('Unit Tests', function () {
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
-                        return resolve({ accumulator: [ciscoampMock.LOG_EVENT, ciscoampMock.LOG_EVENT], nextPage: "nextPageUrl", newSince: ciscoampMock.LOG_EVENT.date });
+                        return resolve({ accumulator: [ciscoampMock.LOG_EVENT, ciscoampMock.LOG_EVENT], nextPage: "nextPageUrl", newSince: undefined });
                     });
                 });
             getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(

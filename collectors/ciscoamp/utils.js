@@ -35,7 +35,7 @@ function getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPages
                             //Api return the data in desending order, so set new start date fom first record.
                             newSince = accumulator[0].date;
                         }
-                        resolve({ accumulator, nextPage, newSince });
+                        resolve({ accumulator, nextPage: undefined, newSince });
                     }
                 }).catch(err => {
                     reject(err);
@@ -43,7 +43,7 @@ function getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPages
             }
             else {
                 nextPage = apiUrl;
-                resolve({ accumulator, nextPage, newSince });
+                resolve({ accumulator, nextPage, newSince: undefined });
             }
         }
     });
