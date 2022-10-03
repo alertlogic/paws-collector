@@ -31,6 +31,7 @@ const LOG_EVENT = {
     audit_log_id: 'b72fd5c0-1ec8-4b7a-b5aa-a500e64635f4',
     audit_log_user: '16db5cf986eec6f44422',
     created_at: '2020-04-20T05:30:18Z',
+    date: "2022-09-27T04:52:54+00:00",
     old_attributes:
     {
         name: null,

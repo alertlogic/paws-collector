@@ -9,11 +9,11 @@ var alserviceStub = {};
 
 describe('Unit Tests', function () {
     describe('Get API Logs', function () {
-        it('Get API Logs success', function (done) {
+        it('Get API Logs success with no nextPage', function (done) {
             alserviceStub.get = sinon.stub(RestServiceClient.prototype, 'get').callsFake(
                 function fakeFn() {
                     return new Promise(function (resolve, reject) {
-                        return resolve({ headers: { 'x-ratelimit-remaining': 2000, 'x-ratelimit-reset': 3000 }, body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: {}, results: { total: 100 } } } });
+                        return resolve({body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl" }, results: { total: 100 } } } });
                     });
                 });
             let maxPagesPerInvocation = 5;
@@ -30,6 +30,8 @@ describe('Unit Tests', function () {
             };
             const baseUrl = process.env.paws_endpoint;
             utils.getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPagesPerInvocation).then(data => {
+                // Check if there is no nextpage it will set the newSince value from received data for Events stream only
+                assert.equal(data.newSince, ciscoampMock.LOG_EVENT.date);
                 assert(accumulator.length == 1, "accumulator length is wrong");
                 alserviceStub.get.restore();
                 done();
@@ -60,40 +62,13 @@ describe('Unit Tests', function () {
             const baseUrl = process.env.paws_endpoint;
             utils.getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPagesPerInvocation).then(data => {
                 assert(accumulator.length == 5, "accumulator length is wrong");
+                assert.equal(data.newSince, null);
                 alserviceStub.get.restore();
                 done();
             });
         });
     });
 
-    describe('Get API Logs with discard condition', function () {
-        it('Get API Logs with discard condition', function (done) {
-            alserviceStub.get = sinon.stub(RestServiceClient.prototype, 'get').callsFake(
-                function fakeFn() {
-                    return new Promise(function (resolve, reject) {
-                        return resolve({ headers: { 'x-ratelimit-remaining': 199, 'x-ratelimit-reset': 3000 }, body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { next: "nextPageUrl" }, results: { total: 100 } } } });
-                    });
-                });
-            let maxPagesPerInvocation = 5;
-            let accumulator = [];
-            let authorization = "authorization";
-            let apiUrl = "apiUrl";
-            const startDate = moment().subtract(5, 'days');
-            let state = {
-                stream: "Events",
-                since: startDate.toISOString(),
-                until: startDate.add(5, 'days').toISOString(),
-                totalLogsCount: 50,
-                poll_interval_sec: 1
-            };
-            const baseUrl = process.env.paws_endpoint;
-            utils.getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPagesPerInvocation).then(data => {
-                assert(accumulator.length == 0, "accumulator length is wrong");
-                alserviceStub.get.restore();
-                done();
-            });
-        });
-    });
 
     describe('Get API Details', function () {
         it('Get API Details', function (done) {

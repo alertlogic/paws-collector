@@ -7,9 +7,7 @@ const Events = 'Events';
 function getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPagesPerInvocation) {
     let pageCount = 0;
     let nextPage;
-    let resetSeconds = null;
-    let totalLogsCount = state.totalLogsCount;
-    let discardFlag = false;
+    let newSince = null;
 
     let restServiceClient = new RestServiceClient(baseUrl);
 
@@ -22,31 +20,25 @@ function getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPages
                         "authorization": `Basic ${authorization}`
                     },
                     resolveWithFullResponse: true
-                }).then(({ headers, body }) => {
+                }).then(({ body }) => {
                     pageCount++;
-                    if (parseInt(headers['x-ratelimit-remaining']) < 200) {
-                        resetSeconds = parseInt(headers['x-ratelimit-reset']);
+
+                    if (body.data) {
+                        accumulator.push(...body.data);
                     }
-                    if (state.stream === Events && totalLogsCount !== 0 && totalLogsCount !== body.metadata.results.total) {
-                        discardFlag = true;
-                        totalLogsCount = body.metadata.results.total;
-                        resolve({ accumulator: [], nextPage, resetSeconds, totalLogsCount, discardFlag });
+                    if (body.metadata.links.next) {
+                        apiUrl = url.parse(body.metadata.links.next).path;
+                        getData();
                     }
                     else {
-                        if (state.stream === Events && totalLogsCount === 0) {
-                            //This condition works when first time call 
-                            totalLogsCount = body.metadata.results.total;
+                        if (state.stream === Events && accumulator.length > 0) {
+                            // Api return the data in desending order, so set new start date form first record if not available pull date from fallup records.
+                            newSince = accumulator[0].date ? accumulator[0].date : accumulator[1].date ? accumulator[1].date : accumulator[2].date;
+                            if (!newSince) {
+                                reject(`CAMP000005 Date is not available in Events api response`);
+                            }
                         }
-                        if (body.data) {
-                            accumulator.push(...body.data);
-                        }
-                        if (body.metadata.links.next) {
-                            apiUrl = url.parse(body.metadata.links.next).path;
-                            getData();
-                        }
-                        else {
-                            resolve({ accumulator, nextPage, resetSeconds, totalLogsCount, discardFlag });
-                        }
+                        resolve({ accumulator, nextPage: undefined, newSince });
                     }
                 }).catch(err => {
                     reject(err);
@@ -54,7 +46,7 @@ function getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPages
             }
             else {
                 nextPage = apiUrl;
-                resolve({ accumulator, nextPage, resetSeconds, totalLogsCount, discardFlag });
+                resolve({ accumulator, nextPage, newSince: undefined });
             }
         }
     });

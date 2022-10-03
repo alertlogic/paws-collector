@@ -149,7 +149,7 @@ describe('Unit Tests', function () {
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
-                        return resolve({ accumulator: [ciscoampMock.LOG_EVENT, ciscoampMock.LOG_EVENT], nextPage: "nextPage", resetSeconds: 1000 });
+                        return resolve({ accumulator: [ciscoampMock.LOG_EVENT, ciscoampMock.LOG_EVENT], nextPage: "nextPageUrl", newSince: undefined });
                     });
                 });
             getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
@@ -164,7 +164,7 @@ describe('Unit Tests', function () {
                 var collector = new CiscoampCollector(ctx, creds, 'ciscoamp');
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
-                    resource: "AuditLogs",
+                    stream: "AuditLogs",
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     nextPage: "nextPageUrl",
@@ -175,53 +175,19 @@ describe('Unit Tests', function () {
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
                     assert.equal(logs.length, 2);
                     assert.equal(newState.poll_interval_sec, 1);
-                    assert.notEqual(newState.apiQuotaResetDate, null);
+                    assert.equal(newState.apiQuotaResetDate, null);
                     assert.ok(logs[0].audit_log_id);
                     done();
                 });
 
             });
         });
-        it('Paws Get Logs Success with Events discard Flag True', function (done) {
+        it('Paws Get Logs Success with Events and nextPage value is null', function (done) {
+            ciscoampMock.LOG_EVENT.date = moment();
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
-                        return resolve({ accumulator: [], nextPage: null, resetSeconds: null, totalLogsCount: 100, discardFlag: true });
-                    });
-                });
-            getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
-                function fakeFn(state) {
-                    return {
-                        url: "api_url",
-                        typeIdPaths: [{ path: ["id"] }],
-                        tsPaths: [{ path: ["date"] }]
-                    };
-                });
-            CiscoampCollector.load().then(function (creds) {
-                var collector = new CiscoampCollector(ctx, creds, 'ciscoamp');
-                const startDate = moment().subtract(3, 'days');
-                const curState = {
-                    resource: "Events",
-                    since: startDate.toISOString(),
-                    until: startDate.add(2, 'days').toISOString(),
-                    nextPage: null,
-                    apiQuotaResetDate: null,
-                    totalLogsCount: 0,
-                    poll_interval_sec: 1
-                };
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(logs.length, 0);
-                    assert.equal(newState.poll_interval_sec, 1);
-                    done();
-                });
-
-            });
-        });
-        it('Paws Get Logs Success with Events with Events discard Flag True and nextPage value is not null', function (done) {
-            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
-                function fakeFn(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvocation) {
-                    return new Promise(function (resolve, reject) {
-                        return resolve({ accumulator: [], nextPage: "/v1/events?start_date=2020-04-01T00%3A00%3A00Z&limit=2&offset=4", resetSeconds: null, totalLogsCount: 100, discardFlag: true });
+                        return resolve({ accumulator: [ciscoampMock.LOG_EVENT, ciscoampMock.LOG_EVENT], nextPage: undefined, newSince: ciscoampMock.LOG_EVENT.date });
                     });
                 });
             getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
@@ -239,44 +205,82 @@ describe('Unit Tests', function () {
                     stream: "Events",
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
-                    nextPage: "/v1/events?start_date=2020-04-01T00%3A00%3A00Z&limit=2&offset=2",
+                    nextPage: null,
                     apiQuotaResetDate: null,
-                    totalLogsCount: 50,
+                    totalLogsCount: 0,
                     poll_interval_sec: 1
                 };
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(logs.length, 0);
-                    assert.equal(newState.nextPage, "/v1/events?start_date=2020-04-01T00:00:00Z&limit=2&offset=52");
-                    assert.equal(newState.poll_interval_sec, 1);
+                    assert.equal(logs.length, 2);
+                    assert.equal(newState.poll_interval_sec, newPollInterval);
+                    assert.equal(newState.nextPage, null);
+                    // checked  if nextpage is null then set since value from received data
+                    assert.equal(newState.since, moment(ciscoampMock.LOG_EVENT.date).toISOString());
                     done();
                 });
 
             });
         });
-        it('Paws Get Logs with API Quota Reset Date', function (done) {
+        
+        it('Paws Get Logs with throttle error and set apiQuotaResetDate', function (done) {
+            let errorObj = {
+                statusCode: 429,
+                response: {
+                    body: {
+                        version: null,
+                        data: {},
+                        errors: [
+                            {
+                                error_code: 429,
+                                description: "RateLimitExceed",
+                                details: [
+                                    "API hourly Limit Exceeded"
+                                ]
+                            }
+                        ]
+                    },
+                    headers: {
+                        "x-ratelimit-limit": "200",
+                        "x-ratelimit-reset": "59"
+                    }
+                }
+            };
+
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject(errorObj);
+                    });
+                });
+            getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
+                function fakeFn(state) {
+                    return {
+                        url: "api_url",
+                        typeIdPaths: [{ path: ["id"] }],
+                        tsPaths: [{ path: ["date"] }]
+                    };
+                });
             CiscoampCollector.load().then(function (creds) {
                 var collector = new CiscoampCollector(ctx, creds, 'ciscoamp');
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
-                    stream: "AuditLogs",
+                    stream: "Events",
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
-                    nextPage: "nextPageUrl",
-                    apiQuotaResetDate: moment().add(1000, 'seconds').toISOString(),
+                    nextPage: null,
+                    apiQuotaResetDate: null,
                     totalLogsCount: 0,
-                    poll_interval_sec: 900
+                    poll_interval_sec: 1
                 };
-
                 var reportSpy = sinon.spy(collector, 'reportApiThrottling');
-
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(err, null);
                     assert.equal(true, reportSpy.calledOnce);
                     assert.equal(logs.length, 0);
-                    assert.equal(moment(newState.until).diff(newState.since, 'days'), 1);
-                    assert.equal(newState.poll_interval_sec, 900);
+                    assert.notEqual(newState.apiQuotaResetDate, null);
+                    assert.equal(newState.poll_interval_sec, newPollInterval);
                     done();
                 });
-
             });
         });
         it('Get client error', function (done) {
