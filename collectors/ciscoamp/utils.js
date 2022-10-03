@@ -32,8 +32,11 @@ function getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPages
                     }
                     else {
                         if (state.stream === Events && accumulator.length > 0) {
-                            //Api return the data in desending order, so set new start date fom first record.
-                            newSince = accumulator[0].date;
+                            // Api return the data in desending order, so set new start date form first record if not available pull date from fallup records.
+                            newSince = accumulator[0].date ? accumulator[0].date : accumulator[1].date ? accumulator[1].date : accumulator[2].date;
+                            if (!newSince) {
+                                reject(`CAMP000005 Date is not available in Events api response`);
+                            }
                         }
                         resolve({ accumulator, nextPage: undefined, newSince });
                     }
