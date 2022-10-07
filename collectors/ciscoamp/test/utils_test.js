@@ -31,7 +31,7 @@ describe('Unit Tests', function () {
             const baseUrl = process.env.paws_endpoint;
             utils.getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPagesPerInvocation).then(data => {
                 // Check if there is no nextpage it will set the newSince value from received data for Events stream only
-                assert.equal(data.newSince, ciscoampMock.LOG_EVENT.date);
+                assert.equal(data.newSince, moment(ciscoampMock.LOG_EVENT.date).add(1,'seconds').toISOString());
                 assert(accumulator.length == 1, "accumulator length is wrong");
                 alserviceStub.get.restore();
                 done();
