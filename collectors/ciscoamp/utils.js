@@ -33,7 +33,11 @@ function getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPages
                     }
                     else {
                         if (state.stream === Events && accumulator.length > 0) {
-                            newSince = moment(accumulator[0].date).add(1, 'seconds').toISOString();
+                            const newDate = accumulator[0].date ? accumulator[0].date : accumulator[1].date ? accumulator[1].date : accumulator[2].date;
+                            newSince = moment(newDate).add(1, 'seconds');
+                            if (!newSince) {
+                                reject(`CAMP000005 Date is not available in Events api response`);
+                            }
                         }
                         resolve({ accumulator, nextPage: undefined, newSince });
                     }

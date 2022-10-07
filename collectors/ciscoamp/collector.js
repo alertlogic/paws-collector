@@ -97,7 +97,7 @@ class CiscoampCollector extends PawsCollector {
             .then(({ accumulator, nextPage, newSince }) => {
                 state.apiQuotaResetDate = null;
                 if (!nextPage && state.stream === Events && newSince) {
-                    state.until = newSince;
+                    state.until = moment(newSince).toISOString();
                 }
 
                 let newState;
