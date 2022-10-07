@@ -96,7 +96,7 @@ class CiscoampCollector extends PawsCollector {
         utils.getAPILogs(baseUrl, base64EncodedString, apiUrl, state, [], process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextPage, newSince }) => {
                 state.apiQuotaResetDate = null;
-                if (!nextPage && state.stream == Events && newSince) {
+                if (!nextPage && state.stream === Events && newSince) {
                     state.until = moment(newSince).toISOString();
                 }
 
