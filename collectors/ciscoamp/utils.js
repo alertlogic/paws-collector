@@ -33,9 +33,11 @@ function getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPages
                     }
                     else {
                         if (state.stream === Events && accumulator.length > 0) {
+                            // Api return the data in desending order, so set new start date form first record if not available pull date from fallup records.
                             const findDate = accumulator[0].date ? accumulator[0].date : accumulator[1].date ? accumulator[1].date : accumulator[2].date;
-                            newSince = moment(findDate).add(1, 'seconds');
-                            if (!newSince) {
+                            if (findDate) {
+                                newSince = moment(findDate).add(1, 'seconds');
+                            } else {
                                 reject(`CAMP000005 Date is not available in Events api response`);
                             }
                         }
