@@ -111,3 +111,18 @@ make sam-local
   4. Please see `local/event.json` for the event payload used for local invocation.
 Please write your readme here
 
+
+# Flow Digram
+![ScreenShot](./docs/CiscoAMP_flow_diagram.png)
+
+# EventApi duplication Scenario
+When collector is lacking behind and pages are more than maxPagesPerInvocation(Default is 10).
+Cisco AMP api return the data in descending order, as we go through pages, data become older. If we pick the date from last received page for next collection then that date is older and not the current value still which we already fetch the data. 
+When we start next collection it adding duplicate data.
+Explain  with example :
+If I make api call(https://api.amp.cisco.com/v1/events?start_date=2022-10-09T13:49:45.000Z) at 11-10-2022T05:52:000Z (UTC), api return the data since last min till start_date value.
+![ScreenShot](./docs/CiscoAMP_EventApi_response.png)
+
+Total record recived in api call `"total": 5436` and each page it return with 500 records. In one invocation we can read max 10 pages. In this scenario we need one more invocation to fetch rest of data.
+When we read all pages and reached to last one then metadata data does not have **next page link** and so we were fetching the date from received message which is older as show below in screen shot
+![ScreenShot](./docs/CiscoAMP_EventApi_last_response.png)
