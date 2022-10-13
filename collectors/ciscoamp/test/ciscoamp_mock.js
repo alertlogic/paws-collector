@@ -19,6 +19,7 @@ process.env.paws_api_client_id = "client_id";
 process.env.paws_endpoint = "https://ciscoamp.com";
 process.env.collector_streams = "[\"AuditLogs\",\"Events\"]";
 process.env.AWS_LAMBDA_FUNCTION_NAME = "test";
+process.env.paws_max_pages_per_invocation = 10;
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',

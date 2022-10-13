@@ -32,8 +32,8 @@ describe('Unit Tests', function () {
             utils.getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPagesPerInvocation).then(data => {
                 assert(accumulator.length == 1, "accumulator length is wrong");
                 assert.equal(data.nextPage, undefined);
-                // Check if there is no nextpage it will set the newSince value from state for Events stream only
-                assert.equal(moment(data.newSince).toISOString() , moment(state.until).add(1,'seconds').toISOString());
+                // Check if there is no nextpage it will set the newSince value from received data for Events stream only
+                assert.equal(moment(data.newSince).toISOString(), moment(ciscoampMock.LOG_EVENT.date).toISOString());
                 alserviceStub.get.restore();
                 done();
             });
@@ -92,7 +92,7 @@ describe('Unit Tests', function () {
             utils.getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPagesPerInvocation).then(data => {
                 assert(accumulator.length == 5, "accumulator length is wrong");  
                 assert.equal(data.nextPage, 'nextPageUrl');
-                assert.equal(data.newSince, null);
+                assert.notEqual(data.newSince, null);
                 alserviceStub.get.restore();
                 done();
             });
@@ -129,7 +129,7 @@ describe('Unit Tests', function () {
             const baseUrl = process.env.paws_endpoint;
             utils.getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPagesPerInvocation).then(data => {
                 assert(accumulator.length == 4, "accumulator length is wrong");
-                assert.equal(moment(data.newSince).toISOString(), moment(state.until).add(1, 'seconds').toISOString());
+                assert.equal(moment(data.newSince).toISOString(), moment(ciscoampMock.LOG_EVENT.date).toISOString());
                 assert.equal(data.nextPage, null);
                 alserviceStub.get.restore();
                 done();

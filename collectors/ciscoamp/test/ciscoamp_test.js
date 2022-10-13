@@ -4,12 +4,14 @@ var AWS = require('aws-sdk-mock');
 const m_response = require('cfn-response');
 const ciscoampMock = require('./ciscoamp_mock');
 var CiscoampCollector = require('../collector').CiscoampCollector;
+const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClient;
 const moment = require('moment');
 const utils = require("../utils");
 
 
 var responseStub = {};
 let getAPILogs, getAPIDetails;
+var alserviceStub = {};
 
 describe('Unit Tests', function () {
     beforeEach(function () {
@@ -183,22 +185,68 @@ describe('Unit Tests', function () {
 
             });
         });
-        it('Paws Get Logs Success with Events and nextPage value is null', function (done) {
-            const startDate = moment().subtract(3, 'days');
-            const curState = {
-                stream: "Events",
-                since: startDate.toISOString(),
-                until: startDate.add(2, 'days').toISOString(),
-                nextPage: null,
-                apiQuotaResetDate: null,
-                totalLogsCount: 0,
-                poll_interval_sec: 1
-            };
-            const NextCollectionStartTime = moment(curState.until).add(1,'seconds');
-            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
-                function fakeFn(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvocation) {
+        it('Paws Get Logs Success with EventsApi and return nextPage value as null if pages are less than paws_max_pages_per_invocation', function (done) {
+            // If there are 3 pages then it read all pages in one invocation and return 1st message date as newSince from received data.
+            let count = 0;
+            const lastOneHrTimeStamp = moment().subtract(1, 'hours').toISOString();
+            alserviceStub.get = sinon.stub(RestServiceClient.prototype, 'get').callsFake(
+                function fakeFn() {
+                    if (count < 2) {
+                        count++;
+                        ciscoampMock.LOG_EVENT.date = lastOneHrTimeStamp;
+                        return new Promise(function (resolve, reject) {
+                            return resolve({ body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: "nextPageUrl" }, results: { total: 100 } } } });
+                        });
+                    } else {
+                        ciscoampMock.LOG_EVENT.date = moment().subtract(2, 'days').toISOString();
+                        return new Promise(function (resolve, reject) {
+                            return resolve({ body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl" }, results: { total: 100 } } } });
+                        });
+                    }
+                });
+            getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
+                function fakeFn(state) {
+                    return {
+                        url: "api_url",
+                        typeIdPaths: [{ path: ["id"] }],
+                        tsPaths: [{ path: ["date"] }]
+                    };
+                });
+            CiscoampCollector.load().then(function (creds) {
+                var collector = new CiscoampCollector(ctx, creds, 'ciscoamp');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    stream: "Events",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    nextPage: null,
+                    apiQuotaResetDate: null,
+                    totalLogsCount: 0,
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(logs.length, 3);
+                    assert.equal(newState.poll_interval_sec, newPollInterval);
+                    assert.equal(newState.nextPage, null);
+                    // checked if nextpage is null then set since value from received data
+                    assert.equal(newState.since, moment(lastOneHrTimeStamp).add(1, 'seconds').toISOString());
+                    alserviceStub.get.restore();
+                    done();
+                });
+
+            });
+        });
+
+        it('Paws Get Logs Success from EventsApi and retun nextPage and newSince if pages are greater than paws_max_pages_per_invocation', function (done) {
+            // If there are 15 pages then it read 10 pages in one invocation and return 11 page url and 1st message date as newSince from received data.
+            let count = 0;
+            const lastOneHrTimeStamp = moment().subtract(1, 'hours').toISOString();
+            alserviceStub.get = sinon.stub(RestServiceClient.prototype, 'get').callsFake(
+                function fakeFn() {
+                    count++;
+                    ciscoampMock.LOG_EVENT.date = count === 1 ? lastOneHrTimeStamp : moment().subtract(count, 'hours').toISOString();
                     return new Promise(function (resolve, reject) {
-                        return resolve({ accumulator: [ciscoampMock.LOG_EVENT, ciscoampMock.LOG_EVENT], nextPage: undefined, newSince: NextCollectionStartTime });
+                        return resolve({ body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: `nextPageUrl${count}` }, results: { total: 100 } } } });
                     });
                 });
             getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
@@ -211,12 +259,117 @@ describe('Unit Tests', function () {
                 });
             CiscoampCollector.load().then(function (creds) {
                 var collector = new CiscoampCollector(ctx, creds, 'ciscoamp');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    stream: "Events",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    nextPage: null,
+                    apiQuotaResetDate: null,
+                    totalLogsCount: 0,
+                    poll_interval_sec: 1
+                };
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(logs.length, 2);
+                    assert.equal(logs.length, 10);
+                    assert.equal(newState.poll_interval_sec, newPollInterval);
+                    assert.equal(newState.nextPage, 'nextPageUrl10');
+                    // checked date from first page will be store in state.until
+                    assert.equal(newState.until, moment(lastOneHrTimeStamp).add(1, 'seconds').toISOString());
+                    alserviceStub.get.restore();
+                    done();
+                });
+            });
+        });
+
+        it('Paws EventsApi Success with logs and retun new nextPage and state.untill if still pages are greater than paws_max_pages_per_invocation', function (done) {
+            // If there are 25 pages and it already read 10page then it read next 10 pages in 2nd invocation and return 21 page url and same state.until from received data.
+            let count = 0;
+            alserviceStub.get = sinon.stub(RestServiceClient.prototype, 'get').callsFake(
+                function fakeFn() {
+                    count++;
+                    ciscoampMock.LOG_EVENT.date = moment().subtract(count, 'hours').toISOString();
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: `nextPageUrl${10 + count}` }, results: { total: 100 } } } });
+                    });
+                });
+            getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
+                function fakeFn(state) {
+                    return {
+                        url: "api_url",
+                        typeIdPaths: [{ path: ["id"] }],
+                        tsPaths: [{ path: ["date"] }]
+                    };
+                });
+            CiscoampCollector.load().then(function (creds) {
+                var collector = new CiscoampCollector(ctx, creds, 'ciscoamp');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    stream: "Events",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    nextPage: `nextPageUrl10`,
+                    apiQuotaResetDate: null,
+                    totalLogsCount: 0,
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(logs.length, 10);
+                    assert.equal(newState.poll_interval_sec, newPollInterval);
+                    assert.equal(newState.nextPage, 'nextPageUrl20');
+                    // checked date from first page will be store in state.until
+                    assert.equal(newState.until, curState.until);
+                    alserviceStub.get.restore();
+                    done();
+                });
+
+            });
+        });
+
+        it('Paws EventsApi Success with logs and retun newSince for nextCollection and nextPage is undefined', function (done) {
+            // If there are 25 pages and it already read 20 page then it read next 10 pages in 2nd invocation and return 21 page url and same state.until from received data.
+            let count = 0;
+            alserviceStub.get = sinon.stub(RestServiceClient.prototype, 'get').callsFake(
+                function fakeFn() {
+                    count++;
+                    if (count < 5) {
+                        ciscoampMock.LOG_EVENT.date = moment().subtract(count, 'hours').toISOString();
+                        return new Promise(function (resolve, reject) {
+                            return resolve({ body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: `nextPageUrl${20 + count}` }, results: { total: 100 } } } });
+                        });
+                    } else {
+                        ciscoampMock.LOG_EVENT.date = ciscoampMock.LOG_EVENT.date = moment().subtract(count, 'hours').toISOString();
+                        return new Promise(function (resolve, reject) {
+                            return resolve({ body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl" }, results: { total: 100 } } } });
+                        });
+                    }
+                });
+            getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
+                function fakeFn(state) {
+                    return {
+                        url: "api_url",
+                        typeIdPaths: [{ path: ["id"] }],
+                        tsPaths: [{ path: ["date"] }]
+                    };
+                });
+            CiscoampCollector.load().then(function (creds) {
+                var collector = new CiscoampCollector(ctx, creds, 'ciscoamp');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    stream: "Events",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    nextPage: `nextPageUrl10`,
+                    apiQuotaResetDate: null,
+                    totalLogsCount: 0,
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(logs.length, 5);
                     assert.equal(newState.poll_interval_sec, newPollInterval);
                     assert.equal(newState.nextPage, null);
-                    // checked if nextpage is null then set since value from state.until
-                    assert.notEqual(newState.since , null);
+                    // checked date from first page date set to state.since for nextCollection
+                    assert.equal(newState.since, curState.until);
+                    alserviceStub.get.restore();
                     done();
                 });
 

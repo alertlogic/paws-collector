@@ -1,6 +1,5 @@
 const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClient;
 var url = require("url");
-const moment = require('moment');
 
 const Audit_Logs = 'AuditLogs';
 const Events = 'Events';
@@ -27,16 +26,18 @@ function getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPages
                     if (body.data) {
                         accumulator.push(...body.data);
                     }
+                    if (state.stream === Events && accumulator.length > 0 && pageCount === 1) {
+                        // Api return the data in desending order, so set new start date form first record if not available pull date from fallup records.
+                        newSince = accumulator[0].date ? accumulator[0].date : accumulator[1].date ? accumulator[1].date : accumulator[2].date;
+                        if (!newSince) {
+                            reject(`CAMP000005 Date is not available in Events api response`);
+                        }
+                    }
                     if (body.metadata.links.next) {
                         apiUrl = url.parse(body.metadata.links.next).path;
                         getData();
                     }
                     else {
-                        if (state.stream === Events && accumulator.length > 0) {
-                            // Api return the data in desending order, If there are lots of pages, when we go through page it return older data and old date. 
-                            // As we already read the data till current time stamp, so adding 1 sec for next collection to avoid duplication of records.
-                            newSince = moment(state.until).add(1, 'seconds');
-                        }
                         resolve({ accumulator, nextPage: undefined, newSince });
                     }
                 }).catch(err => {
@@ -45,7 +46,7 @@ function getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPages
             }
             else {
                 nextPage = apiUrl;
-                resolve({ accumulator, nextPage, newSince: undefined });
+                resolve({ accumulator, nextPage, newSince});
             }
         }
     });
