@@ -111,10 +111,6 @@ make sam-local
   4. Please see `local/event.json` for the event payload used for local invocation.
 Please write your readme here
 
-
-# Flow Digram
-![ScreenShot](./docs/CiscoAMP_flow_diagram.png)
-
 # EventApi duplication Scenario
 When collector is lacking behind and pages are more than maxPagesPerInvocation(Default is 10).
 Cisco AMP api return the data in descending order, as we go through pages, data become older. If we pick the date from last received page for next collection then that date is older and not the current value still which we already fetch the data. 
