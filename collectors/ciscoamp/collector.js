@@ -96,8 +96,9 @@ class CiscoampCollector extends PawsCollector {
         utils.getAPILogs(baseUrl, base64EncodedString, apiUrl, state, [], process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextPage, newSince }) => {
                 state.apiQuotaResetDate = null;
-                if (!nextPage && state.stream === Events && newSince) {
-                    state.until = moment(newSince).toISOString();
+                if (state.stream === Events && apiUrl === resourceDetails.url && newSince) {
+                    // Added 1 more secs in received date to avoid duplication of message
+                    state.until = moment(newSince).add(1, 'seconds').toISOString();
                 }
 
                 let newState;
