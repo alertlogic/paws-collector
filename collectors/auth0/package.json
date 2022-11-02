@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "lint": "jshint --exclude \"./node_modules/*\" **/*.js",
-    "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=text mocha --colors"
+    "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=cobertura --reporter=text mocha --colors"
   },
   "devDependencies": {
     "aws-sdk": "*",

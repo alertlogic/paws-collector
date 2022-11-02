@@ -18,8 +18,9 @@ compile: deps
 test: compile
 	npm run test
 	@echo "Running Code Coverage."	
-	cp coverage/cobertura-coverage.xml paws-collector.coverage.xml
-	@./local/run-coverage.sh -c 'paws-collector.coverage.xml'
+	cp coverage/cobertura-coverage.xml $(AWS_LAMBDA_PAWS_FUNCTION_NAME).coverage.xml
+	@./local/run-coverage.sh -c '$(AWS_LAMBDA_PAWS_FUNCTION_NAME).coverage.xml'
+	rm -rf $(AWS_LAMBDA_PAWS_FUNCTION_NAME).coverage.xml
 
 test-all: compile
 	npm run test
@@ -57,4 +58,5 @@ clean:
 	rm -f test/report.xml
 	rm -f *.coverage.xml
 	rm -rf ./coverage/
-	rm -rf .ps_outputs
+	rm -rf ./ps_outputs/
+	rm -rf ./nyc_output/
