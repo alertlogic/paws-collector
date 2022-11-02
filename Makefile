@@ -17,7 +17,7 @@ compile: deps
 
 test: compile
 	npm run test
-	@echo "Running Code Coverage."	
+	@echo "Running Code Coverage for $(AWS_LAMBDA_PAWS_FUNCTION_NAME)."	
 	cp coverage/cobertura-coverage.xml $(AWS_LAMBDA_PAWS_FUNCTION_NAME).coverage.xml
 	@./local/run-coverage.sh -c '$(AWS_LAMBDA_PAWS_FUNCTION_NAME).coverage.xml'
 	rm -rf $(AWS_LAMBDA_PAWS_FUNCTION_NAME).coverage.xml
