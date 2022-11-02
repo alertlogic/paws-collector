@@ -6,6 +6,7 @@ test/report.xml
 nbproject/
 .nyc_output/
 coverage/
+*.coverage.xml
 .ps_outputs/
 test/ide_test.js
 .env
