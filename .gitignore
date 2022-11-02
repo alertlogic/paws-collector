@@ -5,6 +5,8 @@ test/report.xml
 .idea/
 nbproject/
 .nyc_output/
+coverage/
+.ps_outputs/
 test/ide_test.js
 .env
 **/local/env.json

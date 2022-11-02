@@ -17,7 +17,10 @@ compile: deps
 
 test: compile
 	npm run test
-	
+	@echo "Running Code Coverage."	
+	cp coverage/cobertura-coverage.xml paws-collector.coverage.xml
+	@./local/run-coverage.sh -c 'paws-collector.coverage.xml'
+
 test-all: compile
 	npm run test
 	for d in $(COLLECTOR_DIRS); do \
@@ -53,3 +56,4 @@ clean:
 	rm -f package-lock.json
 	rm -f test/report.xml
 	rm -rf ./coverage/
+	rm -rf .ps_outputs
