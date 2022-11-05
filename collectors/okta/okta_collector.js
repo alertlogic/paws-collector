@@ -116,6 +116,7 @@ class OktaCollector extends PawsCollector {
         sensitiveFields.forEach((path) => this.redactValue(path, msg));
 
         let formattedMsg = {
+            hostname: collector.collector_id,
             messageTs: ts.sec,
             priority: 11,
             progName: 'OktaCollector',
