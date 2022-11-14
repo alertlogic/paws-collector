@@ -1,6 +1,6 @@
 {
   "name": "@alertlogic/paws-collector",
-  "version": "2.1.8",
+  "version": "2.1.9",
   "license": "MIT",
   "description": "Alert Logic AWS based API Poll Log Collector Library",
   "repository": {
@@ -15,7 +15,7 @@
   ],
   "scripts": {
     "lint": "jshint --exclude \"./node_modules/*\" **/*.js",
-    "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=cobertura mocha --colors",
+    "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=cobertura --reporter=text mocha --colors",
     "create-collector": "node create-collector.js",
     "bump-collector-versions": "node update-collector-versions.js",
     "rel": "npm publish --access=public"

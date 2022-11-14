@@ -11,7 +11,7 @@ stages:
         image: node:14
         compute_size: small
         commands:
-            - make test
+            - make test-all
 
     -
         name: Master Push - Publish
@@ -22,8 +22,6 @@ stages:
         commands:
             - |
               set -ex
-              #git config --global --add url."git@github.com:".insteadOf "https://github.com/"
-  
               echo //registry.npmjs.org/:_authToken=$NPM_TOKEN > .npmrc
               npm whoami
               
