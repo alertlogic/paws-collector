@@ -11,7 +11,7 @@ stages:
         image: node:14
         compute_size: small
         commands:
-            - make test-all
+            - make test
         outputs:
             file: ./.ps_outputs/*  
     -
@@ -21,6 +21,7 @@ stages:
         image: node:14
         compute_size: small
         commands:
+            - make test-all
             - |
               set -ex
               echo //registry.npmjs.org/:_authToken=$NPM_TOKEN > .npmrc
@@ -45,4 +46,5 @@ stages:
                  echo "NOT PUBLISHING $PKGNAME $PKGVERSION"
               fi
             - echo done
-            
+        outputs:
+            file: ./.ps_outputs/* 
