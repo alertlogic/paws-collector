@@ -21,7 +21,7 @@ test: compile
 	npm run test
 	@echo "Running Code Coverage for $(AWS_LAMBDA_PAWS_FUNCTION_NAME)."	
 	mkdir ".ps_outputs"
-	cp coverage/cobertura-coverage.xml ./.ps_outputs/coverage.cobertura.xml
+	cp coverage/cobertura-coverage.xml coverage/coverage.cobertura.xml
 	cp coverage/cobertura-coverage.xml ./.ps_outputs/$(AWS_LAMBDA_PAWS_FUNCTION_NAME).covertool.xml
 	
 test-all: test
