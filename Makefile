@@ -29,7 +29,7 @@ test-all: test
 	    make -C collectors/$$d test || exit 1; \
 		if [ -d "./collectors/$$d/coverage" ]; then \
 		  echo "\n************ Copying Code Coverage files $$d ************\n\n"; \
-          cp ./collectors/$$d/coverage/cobertura-coverage.xml ./.ps_outputs/$$d.covertool.xml; \
+                  cp ./collectors/$$d/coverage/cobertura-coverage.xml ./.ps_outputs/$$d.covertool.xml; \
 		fi; \
 	done;
 
