@@ -15,7 +15,7 @@
   ],
   "scripts": {
     "lint": "jshint --exclude \"./node_modules/*\" **/*.js",
-    "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=cobertura --reporter=text mocha --colors",
+    "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=cobertura --reporter=text --reporter=lcov  mocha --colors",
     "create-collector": "node create-collector.js",
     "bump-collector-versions": "node update-collector-versions.js",
     "rel": "npm publish --access=public"
