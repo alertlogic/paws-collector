@@ -12,8 +12,7 @@ stages:
         compute_size: small
         commands:
             - make test
-        outputs:
-            file: ./.ps_outputs/*  
+        
     -
         name: Master Push - Publish
         when:
