@@ -6,6 +6,9 @@ node_modules/
 nbproject/
 .nyc_output/
 coverage/
+*.coverage.xml
+*.covertool.xml
+.ps_outputs/
 test/ide_test.js
 .env
 .project

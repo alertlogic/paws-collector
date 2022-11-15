@@ -12,7 +12,7 @@ stages:
         compute_size: small
         commands:
             - make test
-
+        
     -
         name: Master Push - Publish
         when:
@@ -22,8 +22,6 @@ stages:
         commands:
             - |
               set -ex
-              #git config --global --add url."git@github.com:".insteadOf "https://github.com/"
-  
               echo //registry.npmjs.org/:_authToken=$NPM_TOKEN > .npmrc
               npm whoami
               
@@ -38,6 +36,7 @@ stages:
               npm install
               
               if [ "$WORDCOUNT" -eq 0 ]; then
+                 make test-all
                  echo "PUBLISHING $PKGNAME $PKGVERSION"
                  npm run lint
                  git push origin $PKGVERSION
@@ -46,4 +45,5 @@ stages:
                  echo "NOT PUBLISHING $PKGNAME $PKGVERSION"
               fi
             - echo done
-            
+        outputs:
+            file: ./.ps_outputs/* 

@@ -14,5 +14,7 @@ test/ide_test.js
 **/report.xml
 **.swp
 **.swo
-
+*.coverage.xml
+*.covertool.xml
+.ps_outputs/
 *.DS_Store

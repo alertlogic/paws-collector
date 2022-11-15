@@ -45,4 +45,7 @@ clean:
 	rm -f package-lock.json
 	rm -f test/report.xml
 	rm -rf ./coverage/
+	rm -rf .nyc_output/
+	rm -rf *.coverage.xml
+	rm -rf *.covertool.xml
 

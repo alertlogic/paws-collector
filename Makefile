@@ -4,6 +4,8 @@ AWS_LAMBDA_PAWS_PACKAGE_NAME ?= al-paws-collector.zip
 AWS_CFN_TEMPLATE_PATH ?= ./cfn/paws-collector.template
 AWS_CFN_TEMPLATE_SHARED_PATH ?= ./cfn/paws-collector-shared.template
 COLLECTOR_DIRS ?= $(shell find collectors/ -type d -maxdepth 1 -mindepth 1)
+COLLECTOR_NAMES ?= $(shell find collectors/ -type d -maxdepth 1 -mindepth 1 -exec basename {} \;)
+
 
 .PHONY: test
 
@@ -17,14 +19,21 @@ compile: deps
 
 test: compile
 	npm run test
+	@echo "Running Code Coverage for $(AWS_LAMBDA_PAWS_FUNCTION_NAME)."	
+	mkdir ".ps_outputs"
+	cp coverage/cobertura-coverage.xml ./coverage/coverage.cobertura.xml
+	cp coverage/cobertura-coverage.xml ./.ps_outputs/$(AWS_LAMBDA_PAWS_FUNCTION_NAME).covertool.xml
 	
-test-all: compile
-	npm run test
-	for d in $(COLLECTOR_DIRS); do \
+test-all: test
+	for d in $(COLLECTOR_NAMES); do \
 	    echo "\n************\n\nrunning tests for $$d\n\n************\n\n"; \
-	    make -C $$d test || exit 1; \
+	    make -C collectors/$$d test || exit 1; \
+	    if [ -d "./collectors/$$d/coverage" ]; then \
+	      echo "\n************ Copying Code Coverage files $$d ************\n\n"; \
+              cp ./collectors/$$d/coverage/cobertura-coverage.xml ./.ps_outputs/$$d.covertool.xml; \
+	    fi; \
 	done;
-	
+
 package: test package.zip
 
 package.zip: node_modules/ *.js package.json
@@ -53,3 +62,13 @@ clean:
 	rm -f package-lock.json
 	rm -f test/report.xml
 	rm -rf ./coverage/
+	rm -rf .ps_outputs/
+	rm -rf .nyc_output/
+	rm -rf *.coverage.xml
+	rm -rf *.covertool.xml
+	for d in $(COLLECTOR_DIRS); do \
+        echo "\n************\n\cleaning for $$d\n\n************\n\n"; \
+        if [ "$$d" != "collectors//template" ]; then \
+                make -C $$d clean || exit 1; \
+        fi \
+    done;
