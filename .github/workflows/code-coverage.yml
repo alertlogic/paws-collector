@@ -1,6 +1,6 @@
 on: ["push", "pull_request"]
 
-name: Test Coveralls
+name: Test Coverage
 
 jobs:
 
@@ -19,10 +19,3 @@ jobs:
     - name: make test-all
       run: |
         make test-all
-
-    - name: Add Coverage PR Comment
-      uses: marocchino/sticky-pull-request-comment@v2
-      if: github.event_name == 'pull_request'
-      with:
-        recreate: true
-        path: code-coverage-results.md
