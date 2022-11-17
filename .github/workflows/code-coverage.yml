@@ -1,6 +1,6 @@
 on: ["push", "pull_request"]
 
-name: Test Coveralls
+name: Test Coverage
 
 jobs:
 
@@ -19,10 +19,3 @@ jobs:
     - name: make test-all
       run: |
         make test-all
-
-    - name: Test and Generate Coverage
-      uses: 5monkeys/cobertura-action@master
-      with:
-       path: ./coverage/*.xml
-       repo_token: ${{secrets.GITHUB_TOKEN}}
-       minimum_coverage: 75
