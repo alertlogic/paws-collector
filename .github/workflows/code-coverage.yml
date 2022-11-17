@@ -20,9 +20,9 @@ jobs:
       run: |
         make test-all
 
-    - name: Add Coverage PR Comment
-      uses: marocchino/sticky-pull-request-comment@v2
-      if: github.event_name == 'pull_request'
+    - name: Test and Generate Coverage
+      uses: 5monkeys/cobertura-action@master
       with:
-        recreate: true
-        path: code-coverage-results.md
+       path: ./coverage/*.xml
+       repo_token: ${{secrets.GITHUB_TOKEN}}
+       minimum_coverage: 75
