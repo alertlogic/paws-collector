@@ -31,13 +31,13 @@ stages:
               
               git config --global credential.helper \'store\' || true
               echo "https://$ALPS_GH_USER:$ALPS_GH_TOKEN@github.com" > ~/.git-credentials
-              git tag -a $PKGVERSION -m "$PKGNAME release $PKGVERSION" HEAD
  
               npm install
               
               if [ $(git tag -l "$PKGVERSION") ]; then
                 echo "Skip tagging $PKGNAME $PKGVERSION version already exist"
               else
+                git tag -a $PKGVERSION -m "$PKGNAME release $PKGVERSION" HEAD
                 if [ "$WORDCOUNT" -eq 0 ]; then
                   make test-all
                   echo "PUBLISHING $PKGNAME $PKGVERSION"
