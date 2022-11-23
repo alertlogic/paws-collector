@@ -35,14 +35,18 @@ stages:
  
               npm install
               
-              if [ "$WORDCOUNT" -eq 0 ]; then
-                 make test-all
-                 echo "PUBLISHING $PKGNAME $PKGVERSION"
-                 npm run lint
-                 git push origin $PKGVERSION
-                 npm publish --access public
+              if [ $(git tag -l "$PKGVERSION") ]; then
+                echo "Skip tagging $PKGNAME $PKGVERSION version already exist"
               else
+                if [ "$WORDCOUNT" -eq 0 ]; then
+                  make test-all
+                  echo "PUBLISHING $PKGNAME $PKGVERSION"
+                  npm run lint
+                  git push origin $PKGVERSION
+                  npm publish --access public
+                else
                  echo "NOT PUBLISHING $PKGNAME $PKGVERSION"
+                fi
               fi
             - echo done
         outputs:
