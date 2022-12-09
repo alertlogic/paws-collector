@@ -144,11 +144,6 @@
             "Type": "String",
             "Default": "true",
             "AllowedValues":["true"]
-        },
-        "ExistingDeadLetterQueueArn":{
-            "Description": "Dead-letter queue to collect failed message",
-            "Type": "String",
-            "Default": ""
         }
     },
     "Conditions":{
@@ -690,12 +685,6 @@
          "Properties":{
             "VisibilityTimeout": 900,
             "MessageRetentionPeriod": 1209600,
-            "RedrivePolicy": {
-                "deadLetterTargetArn": {
-                    "Ref": "ExistingDeadLetterQueueArn"
-                },
-                "maxReceiveCount": 10
-            },
             "Tags": [
                 {
                     "Key": "QueueName",

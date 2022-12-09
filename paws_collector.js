@@ -688,9 +688,8 @@ class PawsCollector extends AlAwsCollector {
     _storeCollectionState(pawsState, privCollectorState, invocationTimeout, callback) {
         // Added extra parameter to identify the message from which collector in case it failed and went into DLQ
         let extraParam = {
-            lambda_function_name: process.env.AWS_LAMBDA_FUNCTION_NAME,
             customer_id: process.env.customer_id,
-            account_id: this._awsAccountId
+            collector_id: this._collectorId
         };
         pawsState = Object.assign(pawsState, extraParam);
         if (Array.isArray(privCollectorState)) {

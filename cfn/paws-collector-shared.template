@@ -254,7 +254,7 @@
                 "deadLetterTargetArn": {
                     "Ref": "ExistingDeadLetterQueueArn"
                 },
-                "maxReceiveCount": 10
+                "maxReceiveCount": 3
             },
             "Tags": [
                 {
