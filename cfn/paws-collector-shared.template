@@ -167,6 +167,10 @@
         "ExistingControlSnsArn" :{
             "Description": "SNS topic ARN used for triggering collector checkins an updates",
             "Type": "String"
+        },
+        "ExistingDeadLetterQueueArn":{
+            "Description": "Dead-letter queue to collect failed message",
+            "Type": "String"
         }
     },
     "Resources":{
@@ -248,20 +252,7 @@
             "MessageRetentionPeriod": 1209600,
             "RedrivePolicy": {
                 "deadLetterTargetArn": {
-                    "Fn::Join": [
-                        "",
-                        [
-                            "arn:aws:sqs:",
-                            {
-                                "Ref": "AWS::Region"
-                            },
-                            ":",
-                            {
-                                "Ref": "AWS::AccountId"
-                            },
-                            ":Paws-shared-deadLetterQueue"
-                        ]
-                    ]
+                    "Ref": "ExistingDeadLetterQueueArn"
                 },
                 "maxReceiveCount": 10
             },
