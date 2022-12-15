@@ -825,7 +825,7 @@ describe('Unit Tests', function() {
                     done();
                 }
             };
-            let ingestError = "404 - \"{\"error\":\"Customer Not Active in AIMS\"}";
+            let ingestError = "AWSC0018 failed to send the logmsgs : 404 - \"{\"error\":\"Customer Not Active in AIMS\"}";
             let processLog = sinon.stub(m_al_aws.AlAwsCollector.prototype, 'processLog').callsFake(
                 function fakeFn(messages, formatFun, hostmetaElems, callback) {
                     return callback(ingestError);
