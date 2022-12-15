@@ -812,6 +812,35 @@ describe('Unit Tests', function() {
                 
             });
         });
+        it('Extract the error code from ingest error message', function (done) {
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    sinon.assert.calledOnce(processLog);
+                    processLog.restore();
+                    done();
+                }
+            };
+            let ingestError = "404 - \"{\"error\":\"Customer Not Active in AIMS\"}";
+            let processLog = sinon.stub(m_al_aws.AlAwsCollector.prototype, 'processLog').callsFake(
+                function fakeFn(messages, formatFun, hostmetaElems, callback) {
+                    return callback(ingestError);
+                });
+
+            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback());
+            TestCollector.load().then(function (creds) {
+                var collector = new TestCollector(ctx, creds);
+                collector.batchLogProcess(['log1', 'log2'], { state: 'new-state' }, 900, (err, res) => {
+                    assert.equal(ingestError, err);
+                    AWS.restore('CloudWatch');
+                    done();
+                });
+            });
+        });
         it('reportApiThrottling', function(done) {
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,

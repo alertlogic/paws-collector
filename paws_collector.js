@@ -549,7 +549,8 @@ class PawsCollector extends AlAwsCollector {
         Promise.all(promises).then((res) => {
             return callback(null, privCollectorState, nextInvocationTimeout);
         }).catch((err) => {
-            collector.reportErrorToIngestApi(err, () => {
+            const errorObject = typeof (err) === 'object' ? err : { errorCode: err.slice(0, 3) };
+            collector.reportErrorToIngestApi(errorObject, () => {
                 return callback(err);
             });
         });
