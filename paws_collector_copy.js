@@ -462,6 +462,8 @@ class PawsCollector extends AlAwsCollector {
                     return collector._storeCollectionState(pawsState, privCollectorState, nextInvocationTimeout, asyncCallback);
                 }
             ], function(handleError) {
+                AlLogger.info(`handleError ${ JSON.stringify(handleError)}`);
+                let isIngestError = isIngestError(handleError);
                 if( handleError && handleError.errorCode === ERROR_CODE_DUPLICATE_STATE) {
                     // We need to fail invocation for duplicate state handling
                     // because we don't want delete SQS message which is being handled by another invocation
@@ -469,7 +471,14 @@ class PawsCollector extends AlAwsCollector {
                 } else if (handleError && handleError.errorCode === ERROR_CODE_COMPLETED_STATE) {
                     // For already completed states we need to just remove the state message from SQS
                     collector.done(null, pawsState, false);
-                } else {
+                } 
+                // else if (isIngestError) {
+                    
+                //   // check errorCode 400 and error 
+                //   const ddbStatus = handleError ? isIngestError? STATE_RECORD_INCOMPLETE : STATE_RECORD_FAILED : STATE_RECORD_COMPLETE;
+                //   // update status to STATE_RECORD_INCOMPLETE in DDB and send the new SQS message with next window
+                // }
+                else {
                    const ddbStatus = handleError ? STATE_RECORD_FAILED : STATE_RECORD_COMPLETE;
                     collector.updateStateDBEntry(stateSqsMsg, ddbStatus, function() {
                         if(handleError) {
@@ -479,6 +488,7 @@ class PawsCollector extends AlAwsCollector {
                             // The invocation is marked as succeed in order to clean up current state message in SQS.
                             // Increment/reset the retry count if error occured. 
                             pawsState.retry_count = (!pawsState.retry_count || pawsState.retry_count >= MAX_ERROR_RETRIES) ? 1 : pawsState.retry_count + 1;
+                            
                             collector._storeCollectionState(pawsState, pawsState.priv_collector_state, 300, function(storeError){
                                 if (!storeError){
                                     collector.reportErrorStatus(handleError, pawsState, (statusSendError, handleErrorString) => {
@@ -549,19 +559,26 @@ class PawsCollector extends AlAwsCollector {
         Promise.all(promises).then((res) => {
             return callback(null, privCollectorState, nextInvocationTimeout);
         }).catch((err) => {
-            let errorObject = {};
-            if (typeof (err) === 'object') {
-                errorObject = Object.assign(errorObject, err);
-            } else {
-                let splitErrorMessage = err.split(':');
-                errorObject.errorCode = splitErrorMessage[1].slice(1, 4);
-            }
-            collector.reportErrorToIngestApi(errorObject, () => {
+            // {
+            //     "error": "body encoding invalid"
+            // }
+            // isBodyEncodingInvalidError = isIngestError(err);
+            // if(isBodyEncodingInvalidError){
+            //     // then add new SQS message with next interval
+            // }
+            
+            collector.reportErrorToIngestApi(err, () => {
                 return callback(err);
             });
         });
     }
 
+    isIngestError(err){
+        if(err.statusCode == 400 && err.error === 'body encoding invalid'){
+            return true;
+        }
+        false;
+    }
     reportApiThrottling(callback) {
         // TODO: report collector status via Ingest/agentstatus
         var cloudwatch = new AWS.CloudWatch({apiVersion: '2010-08-01'});
@@ -693,6 +710,12 @@ class PawsCollector extends AlAwsCollector {
     };
 
     _storeCollectionState(pawsState, privCollectorState, invocationTimeout, callback) {
+        // Added extra parameter to identify the message from which collector in case it failed and went into DLQ
+        let extraParam = {
+            customer_id: process.env.customer_id,
+            collector_id: this._collectorId
+        };
+        pawsState = Object.assign(pawsState, extraParam);
         if (Array.isArray(privCollectorState)) {
             return this._storeCollectionStateArray(pawsState, privCollectorState, invocationTimeout, callback);
         } else {
