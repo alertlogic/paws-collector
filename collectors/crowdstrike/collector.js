@@ -129,6 +129,7 @@ class CrowdstrikeCollector extends PawsCollector {
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
         
         let formattedMsg = {
+            hostname: collector.collector_id,
             messageTs: ts.sec,
             priority: 11,
             progName: 'CrowdstrikeCollector',
