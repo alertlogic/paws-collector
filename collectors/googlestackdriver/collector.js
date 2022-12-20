@@ -192,6 +192,7 @@ timestamp < "${state.until}"`;
 
         let formattedMsg = {
             // TODO: figure out if this TS is always a string or if they API is goofy...
+            hostname: collector.collector_id,
             messageTs: parseInt(ts.seconds),
             priority: 11,
             progName: 'GooglestackdriverCollector',
