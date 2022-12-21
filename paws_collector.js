@@ -549,17 +549,28 @@ class PawsCollector extends AlAwsCollector {
         Promise.all(promises).then((res) => {
             return callback(null, privCollectorState, nextInvocationTimeout);
         }).catch((err) => {
-            let errorObject = {};
-            if (typeof (err) === 'object') {
-                errorObject = Object.assign(errorObject, err);
-            } else {
-                let splitErrorMessage = err.split(':');
-                errorObject.errorCode = splitErrorMessage[1].slice(1, 4);
-            }
-            collector.reportErrorToIngestApi(errorObject, () => {
-                return callback(err);
+            let error = collector.parseError(err);
+            collector.reportErrorToIngestApi(error, () => {
+                return callback(error);
             });
         });
+    }
+
+    parseError(error) {
+        let errorObject = {};
+        if (typeof (error) === 'string') {
+            if (error.includes(':')) {
+                const splitErrorMessage = error.split(':');
+                errorObject.errorCode = parseInt(splitErrorMessage[1].slice(1, 4));
+            }
+            else {
+                errorObject.errorCode = parseInt(error.slice(0, 3));
+            }
+            errorObject.message = error;
+        } else {
+            errorObject = Object.assign(errorObject, error);
+        }
+        return errorObject;
     }
 
     reportApiThrottling(callback) {

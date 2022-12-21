@@ -825,7 +825,7 @@ describe('Unit Tests', function() {
                     done();
                 }
             };
-            let ingestError = "AWSC0018 failed to send the logmsgs : 404 - \"{\"error\":\"Customer Not Active in AIMS\"}";
+           let ingestError = "AWSC0018 failed to send the logmsgs : 404 - \"{\"error\":\"Customer Not Active in AIMS\"}";
             let processLog = sinon.stub(m_al_aws.AlAwsCollector.prototype, 'processLog').callsFake(
                 function fakeFn(messages, formatFun, hostmetaElems, callback) {
                     return callback(ingestError);
@@ -835,7 +835,7 @@ describe('Unit Tests', function() {
             TestCollector.load().then(function (creds) {
                 var collector = new TestCollector(ctx, creds);
                 collector.batchLogProcess(['log1', 'log2'], { state: 'new-state' }, 900, (err, res) => {
-                    assert.equal(ingestError, err);
+                    assert.equal(err.errorCode, 404);
                     AWS.restore('CloudWatch');
                     done();
                 });
