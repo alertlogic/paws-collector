@@ -559,13 +559,13 @@ class PawsCollector extends AlAwsCollector {
     parseError(error) {
         let errorObject = {};
         if (typeof (error) === 'string') {
+            let errorString;
             if (error.includes(':')) {
                 const splitErrorMessage = error.split(':');
-                errorObject.errorCode = parseInt(splitErrorMessage[1].slice(1, 4));
-            }
-            else {
-                errorObject.errorCode = parseInt(error.slice(0, 3));
-            }
+                errorString = splitErrorMessage[1].replace(/ /, '');
+            } else errorString = error;
+
+            errorObject.errorCode = parseInt(errorString.slice(0, 3));
             errorObject.message = error;
         } else {
             errorObject = Object.assign(errorObject, error);
