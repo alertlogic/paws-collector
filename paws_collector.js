@@ -550,11 +550,30 @@ class PawsCollector extends AlAwsCollector {
             return callback(null, privCollectorState, nextInvocationTimeout);
         }).catch((err) => {
             collector.reportErrorToIngestApi(err, () => {
-                return callback(err);
+                if (err.httpErrorCode === 400) {
+                    collector.uploadFile(logs, (error) => {
+                        if (error) {
+                            return callback(error);
+                        }
+                        else return callback(null, privCollectorState, nextInvocationTimeout);
+                    });
+                }
+                else return callback(err);
             });
         });
     }
 
+    uploadFile(data, callback) {
+        const timeStamp = moment().format('YYYY-MM-DDTHH.mm.ss');
+        const fileName = `${process.env.customer_id}_${this._pawsCollectorType}_${this._collectorId}_${timeStamp}.json`;
+        const keyValue = `ingestBadEncoding/${process.env.customer_id}/${this._pawsCollectorType}/${this._collectorId}/${fileName}`
+        let params = {
+            data: data,
+            key: keyValue,
+            bucketName: process.env.aws_lambda_s3_bucket,
+        }
+        return AlAwsUtil.uploadS3Object(params, callback);
+    }
     reportApiThrottling(callback) {
         // TODO: report collector status via Ingest/agentstatus
         var cloudwatch = new AWS.CloudWatch({apiVersion: '2010-08-01'});
