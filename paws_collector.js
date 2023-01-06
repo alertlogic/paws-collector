@@ -41,6 +41,10 @@ const DDB_OPTIONS = {
 };
 const MAX_ERROR_RETRIES = 5;
 const MAX_LOG_BATCH_SIZE = 10000;
+const INGEST_INVALID_ENCODING = {
+    code: 400,
+    message: 'body encoding invalid'
+}
 function getPawsParamStoreParam(){
     return new Promise((resolve, reject) => {
         if (fs.existsSync(CREDS_FILE_PATH) && fs.statSync(CREDS_FILE_PATH).size !== 0) {
@@ -550,12 +554,15 @@ class PawsCollector extends AlAwsCollector {
             return callback(null, privCollectorState, nextInvocationTimeout);
         }).catch((err) => {
             collector.reportErrorToIngestApi(err, () => {
-                if (err.httpErrorCode === 400) {
+                if (err.httpErrorCode === INGEST_INVALID_ENCODING.code && err.message.includes(INGEST_INVALID_ENCODING.message)) {
                     collector.uploadFile(logs, (error) => {
                         if (error) {
                             return callback(error);
                         }
-                        else return callback(null, privCollectorState, nextInvocationTimeout);
+                        else {
+                            AlLogger.warn(`PAWS000404 ingest error ${err.message}`);
+                            return callback(null, privCollectorState, nextInvocationTimeout);
+                        }
                     });
                 }
                 else return callback(err);
