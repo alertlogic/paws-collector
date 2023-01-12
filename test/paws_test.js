@@ -835,21 +835,24 @@ describe('Unit Tests', function() {
                     return callback(ingestError);
                 });
 
+            let uploadS3ObjectMock = sinon.stub(m_al_aws.Util.prototype, 'uploadS3Object').callsFake(
+                function fakeFn(messages, formatFun, hostmetaElems, callback) {
+                    return callback(null);
+                });
+
+
             AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback());
 
             TestCollector.load().then(function (creds) {
                 var collector = new TestCollector(ctx, creds);
-                let uploadFileMock = sinon.stub(collector, 'uploadFile').callsFake(function fakeFn(data, callback) {
-                    return callback(null);
-                });
                 const nextState = { state: 'new-state' };
                 collector.batchLogProcess(['log1', 'log2'], nextState, 900, (err, newState, nextinvocationTimeout) => {
-                    sinon.assert.calledOnce(uploadFileMock);
+                    sinon.assert.calledOnce(uploadS3ObjectMock);
                     assert.equal(newState, nextState);
                     assert.equal(nextinvocationTimeout, 900);
                     AWS.restore('CloudWatch');
                     processLog.restore();
-                    uploadFileMock.restore();
+                    uploadS3ObjectMock.restore();
                     done();
                 });
             });
@@ -880,16 +883,11 @@ describe('Unit Tests', function() {
 
             TestCollector.load().then(function (creds) {
                 var collector = new TestCollector(ctx, creds);
-                let uploadFileMock = sinon.stub(collector, 'uploadFile').callsFake(function fakeFn(data, callback) {
-                    return callback(null);
-                });
                 const nextState = { state: 'new-state' };
                 collector.batchLogProcess(['log1', 'log2'], nextState, 900, (err, res) => {
                     assert.equal(err.errorCode, 'AWSC0018');
                     assert.equal(err.httpErrorCode, 404);
-                    sinon.assert.callCount(uploadFileMock, 0);
                     processLog.restore();
-                    uploadFileMock.restore();
                     AWS.restore('CloudWatch');
                     done();
                 });

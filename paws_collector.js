@@ -20,6 +20,7 @@ const ddLambda = require('datadog-lambda-js');
 const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector;
 const AlAwsUtil = require('@alertlogic/al-aws-collector-js').Util;
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
+const AlAwsHealth = require('@alertlogic/al-aws-collector-js').Health
 const HealthChecks = require('./paws_health_checks');
 const packageJson = require('./package.json');
 
@@ -41,10 +42,6 @@ const DDB_OPTIONS = {
 };
 const MAX_ERROR_RETRIES = 5;
 const MAX_LOG_BATCH_SIZE = 10000;
-const INGEST_INVALID_ENCODING = {
-    code: 400,
-    message: 'body encoding invalid'
-}
 function getPawsParamStoreParam(){
     return new Promise((resolve, reject) => {
         if (fs.existsSync(CREDS_FILE_PATH) && fs.statSync(CREDS_FILE_PATH).size !== 0) {
@@ -552,34 +549,29 @@ class PawsCollector extends AlAwsCollector {
 
         Promise.all(promises).then((res) => {
             return callback(null, privCollectorState, nextInvocationTimeout);
-        }).catch((err) => {
-            collector.reportErrorToIngestApi(err, () => {
-                if (err.httpErrorCode === INGEST_INVALID_ENCODING.code && err.message.includes(INGEST_INVALID_ENCODING.message)) {
-                    collector.uploadFile(logs, (error) => {
-                        if (error) {
-                            return callback(error);
-                        }
-                        else {
-                            AlLogger.warn(`PAWS000404 ingest error ${err.message}`);
-                            return callback(null, privCollectorState, nextInvocationTimeout);
-                        }
-                    });
-                }
-                else return callback(err);
+        }).catch((error) => {
+            collector.reportErrorToIngestApi(error, () => {
+                let params = collector.getS3ObjectParams(logs);
+                return AlAwsHealth.handleIngestEncodingInvalidError(error, params, (err) => {
+                    if (err) {
+                        return callback(err);
+                    }
+                    else return callback(null, privCollectorState, nextInvocationTimeout);
+                });
             });
         });
     }
 
-    uploadFile(data, callback) {
+    getS3ObjectParams(data) {
+        const collector = this;
         const timeStamp = moment().format('YYYY-MM-DDTHH.mm.ss');
-        const fileName = `${process.env.customer_id}_${this._pawsCollectorType}_${this._collectorId}_${timeStamp}.json`;
-        const keyValue = `ingestBadEncoding/${process.env.customer_id}/${this._pawsCollectorType}/${this._collectorId}/${fileName}`
+        const keyValue = `${process.env.customer_id}/${collector._pawsCollectorType}/${collector._collectorId}/${collector._collectorId}_${timeStamp}.json`;
         let params = {
             data: data,
             key: keyValue,
-            bucketName: process.env.aws_lambda_s3_bucket,
+            bucketName: process.env.dl_s3_bucket_name
         }
-        return AlAwsUtil.uploadS3Object(params, callback);
+        return params;
     }
     reportApiThrottling(callback) {
         // TODO: report collector status via Ingest/agentstatus
