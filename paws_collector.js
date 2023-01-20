@@ -20,6 +20,7 @@ const ddLambda = require('datadog-lambda-js');
 const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector;
 const AlAwsUtil = require('@alertlogic/al-aws-collector-js').Util;
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
+const AlAwsHealth = require('@alertlogic/al-aws-collector-js').Health
 const HealthChecks = require('./paws_health_checks');
 const packageJson = require('./package.json');
 
@@ -548,13 +549,30 @@ class PawsCollector extends AlAwsCollector {
 
         Promise.all(promises).then((res) => {
             return callback(null, privCollectorState, nextInvocationTimeout);
-        }).catch((err) => {
-            collector.reportErrorToIngestApi(err, () => {
-                return callback(err);
+        }).catch((error) => {
+            collector.reportErrorToIngestApi(error, () => {
+                let params = collector.getS3ObjectParams(logs);
+                return AlAwsHealth.handleIngestEncodingInvalidError(error, params, (err) => {
+                    if (err) {
+                        return callback(err);
+                    }
+                    else return callback(null, privCollectorState, nextInvocationTimeout);
+                });
             });
         });
     }
 
+    getS3ObjectParams(data) {
+        const collector = this;
+        const timeStamp = moment().format('YYYY-MM-DDTHH.mm.ss');
+        const keyValue = `${process.env.customer_id}/${collector._pawsCollectorType}/${collector._collectorId}/${collector._collectorId}_${timeStamp}.json`;
+        let params = {
+            data: data,
+            key: keyValue,
+            bucketName: process.env.dl_s3_bucket_name
+        }
+        return params;
+    }
     reportApiThrottling(callback) {
         // TODO: report collector status via Ingest/agentstatus
         var cloudwatch = new AWS.CloudWatch({apiVersion: '2010-08-01'});

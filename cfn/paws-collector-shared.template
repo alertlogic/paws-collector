@@ -167,6 +167,10 @@
         "ExistingControlSnsArn" :{
             "Description": "SNS topic ARN used for triggering collector checkins an updates",
             "Type": "String"
+        },
+        "ExistingDLS3BucketName": {
+            "Description": "Bucket that contains incorrect data rejected by Ingest service.",
+            "Type": "String"
         }
     },
     "Resources":{
@@ -393,6 +397,9 @@
                   },
                   "ssm_direct": {
                     "Ref": "SsmDirect"
+                },
+                "dl_s3_bucket_name": {
+                    "Ref": "ExistingDLS3BucketName"
                 }
                }
             },

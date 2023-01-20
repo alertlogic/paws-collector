@@ -812,6 +812,87 @@ describe('Unit Tests', function() {
                 
             });
         });
+
+        it('Check body encoding error is handle by uploading the file in s3 bucket and collector return new state', function (done) {
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    sinon.assert.calledOnce(processLog);
+                    done();
+                }
+            };
+            const ingestError = {
+                errorCode: 'AWSC0018',
+                message: "AWSC0018 failed at logmsgs : 401 - \"{\\\"error\\\":\\\"body encoding invalid\\\"}",
+                httpErrorCode: 400
+            };
+            let processLog = sinon.stub(m_al_aws.AlAwsCollector.prototype, 'processLog').callsFake(
+                function fakeFn(messages, formatFun, hostmetaElems, callback) {
+                    return callback(ingestError);
+                });
+
+            let uploadS3ObjectMock = sinon.stub(m_al_aws.Util, 'uploadS3Object').callsFake(
+                function fakeFn(params, callback) {
+                    return callback(null);
+                });
+
+
+            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback());
+
+            TestCollector.load().then(function (creds) {
+                var collector = new TestCollector(ctx, creds);
+                const nextState = { state: 'new-state' };
+                collector.batchLogProcess(['log1', 'log2'], nextState, 900, (err, newState, nextinvocationTimeout) => {
+                    sinon.assert.calledOnce(uploadS3ObjectMock);
+                    assert.equal(newState, nextState);
+                    assert.equal(nextinvocationTimeout, 900);
+                    AWS.restore('CloudWatch');
+                    processLog.restore();
+                    uploadS3ObjectMock.restore();
+                    done();
+                });
+            });
+        });
+
+        it('Throw the other ingest error except body encoding invalid', function (done) {
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    sinon.assert.calledOnce(processLog);
+                    done();
+                }
+            };
+            const ingestError = {
+                errorCode: 'AWSC0018',
+                message: "AWSC0018 failed at logmsgs :  404 - \"{\"error\":\"Customer Not Active in AIMS\"}",
+                httpErrorCode: 404
+            };
+            let processLog = sinon.stub(m_al_aws.AlAwsCollector.prototype, 'processLog').callsFake(
+                function fakeFn(messages, formatFun, hostmetaElems, callback) {
+                    return callback(ingestError);
+                });
+            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback());
+
+            TestCollector.load().then(function (creds) {
+                var collector = new TestCollector(ctx, creds);
+                const nextState = { state: 'new-state' };
+                collector.batchLogProcess(['log1', 'log2'], nextState, 900, (err, res) => {
+                    assert.equal(err.errorCode, 'AWSC0018');
+                    assert.equal(err.httpErrorCode, 404);
+                    processLog.restore();
+                    AWS.restore('CloudWatch');
+                    done();
+                });
+            });
+        });
         it('reportApiThrottling', function(done) {
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,
