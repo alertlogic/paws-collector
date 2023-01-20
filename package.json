@@ -32,7 +32,7 @@
     "yargs": "^15.0.2"
   },
   "dependencies": {
-    "@alertlogic/al-aws-collector-js": "4.1.10",
+    "@alertlogic/al-aws-collector-js": "4.1.14",
     "datadog-lambda-js": "2.23.0",
     "async": "3.2.2",
     "debug": "4.1.1",

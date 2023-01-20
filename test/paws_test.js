@@ -835,8 +835,8 @@ describe('Unit Tests', function() {
                     return callback(ingestError);
                 });
 
-            let uploadS3ObjectMock = sinon.stub(m_al_aws.Util.prototype, 'uploadS3Object').callsFake(
-                function fakeFn(messages, formatFun, hostmetaElems, callback) {
+            let uploadS3ObjectMock = sinon.stub(m_al_aws.Util, 'uploadS3Object').callsFake(
+                function fakeFn(params, callback) {
                     return callback(null);
                 });
 

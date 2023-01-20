@@ -168,7 +168,7 @@
             "Description": "SNS topic ARN used for triggering collector checkins an updates",
             "Type": "String"
         },
-        "ExistingDLS3BucketArn": {
+        "ExistingDLS3BucketName": {
             "Description": "Bucket that contains incorrect data rejected by Ingest service.",
             "Type": "String"
         }
@@ -399,7 +399,7 @@
                     "Ref": "SsmDirect"
                 },
                 "dl_s3_bucket_name": {
-                    "Ref": "ExistingDLS3BucketArn"
+                    "Ref": "ExistingDLS3BucketName"
                 }
                }
             },
