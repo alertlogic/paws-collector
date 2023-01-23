@@ -629,10 +629,10 @@ class PawsCollector extends AlAwsCollector {
             Namespace: 'PawsCollectors'
         };
         let errorCode = 'unknown';
-        if (error && error.errorCode) {
+        if (error && error.httpErrorCode) {
+            errorCode = error.httpErrorCode;
+        } else if (error && error.errorCode) {
             errorCode = error.errorCode;
-        } else if (error && error.statusCode) {
-            errorCode = error.statusCode;
         }
         this.reportDDMetric("ingest_api", 1, [`result:error`, `error_code:${errorCode}`]);
         return cloudwatch.putMetricData(params, callback);
