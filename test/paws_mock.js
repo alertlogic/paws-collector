@@ -22,6 +22,7 @@ process.env.paws_secret_param_name = 'PAWS-SECRET-paws';
 process.env.paws_api_client_id = 'api-client-id';
 process.env.al_application_id = 'paws';
 process.env.paws_ddb_table_name = 'asampletable';
+process.env.dl_s3_bucket_name = 'dl_s3_bucket';
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',
