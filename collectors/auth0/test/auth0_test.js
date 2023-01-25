@@ -154,6 +154,54 @@ describe('Unit Tests', function () {
                 done();
             });
         });
+
+        it('log format when type is null or undefined', function (done) {
+            let ctx = {
+                invokedFunctionArn: auth0Mock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            Auth0Collector.load().then(function (creds) {
+                var collector = new Auth0Collector(ctx, creds);
+                const msg = {
+                    "type": null,
+                    "date": "2020-01-13T15:19:38.386Z"
+                };
+                let fmt = collector.pawsFormatLog(msg);
+                assert.equal(fmt.messageTypeId, undefined);
+                done();
+            });
+        });
+
+        it('log format when date is null or undefined', function (done) {
+            let ctx = {
+                invokedFunctionArn: auth0Mock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            Auth0Collector.load().then(function (creds) {
+                var collector = new Auth0Collector(ctx, creds);
+                const msg = {
+                    "type": "fsa",
+                    "date": null
+                };
+                let fmt = collector.pawsFormatLog(msg);
+                assert.equal(fmt.messageTsUs, undefined);
+                done();
+            });
+        });
     });
 
     describe('pawsGetLogs', function () {
