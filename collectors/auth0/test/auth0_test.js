@@ -169,11 +169,7 @@ describe('Unit Tests', function () {
 
             Auth0Collector.load().then(function (creds) {
                 var collector = new Auth0Collector(ctx, creds);
-                const msg = {
-                    "type": null,
-                    "date": "2020-01-13T15:19:38.386Z"
-                };
-                let fmt = collector.pawsFormatLog(msg);
+                let fmt = collector.pawsFormatLog(auth0Mock.AUTH0_LOG_EVENT_WHEN_TYPE_NULL);
                 assert.equal(fmt.messageTypeId, undefined);
                 done();
             });
@@ -193,11 +189,7 @@ describe('Unit Tests', function () {
 
             Auth0Collector.load().then(function (creds) {
                 var collector = new Auth0Collector(ctx, creds);
-                const msg = {
-                    "type": "fsa",
-                    "date": null
-                };
-                let fmt = collector.pawsFormatLog(msg);
+                let fmt = collector.pawsFormatLog(auth0Mock.AUTH0_LOG_EVENT_WHEN_DATE_NULL);
                 assert.equal(fmt.messageTsUs, undefined);
                 done();
             });
