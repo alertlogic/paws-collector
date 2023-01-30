@@ -1,6 +1,6 @@
 {
   "name": "sophos-collector",
-  "version": "1.0.39",
+  "version": "1.0.40",
   "description": "Alert Logic AWS based Sophos Log Collector",
   "repository": {},
   "private": true,
@@ -13,11 +13,11 @@
     "aws-sdk": "*",
     "aws-sdk-mock": "*",
     "jshint": "^2.9.5",
-    "mocha": "^6.2.2",
+    "mocha": "^10.2.0",
     "mocha-jenkins-reporter": "^0.4.2",
-    "nyc": "^14.1.1",
-    "rewire": "^4.0.1",
-    "sinon": "^7.5.0",
+    "nyc": "^15.1.0",
+    "rewire": "^6.0.0",
+    "sinon": "^15.0.1",
     "mockserver": "^3.1.1"
   },
   "dependencies": {

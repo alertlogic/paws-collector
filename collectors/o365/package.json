@@ -1,6 +1,6 @@
 {
   "name": "o365-collector",
-  "version": "1.2.50",
+  "version": "1.2.51",
   "description": "Alert Logic AWS based O365 Log Collector",
   "repository": {},
   "private": true,
@@ -12,11 +12,11 @@
     "aws-sdk": "^2.624.0",
     "aws-sdk-mock": "^5.0.0",
     "jshint": "^2.11.0",
-    "mocha": "^6.2.2",
+    "mocha": "^10.2.0",
     "mocha-jenkins-reporter": "^0.4.2",
-    "nyc": "^14.1.1",
-    "rewire": "^4.0.1",
-    "sinon": "^7.5.0"
+    "nyc": "^15.1.0",
+    "rewire": "^6.0.0",
+    "sinon": "^15.0.1"
   },
   "dependencies": {
     "@alertlogic/al-aws-collector-js": "4.1.15",
@@ -25,8 +25,8 @@
     "@azure/ms-rest-azure-js": "2.0.1",
     "@azure/ms-rest-js": "2.0.4",
     "@azure/ms-rest-nodeauth": "3.1.1",
-    "async": "3.2.2",
-    "debug": "4.1.1",
+    "async": "^3.2.4",
+    "debug": "^4.3.4",
     "moment": "2.29.4",
     "tiny-async-pool": "^1.2.0"
   },
