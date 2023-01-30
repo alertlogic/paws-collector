@@ -22,8 +22,8 @@
     "@alertlogic/al-collector-js": "^3.0.5",
     "@alertlogic/paws-collector": "^2.1.13",
     "@google-cloud/logging": "^10.3.3",
-    "async": "3.2.2",
-    "debug": "4.1.1",
+    "async": "^3.2.4",
+    "debug": "^4.3.4",
     "moment": "2.29.4"
   },
   "author": "Alert Logic Inc."
