@@ -2,13 +2,11 @@ const assert = require('assert');
 const sinon = require('sinon');
 const utils = require("../utils");
 const gsuiteMock = require('./gsuite_mock');
-const { google, admin_reports_v1 } = require("googleapis");
-
-let mockServiceObject, mockActivityObject, service;
+const { google } = require("googleapis");
+const service = google.admin('reports_v1');
+let mockServiceObject, mockActivityObject;
 describe('Unit Tests', function () {
-
     beforeEach(function () {
-        service = sinon.createStubInstance(admin_reports_v1.Admin);
         service.activities = gsuiteMock.MOCK_ACTIVITES;
         mockServiceObject = sinon.stub(google, 'admin').callsFake(
             function fakeFn(path) {
