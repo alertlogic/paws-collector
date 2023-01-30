@@ -14,17 +14,17 @@
     "jshint": "^2.9.5",
     "mocha": "^10.2.0",
     "mocha-jenkins-reporter": "^0.4.2",
+    "moment": "2.29.4",
     "nyc": "^15.1.0",
     "rewire": "^6.0.0",
-    "sinon": "^15.0.1",
-    "moment": "2.29.4"
+    "sinon": "^15.0.1"
   },
   "dependencies": {
     "@alertlogic/al-collector-js": "^3.0.5",
     "@alertlogic/paws-collector": "^2.1.13",
     "async": "^3.2.4",
     "debug": "^4.3.4",
-    "googleapis": "39.2.0",
+    "googleapis": "^110.0.0",
     "moment": "2.29.4"
   },
   "author": "Alert Logic Inc."
