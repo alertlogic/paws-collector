@@ -169,7 +169,7 @@ describe('Unit Tests', function () {
 
             Auth0Collector.load().then(function (creds) {
                 var collector = new Auth0Collector(ctx, creds);
-                let fmt = collector.pawsFormatLog(auth0Mock.AUTH0_LOG_EVENT_WHEN_TYPE_NULL);
+                let fmt = collector.pawsFormatLog(auth0Mock.AUTH0_LOG_EVENT.type=null);
                 assert.equal(fmt.messageTypeId, undefined);
                 done();
             });
@@ -189,7 +189,7 @@ describe('Unit Tests', function () {
 
             Auth0Collector.load().then(function (creds) {
                 var collector = new Auth0Collector(ctx, creds);
-                let fmt = collector.pawsFormatLog(auth0Mock.AUTH0_LOG_EVENT_WHEN_DATE_NULL);
+                let fmt = collector.pawsFormatLog(auth0Mock.AUTH0_LOG_EVENT.date=null);
                 assert.equal(fmt.messageTsUs, undefined);
                 done();
             });
