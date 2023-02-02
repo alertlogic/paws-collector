@@ -44,7 +44,10 @@ describe('Unit Tests', function () {
             getLogsStub = sinon.stub(auth0Client, 'getLogs').callsFake(
                 function fakeFn() {
                     return new Promise(function (resolve, reject) {
-                        return reject(new Error("Test Error"));
+                        return reject({ statusCode: 503,
+                               error: "Service Unavailable",
+                              message: "The API service is temporarily unavailable, please try again later"
+                     });
                     });
                 });
                 
@@ -58,7 +61,7 @@ describe('Unit Tests', function () {
     
             utils.getAPILogs(auth0Client, state, accumulator, maxPagesPerInvocation)
                 .catch(err => {
-                    assert.equal(err.message, "Test Error", "Error message is not correct");
+                    assert.equal(err.message, "The API service is temporarily unavailable, please try again later", "Error message is not correct");
                     getLogsStub.restore();
                     done();
                 });
