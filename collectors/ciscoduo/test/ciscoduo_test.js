@@ -53,11 +53,11 @@ describe('Unit Tests', function () {
                 collector.pawsInitCollectionState(null, (err, initialStates, nextPoll) => {
                     initialStates.forEach((state) => {
                         if (state.object === "Authentication") {
-                            assert.equal(moment(parseInt(state.maxtime)).diff(parseInt(state.mintime), 'seconds'), 60);
+                            assert.equal(moment(parseInt(state.until)).diff(parseInt(state.since), 'seconds'), 60);
                         }
                         else {
-                            assert.equal(state.poll_interval_sec, 60);
-                            assert.ok(state.mintime);
+                            assert.equal(state.poll_interval_sec, 240);
+                            assert.ok(state.since);
                         }
                     });
                     done();
@@ -128,14 +128,14 @@ describe('Unit Tests', function () {
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
                     stream: "Authentication",
-                    mintime: startDate.valueOf(),
-                    maxtime: startDate.add(2, 'days').valueOf(),
+                    since: startDate.valueOf(),
+                    until: startDate.add(2, 'days').valueOf(),
                     nextPage: null,
                     poll_interval_sec: 1
                 };
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
                     assert.equal(logs.length, 2);
-                    assert.equal(newState.poll_interval_sec, 60);
+                    assert.equal(newState.poll_interval_sec, 240);
                     assert.ok(logs[0].txid);
                     getAPILogs.restore();
                     getAPIDetails.restore();
@@ -172,8 +172,8 @@ describe('Unit Tests', function () {
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
                     stream: "Authentication",
-                    mintime: startDate.valueOf(),
-                    maxtime: startDate.add(2, 'days').valueOf(),
+                    since: startDate.valueOf(),
+                    until: startDate.add(2, 'days').valueOf(),
                     nextPage: null,
                     poll_interval_sec: 1
                 };
@@ -220,8 +220,8 @@ describe('Unit Tests', function () {
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
                     stream: "Authentication",
-                    mintime: startDate.valueOf(),
-                    maxtime: startDate.add(2, 'days').valueOf(),
+                    since: startDate.valueOf(),
+                    until: startDate.add(2, 'days').valueOf(),
                     nextPage: null,
                     poll_interval_sec: 1
                 };
@@ -264,15 +264,15 @@ describe('Unit Tests', function () {
                 const startDate = moment();
                 const curState = {
                     stream: "telephony",
-                    mintime: startDate.unix(),
-                    poll_interval_sec: 1
+                    since: startDate.unix(),
+                    poll_interval_sec: 60
                 };
 
                 var reportSpy = sinon.spy(collector, 'reportApiThrottling');
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
                     assert.equal(true, reportSpy.calledOnce);
                     assert.equal(logs.length, 0);
-                    assert.equal(newState.poll_interval_sec, 900);
+                    assert.equal(newState.poll_interval_sec, 120);
                     getAPILogs.restore();
                     getAPIDetails.restore();
                     done();
@@ -297,8 +297,8 @@ describe('Unit Tests', function () {
                 const startDate = moment();
                 const curState = {
                     stream: "Authentication",
-                    mintime: startDate.valueOf(),
-                    maxtime: startDate.add(collector.pollInterval, 'seconds').valueOf(),
+                    since: startDate.valueOf(),
+                    until: startDate.add(collector.pollInterval, 'seconds').valueOf(),
                     nextPage: null,
                     poll_interval_sec: 1
                 };
@@ -314,14 +314,14 @@ describe('Unit Tests', function () {
                 const startDate = moment().subtract(1,'days');
                 const curState = {
                     stream: "Authentication",
-                    mintime: startDate.valueOf(),
-                    maxtime: startDate.add(collector.pollInterval, 'seconds').valueOf(),
+                    since: startDate.valueOf(),
+                    until: startDate.add(collector.pollInterval, 'seconds').valueOf(),
                     nextPage: null,
                     poll_interval_sec: 1
                 };
                 let nextState = collector._getNextCollectionState(curState);
-                 assert.equal(nextState.poll_interval_sec, 60);
-                assert.equal(moment(parseInt(nextState.maxtime)).diff(parseInt(nextState.mintime), 'minutes'), 60);
+                 assert.equal(nextState.poll_interval_sec, 240);
+                assert.equal(moment(parseInt(nextState.until)).diff(parseInt(nextState.since), 'minutes'), 60);
                 done();
             });
         });
@@ -332,13 +332,13 @@ describe('Unit Tests', function () {
                 const startDate = moment().subtract(1, 'hours');
                 const curState = {
                     stream: "OfflineEnrollment",
-                    mintime: startDate.unix(),
+                    since: startDate.unix(),
                     poll_interval_sec: 1
                 };
                 let nextState = collector._getNextCollectionState(curState);
                 // If there is no data check next api call is after 15min
                 assert.equal(nextState.poll_interval_sec, 900);
-                assert.equal(nextState.mintime, curState.mintime + 1);
+                assert.equal(nextState.since, curState.since + 1);
 
                 done();
             });
@@ -380,8 +380,8 @@ describe('Unit Tests', function () {
             const startDate = moment().subtract(5, 'minutes');
             const curState = {
                 stream: "Authentication",
-                mintime: startDate.valueOf(),
-                maxtime: startDate.add(5, 'minutes').valueOf(),
+                since: startDate.valueOf(),
+                until: startDate.add(5, 'minutes').valueOf(),
                 poll_interval_sec: 1
             };
             const nextPage = "nextPage";
@@ -397,15 +397,15 @@ describe('Unit Tests', function () {
             const startDate = moment().subtract(5, 'minutes');
             const curState = {
                 stream: "OfflineEnrollment",
-                mintime: startDate.unix(),
+                since: startDate.unix(),
                 poll_interval_sec: 1
             };
             const nextPageTimestamp = "1574157600";
             CiscoduoCollector.load().then(function (creds) {
                 var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
                 let nextState = collector._getNextCollectionStateWithNextPage(curState, nextPageTimestamp);
-                assert.ok(nextState.mintime);
-                assert.equal(nextState.mintime, nextPageTimestamp);
+                assert.ok(nextState.since);
+                assert.equal(nextState.since, nextPageTimestamp);
                 done();
             });
         });

@@ -63,7 +63,7 @@ function getAPIDetails(state) {
     let tsPaths = [{ path: ["timestamp"] }];
     let method = "GET";
     let query = {
-        mintime: state.mintime
+        mintime: state.since
     };
 
     switch (state.stream) {
@@ -76,8 +76,8 @@ function getAPIDetails(state) {
             } : {};
 
             Object.assign(query, {
-                mintime: state.mintime,
-                maxtime: state.maxtime,
+                mintime: state.since,
+                maxtime: state.until,
                 limit: 1000
             });
 
