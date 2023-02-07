@@ -30,8 +30,8 @@ describe('Unit Tests', function () {
             const startDate = moment().subtract(5, 'days');
             let state = {
                 stream: "Authentication",
-                mintime: startDate.valueOf(),
-                maxtime: startDate.add(2, 'days').valueOf(),
+                since: startDate.valueOf(),
+                until: startDate.add(2, 'days').valueOf(),
                 nextPage: null,
                 poll_interval_sec: 1
             };
@@ -40,8 +40,8 @@ describe('Unit Tests', function () {
                 typeIdPaths: [{ path: ["txid"] }],
                 tsPaths: [{ path: ["timestamp"] }],
                 query: {
-                    mintime: state.mintime,
-                    maxtime: state.maxtime,
+                    mintime: state.since,
+                    maxtime: state.until,
                     limit: 1000
                 },
                 method: "GET"
@@ -70,8 +70,8 @@ describe('Unit Tests', function () {
             const startDate = moment().subtract(5, 'days');
             let state = {
                 stream: "Authentication",
-                mintime: startDate.valueOf(),
-                maxtime: startDate.add(2, 'days').valueOf(),
+                since: startDate.valueOf(),
+                until: startDate.add(2, 'days').valueOf(),
                 nextPage: null,
                 poll_interval_sec: 1
             };
@@ -80,8 +80,8 @@ describe('Unit Tests', function () {
                 typeIdPaths: [{ path: ["txid"] }],
                 tsPaths: [{ path: ["timestamp"] }],
                 query: {
-                    mintime: state.mintime,
-                    maxtime: state.maxtime,
+                    mintime: state.since,
+                    maxtime: state.until,
                     limit: 1000
                 },
                 method: "GET"
@@ -105,7 +105,7 @@ describe('Unit Tests', function () {
             const startDate = moment().subtract(5, 'days');
             let state = {
                 stream: "Administrator",
-                mintime: startDate.unix(),
+                since: startDate.unix(),
                 poll_interval_sec: 1
             };
             let objectDetails = {
@@ -113,7 +113,7 @@ describe('Unit Tests', function () {
                 typeIdPaths: [{ path: ["action"] }],
                 tsPaths: [{ path: ["timestamp"] }],
                 query: {
-                    mintime: state.mintime
+                    mintime: state.since
                 },
                 method: "GET"
             };
@@ -136,7 +136,7 @@ describe('Unit Tests', function () {
             const startDate = moment().subtract(5, 'days');
             let state = {
                 stream: "Administrator",
-                mintime: startDate.unix(),
+                since: startDate.unix(),
                 poll_interval_sec: 1
             };
             let objectDetails = {
@@ -144,7 +144,7 @@ describe('Unit Tests', function () {
                 typeIdPaths: [{ path: ["action"] }],
                 tsPaths: [{ path: ["timestamp"] }],
                 query: {
-                    mintime: state.mintime
+                    mintime: state.since
                 },
                 method: "GET"
             };
@@ -154,7 +154,7 @@ describe('Unit Tests', function () {
                 done();
             });
         });
-        it('Pull Only one page data if Mintime stamp is less than one hour ', function (done) {
+        it('Pull Only one page data if since stamp is less than one hour ', function (done) {
             ciscoduoMock.LOG_EVENT.timestamp = moment().subtract(30, 'minutes').unix();
             getLogsStub = sinon.stub(client, 'jsonApiCall').yields({
                 response: [ciscoduoMock.LOG_EVENT],
@@ -165,7 +165,7 @@ describe('Unit Tests', function () {
             const startDate = moment().subtract(30, 'minutes');
             let state = {
                 stream: "Administrator",
-                mintime: startDate.unix(),
+                since: startDate.unix(),
                 poll_interval_sec: 1
             };
             let objectDetails = {
@@ -173,7 +173,7 @@ describe('Unit Tests', function () {
                 typeIdPaths: [{ path: ["action"] }],
                 tsPaths: [{ path: ["timestamp"] }],
                 query: {
-                    mintime: state.mintime
+                    mintime: state.since
                 },
                 method: "GET"
             };
@@ -195,8 +195,8 @@ describe('Unit Tests', function () {
                 if (stream === "Authentication") {
                     state = {
                         stream,
-                        mintime: startDate.valueOf(),
-                        maxtime: startDate.add(5, 'minutes').valueOf(),
+                        since: startDate.valueOf(),
+                        until: startDate.add(5, 'minutes').valueOf(),
                         nextPage: "nextPage",
                         poll_interval_sec: 1
                     };
@@ -204,7 +204,7 @@ describe('Unit Tests', function () {
                 else {
                     state = {
                         stream,
-                        mintime: startDate.unix(),
+                        since: startDate.unix(),
                         poll_interval_sec: 1
                     };
                 }
@@ -219,8 +219,8 @@ describe('Unit Tests', function () {
             const startDate = moment().subtract(5, 'minutes');
             let state = {
                 stream: "object",
-                mintime: startDate.valueOf(),
-                maxtime: startDate.add(5, 'minutes').valueOf(),
+                since: startDate.valueOf(),
+                until: startDate.add(5, 'minutes').valueOf(),
                 nextPage: null,
                 poll_interval_sec: 1
             };
