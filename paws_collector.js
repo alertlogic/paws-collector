@@ -673,7 +673,8 @@ class PawsCollector extends AlAwsCollector {
     
     reportCollectionDelay(lastCollectedTs, callback) {
         const nowMoment = moment();
-        const lastCollectedMoment = moment(lastCollectedTs);
+        // converting the time from seconds to milliseconds . 
+        const lastCollectedMoment = !isNaN(lastCollectedTs) && lastCollectedTs.toString().length == 10 ? moment.unix(lastCollectedTs) : moment(lastCollectedTs);
         const delayDuration = moment.duration(nowMoment.diff(lastCollectedMoment));
         const collectionDelaySec = Math.floor(delayDuration.asSeconds());
         
