@@ -1,6 +1,6 @@
 {
   "name": "ciscoduo-collector",
-  "version": "1.0.39",
+  "version": "1.0.40",
   "description": "Alert Logic AWS based Ciscoduo Log Collector",
   "repository": {},
   "private": true,
@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@alertlogic/al-collector-js": "^3.0.5",
-    "@alertlogic/paws-collector": "^2.1.13",
+    "@alertlogic/paws-collector": "^2.1.14",
     "@duosecurity/duo_api": "^1.2.3",
     "async": "^3.2.4",
     "debug": "^4.3.4",

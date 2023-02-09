@@ -26,6 +26,7 @@ let tsPaths = [];
 const Authentication = 'Authentication';
 const API_THROTTLING_ERROR = 42901;
 const MAX_POLL_INTERVAL = 900;
+const POLL_INTERVAL_SECS = 60;
 
 class CiscoduoCollector extends PawsCollector {
     constructor(context, creds) {
@@ -38,25 +39,26 @@ class CiscoduoCollector extends PawsCollector {
             moment().toISOString();
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
         const objectNames = JSON.parse(process.env.collector_streams);
+        const pollInterval = objectNames.length * POLL_INTERVAL_SECS;
         const initialStates = objectNames.map(stream => {
             if (stream === Authentication) {
                 return {
                     stream,
-                    mintime: moment(startTs).valueOf(),
-                    maxtime: moment(endTs).valueOf(),
+                    since: moment(startTs).valueOf(),
+                    until: moment(endTs).valueOf(),
                     nextPage: null,
-                    poll_interval_sec: 60
+                    poll_interval_sec: pollInterval
                 }
             }
             else {
                 return {
                     stream,
-                    mintime: moment(startTs).unix(),
-                    poll_interval_sec: 60
+                    since: moment(startTs).unix(),
+                    poll_interval_sec: pollInterval
                 }
             }
         });
-        return callback(null, initialStates, 60);
+        return callback(null, initialStates, pollInterval);
     }
 
     pawsGetRegisterParameters(event, callback) {
@@ -72,8 +74,8 @@ class CiscoduoCollector extends PawsCollector {
         if (!process.env.collector_streams) {
             collector.setCollectorStreamsEnv(process.env.paws_collector_param_string_1);
         }
-        if (!state.stream) {
-            state = collector.setStreamToCollectionState(state);
+        if (!state.since) {
+            state = collector.setSinceUntilToCollectionState(state);
         }
         const clientSecret = collector.secret;
         if (!clientSecret) {
@@ -98,11 +100,10 @@ class CiscoduoCollector extends PawsCollector {
 
         typeIdPaths = objectDetails.typeIdPaths;
         tsPaths = objectDetails.tsPaths;
+        const stateUntil = state.until ? `till ${moment(parseInt(state.until)).toISOString()}` : ``;
+        const stateSince = state.stream === Authentication ? moment(parseInt(state.since)).toISOString() : moment(parseInt(state.since * 1000)).toISOString(); // Convert Epoch timestamp to milliseconds to get date in correct format
 
-        const stateMaxtime = state.maxtime ? `till ${moment(parseInt(state.maxtime)).toISOString()}` : ``;
-        const stateMintime = state.stream === Authentication ? moment(parseInt(state.mintime)).toISOString() : moment(parseInt(state.mintime * 1000)).toISOString(); // Convert Epoch timestamp to milliseconds to get date in correct format
-
-        AlLogger.info(`CDUO000001 Collecting data for ${state.stream} from ${stateMintime} ${stateMaxtime}`);
+        AlLogger.info(`CDUO000001 Collecting data for ${state.stream} from ${stateSince} ${stateUntil}`);
 
         utils.getAPILogs(client, objectDetails, state, [], process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextPage }) => {
@@ -117,9 +118,10 @@ class CiscoduoCollector extends PawsCollector {
             }).catch((error) => {
                 // Cisco duo api has some rate limits that we might run into.
                 // If we run into a rate limit error, instead of returning the error,
-                // We return the state back to the queue with an additional 15 min.
+                // We return the state back to the queue with an additional 60 secs.
                 if (error.code && error.code === API_THROTTLING_ERROR) {
-                    state.poll_interval_sec = MAX_POLL_INTERVAL;
+                    state.poll_interval_sec = state.poll_interval_sec < MAX_POLL_INTERVAL ?
+                    state.poll_interval_sec + POLL_INTERVAL_SECS : MAX_POLL_INTERVAL;
                     AlLogger.warn(`CDUO000003 API Request Limit Exceeded`, error);
                     collector.reportApiThrottling(function () {
                         return callback(null, [], state, state.poll_interval_sec);
@@ -137,14 +139,14 @@ class CiscoduoCollector extends PawsCollector {
 
         if (curState.stream === Authentication) {
 
-            const untilMoment = moment(parseInt(curState.maxtime));
+            const untilMoment = moment(parseInt(curState.until));
              // Used hour-cap instead of making api call for 1 min interval, may help to reduce throtling issue.
             const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-cap', untilMoment, this.pollInterval);
-            const nextPollIntervalSec = nextPollInterval >= 60 ? nextPollInterval : 60;
+            const nextPollIntervalSec = nextPollInterval >= POLL_INTERVAL_SECS ? nextPollInterval : POLL_INTERVAL_SECS * JSON.parse(process.env.collector_streams).length;
             return {
                 stream: curState.stream,
-                mintime: nextSinceMoment.valueOf(),
-                maxtime: nextUntilMoment.valueOf(),
+                since: nextSinceMoment.valueOf(),
+                until: nextUntilMoment.valueOf(),
                 nextPage: null,
                 poll_interval_sec: nextPollIntervalSec
             };
@@ -152,14 +154,14 @@ class CiscoduoCollector extends PawsCollector {
         else {
             // This condition works if next page getting null or undefined
             const untilMoment = moment();
-            if (curState.mintime) {
-                // New mintime is either last hour or current.mintime if it is less than one hr.
+            if (curState.since) {
+                // New since is either last hour or current.since if it is less than one hr.
                 // Set nextPoll interval to 15 min as it collecting data for last one hr
                 const nextUntilMoment = moment().subtract(1, 'hours').unix();
-                const newMintime = Math.max(curState.mintime + 1, nextUntilMoment);
+                const newSince = Math.max(parseInt(curState.since) + 1, nextUntilMoment);
                 return {
                     stream: curState.stream,
-                    mintime: newMintime,
+                    since: newSince,
                     poll_interval_sec: MAX_POLL_INTERVAL
                 };
             }
@@ -167,7 +169,7 @@ class CiscoduoCollector extends PawsCollector {
                 let { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
                 return {
                     stream: curState.stream,
-                    mintime: nextSinceMoment.unix(),
+                    since: nextSinceMoment.unix(),
                     poll_interval_sec: nextPollInterval
                 };
             }
@@ -179,17 +181,17 @@ class CiscoduoCollector extends PawsCollector {
         if (curState.stream === Authentication) {
             return {
                 stream: curState.stream,
-                mintime: curState.mintime,
-                maxtime: curState.maxtime,
+                since: curState.since,
+                until: curState.until,
                 nextPage: nextPage,
                 poll_interval_sec: 60
             };
         } else {
-            //There is no next page concept for this API, So Setting up the next state mintime using the last log (Unix timestamp + 1).
+            //There is no next page concept for this API, So Setting up the next state since using the last log (Unix timestamp + 1).
             // call after 60 sec to avoid multiple api call
             return {
                 stream: curState.stream,
-                mintime: nextPage,
+                since: nextPage,
                 poll_interval_sec: 60
             };
         }
@@ -220,19 +222,19 @@ class CiscoduoCollector extends PawsCollector {
         return formattedMsg;
     }
 
-    setStreamToCollectionState(curState) {
-        if (curState.object === Authentication) {
+    setSinceUntilToCollectionState(curState) {
+        if (curState.stream === Authentication) {
             return {
-                stream: curState.object,
-                mintime: curState.mintime,
-                maxtime: curState.maxtime,
+                stream: curState.stream,
+                since: curState.mintime,
+                until: curState.maxtime,
                 nextPage: curState.nextPage,
                 poll_interval_sec: curState.poll_interval_sec
             };
         } else {
             return {
-                stream: curState.object,
-                mintime: curState.mintime,
+                stream: curState.stream,
+                since: curState.mintime,
                 poll_interval_sec: curState.poll_interval_sec
             };
         }
