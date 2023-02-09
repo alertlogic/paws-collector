@@ -19,6 +19,8 @@ process.env.paws_api_secret = "api-secret";
 process.env.collector_streams = "[\"AuditLogEvents\", \"SearchAlerts\",\"SearchAlertsCBAnalytics\", \"SearchAlertsWatchlist\"]";
 process.env.paws_collector_param_string_2 = "carbonblackOrgKey";
 process.env.paws_endpoint = "https://api-url.conferdeploy.net";
+process.env.collector_streams_null = "[\"AuditLogEventsCB\", \"SearchAlertsCB\",\"SearchAlertsCBAnalyticsCB\", \"SearchAlertsWatchlistCB\"]";
+
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',
