@@ -169,6 +169,164 @@ describe('Unit Tests', function () {
             });
         });
     });
+    describe('pawsGetLogs Success when state.stream is Incident', function () {
+        let ctx = {
+            invokedFunctionArn: crowdstrikeMock.FUNCTION_ARN,
+            fail: function (error) {
+                assert.fail(error);
+            },
+            succeed: function () { }
+        };
+        it('Paws Get Logs Success when state.stream is Incident', function (done) {
+            setAlServiceStub();
+            CrowdstrikeCollector.load().then(function (creds) {
+                var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    stream: "Incident",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    offset: 0,
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(logs.length, 1);
+                    assert.equal(newState.poll_interval_sec, 1);
+                    assert.ok(logs[0].incident_id);
+                    done();
+                });
+
+            });
+        });
+    });
+
+    describe('pawsGetLogs (getIncidents) Error', function () {
+        let ctx = {
+            invokedFunctionArn: crowdstrikeMock.FUNCTION_ARN,
+            fail: function (error) {
+                assert.fail(error);
+            },
+            succeed: function () { }
+        };
+       
+        it('Paws Get Logs (getIncidents) Error', function (done) {
+            authenticate = sinon.stub(utils, 'authenticate').callsFake(
+                function fakeFn(baseUrl, client_id, client_secret) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve(crowdstrikeMock.AUTHENTICATE.access_token);
+                    });
+                }
+            );
+            getList = sinon.stub(utils, 'getList').callsFake(
+                function fakeFn(apiDetails, accumulator, apiEndpoint, token) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ accumulator: crowdstrikeMock.LIST.resources, total: 1 });
+                    });
+                });
+            getIncidents = sinon.stub(utils, 'getIncidents').callsFake(
+                function fakeFn(ids, apiEndpoint, token) {
+                    return new Promise(function (resolve, reject) {
+                        return reject(new Error("Failed to fetch API logs due to an authentication issue"));
+                    });
+                });
+            getDetections = sinon.stub(utils, 'getDetections').callsFake(
+                function fakeFn(ids, apiEndpoint, token) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ resources: crowdstrikeMock.DETECTION_LOG_EVENT.resources});
+                    });
+                });
+            getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
+                function fakeFn(state) {
+                    return {
+                        url: "url",
+                        method: "GET",
+                        requestBody: "sortFieldName",
+                        typeIdPaths: [{ path: ["incident_id"] }],
+                        tsPaths: [{ path: ["created_timestamp"] }]
+                    };
+                });
+            CrowdstrikeCollector.load().then(function (creds) {
+                var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    stream: "Incident",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    offset: 0,
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(err.message, "Failed to fetch API logs due to an authentication issue", "Error message is not correct");
+                        done();
+                });
+
+            });
+        });
+    });
+
+    describe('pawsGetLogs (getDetections) Error', function () {
+        let ctx = {
+            invokedFunctionArn: crowdstrikeMock.FUNCTION_ARN,
+            fail: function (error) {
+                assert.fail(error);
+            },
+            succeed: function () { }
+        };
+        it('Paws Get Logs (getDetections) Error', function (done) {
+            authenticate = sinon.stub(utils, 'authenticate').callsFake(
+                function fakeFn(baseUrl, client_id, client_secret) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve(crowdstrikeMock.AUTHENTICATE.access_token);
+                    });
+                }
+            );
+            getList = sinon.stub(utils, 'getList').callsFake(
+                function fakeFn(apiDetails, accumulator, apiEndpoint, token) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ accumulator: crowdstrikeMock.LIST.resources, total: 1 });
+                    });
+                });
+            getIncidents = sinon.stub(utils, 'getIncidents').callsFake(
+                function fakeFn(ids, apiEndpoint, token) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ resources: crowdstrikeMock.INCIDENT_LOG_EVENT.resources});
+                    });
+                });
+            getDetections = sinon.stub(utils, 'getDetections').callsFake(
+                function fakeFn(ids, apiEndpoint, token) {
+                    return new Promise(function (resolve, reject) {
+                        return reject(new Error("Failed to fetch API logs due to an authentication issue"));
+                    });
+                });
+            getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
+                function fakeFn(state) {
+                    return {
+                        url: "url",
+                        method: "GET",
+                        requestBody: "sortFieldName",
+                        typeIdPaths: [{ path: ["detection_id"] }],
+                        tsPaths: [{ path: ["created_timestamp"] }]
+                    };
+                });
+            CrowdstrikeCollector.load().then(function (creds) {
+                var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    stream: "Detection",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    offset: 0,
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(err.message, "Failed to fetch API logs due to an authentication issue", "Error message is not correct");
+                        done();
+                });
+
+            });
+        });
+    });
 
     describe('Format Tests', function () {
         it('log format success', function (done) {

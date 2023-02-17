@@ -168,5 +168,30 @@ describe('Unit Tests', function () {
         });
     });
 });
+describe('Get API Logs (GET) with Error', function () {
+    it('Get API Logs with Error (GET)', function (done) {
+        alserviceStub.get = sinon.stub(RestServiceClient.prototype, 'get').callsFake(
+            function fakeFn(path, extraOptions) {
+                return new Promise(function (resolve, reject) {
+                    return reject(new Error("Failed to fetch API logs due to an authentication issue"));
+                });
+            });
+        let apiDetails = {
+            url: "url",
+            method: "GET",
+            requestBody:"",
+            typeIdPaths: [{ path: ["eventId"] }],
+            tsPaths: [{ path: ["eventTime"] }]
+        };
+        let accumulator = [];
+        const apiEndpoint = process.env.paws_endpoint;
+        const token = crowdstrikeMock.AUTHENTICATE.access_token;
 
+        utils.getList(apiDetails, accumulator, apiEndpoint, token).catch(err => {
+            assert.equal(err.message, "Failed to fetch API logs due to an authentication issue", "Error message is not correct");
+            alserviceStub.get.restore();
+            done();
+        });
+    });
+});
 
