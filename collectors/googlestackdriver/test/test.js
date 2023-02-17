@@ -102,6 +102,20 @@ describe('Unit Tests', function() {
                 });
             });
         });
+        it('when the difference between the current moment and a given startTs timestamp is more than 7 days', function(done) {
+            GooglestackdriverCollector.load().then(function(creds) {
+                var collector = new GooglestackdriverCollector(ctx, creds);
+                const startDate = moment().subtract(8, 'days').toISOString();
+                process.env.paws_collection_start_ts = startDate;
+
+                collector.pawsInitCollectionState(googlestackdriverMock.LOG_EVENT, (err, initialStates, nextPoll) => {
+                    initialStates.forEach((state) => {
+                        assert.equal(moment(state.until).diff(state.since, 'days'), 7);
+                    });
+                    done();
+                });
+            });
+        });
     });
 
     describe('pawsGetLogs', function() {
