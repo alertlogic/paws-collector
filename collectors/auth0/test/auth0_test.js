@@ -170,7 +170,7 @@ describe('Unit Tests', function () {
             Auth0Collector.load().then(function (creds) {
                 var collector = new Auth0Collector(ctx, creds);
                 auth0Mock.AUTH0_LOG_EVENT.type = null;
-                let fmt = collector.pawsFormatLog(auth0Mock.AUTH0_LOG_EVENT.type);
+                let fmt = collector.pawsFormatLog(auth0Mock.AUTH0_LOG_EVENT);
                 assert.equal(fmt.messageTypeId, undefined);
                 done();
             });
