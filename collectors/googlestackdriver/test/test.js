@@ -403,6 +403,22 @@ describe('Unit Tests', function() {
                 done();
             });
         });
+        it('get next state when pageSize is given and less than MAX_PAGE_SIZE', function(done) {
+            GooglestackdriverCollector.load().then(function(creds) {
+                var collector = new GooglestackdriverCollector(ctx, creds);
+                const startDate = moment().subtract(collector.pollInterval * 2, 'seconds');
+                const curState = {
+                    since: startDate.toISOString(),
+                    until: startDate.add(collector.pollInterval, 'seconds').toISOString(),
+                    poll_interval_sec: 1, 
+                    pageSize: 370
+                };
+                const newState = collector._getNextCollectionState(curState);
+                assert.equal(moment(newState.until).diff(newState.since, 'seconds'), collector.pollInterval);
+                assert.equal(newState.poll_interval_sec, 300);
+                done();
+            });
+        });
     });
     describe('Format Tests', function() {
         it('log format JSON success', function(done) {
