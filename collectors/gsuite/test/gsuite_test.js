@@ -156,6 +156,35 @@ describe('Unit Tests', function () {
             });
         });
 
+        it('Paws Get Logs Success when nextPage is not undefined', function (done) {
+            listEvent = sinon.stub(utils, 'listEvents').callsFake(
+                function fakeFn(path) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ accumulator: [gsuiteMock.LOG_EVENT, gsuiteMock.LOG_EVENT], nextPage: null });
+                    });
+                });
+
+            GsuiteCollector.load().then(function (creds) {
+                var collector = new GsuiteCollector(ctx, creds, 'gsuite');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    application: "login",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(logs.length, 2);
+                    assert.equal(newState.poll_interval_sec, 1);
+                    assert.ok(logs[0].kind);
+                    listEvent.restore();
+                    done();
+                });
+
+            });
+        });
+
         it('Paws Get Logs with API Quota Reset Date', function (done) {
             listEvent = sinon.stub(utils, 'listEvents').callsFake(
                 function fakeFn(path) {
@@ -269,6 +298,46 @@ describe('Unit Tests', function () {
                 let fmt = collector.pawsFormatLog(gsuiteMock.LOG_EVENT);
                 assert.equal(fmt.progName, 'GsuiteCollector');
                 assert.ok(fmt.messageTypeId);
+                done();
+            });
+        });
+        it('log format when kind is null or undefined', function (done) {
+            let ctx = {
+                invokedFunctionArn: gsuiteMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            GsuiteCollector.load().then(function (creds) {
+                var collector = new GsuiteCollector(ctx, creds, 'gsuite');
+                gsuiteMock.LOG_EVENT.kind = null;
+                let fmt = collector.pawsFormatLog(gsuiteMock.LOG_EVENT);
+                assert.equal(fmt.messageTypeId, undefined);
+                done();
+            });
+        });
+        it('log format when time is null or undefined', function (done) {
+            let ctx = {
+                invokedFunctionArn: gsuiteMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            GsuiteCollector.load().then(function (creds) {
+                var collector = new GsuiteCollector(ctx, creds, 'gsuite');
+                gsuiteMock.LOG_EVENT.id.time=null;
+                let fmt = collector.pawsFormatLog(gsuiteMock.LOG_EVENT);
+                assert.equal(fmt.messageTsUs, undefined);
                 done();
             });
         });
