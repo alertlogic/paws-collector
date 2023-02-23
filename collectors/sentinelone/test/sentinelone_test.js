@@ -189,6 +189,47 @@ describe('Unit Tests', function () {
                 done();
             });
         });
+        it('log format when id is null or undefined', function (done) {
+            let ctx = {
+                invokedFunctionArn: sentineloneMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            SentineloneCollector.load().then(function (creds) {
+                var collector = new SentineloneCollector(ctx, creds, 'sentinelone');
+                sentineloneMock.LOG_EVENT.id = null;
+                let fmt = collector.pawsFormatLog(sentineloneMock.LOG_EVENT);
+                assert.equal(fmt.messageTypeId, undefined);
+                done();
+            });
+        });
+
+        it('log format when createdAt is null or undefined', function (done) {
+            let ctx = {
+                invokedFunctionArn: sentineloneMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            SentineloneCollector.load().then(function (creds) {
+                var collector = new SentineloneCollector(ctx, creds, 'sentinelone');
+                sentineloneMock.LOG_EVENT.createdAt = null;
+                let fmt = collector.pawsFormatLog(sentineloneMock.LOG_EVENT);
+                assert.equal(fmt.messageTsUs, undefined);
+                done();
+            });
+        });
     });
 
     describe('NextCollectionStateWithNextPage', function () {
