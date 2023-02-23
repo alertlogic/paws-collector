@@ -49,6 +49,66 @@ describe('Unit Tests', function () {
                 done();
             });
         });
+
+        it('Get Object Logs when state.stream is LoginHistory', function (done) {
+            mockActivityObject = sinon.stub(conn, 'query').callsFake(
+                function fakeFn(err, result) {
+                    return result(null, { records: [salesforceMock.LOG_EVENT] });
+                });
+            let maxPagesPerInvocation = 5;
+            let response = {
+                body: `{}`
+            };
+            let objectQueryDetails = {
+                query: "query",
+                tsPaths: [{ path: ["LastLoginDate"] }],
+                sortFieldName: "Id",
+                sortType: "ASC"
+            };
+            const startDate = moment().subtract(5, 'minutes');
+            let state = {
+                object: "LoginHistory",
+                stream: "LoginHistory",
+                since: startDate.toISOString(),
+                until: startDate.add(5, 'minutes').toISOString(),
+                poll_interval_sec: 1
+            };
+            let accumulator = [];
+            utils.getObjectLogs(response, objectQueryDetails, accumulator, state, maxPagesPerInvocation).then(data => {
+                assert(accumulator.length == 5, "accumulator length is wrong");
+                done();
+            });
+        });
+
+        it('Get Object Logs when state.stream is LoginAsEvent', function (done) {
+            mockActivityObject = sinon.stub(conn, 'query').callsFake(
+                function fakeFn(err, result) {
+                    return result(null, { records: [salesforceMock.LOG_EVENT] });
+                });
+            let maxPagesPerInvocation = 5;
+            let response = {
+                body: `{}`
+            };
+            let objectQueryDetails = {
+                query: "query",
+                tsPaths: [{ path: ["LastLoginDate"] }],
+                sortFieldName: "Id",
+                sortType: "ASC"
+            };
+            const startDate = moment().subtract(5, 'minutes');
+            let state = {
+                object: "LoginAsEvent",
+                stream: "LoginAsEvent",
+                since: startDate.toISOString(),
+                until: startDate.add(5, 'minutes').toISOString(),
+                poll_interval_sec: 1
+            };
+            let accumulator = [];
+            utils.getObjectLogs(response, objectQueryDetails, accumulator, state, maxPagesPerInvocation).then(data => {
+                assert(accumulator.length == 5, "accumulator length is wrong");
+                done();
+            });
+        });
     });
 
     describe('Get Object Logs with no records', function () {
@@ -99,5 +159,132 @@ describe('Unit Tests', function () {
             assert(objectQueryDetails.length == objectNames.length, "objectQueryDetails length is wrong");
             done();
         });
+
+        it('Get Object Query when state.stream is LoginHistory', function (done) {
+            const startDate = moment().subtract(5, 'minutes');
+            let objectQueryDetails = [];
+            const objectNames = JSON.parse(process.env.collector_streams);
+            objectNames.map(object => {
+                let state = {
+                    object: object,
+                    stream: "LoginHistory",
+                    since: startDate.toISOString(),
+                    until: startDate.add(5, 'minutes').toISOString(),
+                    poll_interval_sec: 1
+                };
+                objectQueryDetails.push(utils.getObjectQuery(state));
+            });
+            assert(objectQueryDetails.length == objectNames.length, "objectQueryDetails length is wrong");
+            done();
+        });
+
+        it('Get Object Query when state.stream is EventLogFile', function (done) {
+            const startDate = moment().subtract(5, 'minutes');
+            let objectQueryDetails = [];
+            const objectNames = JSON.parse(process.env.collector_streams);
+            objectNames.map(object => {
+                let state = {
+                    object: object,
+                    stream: "EventLogFile",
+                    since: startDate.toISOString(),
+                    until: startDate.add(5, 'minutes').toISOString(),
+                    poll_interval_sec: 1
+                };
+                objectQueryDetails.push(utils.getObjectQuery(state));
+            });
+            assert(objectQueryDetails.length == objectNames.length, "objectQueryDetails length is wrong");
+            done();
+        });
+
+        it('Get Object Query when state.stream is ApiEvent', function (done) {
+            const startDate = moment().subtract(5, 'minutes');
+            let objectQueryDetails = [];
+            const objectNames = JSON.parse(process.env.collector_streams);
+            objectNames.map(object => {
+                let state = {
+                    object: object,
+                    stream: "ApiEvent",
+                    since: startDate.toISOString(),
+                    until: startDate.add(5, 'minutes').toISOString(),
+                    poll_interval_sec: 1
+                };
+                objectQueryDetails.push(utils.getObjectQuery(state));
+            });
+            assert(objectQueryDetails.length == objectNames.length, "objectQueryDetails length is wrong");
+            done();
+        });
+
+        it('Get Object Query when state.stream is LoginEvent', function (done) {
+            const startDate = moment().subtract(5, 'minutes');
+            let objectQueryDetails = [];
+            const objectNames = JSON.parse(process.env.collector_streams);
+            objectNames.map(object => {
+                let state = {
+                    object: object,
+                    stream: "LoginEvent",
+                    since: startDate.toISOString(),
+                    until: startDate.add(5, 'minutes').toISOString(),
+                    poll_interval_sec: 1
+                };
+                objectQueryDetails.push(utils.getObjectQuery(state));
+            });
+            assert(objectQueryDetails.length == objectNames.length, "objectQueryDetails length is wrong");
+            done();
+        });
+
+        it('Get Object Query when state.stream is LogoutEvent', function (done) {
+            const startDate = moment().subtract(5, 'minutes');
+            let objectQueryDetails = [];
+            const objectNames = JSON.parse(process.env.collector_streams);
+            objectNames.map(object => {
+                let state = {
+                    object: object,
+                    stream: "LogoutEvent",
+                    since: startDate.toISOString(),
+                    until: startDate.add(5, 'minutes').toISOString(),
+                    poll_interval_sec: 1
+                };
+                objectQueryDetails.push(utils.getObjectQuery(state));
+            });
+            assert(objectQueryDetails.length == objectNames.length, "objectQueryDetails length is wrong");
+            done();
+        });
+
+        it('Get Object Query when state.stream is LoginAsEvent', function (done) {
+            const startDate = moment().subtract(5, 'minutes');
+            let objectQueryDetails = [];
+            const objectNames = JSON.parse(process.env.collector_streams);
+            objectNames.map(object => {
+                let state = {
+                    object: object,
+                    stream: "LoginAsEvent",
+                    since: startDate.toISOString(),
+                    until: startDate.add(5, 'minutes').toISOString(),
+                    poll_interval_sec: 1
+                };
+                objectQueryDetails.push(utils.getObjectQuery(state));
+            });
+            assert(objectQueryDetails.length == objectNames.length, "objectQueryDetails length is wrong");
+            done();
+        });
+
+        it('Get Object Query when state.stream is null', function (done) {
+            const startDate = moment().subtract(5, 'minutes');
+            let objectQueryDetails = [];
+            const objectNames = JSON.parse(process.env.collector_streams);
+            objectNames.map(object => {
+                let state = {
+                    object: object,
+                    stream: null,
+                    since: startDate.toISOString(),
+                    until: startDate.add(5, 'minutes').toISOString(),
+                    poll_interval_sec: 1
+                };
+                objectQueryDetails.push(utils.getObjectQuery(state));
+            });
+            assert(objectQueryDetails.length == objectNames.length, "objectQueryDetails length is wrong");
+            done();
+        });
+
     });
 });
