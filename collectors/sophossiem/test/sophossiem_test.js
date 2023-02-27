@@ -270,6 +270,23 @@ describe('Unit Tests', function () {
                 done();
             });
         });
+         it('Next state tests success when nextPage is null', function (done) {
+            SophossiemCollector.load().then(function (creds) {
+                var collector = new SophossiemCollector(ctx, creds, 'sophossiem');
+                const startDate = moment();
+                const curState = {
+                    stream: "Events",
+                    from_date: startDate.unix(),
+                    poll_interval_sec: 1
+                };
+                const nextPage = null;
+                const has_more = true;
+                let nextState = collector._getNextCollectionState(curState, nextPage, has_more);
+                assert.equal(nextState.poll_interval_sec, 1);
+                assert.equal(nextState.nextPage, null);
+                done();
+            });
+        });
     });
 
     describe('Format Tests', function () {
@@ -289,6 +306,44 @@ describe('Unit Tests', function () {
                 let fmt = collector.pawsFormatLog(sophossiemMock.LOG_EVENT);
                 assert.equal(fmt.progName, 'SophossiemCollector');
                 assert.ok(fmt.message);
+                done();
+            });
+        });
+        it('log format success when id is null', function (done) {
+            let ctx = {
+                invokedFunctionArn: sophossiemMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+            SophossiemCollector.load().then(function (creds) {
+                var collector = new SophossiemCollector(ctx, creds, 'sophossiem');
+                sophossiemMock.LOG_EVENT.id = null;
+                let fmt = collector.pawsFormatLog(sophossiemMock.LOG_EVENT);
+                assert.equal(fmt.messageTypeId, undefined);
+                done();
+            });
+        });
+        it('log format success when created_at is null', function (done) {
+            let ctx = {
+                invokedFunctionArn: sophossiemMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+            SophossiemCollector.load().then(function (creds) {
+                var collector = new SophossiemCollector(ctx, creds, 'sophossiem');
+                sophossiemMock.LOG_EVENT.created_at = null;
+                let fmt = collector.pawsFormatLog(sophossiemMock.LOG_EVENT);
+                assert.equal(fmt.messageTsUs, undefined);
                 done();
             });
         });
