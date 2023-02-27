@@ -32,6 +32,7 @@ describe('Unit Tests', function () {
 
     afterEach(function () {
         responseStub.restore();
+
     });
 
     describe('pawsInitCollectionState', function () {
@@ -432,6 +433,47 @@ describe('Unit Tests', function () {
                 let fmt = collector.pawsFormatLog(sophosMock.LOG_EVENT);
                 assert.equal(fmt.progName, 'SophosCollector');
                 assert.ok(fmt.message);
+                done();
+            });
+        });
+        it('log format success when id is null', function (done) {
+            let ctx = {
+                invokedFunctionArn: sophosMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            SophosCollector.load().then(function (creds) {
+                var collector = new SophosCollector(ctx, creds, 'sophos');
+                sophosMock.LOG_EVENT.id = null;
+                let fmt = collector.pawsFormatLog(sophosMock.LOG_EVENT);
+                assert.equal(fmt.messageTypeId, undefined);
+                done();
+            });
+        });
+
+        it('log format success when raisedAt is null', function (done) {
+            let ctx = {
+                invokedFunctionArn: sophosMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            SophosCollector.load().then(function (creds) {
+                var collector = new SophosCollector(ctx, creds, 'sophos');
+                sophosMock.LOG_EVENT.raisedAt = null;
+                let fmt = collector.pawsFormatLog(sophosMock.LOG_EVENT);
+                assert.equal(fmt.messageTsUs, undefined);
                 done();
             });
         });
