@@ -913,5 +913,44 @@ describe('O365 Collector Tests', function() {
                 done();
             });
         });
+
+        it('log format when RecordType is null', function(done) {
+            let ctx = {
+                invokedFunctionArn : o365Mock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+            O365Collector.load().then(function(creds) {
+                var collector = new O365Collector(ctx, creds, 'o365');
+                o365Mock.LOG_EVENT.RecordType = null;
+                let fmt = collector.pawsFormatLog(o365Mock.LOG_EVENT);
+                assert.equal(fmt.messageTypeId, undefined);
+                done();
+            });
+        });
+        it('log format when CreationTime is null', function(done) {
+            let ctx = {
+                invokedFunctionArn : o365Mock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+            O365Collector.load().then(function(creds) {
+                var collector = new O365Collector(ctx, creds, 'o365');
+                o365Mock.LOG_EVENT.CreationTime = null;
+                let fmt = collector.pawsFormatLog(o365Mock.LOG_EVENT);
+                assert.equal(fmt.messageTsUs, undefined);
+                done();
+            });
+        });
     });
 });
