@@ -177,7 +177,7 @@ describe('Unit Tests', function () {
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
                     assert.equal(logs.length, 2);
                     assert.equal(newState.poll_interval_sec, 1);
-                    assert.equal(newState.nextPage,'nextPageUrl');
+                    assert.equal(newState.nextPage, 'nextPageUrl');
                     assert.equal(newState.apiQuotaResetDate, null);
                     assert.ok(logs[0].audit_log_id);
                     done();
@@ -375,7 +375,7 @@ describe('Unit Tests', function () {
 
             });
         });
-        
+
         it('Paws Get Logs with throttle error and set apiQuotaResetDate', function (done) {
             let errorObj = {
                 statusCode: 429,
@@ -478,7 +478,6 @@ describe('Unit Tests', function () {
                     totalLogsCount: 0,
                     poll_interval_sec: 1
                 };
-               
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
                     assert.equal(err.errorCode, 401);
                     done();
@@ -540,6 +539,48 @@ describe('Unit Tests', function () {
                 done();
             });
         });
+
+        it('log format when state.stream is Audit_Logs and audit_log_id is null', function (done) {
+            let ctx = {
+                invokedFunctionArn: ciscoampMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            CiscoampCollector.load().then(function (creds) {
+                var collector = new CiscoampCollector(ctx, creds, 'ciscoamp');
+                ciscoampMock.LOG_EVENT.audit_log_id = null;
+                let fmt = collector.pawsFormatLog(ciscoampMock.LOG_EVENT);
+                assert.equal(fmt.messageTypeId, undefined);
+                done();
+            });
+        });
+
+        it('log format when state.stream is Audit_Logs and created_at is null', function (done) {
+            let ctx = {
+                invokedFunctionArn: ciscoampMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            CiscoampCollector.load().then(function (creds) {
+                var collector = new CiscoampCollector(ctx, creds, 'ciscoamp');
+                ciscoampMock.LOG_EVENT.created_at = null;
+                let fmt = collector.pawsFormatLog(ciscoampMock.LOG_EVENT);
+                assert.equal(fmt.messageTsUs, undefined);
+                done();
+            });
+        });
     });
 
     describe('NextCollectionStateWithNextPage', function () {
@@ -576,4 +617,80 @@ describe('Unit Tests', function () {
         });
     });
 
+});
+
+describe('Unit Tests 2', function () {
+    beforeEach(function () {
+        AWS.mock('SSM', 'getParameter', function (params, callback) {
+            const data = new Buffer('test-secret');
+            return callback(null, { Parameter: { Value: data.toString('base64') } });
+        });
+        AWS.mock('KMS', 'decrypt', function (params, callback) {
+            const data = {
+                Plaintext: '{}'
+            };
+            return callback(null, data);
+        });
+    });
+
+    it('Paws Get Logs when currentInterval is less than 120 seconds', function (done) {
+        getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+            function fakeFn(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvocation) {
+                return new Promise(function (resolve, reject) {
+                    return reject(new Error("Failed to fetch API logs due to an authentication issue"));
+                });
+            });
+        CiscoampCollector.load().then(function (creds) {
+            const state = {
+                stream: "AuditLogs",
+                since: "2023-01-31T13:20:00.000Z",
+                until: "2023-01-31T13:21:00.000Z",
+                nextPage: null,
+                apiQuotaResetDate: null,
+                totalLogsCount: 0,
+                poll_interval_sec: 1
+            };
+            const baseUrl = process.env.paws_endpoint;
+            let maxPagesPerInvocation = 5;
+            let accumulator = [];
+            let authorization = "authorization";
+            let apiUrl = "apiUrl";
+            utils.getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPagesPerInvocation).catch(err => {
+                assert.equal(err.message, "Failed to fetch API logs due to an authentication issue", "Error message is not correct");
+                getAPILogs.restore();
+                done();
+            });
+
+        });
+    });
+    it('Paws Get Logs when state.since is null', function (done) {
+        getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+            function fakeFn(baseUrl, authorization, apiUrl, accumulator, maxPagesPerInvocation) {
+                return new Promise(function (resolve, reject) {
+                    return reject(new Error("Failed to fetch API logs due to an authentication issue"));
+                });
+            });
+        CiscoampCollector.load().then(function (creds) {
+            const state = {
+                stream: "AuditLogs",
+                since: null,
+                until: "2023-01-31T13:21:00.000Z",
+                nextPage: null,
+                apiQuotaResetDate: null,
+                totalLogsCount: 0,
+                poll_interval_sec: 1
+            };
+            const baseUrl = process.env.paws_endpoint;
+            let maxPagesPerInvocation = 5;
+            let accumulator = [];
+            let authorization = "authorization";
+            let apiUrl = "apiUrl";
+            utils.getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPagesPerInvocation).catch(err => {
+                assert.equal(err.message, "Failed to fetch API logs due to an authentication issue", "Error message is not correct");
+                getAPILogs.restore();
+                done();
+            });
+
+        });
+    });
 });

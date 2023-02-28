@@ -31,8 +31,32 @@ const LOG_EVENT = {
     audit_log_type: 'Computer',
     audit_log_id: 'b72fd5c0-1ec8-4b7a-b5aa-a500e64635f4',
     audit_log_user: '16db5cf986eec6f44422',
-    created_at: '2020-04-20T05:30:18Z',
+    created_at: '2020-04-20T05:30:18.789012Z',
     date: "2022-09-27T04:52:54+00:00",
+    old_attributes:
+    {
+        name: null,
+        desc: null,
+        hostname: null,
+        group_id: null,
+        operating_system_id: null
+    },
+    new_attributes:
+    {
+        name: 'Demo_AMP_Intel',
+        desc: 'Computer populated with demo data',
+        hostname: 'Demo_AMP_Intel',
+        group_id: 609190,
+        operating_system_id: 21810
+    }
+};
+
+const LOG_EVENT_WITHOUT_DATE = {
+    event: 'create',
+    audit_log_type: 'Computer',
+    audit_log_id: 'b72fd5c0-1ec8-4b7a-b5aa-a500e64635f4',
+    audit_log_user: '16db5cf986eec6f44422',
+    created_at: '2020-04-20T05:30:18Z',
     old_attributes:
     {
         name: null,
@@ -60,5 +84,6 @@ module.exports = {
     AIMS_TEST_CREDS: AIMS_TEST_CREDS,
     FUNCTION_ARN: FUNCTION_ARN,
     FUNCTION_NAME: FUNCTION_NAME,
-    LOG_EVENT: LOG_EVENT
+    LOG_EVENT: LOG_EVENT,
+    LOG_EVENT_WITHOUT_DATE: LOG_EVENT_WITHOUT_DATE
 };
