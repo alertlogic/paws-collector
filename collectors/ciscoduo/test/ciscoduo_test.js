@@ -7,7 +7,6 @@ var CiscoduoCollector = require('../collector').CiscoduoCollector;
 const moment = require('moment');
 const utils = require("../utils");
 
-
 var responseStub = {};
 let getAPIDetails;
 let getAPILogs;
@@ -101,6 +100,11 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
+        afterEach(function () {
+            // responseStub.restore();
+            getAPILogs.restore();
+            getAPIDetails.restore();
+        });
         it('Paws Get Logs Success', function (done) {
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
@@ -282,6 +286,60 @@ describe('Unit Tests', function () {
         });
     });
 
+    describe('When object details are null', function() {
+        let ctx = {
+            invokedFunctionArn: ciscoduoMock.FUNCTION_ARN,
+            fail: function (error) {
+                assert.fail(error);
+            },
+            succeed: function () { }
+        };
+        it('when object details are null(process.env.collector_streams) is null', function (done) {
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ accumulator: [ciscoduoMock.LOG_EVENT, ciscoduoMock.LOG_EVENT] });
+                    });
+                });
+            getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
+                function fakeFn(state) {
+                    const startDate = moment().subtract(3, 'days');
+                    return {
+                        url: "api_url",
+                        typeIdPaths: [{ path: ["txid"] }],
+                        tsPaths: [{ path: ["timestamp"] }],
+                        query: {
+                            mintime: startDate.valueOf(),
+                            maxtime: startDate.add(2, 'days').valueOf(),
+                            limit: 1000
+                        },
+                        method: "GET"
+                    };
+                });
+            CiscoduoCollector.load().then(function (creds) {
+                var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    stream: "Authentication",
+                    since: startDate.valueOf(),
+                    until: startDate.add(2, 'days').valueOf(),
+                    nextPage: null,
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(logs.length, 2);
+                    assert.equal(newState.poll_interval_sec, 240);
+                    assert.ok(logs[0].txid);
+                    getAPILogs.restore();
+                    getAPIDetails.restore();
+                    done();
+                });
+
+            });
+        });
+
+    });
+
     describe('Next state tests', function () {
         let ctx = {
             invokedFunctionArn: ciscoduoMock.FUNCTION_ARN,
@@ -363,6 +421,46 @@ describe('Unit Tests', function () {
                 let fmt = collector.pawsFormatLog(ciscoduoMock.LOG_EVENT);
                 assert.equal(fmt.progName, 'CiscoduoCollector');
                 assert.ok(fmt.message);
+                done();
+            });
+        });
+        it('log format success when txid is null', function (done) {
+            let ctx = {
+                invokedFunctionArn: ciscoduoMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            CiscoduoCollector.load().then(function (creds) {
+                var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
+                ciscoduoMock.LOG_EVENT.txid = null;
+                let fmt = collector.pawsFormatLog(ciscoduoMock.LOG_EVENT);
+                assert.equal(fmt.messageTypeId, undefined);
+                done();
+            });
+        });
+        it('log format success when timestamp is null', function (done) {
+            let ctx = {
+                invokedFunctionArn: ciscoduoMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            CiscoduoCollector.load().then(function (creds) {
+                var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
+                ciscoduoMock.LOG_EVENT.timestamp = null;
+                let fmt = collector.pawsFormatLog(ciscoduoMock.LOG_EVENT);
+                assert.equal(fmt.messageTsUs, undefined);
                 done();
             });
         });
