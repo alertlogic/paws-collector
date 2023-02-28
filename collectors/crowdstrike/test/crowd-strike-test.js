@@ -350,6 +350,27 @@ describe('Unit Tests', function () {
                 done();
             });
         });
+        it('log format success when incident_type is null', function (done) {
+            setAlServiceStub();
+            let ctx = {
+                invokedFunctionArn: crowdstrikeMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            CrowdstrikeCollector.load().then(function (creds) {
+                var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
+                crowdstrikeMock.INCIDENT_LOG_EVENT.resources.incident_type = null;
+                let fmt = collector.pawsFormatLog(crowdstrikeMock.INCIDENT_LOG_EVENT);
+                assert.equal(fmt.messageTypeId, undefined);
+                done();
+            });
+        });
     });
 
     describe('NextCollectionStateWithOffset', function () {
