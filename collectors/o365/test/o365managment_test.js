@@ -16,16 +16,6 @@ function createManagmentInstance(){
 
     return new O365Management(g_appAdCreds, process.env.paws_collector_param_string_1);
 }
-// function createManagmentInstance1(){
-//     var g_appAdCreds = new ApplicationTokenCredentials(
-//         process.env.paws_api_client_id,
-//         process.env.paws_collector_param_string_1,
-//         'a secret',
-//         'https://manage.office.com'
-//     );
-
-//     return new O365Management(g_appAdCreds, process.env.paws_collector_param_string_1, process.env.publisherId);
-// }
 
 
 describe('O365 managment tests', function() {
