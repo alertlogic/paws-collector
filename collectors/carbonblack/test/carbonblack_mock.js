@@ -29,7 +29,7 @@ const AIMS_TEST_CREDS = {
 
 const LOG_EVENT =  {
     "requestUrl": null,
-    "eventTime": 1529332687006,
+    "eventTime": "2020-05-30T13:49:11.789012Z",
     "eventId": "37075c01730511e89504c9ba022c3fbf",
     "loginName": "bs@carbonblack.com",
     "orgName": "example.org",
