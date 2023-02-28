@@ -70,7 +70,7 @@ const AUTH0_LOG_EVENT = {
         "log_id": "90020200113151943625000993024408641221974042823186448498",
         "_id": "90020200113151943625000993024408641221974042823186448498",
         "isMobile": false
-      };
+};
 
 const FUNCTION_ARN = 'arn:aws:lambda:us-east-1:352283894008:function:test-01-CollectLambdaFunction-2CWNLPPW5XO8';
 const FUNCTION_NAME = 'test-TestCollectLambdaFunction-1JNNKQIPOTEST';

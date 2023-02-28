@@ -186,6 +186,36 @@ describe('Unit Tests', function () {
             });
         });
 
+        it('Paws Get Logs Success when nextPage is not undefined', function (done) {
+
+            getObjectLogs = sinon.stub(utils, 'getObjectLogs').callsFake(
+                function fakeFn(response, objectQueryDetails, accumulator, state, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ accumulator: [salesforceMock.LOG_EVENT, salesforceMock.LOG_EVENT], nextPage: null });
+                    });
+                });
+
+            SalesforceCollector.load().then(function (creds) {
+                var collector = new SalesforceCollector(ctx, creds, 'salesforce');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    object: "LoginHistory",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(logs.length, 2);
+                    assert.equal(newState.poll_interval_sec, 1);
+                    assert.ok(logs[0].attributes);
+                    getObjectLogs.restore();
+                    done();
+                });
+
+            });
+        });
+
         it('Paws Get Logs with API Quota Reset Date', function (done) {
 
             getObjectLogs = sinon.stub(utils, 'getObjectLogs').callsFake(
@@ -250,6 +280,116 @@ describe('Unit Tests', function () {
 
             });
         });
+
+        it('Paws Get Logs error when Error code is other than REQUEST_LIMIT_EXCEEDED', function (done) {
+
+            getObjectLogs = sinon.stub(utils, 'getObjectLogs').callsFake(
+                function fakeFn(response, objectQueryDetails, accumulator, state, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ errorCode: "Service Unavailable"  });
+                    });
+                });
+
+            SalesforceCollector.load().then(function (creds) {
+                var collector = new SalesforceCollector(ctx, creds, 'salesforce');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    object: "LoginHistory",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.strictEqual(err.errorCode, 'Service Unavailable');
+                    getObjectLogs.restore();
+                    done();
+                });
+
+            });
+        });
+
+        it('Paws Get Logs error when Error code is INVALID_FIELD', function (done) {
+
+            getObjectLogs = sinon.stub(utils, 'getObjectLogs').callsFake(
+                function fakeFn(response, objectQueryDetails, accumulator, state, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ errorCode: "INVALID_FIELD"  });
+                    });
+                });
+
+            SalesforceCollector.load().then(function (creds) {
+                var collector = new SalesforceCollector(ctx, creds, 'salesforce');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    object: "LoginHistory",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.strictEqual(err.errorCode, 'INVALID_FIELD');
+                    getObjectLogs.restore();
+                    done();
+                });
+
+            });
+        });
+
+        it('Paws Get Logs error when Error code is INVALID_TYPE', function (done) {
+
+            getObjectLogs = sinon.stub(utils, 'getObjectLogs').callsFake(
+                function fakeFn(response, objectQueryDetails, accumulator, state, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ errorCode: "INVALID_TYPE"  });
+                    });
+                });
+
+            SalesforceCollector.load().then(function (creds) {
+                var collector = new SalesforceCollector(ctx, creds, 'salesforce');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    object: "LoginHistory",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.strictEqual(err.errorCode, 'INVALID_TYPE');
+                    getObjectLogs.restore();
+                    done();
+                });
+
+            });
+        });
+
+        it('Paws Get Logs error when Error code is INVALID_SESSION_ID', function (done) {
+
+            getObjectLogs = sinon.stub(utils, 'getObjectLogs').callsFake(
+                function fakeFn(response, objectQueryDetails, accumulator, state, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ errorCode: "INVALID_SESSION_ID"  });
+                    });
+                });
+
+            SalesforceCollector.load().then(function (creds) {
+                var collector = new SalesforceCollector(ctx, creds, 'salesforce');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    object: "LoginHistory",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.strictEqual(err.errorCode, 'INVALID_SESSION_ID');
+                    getObjectLogs.restore();
+                    done();
+                });
+
+            });
+        });
+
+
     });
 
 
@@ -352,6 +492,28 @@ describe('Unit Tests', function () {
                 let fmt = collector.pawsFormatLog(salesforceMock.LOG_EVENT);
                 assert.equal(fmt.progName, 'SalesforceCollector');
                 assert.ok(fmt.messageType);
+                done();
+            });
+        });
+        it('log format when type is null or undefined', function (done) {
+            setAlServiceStub();
+            let ctx = {
+                invokedFunctionArn: salesforceMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            SalesforceCollector.load().then(function (creds) {
+                var collector = new SalesforceCollector(ctx, creds, 'salesforce');
+                collector.tsPaths = [{ path: ["LastLoginDate"] }];
+                salesforceMock.LOG_EVENT.attributes = null;
+                let fmt = collector.pawsFormatLog(salesforceMock.LOG_EVENT);
+                assert.equal(fmt.messageTypeId, undefined);
                 done();
             });
         });

@@ -19,6 +19,8 @@ process.env.paws_api_secret = "api-secret";
 process.env.collector_streams = "[\"AuditLogEvents\", \"SearchAlerts\",\"SearchAlertsCBAnalytics\", \"SearchAlertsWatchlist\"]";
 process.env.paws_collector_param_string_2 = "carbonblackOrgKey";
 process.env.paws_endpoint = "https://api-url.conferdeploy.net";
+process.env.collector_streams_null = "[\"AuditLogEventsCB\", \"SearchAlertsCB\",\"SearchAlertsCBAnalyticsCB\", \"SearchAlertsWatchlistCB\"]";
+
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',
@@ -27,7 +29,7 @@ const AIMS_TEST_CREDS = {
 
 const LOG_EVENT =  {
     "requestUrl": null,
-    "eventTime": 1529332687006,
+    "eventTime": "2020-05-30T13:49:11.789012Z",
     "eventId": "37075c01730511e89504c9ba022c3fbf",
     "loginName": "bs@carbonblack.com",
     "orgName": "example.org",

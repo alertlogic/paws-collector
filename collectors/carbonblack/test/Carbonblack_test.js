@@ -202,6 +202,48 @@ describe('Unit Tests', function () {
                 done();
             });
         });
+        it('log format success when id is null', function (done) {
+            setAlServiceStub();
+            let ctx = {
+                invokedFunctionArn: carbonblackMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            CarbonblackCollector.load().then(function (creds) {
+                var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
+                carbonblackMock.LOG_EVENT.eventId = null;
+                let fmt = collector.pawsFormatLog(carbonblackMock.LOG_EVENT);
+                assert.equal(fmt.messageTypeId, undefined);
+                done();
+            });
+        });
+        it('log format success when eventTime is null', function (done) {
+            setAlServiceStub();
+            let ctx = {
+                invokedFunctionArn: carbonblackMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            CarbonblackCollector.load().then(function (creds) {
+                var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
+                carbonblackMock.LOG_EVENT.eventTime = null;
+                let fmt = collector.pawsFormatLog(carbonblackMock.LOG_EVENT);
+                assert.equal(fmt.messageTsUs, undefined);
+                done();
+            });
+        });
     });
 
     describe('NextCollectionStateWithNextPage', function () {
@@ -275,7 +317,7 @@ describe('Unit Tests', function () {
                 var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
-                    stream: "AuditLogEvents",
+                    stream: null,
                     since: startDate.toISOString(),
                     until: startDate.add(2, 'days').toISOString(),
                     nextPage: null,

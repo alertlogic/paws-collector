@@ -68,6 +68,45 @@ describe('Unit Tests', function () {
         });
     });
 
+    describe('Get API Logs with no date property', function () {
+        it('Get API Logs with no date property', function (done) {
+            alserviceStub.get = sinon.stub(RestServiceClient.prototype, 'get').callsFake(
+                function fakeFn() {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ body: { data: [ciscoampMock.LOG_EVENT_WITHOUT_DATE], metadata: { links: { self: "selfPageUrl" }, results: { total: 100 } } } });
+                    });
+                });
+    
+            const startDate = moment().subtract(5, 'days');
+            let state = {
+                since: startDate.toISOString(),
+                poll_interval_sec: 1,
+                stream: 'Events'
+            };
+            let maxPagesPerInvocation = 5;
+            let accumulator = [];
+            let authorization = "authorization";
+            let apiUrl = "apiUrl";
+    
+            const baseUrl = process.env.paws_endpoint;
+            utils.getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPagesPerInvocation)
+                .then(data => {
+                    assert(accumulator.length == 1, "accumulator length is wrong");
+                    alserviceStub.get.restore();
+                    done();
+                })
+                .catch(err => {
+                    if (err === 'CAMP000005 Date is not available in Events api response') {
+                      console.log("Error message matches expected value");
+                    } else {
+                      console.error("Unexpected error message:", err);
+                    }
+                    alserviceStub.get.restore();
+                    done();
+                  });
+                  
+        });
+    });
     describe('Get API Logs with nextPage', function () {
         it('Page count is more than maxPagesPerInvocation then return tha nextPage url for next invocation', function (done) {
             alserviceStub.get = sinon.stub(RestServiceClient.prototype, 'get').callsFake(

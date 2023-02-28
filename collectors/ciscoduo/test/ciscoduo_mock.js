@@ -47,7 +47,7 @@ const LOG_EVENT = {
     isotimestamp: '2020-06-03T14:29:17.668359+00:00',
     reason: 'bypass_user',
     result: 'success',
-    timestamp: 1591194557,
+    timestamp: "2020-05-30T13:49:11.789012Z",
     trusted_endpoint_status: 'unknown',
     txid: 'qwewqewq-23123-adasd-123112d-12323qd',
     user: { key: 'qweqwewqeqw', name: 'testuser' }

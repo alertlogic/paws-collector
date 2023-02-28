@@ -102,6 +102,20 @@ describe('Unit Tests', function() {
                 });
             });
         });
+        it('when the difference between the current moment and a given startTs timestamp is more than 7 days', function(done) {
+            GooglestackdriverCollector.load().then(function(creds) {
+                var collector = new GooglestackdriverCollector(ctx, creds);
+                const startDate = moment().subtract(8, 'days').toISOString();
+                process.env.paws_collection_start_ts = startDate;
+
+                collector.pawsInitCollectionState(googlestackdriverMock.LOG_EVENT, (err, initialStates, nextPoll) => {
+                    initialStates.forEach((state) => {
+                        assert.equal(moment(state.until).diff(state.since, 'days'), 7);
+                    });
+                    done();
+                });
+            });
+        });
     });
 
     describe('pawsGetLogs', function() {
@@ -382,6 +396,22 @@ describe('Unit Tests', function() {
                     since: startDate.toISOString(),
                     until: startDate.add(collector.pollInterval, 'seconds').toISOString(),
                     poll_interval_sec: 1
+                };
+                const newState = collector._getNextCollectionState(curState);
+                assert.equal(moment(newState.until).diff(newState.since, 'seconds'), collector.pollInterval);
+                assert.equal(newState.poll_interval_sec, 300);
+                done();
+            });
+        });
+        it('get next state when pageSize is given and less than MAX_PAGE_SIZE', function(done) {
+            GooglestackdriverCollector.load().then(function(creds) {
+                var collector = new GooglestackdriverCollector(ctx, creds);
+                const startDate = moment().subtract(collector.pollInterval * 2, 'seconds');
+                const curState = {
+                    since: startDate.toISOString(),
+                    until: startDate.add(collector.pollInterval, 'seconds').toISOString(),
+                    poll_interval_sec: 1, 
+                    pageSize: 370
                 };
                 const newState = collector._getNextCollectionState(curState);
                 assert.equal(moment(newState.until).diff(newState.since, 'seconds'), collector.pollInterval);

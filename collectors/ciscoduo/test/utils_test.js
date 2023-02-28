@@ -15,6 +15,9 @@ describe('Unit Tests', function () {
     });
 
     describe('Get API Logs (Authentication)', function () {
+        afterEach(function () {
+            getLogsStub.restore();
+          });
         it('Get API Logs (Authentication) success', function (done) {
             getLogsStub = sinon.stub(client, 'jsonApiCall').yields({
                 response: {
@@ -48,6 +51,35 @@ describe('Unit Tests', function () {
             };
             utils.getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvocation).then(data => {
                 assert(accumulator.length == 1, "accumulator length is wrong");
+                getLogsStub.restore();
+                done();
+            });
+        });
+        it('Get API Logs (Authentication) fail', function (done) {
+            getLogsStub = sinon.stub(client, 'jsonApiCall').yields(new Error('Request failed'), null);
+            let maxPagesPerInvocation = 5;
+            let accumulator = [];
+            const startDate = moment().subtract(5, 'days');
+            let state = {
+                stream: "Authentication",
+                since: startDate.valueOf(),
+                until: startDate.add(2, 'days').valueOf(),
+                nextPage: null,
+                poll_interval_sec: 1
+            };
+            let objectDetails = {
+                url: "api_url",
+                typeIdPaths: [{ path: ["txid"] }],
+                tsPaths: [{ path: ["timestamp"] }],
+                query: {
+                    mintime: state.since,
+                    maxtime: state.until,
+                    limit: 1000
+                },
+                method: "GET"
+            };
+            utils.getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvocation).catch(err => {
+                assert(err.message === 'Request failed', "error message is wrong");
                 getLogsStub.restore();
                 done();
             });
@@ -92,6 +124,35 @@ describe('Unit Tests', function () {
                 done();
             });
         });
+        it('Get API Logs (Authentication) with nextPage fail', function (done) {
+            getLogsStub = sinon.stub(client, 'jsonApiCall').yields(new Error('Request failed'), null);
+            let maxPagesPerInvocation = 5;
+            let accumulator = [];
+            const startDate = moment().subtract(5, 'days');
+            let state = {
+                stream: "Authentication",
+                since: startDate.valueOf(),
+                until: startDate.add(2, 'days').valueOf(),
+                nextPage: null,
+                poll_interval_sec: 1
+            };
+            let objectDetails = {
+                url: "api_url",
+                typeIdPaths: [{ path: ["txid"] }],
+                tsPaths: [{ path: ["timestamp"] }],
+                query: {
+                    mintime: state.since,
+                    maxtime: state.until,
+                    limit: 1000
+                },
+                method: "GET"
+            };
+            utils.getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvocation).catch(err => {
+                assert(err.message === 'Request failed', "error message is wrong");
+                getLogsStub.restore();
+                done();
+            });
+        });
     });
 
     describe('Get API Logs (Administrator)', function () {
@@ -119,6 +180,31 @@ describe('Unit Tests', function () {
             };
             utils.getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvocation).then(data => {
                 assert(accumulator.length == 0, "accumulator length is wrong");
+                getLogsStub.restore();
+                done();
+            });
+        });
+        it('Get API Logs (Administrator) fail', function (done) {
+            getLogsStub = sinon.stub(client, 'jsonApiCall').yields(new Error('Request failed'), null);
+            let maxPagesPerInvocation = 5;
+            let accumulator = [];
+            const startDate = moment().subtract(5, 'days');
+            let state = {
+                stream: "Administrator",
+                since: startDate.unix(),
+                poll_interval_sec: 1
+            };
+            let objectDetails = {
+                url: "api_url",
+                typeIdPaths: [{ path: ["action"] }],
+                tsPaths: [{ path: ["timestamp"] }],
+                query: {
+                    mintime: state.since
+                },
+                method: "GET"
+            };
+            utils.getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvocation).catch(err => {
+                assert(err.message === 'Request failed', "error message is wrong");
                 getLogsStub.restore();
                 done();
             });

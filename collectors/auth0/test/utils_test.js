@@ -39,6 +39,36 @@ describe('Unit Tests', function () {
         });
     });
 
+    describe('Get API Logs with error', function () {
+        it('Get API Logs with error', function (done) {
+            getLogsStub = sinon.stub(auth0Client, 'getLogs').callsFake(
+                function fakeFn() {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ statusCode: 503,
+                               error: "Service Unavailable",
+                              message: "The API service is temporarily unavailable, please try again later"
+                     });
+                    });
+                });
+                
+            const startDate = moment().subtract(5, 'minutes');    
+            let state = {
+                since: startDate.toISOString(),
+                poll_interval_sec: 1
+            };
+            let maxPagesPerInvocation = 5;
+            let accumulator = [];
+    
+            utils.getAPILogs(auth0Client, state, accumulator, maxPagesPerInvocation)
+                .catch(err => {
+                    assert.equal(err.message, "The API service is temporarily unavailable, please try again later", "Error message is not correct");
+                    getLogsStub.restore();
+                    done();
+                });
+        });
+    });
+    
+
     describe('Get API Logs with last log id', function () {
         it('Get API Logs  with last log id', function (done) {
             getLogsStub = sinon.stub(auth0Client, 'getLogs').callsFake(

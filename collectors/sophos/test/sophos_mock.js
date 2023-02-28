@@ -43,7 +43,7 @@ const LOG_EVENT = {
     "person": {
         "id": "4CC323EE-6D93-4CC5-AD3E-7AF5DC3B1AB9"
     },
-    "raisedAt": "2020-05-30T13:49:11.000Z",
+    "raisedAt": "2020-05-30T13:49:11.789012Z",
     "allowedActions": [
         "acknowledge",
         "authPua",
