@@ -248,6 +248,37 @@ describe('Unit Tests', function () {
 
             });
         });
+
+        it('Paws Get Logs Success Context Aware Access', function (done) {
+            listEvent = sinon.stub(utils, 'listEvents').callsFake(
+                function fakeFn(path) {
+                    return new Promise(function (resolve, reject) {
+                        gsuiteMock.LOG_EVENT.events[0].type='context_aware_access';
+                        return resolve({ accumulator: [gsuiteMock.LOG_EVENT, gsuiteMock.LOG_EVENT] });
+                    });
+                });
+
+            GsuiteCollector.load().then(function (creds) {
+                var collector = new GsuiteCollector(ctx, creds, 'gsuite');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    application: "context_aware_access",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(logs.length, 2);
+                    assert.equal(newState.poll_interval_sec, 1);
+                    assert.ok(logs[0].kind);
+                    listEvent.restore();
+                    done();
+                });
+
+            });
+        });
+
     });
 
 

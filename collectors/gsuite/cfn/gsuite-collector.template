@@ -64,7 +64,7 @@
         "GsuiteApplicationNames": {
             "Description": "Define Application name, if it is multiple pass as comma separated string for Gsuite",
             "Type": "String",
-            "Default": "[\"login\", \"admin\", \"access_transparency\", \"calendar\", \"drive\", \"gplus\", \"groups\", \"groups_enterprise\", \"mobile\", \"rules\", \"token\", \"user_accounts\"]"
+            "Default": "[\"login\", \"admin\", \"access_transparency\", \"calendar\", \"drive\", \"gplus\", \"groups\", \"groups_enterprise\", \"mobile\", \"rules\", \"token\", \"user_accounts\",\"context_aware_access\",\"chrome\"]"
         },
         "GsuiteEmailId": {
             "Description": "Email ID for Gsuite",
