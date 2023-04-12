@@ -147,6 +147,7 @@ class PawsCollector extends AlAwsCollector {
         this._pawsDomainEndpoint = endpointDomain;
         this._pawsHttpsEndpoint = 'https://' + endpointDomain;
         this._pawsDdbTableName = process.env.paws_ddb_table_name;
+        this._pawsDeDupLogsDdbTableName = process.env.paws_dedup_logs_ddb_table_name;
     };
 
     get secret () {
@@ -840,13 +841,12 @@ class PawsCollector extends AlAwsCollector {
                     // setting DDB time to life. This is set to cover 24hr duplication window
                     ExpireDate: { N: moment().add(1, 'days').unix().toString() }
                 },
-                TableName: process.env.paws_dedup_logs_ddb_table_name,
+                TableName: collector._pawsDeDupLogsDdbTableName,
                 ConditionExpression: 'attribute_not_exists(Id) OR  (Id = :id AND MessageHashId = :msg_hash_id AND CollectorId = :collector_id)', // Check if item with same Id already exists and id and message is identical
                 ExpressionAttributeValues: {
                     ':id': { S: record[`${paramName}`] }, ':msg_hash_id': { S: messageHashId }, ':collector_id': { S: collector._collectorId }
                 }
             };
-
             let promise = new Promise((resolve, reject) => {
                 ddb.putItem(params, (err, res) => {
                     if (err) {
@@ -855,7 +855,6 @@ class PawsCollector extends AlAwsCollector {
                             return resolve(null);
                         } else {
                             AlLogger.warn('PAWS000404 Error storing event in DynamoDB:', err);
-                            // Handle other errors like throtle -err.code === ProvisionedThroughputExceededException
                             return reject(err);
                         }
                     }

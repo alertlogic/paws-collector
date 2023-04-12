@@ -1025,6 +1025,33 @@ describe('Unit Tests', function() {
                 });
             });
         });
+
+        it('reportDuplicateLogCount', function(done) {
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+
+            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => {
+                callback(null, {});
+            });
+              
+            TestCollector.load().then(function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                collector.reportDuplicateLogCount(6, function(error) {
+                    assert.equal(null, error);
+                    AWS.restore('KMS');
+                    AWS.restore('CloudWatch');
+                    done();
+                });
+            });
+        });
     });
     
     describe('Register Tests', function() {
@@ -1236,6 +1263,168 @@ describe('Unit Tests', function() {
                 collector.pawsGetRegisterParameters(testEvent, (error, objectWithRegistrationProperties) =>{
                     assert.equal(error, null);
                     assert.deepEqual(objectWithRegistrationProperties, {});
+                    done();
+                });
+            });
+        });
+    });
+
+    describe('removeDuplicatedItem', function () {
+        afterEach(function () {
+            AWS.restore('DynamoDB');
+        });
+        it('Added the data if item not exist', function (done) {
+            const fakeFun = function (_params, callback) { return callback(null, { data: null }); };
+            const putItemStub = sinon.stub().callsFake(fakeFun);
+            mockDDB(null, putItemStub, null);
+
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    const putItemArgs = putItemStub.args[0][0];
+                    assert.equal(putItemArgs.called, true, 'should added the item');
+                    assert.equal(putItemArgs.Key.Id.S, "c5d8e7ea-90b0-4549-9746-f67c8f6c00");
+                    done();
+                }
+            };
+
+            PawsCollector.load().then((creds) => {
+                var collector = new TestCollectorNoOverrides(ctx, creds);
+                collector.removeDuplicatedItem(pawsMock.MOCK_LOGS, 'Id', (error, uniqueLogs) => {
+                    assert.equal(error, null);
+                    assert.deepEqual(uniqueLogs.length, pawsMock.MOCK_LOGS.length);
+                    done();
+                });
+            });
+        });
+
+        it('Discard record if it is duplicate', function (done) {
+            const ddbError = {
+                "message": "The conditional request failed",
+                "code": "ConditionalCheckFailedException",
+                "time": "2021-09-01T12:34:56.789Z",
+                "requestId": "12345678-1234-1234-1234-123456789012",
+                "statusCode": 400,
+                "retryable": false
+            };
+            const putItemStub = sinon.stub().callsFake(
+                function (_params, callback) {
+                    return callback(ddbError);
+                });
+
+            mockDDB(null, putItemStub, null);
+
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    const putItemArgs = putItemStub.args[0][0];
+                    assert.equal(putItemArgs.called, true, 'should added the item');
+                    assert.equal(putItemArgs.Key.Id.S, "c5d8e7ea-90b0-4549-9746-f67c8f6c00");
+                    done();
+                }
+            };
+            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback(null));
+            PawsCollector.load().then((creds) => {
+                var collector = new TestCollectorNoOverrides(ctx, creds);
+                collector.removeDuplicatedItem(pawsMock.MOCK_LOGS, 'Id', (error, uniqueLogs) => {
+                    assert.equal(error, null);
+                    assert.equal(uniqueLogs.length, 0);
+                    AWS.restore('CloudWatch');
+                    done();
+                });
+            });
+        });
+
+        it('Added only not existing item and discard duplicate item', function (done) {
+            let ddbError = {
+                "message": "The conditional request failed",
+                "code": "ConditionalCheckFailedException",
+                "time": "2021-09-01T12:34:56.789Z",
+                "requestId": "12345678-1234-1234-1234-123456789012",
+                "statusCode": 400,
+                "retryable": false
+            };
+            const fakeFunError = function (_params, callback) {
+                return callback(ddbError);
+            };
+            const fakeFunSuccess = function (_params, callback) {
+                return callback(null, { data: null });
+            };
+            let putItemStub = sinon.stub().onFirstCall().callsFake(fakeFunError)
+                .onSecondCall().callsFake(fakeFunSuccess);
+
+            mockDDB(null, putItemStub, null);
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    const putItemArgs = putItemStub.args[0][0];
+                    assert.equal(putItemArgs.called, true, 'should added the item');
+                    assert.equal(putItemArgs.Key.Id.S, "c5d8e7ea-90b0-4549-9746-f67c8f6c00");
+                    done();
+                }
+            };
+            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback(null));
+            PawsCollector.load().then((creds) => {
+                var collector = new TestCollectorNoOverrides(ctx, creds);
+                collector.removeDuplicatedItem(pawsMock.MOCK_LOGS, 'Id', (error, uniqueLogs) => {
+                    assert.equal(error, null);
+                    assert.equal(uniqueLogs.length, 1);
+                    AWS.restore('CloudWatch');
+                    done();
+                });
+            });
+        });
+
+        it('Check if ddb send error except ConditionalCheckFailedException ', function (done) {
+            let ddbError = {
+                "message": "The level of configured provisioned throughput for the table was exceeded. Consider increasing your provisioning level with the UpdateTable API.",
+                "code": "ProvisionedThroughputExceededException",
+                "time": "2021-09-01T12:34:56.789Z",
+                "requestId": "12345678-1234-1234-1234-123456789012",
+                "statusCode": 400,
+                "retryable": true
+            };
+            const fakeFunError = function (_params, callback) {
+                return callback(ddbError);
+            };
+            const fakeFunSuccess = function (_params, callback) {
+                return callback(null, { data: null });
+            };
+            let putItemStub = sinon.stub().onFirstCall().callsFake(fakeFunError)
+                .onSecondCall().callsFake(fakeFunSuccess);
+
+            mockDDB(null, putItemStub, null);
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    const putItemArgs = putItemStub.args[0][0];
+                    assert.equal(putItemArgs.called, true, 'should added the item');
+                    assert.equal(putItemArgs.Key.Id.S, "c5d8e7ea-90b0-4549-9746-f67c8f6c00");
+                    done();
+                }
+            };
+            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback(null));
+            PawsCollector.load().then((creds) => {
+                var collector = new TestCollectorNoOverrides(ctx, creds);
+                collector.removeDuplicatedItem(pawsMock.MOCK_LOGS, 'Id', (error, uniqueLogs) => {
+                    assert.notEqual(error, null);
+                    AWS.restore('CloudWatch');
                     done();
                 });
             });
