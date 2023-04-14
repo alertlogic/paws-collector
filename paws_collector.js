@@ -842,7 +842,7 @@ class PawsCollector extends AlAwsCollector {
                     ExpireDate: { N: moment().add(1, 'days').unix().toString() }
                 },
                 TableName: collector._pawsDeDupLogsDdbTableName,
-                ConditionExpression: 'attribute_not_exists(Id) OR  (Id = :id AND MessageHashId = :msg_hash_id AND CollectorId = :collector_id)', // Check if item with same Id already exists and id and message is identical
+                ConditionExpression: '(attribute_not_exists(Id) AND attribute_not_exists(MsgHashId)) OR  (Id = :id AND MsgHashId <> :msg_hash_id AND CollectorId = :collector_id)', // Check if item with same Id already exists and id and message is identical
                 ExpressionAttributeValues: {
                     ':id': { S: record[`${paramName}`] }, ':msg_hash_id': { S: messageHashId }, ':collector_id': { S: collector._collectorId }
                 }
