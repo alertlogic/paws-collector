@@ -37,6 +37,7 @@ const ERROR_CODE_DUPLICATE_STATE = 'DUPLICATE_STATE';
 const ERROR_CODE_COMPLETED_STATE = 'COMPLETED_STATE';
 const SQS_VISIBILITY_TIMEOUT = 900;
 const DDB_TTL_DAYS = 14;
+const DEDUP_LOG_TTL_HOURS = 24;
 const DDB_OPTIONS = {
     maxRetries: 10,
     ConsistentRead: true
@@ -147,7 +148,7 @@ class PawsCollector extends AlAwsCollector {
         this._pawsDomainEndpoint = endpointDomain;
         this._pawsHttpsEndpoint = 'https://' + endpointDomain;
         this._pawsDdbTableName = process.env.paws_ddb_table_name;
-        this._pawsDeDupLogsDdbTableName = process.env.paws_dedup_logs_ddb_table_name;
+        this._pawsDeDupLogsTableName = process.env.paws_dedup_logs_ddb_table_name;
     };
 
     get secret () {
@@ -811,11 +812,21 @@ class PawsCollector extends AlAwsCollector {
     /**
      * Get hash of message 
      * @param {*} message 
-     * @returns 
+     * @returns messageHash value
      */
     getHash(message) {
-        const hashValue = crypto.createHash('sha256').update(JSON.stringify(message, Object.keys(message).sort())).digest('hex');
-        return hashValue;
+        const messageHash = crypto.createHash('sha256').update(JSON.stringify(message, Object.keys(message).sort())).digest('hex');
+        return messageHash;
+    }
+
+    /**
+     * calculate expiry date for deduplicate table item
+     * @returns expireTTLDate
+     */
+    calculateExpiryTs() {
+        const expireTTLHours = process.env.expire_ttl_hours ? process.env.expire_ttl_hours : DEDUP_LOG_TTL_HOURS // set default to be 24 hr.
+        const expireTTLDate = moment().add(expireTTLHours, 'hours').unix().toString();
+        return expireTTLDate;
     }
 
    /**
@@ -823,7 +834,7 @@ class PawsCollector extends AlAwsCollector {
     * @param {*} logs 
     * @param {*} paramName :Uniquely identified parameter key 
     * @param {*} callback 
-    * @returns 
+    * @returns  callback - (error, uniqueLogs)
     */
     removeDuplicatedItem(logs, paramName, asyncCallback) {
         let collector = this;
@@ -831,21 +842,20 @@ class PawsCollector extends AlAwsCollector {
         let uniqueLogs = [];
         var promises = [];
         let duplicateCount = 0;
-        logs.forEach(record => {
-            const messageHashId = collector.getHash(record);
+        logs.forEach(message => {
+            const cid = collector.cid ? collector.cid : 'none';
+            const collectorId = collector._collectorId;
+            const messageHash = collector.getHash(message);
+            const itemId = `${cid}_${collectorId}_${messageHash}`;
             const params = {
                 Item: {
-                    Id: { S: record[`${paramName}`] },
-                    CollectorId: { S: collector._collectorId },
-                    MsgHashId: { S: messageHashId },
-                    // setting DDB time to life. This is set to cover 24hr duplication window
-                    ExpireDate: { N: moment().add(1, 'days').unix().toString() }
+                    Id: { S: itemId },
+                    CollectorId: { S: collectorId },
+                    OrigMessageId: { S: message[`${paramName}`] },
+                    ExpireDate: { N: collector.calculateExpiryTs() }
                 },
-                TableName: collector._pawsDeDupLogsDdbTableName,
-                ConditionExpression: '(attribute_not_exists(Id) AND attribute_not_exists(MsgHashId)) OR  (Id = :id AND MsgHashId <> :msg_hash_id AND CollectorId = :collector_id)', // Check if item with same Id already exists and id and message is identical
-                ExpressionAttributeValues: {
-                    ':id': { S: record[`${paramName}`] }, ':msg_hash_id': { S: messageHashId }, ':collector_id': { S: collector._collectorId }
-                }
+                TableName: collector._pawsDeDupLogsTableName,
+                ConditionExpression: 'attribute_not_exists(Id)'
             };
             let promise = new Promise((resolve, reject) => {
                 ddb.putItem(params, (err, res) => {
@@ -859,7 +869,7 @@ class PawsCollector extends AlAwsCollector {
                         }
                     }
                     else {
-                        uniqueLogs.push(record);
+                        uniqueLogs.push(message);
                         return resolve(null);
                     }
                 });
@@ -869,9 +879,10 @@ class PawsCollector extends AlAwsCollector {
 
         Promise.all(promises).then(result => {
             if (duplicateCount > 0) {
-                collector.reportDuplicateLogCount(duplicateCount, (err)=>{
-                    if(err)
-                    AlLogger.warn(`PAWS000405 error from custom cloud watch metrics ${JSON.stringify(err)}`);
+                collector.reportDuplicateLogCount(duplicateCount, (err) => {
+                    if (err){
+                        AlLogger.warn(`PAWS000405 error from custom cloud watch metrics ${JSON.stringify(err)}`);
+                    }
                 });
             }
             return asyncCallback(null, uniqueLogs);

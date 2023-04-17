@@ -120,13 +120,21 @@ const HEALTCHECK_SUBSCRIPTION_FILTERS = {
 };
 const MOCK_LOGS = [
     {
-        "CreationTime": new Date().toISOString(), "Id": "c5d8e7ea-90b0-4549-9746-f67c8f6c00", "Operation": "UserLoginFailed", "Workload": "AzureActiveDirectory",
-        "ErrorNumber": "500121", "LogonError": "AuthenticationFailedSasError"
+        CreationTime: new Date().toISOString(),
+        Id: "c5d8e7ea-90b0-4549-9746-f67c8f6c00",
+        Operation: "UserLoginFailed",
+        Workload: "AzureActiveDirectory",
+        ErrorNumber: "500121",
+        LogonError: "AuthenticationFailedSasError",
     },
     {
-        "CreationTime": new Date().toISOString(), "Id": "c5d8e7ea-90b0-4549-9746-f67c8f6c11", "Operation": "UserLoginFailed", "Workload": "AzureActiveDirectory",
-        "ErrorNumber": "500101", "LogonError": "AuthenticationFailedSasError"
-    }
+        CreationTime: new Date().toISOString(),
+        Id: "c5d8e7ea-90b0-4549-9746-f67c8f6c11",
+        Operation: "UserLoginFailed",
+        Workload: "AzureActiveDirectory",
+        ErrorNumber: "500101",
+        LogonError: "AuthenticationFailedSasError",
+    },
 ];
 
 module.exports = {
