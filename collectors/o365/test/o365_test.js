@@ -381,6 +381,16 @@ describe('O365 Collector Tests', function() {
             },
             succeed : function() {}
         };
+        beforeEach(function() {
+            const putItemStub = sinon.stub().callsFake(
+                function (_params, callback) {
+                    return callback(null, { data: null });
+                });
+            AWS.mock('DynamoDB', 'putItem', putItemStub);
+        });
+        afterEach(function() {
+            AWS.restore('DynamoDB');
+        });
 
         it('Updates a stale state', function(done) {
             O365Collector.load().then(function(creds) {

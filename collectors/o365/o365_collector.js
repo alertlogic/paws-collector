@@ -167,8 +167,18 @@ class O365Collector extends PawsCollector {
             } else {
                 newState = this._getNextCollectionStateWithNextPage(state, nextPage);
             }
-
-            return callback(null, logs, newState, newState.poll_interval_sec);
+            let uniqueLogs = [];
+            collector.removeDuplicatedItem(logs, "Id", (err, res) => {
+                if (err) {
+                    return callback(err);
+                }
+                else {
+                    if (res.length > 0) {
+                        uniqueLogs = [...res];
+                    }
+                    return callback(null, uniqueLogs, newState, newState.poll_interval_sec);
+                }
+            });
         }).catch(err => {
             // set errorCode to showcase client error on DDMetric
             if (typeof err === 'object') {
