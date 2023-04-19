@@ -23,6 +23,7 @@ process.env.paws_api_client_id = 'api-client-id';
 process.env.al_application_id = 'paws';
 process.env.paws_ddb_table_name = 'asampletable';
 process.env.dl_s3_bucket_name = 'dl_s3_bucket';
+process.env.paws_dedup_logs_ddb_table_name = 'paws_de_dup_logs_ddb';
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',
@@ -117,6 +118,24 @@ const HEALTCHECK_SUBSCRIPTION_FILTERS = {
         }
     ]
 };
+const MOCK_LOGS = [
+    {
+        CreationTime: new Date().toISOString(),
+        Id: "c5d8e7ea-90b0-4549-9746-f67c8f6c00",
+        Operation: "UserLoginFailed",
+        Workload: "AzureActiveDirectory",
+        ErrorNumber: "500121",
+        LogonError: "AuthenticationFailedSasError",
+    },
+    {
+        CreationTime: new Date().toISOString(),
+        Id: "c5d8e7ea-90b0-4549-9746-f67c8f6c11",
+        Operation: "UserLoginFailed",
+        Workload: "AzureActiveDirectory",
+        ErrorNumber: "500101",
+        LogonError: "AuthenticationFailedSasError",
+    },
+];
 
 module.exports = {
     AIMS_TEST_CREDS : AIMS_TEST_CREDS,
@@ -132,5 +151,6 @@ module.exports = {
     SELF_UPDATE_EVENT : SELF_UPDATE_EVENT,
     HEALTCHECK_SUBSCRIPTION_FILTERS : HEALTCHECK_SUBSCRIPTION_FILTERS,
     STACK_ID : STACK_ID,
-    REGISTRATION_TEST_URL : REGISTRATION_TEST_URL
+    REGISTRATION_TEST_URL : REGISTRATION_TEST_URL,
+    MOCK_LOGS : MOCK_LOGS
 };

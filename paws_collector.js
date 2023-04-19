@@ -16,6 +16,7 @@ const AWS = require('aws-sdk');
 const fs = require('fs');
 const moment = require('moment');
 const ddLambda = require('datadog-lambda-js');
+const crypto = require('crypto');
 
 const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector;
 const AlAwsUtil = require('@alertlogic/al-aws-collector-js').Util;
@@ -36,6 +37,7 @@ const ERROR_CODE_DUPLICATE_STATE = 'DUPLICATE_STATE';
 const ERROR_CODE_COMPLETED_STATE = 'COMPLETED_STATE';
 const SQS_VISIBILITY_TIMEOUT = 900;
 const DDB_TTL_DAYS = 14;
+const DEDUP_LOG_TTL_HOURS = 24;
 const DDB_OPTIONS = {
     maxRetries: 10,
     ConsistentRead: true
@@ -146,6 +148,7 @@ class PawsCollector extends AlAwsCollector {
         this._pawsDomainEndpoint = endpointDomain;
         this._pawsHttpsEndpoint = 'https://' + endpointDomain;
         this._pawsDdbTableName = process.env.paws_ddb_table_name;
+        this._pawsDeDupLogsTableName = process.env.paws_dedup_logs_ddb_table_name;
     };
 
     get secret () {
@@ -704,6 +707,32 @@ class PawsCollector extends AlAwsCollector {
         return cloudwatch.putMetricData(params, callback);
     };
 
+    reportDuplicateLogCount(duplicateCount, callback) {
+        var cloudwatch = new AWS.CloudWatch({ apiVersion: '2010-08-01' });
+        const params = {
+            MetricData: [
+                {
+                    MetricName: "PawsDeDupMessages",
+                    Dimensions: [
+                        {
+                            Name: 'CollectorType',
+                            Value: this._pawsCollectorType
+                        },
+                        {
+                            Name: 'FunctionName',
+                            Value: process.env.AWS_LAMBDA_FUNCTION_NAME
+                        }
+                    ],
+                    Timestamp: new Date(),
+                    Unit: 'Count',
+                    Value: duplicateCount
+                }
+            ],
+            Namespace: 'PawsCollectors'
+        };
+        this.reportDDMetric("duplicate_messages", duplicateCount);
+        return cloudwatch.putMetricData(params, callback);
+    };
     _storeCollectionState(pawsState, privCollectorState, invocationTimeout, callback) {
         if (Array.isArray(privCollectorState)) {
             return this._storeCollectionStateArray(pawsState, privCollectorState, invocationTimeout, callback);
@@ -779,6 +808,89 @@ class PawsCollector extends AlAwsCollector {
             }
         });
     }
+
+    /**
+     * Get hash of message 
+     * @param {*} message 
+     * @returns messageHash value
+     */
+    getHash(message) {
+        const messageHash = crypto.createHash('sha256').update(JSON.stringify(message, Object.keys(message).sort())).digest('hex');
+        return messageHash;
+    }
+
+    /**
+     * calculate expiry date for deduplicate table item
+     * @returns expireTTLDate
+     */
+    calculateExpiryTs() {
+        const expireTTLHours = process.env.expire_ttl_hours ? process.env.expire_ttl_hours : DEDUP_LOG_TTL_HOURS // set default to be 24 hr.
+        const expireTTLDate = moment().add(expireTTLHours, 'hours').unix().toString();
+        return expireTTLDate;
+    }
+
+   /**
+    * 
+    * @param {*} logs 
+    * @param {*} paramName :Uniquely identified parameter key 
+    * @param {*} callback 
+    * @returns  callback - (error, uniqueLogs)
+    */
+    removeDuplicatedItem(logs, paramName, asyncCallback) {
+        let collector = this;
+        const ddb = new AWS.DynamoDB();
+        let uniqueLogs = [];
+        var promises = [];
+        let duplicateCount = 0;
+        logs.forEach(message => {
+            const cid = collector.cid ? collector.cid : 'none';
+            const collectorId = collector._collectorId;
+            const messageHash = collector.getHash(message);
+            const itemId = `${cid}_${collectorId}_${messageHash}`;
+            const params = {
+                Item: {
+                    Id: { S: itemId },
+                    CollectorId: { S: collectorId },
+                    OrigMessageId: { S: message[`${paramName}`] },
+                    ExpireDate: { N: collector.calculateExpiryTs() }
+                },
+                TableName: collector._pawsDeDupLogsTableName,
+                ConditionExpression: 'attribute_not_exists(Id)'
+            };
+            let promise = new Promise((resolve, reject) => {
+                ddb.putItem(params, (err, res) => {
+                    if (err) {
+                        if (err.code === 'ConditionalCheckFailedException') {
+                            duplicateCount++;
+                            return resolve(null);
+                        } else {
+                            AlLogger.warn('PAWS000404 Error storing event in DynamoDB:', err);
+                            return reject(err);
+                        }
+                    }
+                    else {
+                        uniqueLogs.push(message);
+                        return resolve(null);
+                    }
+                });
+            });
+            promises.push(promise);
+        });
+
+        Promise.all(promises).then(result => {
+            if (duplicateCount > 0) {
+                collector.reportDuplicateLogCount(duplicateCount, (err) => {
+                    if (err){
+                        AlLogger.warn(`PAWS000405 error from custom cloud watch metrics ${JSON.stringify(err)}`);
+                    }
+                });
+            }
+            return asyncCallback(null, uniqueLogs);
+        }).catch(err => {
+            return asyncCallback(err);
+        });
+    }
+
 
     /**
      * @function collector callback to initialize collection state

@@ -171,6 +171,10 @@
         "ExistingDLS3BucketName": {
             "Description": "Bucket that contains incorrect data rejected by Ingest service.",
             "Type": "String"
+        },
+        "ExistingDedupLogsDDBTableName": {
+            "Description": "DDB table to store the unique item for 24 hr which allows us to find out the duplicate item before sending to Ingest service.",
+            "Type": "String"
         }
     },
     "Resources":{
@@ -400,6 +404,9 @@
                 },
                 "dl_s3_bucket_name": {
                     "Ref": "ExistingDLS3BucketName"
+                },
+                "paws_dedup_logs_ddb_table_name": {
+                    "Ref": "ExistingDedupLogsDDBTableName"
                 }
                }
             },
