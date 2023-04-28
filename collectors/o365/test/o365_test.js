@@ -374,6 +374,16 @@ describe('O365 Collector Tests', function() {
     });
 
     describe('pawsGetLogs', function() {
+        beforeEach(function() {
+            const putItemStub = sinon.stub().callsFake(
+                function (_params, callback) {
+                    return callback(null, { data: null });
+                });
+            AWS.mock('DynamoDB', 'putItem', putItemStub);
+        });
+        afterEach(function() {
+            AWS.restore('DynamoDB');
+        });
         let ctx = {
             invokedFunctionArn : o365Mock.FUNCTION_ARN,
             fail : function(error) {
