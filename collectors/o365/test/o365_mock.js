@@ -19,6 +19,7 @@ process.env.al_application_id = 'o365';
 process.env.paws_poll_interval = 60;
 process.env.paws_max_pages_per_invocation = 2;
 process.env.paws_poll_interval_delay = 300;
+process.env.paws_dedup_logs_ddb_table_name = 'paws_de_dup_logs_ddb';
 
 const AIMS_TEST_CREDS = {
     access_key_id: 'test-access-key-id',
@@ -27,11 +28,14 @@ const AIMS_TEST_CREDS = {
 
 const LOG_EVENT = {
     CreationTime: new Date().toISOString(),
+    Id: "c5d8e7ea-90b0-4549-9746-f67c8f6c00",
     RecordType: "MockRecordType"
+    
 };
 
 const MOCK_LOG = {
     CreationTime: new Date().toISOString(),
+    Id: "c5d8e7ea-90b0-4549-9746-f67c8f6c00",
     RecordType: "MockRecordType"
 };
 
