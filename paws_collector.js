@@ -37,7 +37,7 @@ const ERROR_CODE_DUPLICATE_STATE = 'DUPLICATE_STATE';
 const ERROR_CODE_COMPLETED_STATE = 'COMPLETED_STATE';
 const SQS_VISIBILITY_TIMEOUT = 900;
 const DDB_TTL_DAYS = 14;
-const DEDUP_LOG_TTL_HOURS = 24;
+const DEDUP_LOG_TTL_SECONDS = 86400;
 const DDB_OPTIONS = {
     maxRetries: 10,
     ConsistentRead: true
@@ -557,7 +557,7 @@ class PawsCollector extends AlAwsCollector {
                 let params = collector.getS3ObjectParams(logs);
                 return AlAwsHealth.handleIngestEncodingInvalidError(error, params, (err) => {
                     if (err) {
-                        return callback(err);
+                        return collector.handleDeDupIngestError(err, logs, callback);
                     }
                     else return callback(null, privCollectorState, nextInvocationTimeout);
                 });
@@ -824,8 +824,8 @@ class PawsCollector extends AlAwsCollector {
      * @returns expireTTLDate
      */
     calculateExpiryTs() {
-        const expireTTLHours = process.env.expire_ttl_hours ? process.env.expire_ttl_hours : DEDUP_LOG_TTL_HOURS // set default to be 24 hr.
-        const expireTTLDate = moment().add(expireTTLHours, 'hours').unix().toString();
+        const expireTTL = process.env.expire_ttl_seconds ? process.env.expire_ttl_seconds : DEDUP_LOG_TTL_SECONDS // set default to be 24 hr.
+        const expireTTLDate = moment().add(expireTTL, 'seconds').unix().toString();
         return expireTTLDate;
     }
 
@@ -886,6 +886,78 @@ class PawsCollector extends AlAwsCollector {
                 });
             }
             return asyncCallback(null, uniqueLogs);
+        }).catch(err => {
+            return asyncCallback(err);
+        });
+    }
+    /**
+     * 
+     * @param {*} error 
+     * @param {*} logs 
+     * @param {*} callback 
+     * @returns original error
+     */
+    handleDeDupIngestError(error, logs, callback) {
+        let collector = this;
+        if (collector.pawsCollectorType == 'o365') {
+            collector.updateDedupLogItemEntry(logs, (err) => {
+                return callback(error);
+            });
+        } else {
+            return callback(error);
+        }
+    }
+
+    /**
+     * update the ExpireTTL value
+     * @param {*} logs 
+     * @param {*} asyncCallback 
+     */
+    updateDedupLogItemEntry(logs, asyncCallback) {
+        let collector = this;
+        const ddb = new AWS.DynamoDB();
+        var promises = [];
+        logs.forEach(message => {
+            const cid = collector.cid ? collector.cid : 'none';
+            const collectorId = collector._collectorId;
+            const messageHash = collector.getHash(message);
+            const itemId = `${cid}_${collectorId}_${messageHash}`;
+            const updateParams = {
+                Key: {
+                    Id: { S: itemId },
+                    CollectorId: { S: collectorId }
+                },
+                AttributeUpdates: {
+                    ExpireDate: {
+                        Action: 'PUT',
+                        Value: { N: moment().add(1, 'seconds').unix().toString() }
+                    }
+                },
+                TableName: collector._pawsDeDupLogsTableName,
+            };
+            let promise = new Promise((resolve, reject) => {
+                ddb.updateItem(updateParams, (err, res) => {
+                    if (err) {
+                        if (err.code === 'ProvisionedThroughputExceededException' && err.retryable === true) {
+                            setTimeout(() => {
+                                ddb.updateItem(updateParams, (err, data) => {
+                                    if (err) {
+                                        AlLogger.warn('Error updating item:', err);
+                                    }
+                                });
+                            }, 1000);
+                        } else {
+                            AlLogger.warn('PAWS000405 Error updating item in DynamoDB:', err);
+                        }
+                    }
+                    return resolve(null);
+                });
+            });
+            promises.push(promise);
+        });
+
+        Promise.all(promises).then(result => {
+            return asyncCallback(null);
         }).catch(err => {
             return asyncCallback(err);
         });
