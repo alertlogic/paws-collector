@@ -42,6 +42,11 @@ const DDB_OPTIONS = {
     maxRetries: 10,
     ConsistentRead: true
 };
+
+const DDB_DELETE_BATCH_OPTIONS = {
+    maxBatchSize: 25,
+    maxBatchSizeBytes: 16 * 1024 * 1024
+}
 const MAX_ERROR_RETRIES = 5;
 const MAX_LOG_BATCH_SIZE = 10000;
 function getPawsParamStoreParam(){
@@ -541,7 +546,9 @@ class PawsCollector extends AlAwsCollector {
             return new Promise((resolve, reject) => {
                 collector.processLog(logs.slice(logpart.start, logpart.stop), collector.pawsFormatLog.bind(collector), null, (err, res) => {
                     if (err) {
-                        reject(err);
+                        collector.handleDeDupIngestError(err, logs.slice(logpart.start, logpart.stop), (error) => {
+                            reject(error);
+                        });
                     }
                     else {
                         resolve(res);
@@ -557,7 +564,7 @@ class PawsCollector extends AlAwsCollector {
                 let params = collector.getS3ObjectParams(logs);
                 return AlAwsHealth.handleIngestEncodingInvalidError(error, params, (err) => {
                     if (err) {
-                        return collector.handleDeDupIngestError(err, logs, callback);
+                        return callback(err);
                     }
                     else return callback(null, privCollectorState, nextInvocationTimeout);
                 });
@@ -891,79 +898,76 @@ class PawsCollector extends AlAwsCollector {
         });
     }
     /**
-     * 
+     * Return the original error after deleting the entry from DDB
      * @param {*} error 
      * @param {*} logs 
-     * @param {*} callback 
-     * @returns original error
+     * @param {*} asyncCallback 
+     * @returns 
      */
-    handleDeDupIngestError(error, logs, callback) {
+    handleDeDupIngestError(error, logs, asyncCallback) {
         let collector = this;
-        if (collector.pawsCollectorType == 'o365') {
-            collector.updateDedupLogItemEntry(logs, (err) => {
-                return callback(error);
+        if (collector.pawsCollectorType === 'o365') {
+            collector.deleteDedupLogItemEntry(logs, (err) => {
+                if (err) {
+                    AlLogger.warn(`PAWS000406 Error while delete item in DynamoDB ${err}`);
+                }
+                return asyncCallback(error);
             });
         } else {
-            return callback(error);
+            return asyncCallback(error);
         }
+    }
+    /**
+     * delete the item entry from DDB
+     * @param {*} logs 
+     * @param {*} callback 
+     */
+    deleteDedupLogItemEntry(logs, callback) {
+        let collector = this;
+        const cid = collector.cid ? collector.cid : 'none';
+        const collectorId = collector._collectorId;
+        const tableName = collector._pawsDeDupLogsTableName
+        const promises = [];
+        let currentBatch = [];
+
+        for (const message of logs) {
+            const messageHash = collector.getHash(message);
+            const itemId = `${cid}_${collectorId}_${messageHash}`;
+            const key = {
+                Id: { S: itemId },
+                CollectorId: { S: collectorId }
+            }
+            currentBatch.push({ DeleteRequest: { Key: key } });
+            const itemSizeBytes = JSON.stringify(currentBatch).length
+
+            if (currentBatch.length === DDB_DELETE_BATCH_OPTIONS.maxBatchSize || currentBatch.length * itemSizeBytes >= DDB_DELETE_BATCH_OPTIONS.maxBatchSizeBytes) {
+                promises.push(collector.dDBBatchWriteItem(tableName, currentBatch));
+                currentBatch = [];
+            }
+        }
+
+        if (currentBatch.length > 0) {
+            promises.push(collector.dDBBatchWriteItem(tableName, currentBatch));
+        }
+
+        Promise.all(promises).then(res => {
+            return callback(null)
+        }).catch(err => {
+            return callback(err);
+        });
     }
 
     /**
-     * update the ExpireTTL value
-     * @param {*} logs 
-     * @param {*} asyncCallback 
+     * Delete the ddb items in batches
+     * @param {*} tableName 
+     * @param {*} batch 
+     * @returns 
      */
-    updateDedupLogItemEntry(logs, asyncCallback) {
-        let collector = this;
-        const ddb = new AWS.DynamoDB();
-        var promises = [];
-        logs.forEach(message => {
-            const cid = collector.cid ? collector.cid : 'none';
-            const collectorId = collector._collectorId;
-            const messageHash = collector.getHash(message);
-            const itemId = `${cid}_${collectorId}_${messageHash}`;
-            const updateParams = {
-                Key: {
-                    Id: { S: itemId },
-                    CollectorId: { S: collectorId }
-                },
-                AttributeUpdates: {
-                    ExpireDate: {
-                        Action: 'PUT',
-                        Value: { N: moment().add(1, 'seconds').unix().toString() }
-                    }
-                },
-                TableName: collector._pawsDeDupLogsTableName,
-            };
-            let promise = new Promise((resolve, reject) => {
-                ddb.updateItem(updateParams, (err, res) => {
-                    if (err) {
-                        if (err.code === 'ProvisionedThroughputExceededException' && err.retryable === true) {
-                            setTimeout(() => {
-                                ddb.updateItem(updateParams, (err, data) => {
-                                    if (err) {
-                                        AlLogger.warn('Error updating item:', err);
-                                    }
-                                });
-                            }, 1000);
-                        } else {
-                            AlLogger.warn('PAWS000405 Error updating item in DynamoDB:', err);
-                        }
-                    }
-                    return resolve(null);
-                });
-            });
-            promises.push(promise);
-        });
-
-        Promise.all(promises).then(result => {
-            return asyncCallback(null);
-        }).catch(err => {
-            return asyncCallback(err);
-        });
+    dDBBatchWriteItem(tableName, batch) {
+        const ddb = new AWS.DynamoDB(DDB_OPTIONS);
+        const batchParams = { RequestItems: { [tableName]: batch } };
+        return ddb.batchWriteItem(batchParams).promise();
     }
-
-
     /**
      * @function collector callback to initialize collection state
      * @param event - collector register event coming in from CFT.
