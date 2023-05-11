@@ -850,14 +850,11 @@ class PawsCollector extends AlAwsCollector {
         var promises = [];
         let duplicateCount = 0;
         logs.forEach(message => {
-            const cid = collector.cid ? collector.cid : 'none';
-            const collectorId = collector._collectorId;
-            const messageHash = collector.getHash(message);
-            const itemId = `${cid}_${collectorId}_${messageHash}`;
+            const itemId = collector.getDeDupItemId(message);
             const params = {
                 Item: {
                     Id: { S: itemId },
-                    CollectorId: { S: collectorId },
+                    CollectorId: { S: collector._collectorId },
                     OrigMessageId: { S: message[`${paramName}`] },
                     ExpireDate: { N: collector.calculateExpiryTs() }
                 },
@@ -923,24 +920,19 @@ class PawsCollector extends AlAwsCollector {
      * @param {*} callback 
      */
     deleteDedupLogItemEntry(logs, callback) {
-        let collector = this;
-        const cid = collector.cid ? collector.cid : 'none';
-        const collectorId = collector._collectorId;
+        const collector = this;
         const tableName = collector._pawsDeDupLogsTableName
-        const promises = [];
+        let promises = [];
         let currentBatch = [];
 
         for (const message of logs) {
-            const messageHash = collector.getHash(message);
-            const itemId = `${cid}_${collectorId}_${messageHash}`;
+            const itemId = collector.getDeDupItemId(message);
             const key = {
                 Id: { S: itemId },
-                CollectorId: { S: collectorId }
+                CollectorId: { S: collector._collectorId }
             }
             currentBatch.push({ DeleteRequest: { Key: key } });
-            const itemSizeBytes = JSON.stringify(currentBatch).length
-
-            if (currentBatch.length === DDB_DELETE_BATCH_OPTIONS.maxBatchSize || currentBatch.length * itemSizeBytes >= DDB_DELETE_BATCH_OPTIONS.maxBatchSizeBytes) {
+            if (collector.isDDBbatchFull(currentBatch)) {
                 promises.push(collector.dDBBatchWriteItem(tableName, currentBatch));
                 currentBatch = [];
             }
@@ -956,7 +948,19 @@ class PawsCollector extends AlAwsCollector {
             return callback(err);
         });
     }
-
+    /**
+     * Form the unique item id which used as primary key
+     * @param {*} message 
+     * @returns itemId
+     */
+    getDeDupItemId(message) {
+        const collector = this;
+        const cid = collector.cid ? collector.cid : 'none';
+        const collectorId = collector._collectorId;
+        const messageHash = collector.getHash(message);
+        const itemId = `${cid}_${collectorId}_${messageHash}`;
+        return itemId;
+    }
     /**
      * Delete the ddb items in batches
      * @param {*} tableName 
@@ -967,6 +971,17 @@ class PawsCollector extends AlAwsCollector {
         const ddb = new AWS.DynamoDB(DDB_OPTIONS);
         const batchParams = { RequestItems: { [tableName]: batch } };
         return ddb.batchWriteItem(batchParams).promise();
+    }
+
+    /**
+     * Retun true or false base on ddb batch size
+     * @param {*} currentBatch 
+     * @returns 
+     */
+    isDDBbatchFull(currentBatch) {
+        const itemSizeBytes = JSON.stringify(currentBatch).length;
+        const batchFull = currentBatch.length === DDB_DELETE_BATCH_OPTIONS.maxBatchSize || currentBatch.length * itemSizeBytes >= DDB_DELETE_BATCH_OPTIONS.maxBatchSizeBytes;
+        return batchFull;
     }
     /**
      * @function collector callback to initialize collection state
