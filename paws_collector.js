@@ -42,11 +42,10 @@ const DDB_OPTIONS = {
     maxRetries: 10,
     ConsistentRead: true
 };
-
 const DDB_DELETE_BATCH_OPTIONS = {
     maxBatchSize: 25,
     maxBatchSizeBytes: 16 * 1024 * 1024
-}
+};
 const MAX_ERROR_RETRIES = 5;
 const MAX_LOG_BATCH_SIZE = 10000;
 function getPawsParamStoreParam(){
@@ -958,8 +957,7 @@ class PawsCollector extends AlAwsCollector {
         const cid = collector.cid ? collector.cid : 'none';
         const collectorId = collector._collectorId;
         const messageHash = collector.getHash(message);
-        const itemId = `${cid}_${collectorId}_${messageHash}`;
-        return itemId;
+        return `${cid}_${collectorId}_${messageHash}`;
     }
     /**
      * Delete the ddb items in batches

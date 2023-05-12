@@ -90,9 +90,9 @@ function mockSQSSendMessageBatch(returnObject) {
     });
 }
 
-function mockDDB(getItemStub, putItemStub, updateItemStub){
+function mockDDB(getItemStub, putItemStub, updateItemStub, batchWriteItemStub) {
     const defaultMock = (_params, callback) => {
-        return callback(null, {data: null});
+        return callback(null, { data: null });
     };
 
     AWS.mock('DynamoDB', 'getItem', getItemStub ? getItemStub : defaultMock);
@@ -100,6 +100,8 @@ function mockDDB(getItemStub, putItemStub, updateItemStub){
     AWS.mock('DynamoDB', 'putItem', putItemStub ? putItemStub : defaultMock);
 
     AWS.mock('DynamoDB', 'updateItem', updateItemStub ? updateItemStub : defaultMock);
+
+    AWS.mock('DynamoDB', 'batchWriteItem', batchWriteItemStub ? batchWriteItemStub : defaultMock);
 }
 
 function gen_state_objects(num) {
@@ -1425,6 +1427,219 @@ describe('Unit Tests', function() {
                 collector.removeDuplicatedItem(pawsMock.MOCK_LOGS, 'Id', (error, uniqueLogs) => {
                     assert.notEqual(error, null);
                     AWS.restore('CloudWatch');
+                    done();
+                });
+            });
+        });
+    });
+
+    describe('handle the ingest error for deduplogs for o365 collector', function () {
+        afterEach(function () {
+            AWS.restore('DynamoDB');
+        });
+        it('delete the item in batches', function (done) {
+            const fakeFun = function (_params, callback) { return callback(null, { data: null }); };
+            const batchWriteItemStub = sinon.stub().callsFake(fakeFun);
+
+            mockDDB(null, null, null, batchWriteItemStub);
+
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            PawsCollector.load().then((creds) => {
+                var collector = new TestCollectorNoOverrides(ctx, creds);
+                collector.deleteDedupLogItemEntry(pawsMock.MOCK_LOGS, (error) => {
+                    assert.equal(error, null);
+                    sinon.assert.calledOnce(batchWriteItemStub);
+                    done();
+                });
+            });
+        });
+
+        it('if data is more the ddb batch size and batch size byte, it should split into different batchs', function (done) {
+            const fakeFun = function (_params, callback) { return callback(null, { data: null }); };
+            const batchWriteItemStub = sinon.stub().callsFake(fakeFun);
+            mockDDB(null, null, null, batchWriteItemStub);
+            const logs = [];
+            for (let i = 0; i < 30; i++) {
+                pawsMock.MOCK_LOGS[0].Id = pawsMock.MOCK_LOGS[0].Id + i;
+                logs.push(pawsMock.MOCK_LOGS[0]);
+            }
+
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            PawsCollector.load().then((creds) => {
+                var collector = new TestCollectorNoOverrides(ctx, creds);
+                collector.deleteDedupLogItemEntry(logs, (error) => {
+                    assert.equal(error, null);
+                    sinon.assert.calledTwice(batchWriteItemStub);
+                    done();
+                });
+            });
+        });
+
+        it('it should return the error if fail to processed the item ', function (done) {
+            let ddbError = {
+                "message": "The level of configured provisioned throughput for the table was exceeded. Consider increasing your provisioning level with the UpdateTable API.",
+                "code": "ProvisionedThroughputExceededException",
+                "time": "2021-09-01T12:34:56.789Z",
+                "requestId": "12345678-1234-1234-1234-123456789012",
+                "statusCode": 400,
+                "retryable": true
+            };
+            const fakeFunError = function (_params, callback) {
+                return callback(ddbError);
+            };
+            const fakeFunSuccess = function (_params, callback) {
+                return callback(null, { data: null });
+            };
+            let batchWriteItemStub = sinon.stub().onFirstCall().callsFake(fakeFunError)
+                .onSecondCall().callsFake(fakeFunSuccess);
+
+            mockDDB(null, null, null, batchWriteItemStub);
+
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    const batchWriteItemArgs = batchWriteItemStub.args[0][0];
+                    assert.equal(batchWriteItemArgs.called, true, 'should delete the item');
+                    done();
+                }
+            };
+
+            PawsCollector.load().then((creds) => {
+                var collector = new TestCollectorNoOverrides(ctx, creds);
+                collector.deleteDedupLogItemEntry(pawsMock.MOCK_LOGS, (error) => {
+                    assert.notEqual(error, null);
+                    sinon.assert.calledOnce(batchWriteItemStub);
+                    done();
+                });
+            });
+        });
+
+        it('Check if ingest error occure for collector type o365, it should delete the item entry for failed message from ddb', function (done) {
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            process.env.paws_type_name = 'o365';
+            const ingestError = {
+                errorCode: 'AWSC0018',
+                message: "AWSC0018 failed at logmsgs : 307 - \"{\\\"error\\\":\\\"temporary redirect\\\"}",
+                httpErrorCode: 307
+            };
+            const fakeFunError = function (messages, formatFun, hostmetaElems, callback) {
+                return callback(ingestError);
+            };
+            const fakeFunSuccess = function (messages, formatFun, hostmetaElems, callback) {
+                return callback(null, { data: null });
+            };
+
+            let processLog = sinon.stub(m_al_aws.AlAwsCollector.prototype, 'processLog').onFirstCall().callsFake(fakeFunSuccess)
+                .onSecondCall().callsFake(fakeFunSuccess).onThirdCall().callsFake(fakeFunError);
+
+            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback());
+
+            const fakeFun = function (_params, callback) { return callback(null, { data: null }); };
+            const batchWriteItemStub = sinon.stub().callsFake(fakeFun);
+
+            mockDDB(null, null, null, batchWriteItemStub);
+
+            TestCollector.load().then(function (creds) {
+                var collector = new TestCollector(ctx, creds);
+                const nextState = { state: 'new-state' };
+                const logs = [];
+                for (let i = 0; i < 20100; i++) {
+                    logs.push('log' + Math.random());
+                }
+                collector.batchLogProcess(logs, nextState, 900, (err, newState, nextinvocationTimeout) => {
+                    sinon.assert.calledThrice(processLog);
+                    sinon.assert.callCount(batchWriteItemStub, 4);
+                    assert.equal(ingestError, err);
+                    AWS.restore('CloudWatch');
+                    processLog.restore();
+                    done();
+                });
+            });
+        });
+
+        it('If collector type other than o365 then it shoud return the same error', function (done) {
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+
+            process.env.paws_type_name = 'okta';
+            const ingestError = {
+                errorCode: 'AWSC0018',
+                message: "AWSC0018 failed at logmsgs : 307 - \"{\\\"error\\\":\\\"temporary redirect\\\"}",
+                httpErrorCode: 307
+            };
+
+            const fakeFunError = function (messages, formatFun, hostmetaElems, callback) {
+                return callback(ingestError);
+            };
+            const fakeFunSuccess = function (messages, formatFun, hostmetaElems, callback) {
+                return callback(null, { data: null });
+            };
+
+            let processLog = sinon.stub(m_al_aws.AlAwsCollector.prototype, 'processLog').onFirstCall().callsFake(fakeFunSuccess)
+                .onSecondCall().callsFake(fakeFunSuccess).onThirdCall().callsFake(fakeFunError);
+
+            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback());
+
+            const fakeFun = function (_params, callback) { return callback(null, { data: null }); };
+            const batchWriteItemStub = sinon.stub().callsFake(fakeFun);
+
+            mockDDB(null, null, null, batchWriteItemStub);
+
+            TestCollector.load().then(function (creds) {
+                var collector = new TestCollector(ctx, creds);
+                const nextState = { state: 'new-state' };
+                const logs = [];
+                for (let i = 0; i < 20050; i++) {
+                    logs.push('log' + Math.random());
+                }
+                collector.batchLogProcess(logs, nextState, 900, (err, newState, nextinvocationTimeout) => {
+                    sinon.assert.calledThrice(processLog);
+                    sinon.assert.callCount(batchWriteItemStub, 0);
+                    assert.equal(ingestError, err);
+                    AWS.restore('CloudWatch');
+                    processLog.restore();
                     done();
                 });
             });
