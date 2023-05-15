@@ -37,10 +37,14 @@ const ERROR_CODE_DUPLICATE_STATE = 'DUPLICATE_STATE';
 const ERROR_CODE_COMPLETED_STATE = 'COMPLETED_STATE';
 const SQS_VISIBILITY_TIMEOUT = 900;
 const DDB_TTL_DAYS = 14;
-const DEDUP_LOG_TTL_HOURS = 24;
+const DEDUP_LOG_TTL_SECONDS = 86400;
 const DDB_OPTIONS = {
     maxRetries: 10,
     ConsistentRead: true
+};
+const DDB_DELETE_BATCH_OPTIONS = {
+    maxBatchSize: 25,
+    maxBatchSizeBytes: 16 * 1024 * 1024
 };
 const MAX_ERROR_RETRIES = 5;
 const MAX_LOG_BATCH_SIZE = 10000;
@@ -541,7 +545,9 @@ class PawsCollector extends AlAwsCollector {
             return new Promise((resolve, reject) => {
                 collector.processLog(logs.slice(logpart.start, logpart.stop), collector.pawsFormatLog.bind(collector), null, (err, res) => {
                     if (err) {
-                        reject(err);
+                        collector.handleDeDupIngestError(err, logs.slice(logpart.start, logpart.stop), (error) => {
+                            reject(error);
+                        });
                     }
                     else {
                         resolve(res);
@@ -824,8 +830,8 @@ class PawsCollector extends AlAwsCollector {
      * @returns expireTTLDate
      */
     calculateExpiryTs() {
-        const expireTTLHours = process.env.expire_ttl_hours ? process.env.expire_ttl_hours : DEDUP_LOG_TTL_HOURS // set default to be 24 hr.
-        const expireTTLDate = moment().add(expireTTLHours, 'hours').unix().toString();
+        const expireTTL = process.env.expire_ttl_seconds ? process.env.expire_ttl_seconds : DEDUP_LOG_TTL_SECONDS // set default to be 24 hr.
+        const expireTTLDate = moment().add(expireTTL, 'seconds').unix().toString();
         return expireTTLDate;
     }
 
@@ -843,14 +849,11 @@ class PawsCollector extends AlAwsCollector {
         var promises = [];
         let duplicateCount = 0;
         logs.forEach(message => {
-            const cid = collector.cid ? collector.cid : 'none';
-            const collectorId = collector._collectorId;
-            const messageHash = collector.getHash(message);
-            const itemId = `${cid}_${collectorId}_${messageHash}`;
+            const itemId = collector.getDeDupItemId(message);
             const params = {
                 Item: {
                     Id: { S: itemId },
-                    CollectorId: { S: collectorId },
+                    CollectorId: { S: collector._collectorId },
                     OrigMessageId: { S: message[`${paramName}`] },
                     ExpireDate: { N: collector.calculateExpiryTs() }
                 },
@@ -890,8 +893,94 @@ class PawsCollector extends AlAwsCollector {
             return asyncCallback(err);
         });
     }
+    /**
+     * Return the original error after deleting the entry from DDB
+     * @param {*} error 
+     * @param {*} logs 
+     * @param {*} asyncCallback 
+     * @returns 
+     */
+    handleDeDupIngestError(error, logs, asyncCallback) {
+        let collector = this;
+        if (collector.pawsCollectorType === 'o365') {
+            collector.deleteDedupLogItemEntry(logs, (err) => {
+                if (err) {
+                    AlLogger.warn(`PAWS000406 Error while delete item in DynamoDB ${err}`);
+                }
+                return asyncCallback(error);
+            });
+        } else {
+            return asyncCallback(error);
+        }
+    }
+    /**
+     * delete the item entry from DDB
+     * @param {*} logs 
+     * @param {*} callback 
+     */
+    deleteDedupLogItemEntry(logs, callback) {
+        const collector = this;
+        const tableName = collector._pawsDeDupLogsTableName
+        let promises = [];
+        let currentBatch = [];
 
+        for (const message of logs) {
+            const itemId = collector.getDeDupItemId(message);
+            const key = {
+                Id: { S: itemId },
+                CollectorId: { S: collector._collectorId }
+            }
+            currentBatch.push({ DeleteRequest: { Key: key } });
+            if (collector.isDDBbatchFull(currentBatch)) {
+                promises.push(collector.dDBBatchWriteItem(tableName, currentBatch));
+                currentBatch = [];
+            }
+        }
 
+        if (currentBatch.length > 0) {
+            promises.push(collector.dDBBatchWriteItem(tableName, currentBatch));
+        }
+
+        Promise.all(promises).then(res => {
+            return callback(null)
+        }).catch(err => {
+            return callback(err);
+        });
+    }
+    /**
+     * Form the unique item id which used as primary key
+     * @param {*} message 
+     * @returns itemId
+     */
+    getDeDupItemId(message) {
+        const collector = this;
+        const cid = collector.cid ? collector.cid : 'none';
+        const collectorId = collector._collectorId;
+        const messageHash = collector.getHash(message);
+        return `${cid}_${collectorId}_${messageHash}`;
+    }
+    /**
+     * Delete the ddb items in batches
+     * @param {*} tableName 
+     * @param {*} batch 
+     * @returns 
+     */
+    dDBBatchWriteItem(tableName, batch) {
+        const ddb = new AWS.DynamoDB(DDB_OPTIONS);
+        const batchParams = { RequestItems: { [tableName]: batch } };
+        return ddb.batchWriteItem(batchParams).promise();
+    }
+
+    /**
+     * Retun true or false base on ddb batch size
+     * @param {*} currentBatch 
+     * @returns 
+     */
+    isDDBbatchFull(currentBatch) {
+        const itemSizeBytes = JSON.stringify(currentBatch).length;
+        const batchFull = currentBatch.length === DDB_DELETE_BATCH_OPTIONS.maxBatchSize || currentBatch.length * itemSizeBytes >= DDB_DELETE_BATCH_OPTIONS.maxBatchSizeBytes;
+        return batchFull;
+    }
     /**
      * @function collector callback to initialize collection state
      * @param event - collector register event coming in from CFT.
