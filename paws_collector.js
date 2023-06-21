@@ -187,9 +187,9 @@ class PawsCollector extends AlAwsCollector {
         // If stream exist in state then post the error status as part of stream specific ; 
         // In check-in or self-update we don't get state ,so check collector_streams env variable and post error as part of paws_{applicationId}_status
         const streamType = pawsState && pawsState.priv_collector_state.stream ?
-            process.env.al_application_id + "_" + pawsState.priv_collector_state.stream :
+            pawsState.priv_collector_state.stream :
             process.env.al_application_id;
-        
+
         super.done(error, streamType, sendStatus);
     }
     
@@ -221,8 +221,8 @@ class PawsCollector extends AlAwsCollector {
         return Object.assign(pawsProps, baseProps);
     };
 
-    prepareErrorStatus(errorString, streamName = 'none', collectorType = this.pawsCollectorType) {
-        return super.prepareErrorStatus(errorString, streamName, collectorType);
+    prepareErrorStatus(errorString, collectorType = this.pawsCollectorType) {
+        return super.setCollectorStatus(collectorType, errorString);
     }
 
     setPawsSecret(secretValue){
@@ -511,14 +511,14 @@ class PawsCollector extends AlAwsCollector {
     
     reportErrorStatus(error, pawsState, callback) {
         const streamType = pawsState && pawsState.priv_collector_state.stream ?
-                process.env.al_application_id + "_" + pawsState.priv_collector_state.stream :
-                process.env.al_application_id;
+            pawsState.priv_collector_state.stream :
+            process.env.al_application_id;
         const errorString = this.stringifyError(error);
-        const status = this.prepareErrorStatus(errorString, 'none', streamType);
+        const status = this.prepareErrorStatus(errorString, streamType);
         // Send the error status to assets only if retry count reached to 5. 
         // To reduce the status fluctuation from healthy  to unhealthy.
         if (pawsState.retry_count === MAX_ERROR_RETRIES) {
-            this.sendStatus(status, (sendError) => {
+            this.sendCollectorStatus(streamType, status, (sendError) => {
                 return callback(sendError, errorString);
             });
         } else {
