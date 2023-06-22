@@ -24,16 +24,21 @@ function setAlServiceStub() {
                 switch (path) {
                     case '/residency/default/services/ingest/endpoint':
                         ret = {
-                            ingest : 'new-ingest-endpoint'
-                    };
+                            ingest: 'new-ingest-endpoint'
+                        };
                         break;
-                case '/residency/default/services/azcollect/endpoint':
-                    ret = {
-                        azcollect : 'new-azcollect-endpoint'
-                    };
-                    break;
-                default:
-                    break;
+                    case '/residency/default/services/azcollect/endpoint':
+                        ret = {
+                            azcollect: 'new-azcollect-endpoint'
+                        };
+                        break;
+                    case '/residency/default/services/collector_status/endpoint':
+                        ret = {
+                            azcollect: 'new-collector-status-endpoint'
+                        };
+                        break;
+                    default:
+                        break;
                 }
                 return resolve(ret);
             });
@@ -44,6 +49,12 @@ function setAlServiceStub() {
                     return resolve();
                 });
             });
+    alserviceStub.put = sinon.stub(m_alCollector.AlServiceC.prototype, 'put').callsFake(
+        function fakeFn(path, extraOptions) {
+            return new Promise(function (resolve, reject) {
+                return resolve();
+            });
+        });
     alserviceStub.del = sinon.stub(m_alCollector.AlServiceC.prototype, 'deleteRequest').callsFake(
             function fakeFn(path) {
                 return new Promise(function(resolve, reject) {
@@ -56,6 +67,7 @@ function restoreAlServiceStub() {
     alserviceStub.get.restore();
     alserviceStub.post.restore();
     alserviceStub.del.restore();
+    alserviceStub.put.restore();
 }
 
 
@@ -691,7 +703,7 @@ describe('Unit Tests', function() {
             });
         });
 
-        it('Check sendStatus method call only after Five failed attempt', function (done) {
+        it('Check sendCollectorStatus method call only after Five failed attempt', function (done) {
             mockDDB();
             let ctx = {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
@@ -700,15 +712,15 @@ describe('Unit Tests', function() {
                     done();
                 },
                 succeed: function () {
-                    sinon.assert.callCount(mockSendStatus, 1);
+                    sinon.assert.callCount(mockSendCollectorStatus, 1);
                     sinon.assert.calledOnce(mockPawsGetLogs);
                     mockPawsGetLogs.restore();
-                    mockSendStatus.restore();
+                    mockSendCollectorStatus.restore();
                     done();
                 }
             };
-            let mockSendStatus = sinon.stub(m_al_aws.AlAwsCollector.prototype, 'sendStatus').callsFake(
-                function fakeFn(status, callback) {
+            let mockSendCollectorStatus = sinon.stub(m_al_aws.AlAwsCollector.prototype, 'sendCollectorStatus').callsFake(
+                function fakeFn(stream,status, callback) {
                     return callback(null);
                 });
 
@@ -732,7 +744,7 @@ describe('Unit Tests', function() {
             });
         });
 
-        it('Check sendStatus method not call if failed attempt less < 5', function (done) {
+        it('Check sendCollectorStatus method not call if failed attempt less < 5', function (done) {
             mockDDB();
             let ctx = {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
@@ -741,15 +753,15 @@ describe('Unit Tests', function() {
                     done();
                 },
                 succeed: function () {
-                    sinon.assert.callCount(mockSendStatus, 0);
+                    sinon.assert.callCount(mockSendCollectorStatus, 0);
                     sinon.assert.calledOnce(mockPawsGetLogs);
                     mockPawsGetLogs.restore();
-                    mockSendStatus.restore();
+                    mockSendCollectorStatus.restore();
                     done();
                 }
             };
-            let mockSendStatus = sinon.stub(m_al_aws.AlAwsCollector.prototype, 'sendStatus').callsFake(
-                function fakeFn(status, callback) {
+            let mockSendCollectorStatus = sinon.stub(m_al_aws.AlAwsCollector.prototype, 'sendCollectorStatus').callsFake(
+                function fakeFn(stream,status, callback) {
                     return callback(null);
                 });
 
@@ -773,7 +785,7 @@ describe('Unit Tests', function() {
             });
         });
 
-        it('Check if retry_count get added in state for existing collector and it will not call sendStatus method', function (done) {
+        it('Check if retry_count get added in state for existing collector and it will not call mockSendCollectorStatus method', function (done) {
             mockDDB();
             let ctx = {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
@@ -782,15 +794,15 @@ describe('Unit Tests', function() {
                     done();
                 },
                 succeed: function () {
-                    sinon.assert.callCount(mockSendStatus, 0);
+                    sinon.assert.callCount(mockSendCollectorStatus, 0);
                     sinon.assert.calledOnce(mockPawsGetLogs);
                     mockPawsGetLogs.restore();
-                    mockSendStatus.restore();
+                    mockSendCollectorStatus.restore();
                     done();
                 }
             };
-            let mockSendStatus = sinon.stub(m_al_aws.AlAwsCollector.prototype, 'sendStatus').callsFake(
-                function fakeFn(status, callback) {
+            let mockSendCollectorStatus = sinon.stub(m_al_aws.AlAwsCollector.prototype, 'sendCollectorStatus').callsFake(
+                function fakeFn(stream, status, callback) {
                     return callback(null);
                 });
 
