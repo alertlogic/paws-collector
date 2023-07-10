@@ -224,6 +224,22 @@ class PawsCollector extends AlAwsCollector {
     prepareErrorStatus(errorString, collectorType = this.pawsCollectorType) {
         return super.setCollectorStatus(collectorType, errorString);
     }
+    /**
+     * Override the super method to send the status to CloudWatch and DataDog metrics
+     * @param {*} stream 
+     * @param {*} collectorStatus 
+     * @param {*} callback 
+     */
+    sendCollectorStatus(stream, collectorStatus, callback) {
+        super.sendCollectorStatus(stream, collectorStatus, (err) => {
+            // report status to metrics if collector_status send the responce succesful.
+            if (!err) {
+                return this.reportCollectorStatus(collectorStatus.status, callback);
+            }
+            else return callback(err);
+        }
+        );
+    }
 
     setPawsSecret(secretValue){
         const encryptPromise = new Promise((resolve, reject) => {
@@ -739,6 +755,40 @@ class PawsCollector extends AlAwsCollector {
         this.reportDDMetric("duplicate_messages", duplicateCount);
         return cloudwatch.putMetricData(params, callback);
     };
+    /**
+     * Report the collector status(ok/error)to dd metrics
+     * @param {*} status 
+     * @param {*} callback 
+     * @returns 
+     */
+    reportCollectorStatus(status, callback) {
+        var cloudwatch = new AWS.CloudWatch({apiVersion: '2010-08-01'});
+        const params = {
+            MetricData: [
+              {
+                MetricName: 'PawsCollectorStatus',
+                Dimensions: [
+                  {
+                    Name: 'CollectorType',
+                    Value: this._pawsCollectorType
+                  },
+                  {
+                    Name: 'FunctionName',
+                    Value: process.env.AWS_LAMBDA_FUNCTION_NAME
+                  }
+                ],
+                Timestamp: new Date(),
+                Unit: 'Count',
+                Value: 1
+              }
+            ],
+            Namespace: 'PawsCollectors'
+        };
+
+        this.reportDDMetric("collector_status", 1, [`status:${status}`]);
+        return cloudwatch.putMetricData(params, callback);
+    };
+
     _storeCollectionState(pawsState, privCollectorState, invocationTimeout, callback) {
         if (Array.isArray(privCollectorState)) {
             return this._storeCollectionStateArray(pawsState, privCollectorState, invocationTimeout, callback);

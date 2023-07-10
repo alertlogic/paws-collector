@@ -116,6 +116,10 @@ function mockDDB(getItemStub, putItemStub, updateItemStub, batchWriteItemStub) {
     AWS.mock('DynamoDB', 'batchWriteItem', batchWriteItemStub ? batchWriteItemStub : defaultMock);
 }
 
+function mockCloudWatch() {
+    AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback());
+}
+
 function gen_state_objects(num) {
     return new Array(num).fill(0).map((e,i) => ({state: 'new-state-' + i}));
 }
@@ -705,6 +709,7 @@ describe('Unit Tests', function() {
 
         it('Check sendCollectorStatus method call only after Five failed attempt', function (done) {
             mockDDB();
+            mockCloudWatch();
             let ctx = {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
                 fail: function (error) {
@@ -716,6 +721,7 @@ describe('Unit Tests', function() {
                     sinon.assert.calledOnce(mockPawsGetLogs);
                     mockPawsGetLogs.restore();
                     mockSendCollectorStatus.restore();
+                    AWS.restore('CloudWatch');
                     done();
                 }
             };
@@ -746,6 +752,7 @@ describe('Unit Tests', function() {
 
         it('Check sendCollectorStatus method not call if failed attempt less < 5', function (done) {
             mockDDB();
+            mockCloudWatch();
             let ctx = {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
                 fail: function (error) {
@@ -757,6 +764,7 @@ describe('Unit Tests', function() {
                     sinon.assert.calledOnce(mockPawsGetLogs);
                     mockPawsGetLogs.restore();
                     mockSendCollectorStatus.restore();
+                    AWS.restore('CloudWatch');
                     done();
                 }
             };
@@ -787,6 +795,7 @@ describe('Unit Tests', function() {
 
         it('Check if retry_count get added in state for existing collector and it will not call mockSendCollectorStatus method', function (done) {
             mockDDB();
+            mockCloudWatch();
             let ctx = {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
                 fail: function (error) {
@@ -798,6 +807,7 @@ describe('Unit Tests', function() {
                     sinon.assert.calledOnce(mockPawsGetLogs);
                     mockPawsGetLogs.restore();
                     mockSendCollectorStatus.restore();
+                    AWS.restore('CloudWatch');
                     done();
                 }
             };
@@ -1059,6 +1069,30 @@ describe('Unit Tests', function() {
             TestCollector.load().then(function(creds) {
                 var collector = new TestCollector(ctx, creds);
                 collector.reportDuplicateLogCount(6, function(error) {
+                    assert.equal(null, error);
+                    AWS.restore('KMS');
+                    AWS.restore('CloudWatch');
+                    done();
+                });
+            });
+        });
+
+        it('reportCollectorStatus', function(done) {
+            let ctx = {
+                invokedFunctionArn : pawsMock.FUNCTION_ARN,
+                fail : function(error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed : function() {
+                    done();
+                }
+            };
+            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback());
+            TestCollector.load().then(function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                const status = 'ok';
+                collector.reportCollectorStatus(status, function(error) {
                     assert.equal(null, error);
                     AWS.restore('KMS');
                     AWS.restore('CloudWatch');
