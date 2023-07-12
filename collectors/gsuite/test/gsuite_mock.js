@@ -63,9 +63,43 @@ const LOG_EVENT = {
     ]
 };
 
+const LOG_ALERT = {
+    "customerId": "03ek00234",
+    "alertId": "9923d7c2-161d-45f5-8881-126efca08ccd3",
+    "createTime": "2023-04-07T13:57:42.402947Z",
+    "startTime": "2023-04-07T13:27:41Z",
+    "endTime": "2023-04-07T13:27:41Z",
+    "type": "Suspicious login",
+    "source": "Google identity",
+    "data": {
+        "@type": "type.googleapis.com/google.apps.alertcenter.type.AccountWarning",
+        "email": "google.cloud.admin@al.com",
+        "loginDetails": {
+            "loginTime": "2023-04-07T13:27:41Z",
+            "ipAddress": "176.58.157.173"
+        }
+    },
+    "securityInvestigationToolLink": "admin.google.com/ac/ac/investigate?alert=BiQ5OTIzZDdjMi0xNjFkLTQ1ZjUtODg4MS05NmVmY2EwOGNjZDM",
+    "metadata": {
+        "customerId": "03ek00234",
+        "alertId": "9923d7c2-161d-45f5-8881-96efca08ccd3",
+        "status": "NOT_STARTED",
+        "updateTime": "2023-04-07T13:57:42.402947Z",
+        "severity": "LOW",
+        "etag": "dv4FotmhiJh="
+    },
+    "updateTime": "2023-04-07T13:57:42.402947Z",
+    "etag": "dv4FotmhiJh="
+};
+
 const MOCK_ACTIVITES = {
     list: () => { }
 };
+
+const MOCK_ALERTS = {
+    list: () => { }
+};
+
 
 const FUNCTION_ARN = 'arn:aws:lambda:us-east-1:352283894008:function:test-01-CollectLambdaFunction-2CWNLPPW5XO8';
 const FUNCTION_NAME = 'test-TestCollectLambdaFunction-1JNNKQIPOTEST';
@@ -75,5 +109,7 @@ module.exports = {
     FUNCTION_ARN: FUNCTION_ARN,
     FUNCTION_NAME: FUNCTION_NAME,
     LOG_EVENT: LOG_EVENT,
-    MOCK_ACTIVITES: MOCK_ACTIVITES
+    MOCK_ACTIVITES: MOCK_ACTIVITES,
+    LOG_ALERT:LOG_ALERT,
+    MOCK_ALERTS:MOCK_ALERTS
 };

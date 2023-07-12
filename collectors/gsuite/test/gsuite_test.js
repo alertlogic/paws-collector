@@ -12,6 +12,7 @@ const { auth } = require("google-auth-library");
 
 var responseStub = {};
 let listEvent;
+let listAlert;
 let authenticationT;
 
 function setAlServiceStub() {
@@ -156,6 +157,35 @@ describe('Unit Tests', function () {
             });
         });
 
+        it('Paws Get Logs Success Alerts', function (done) {
+            listAlert = sinon.stub(utils, 'listAlerts').callsFake(
+                function fakeFn(path) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ accumulator: [gsuiteMock.LOG_ALERT, gsuiteMock.LOG_ALERT] });
+                    });
+                });
+
+            GsuiteCollector.load().then(function (creds) {
+                var collector = new GsuiteCollector(ctx, creds, 'gsuite');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    application: "alerts",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(logs.length, 2);
+                    assert.equal(newState.poll_interval_sec, 1);
+                    assert.ok(logs[0].data['@type']);
+                    listAlert.restore();
+                    done();
+                });
+
+            });
+        });
+
         it('Paws Get Logs with API Quota Reset Date', function (done) {
             listEvent = sinon.stub(utils, 'listEvents').callsFake(
                 function fakeFn(path) {
@@ -279,6 +309,8 @@ describe('Unit Tests', function () {
             });
         });
 
+    
+
     });
 
 
@@ -297,7 +329,12 @@ describe('Unit Tests', function () {
 
             GsuiteCollector.load().then(function (creds) {
                 var collector = new GsuiteCollector(ctx, creds, 'gsuite');
-                let fmt = collector.pawsFormatLog(gsuiteMock.LOG_EVENT);
+                let fmt;
+                if (collector.streams === 'alerts') {
+                    fmt = collector.pawsFormatLog(gsuiteMock.LOG_ALERT);
+                } else {
+                    fmt = collector.pawsFormatLog(gsuiteMock.LOG_EVENT);
+                }
                 assert.equal(fmt.progName, 'GsuiteCollector');
                 assert.ok(fmt.messageTypeId);
                 done();
