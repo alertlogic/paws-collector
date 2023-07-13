@@ -57,14 +57,14 @@
             "NoEcho": true
         },
         "GsuiteScope": {
-            "Description": "Define Scope, if it is multiple pass as comma separated string for example https://www.googleapis.com/auth/admin.reports.audit.readonly, https://www.googleapis.com/auth/admin.reports.usage.readonly",
-            "Default": "[\"https://www.googleapis.com/auth/admin.reports.usage.readonly\",\"https://www.googleapis.com/auth/admin.reports.audit.readonly\"]",
+            "Description": "Define Scope, if it is multiple pass as comma separated string for example https://www.googleapis.com/auth/admin.reports.audit.readonly, https://www.googleapis.com/auth/admin.reports.usage.readonly,https://www.googleapis.com/auth/apps.alerts",
+            "Default": "[\"https://www.googleapis.com/auth/admin.reports.usage.readonly\",\"https://www.googleapis.com/auth/admin.reports.audit.readonly\",\"https://www.googleapis.com/auth/apps.alerts\"]",
             "Type": "String"
         },
         "GsuiteApplicationNames": {
             "Description": "Define Application name, if it is multiple pass as comma separated string for Gsuite",
             "Type": "String",
-            "Default": "[\"login\", \"admin\", \"access_transparency\", \"calendar\", \"drive\", \"gplus\", \"groups\", \"groups_enterprise\", \"mobile\", \"rules\", \"token\", \"user_accounts\",\"context_aware_access\",\"chrome\"]"
+            "Default": "[\"login\", \"admin\", \"access_transparency\", \"calendar\", \"drive\", \"gplus\", \"groups\", \"groups_enterprise\", \"mobile\", \"rules\", \"token\", \"user_accounts\",\"context_aware_access\",\"chrome\",\"alerts\"]"
         },
         "GsuiteEmailId": {
             "Description": "Email ID for Gsuite",

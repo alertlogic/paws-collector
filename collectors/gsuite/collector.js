@@ -19,10 +19,9 @@ const packageJson = require('./package.json');
 const { auth } = require("google-auth-library");
 const utils = require("./utils");
 
-const typeIdPaths = [{ path: ["kind"] }];
+let typeIdPaths = [{ path: ["kind"] }];
 
-const tsPaths = [{ path: ["id", "time"] }];
-
+let tsPaths = [{ path: ["id", "time"] }];
 
 class GsuiteCollector extends PawsCollector {
     
@@ -87,14 +86,24 @@ class GsuiteCollector extends PawsCollector {
         let params = state.nextPage ? {
             pageToken: state.nextPage
         } : {};
-
-        Object.assign(params, {
-            startTime: state.since,
-            endTime: state.until,
-            userKey: "all",
-            applicationName: state.stream
-        });
-
+        let getApiLogs;
+        if (state.stream === 'alerts') {
+            getApiLogs = utils.listAlerts;
+            Object.assign(params, {
+                filter: `startTime >= "${state.since}" AND startTime < "${state.until}"`
+            });
+        } else {
+            getApiLogs = utils.listEvents;
+            Object.assign(params, {
+                startTime: state.since,
+                endTime: state.until,
+                userKey: "all",
+                applicationName: state.stream
+            });
+        }
+        let typeIdAndTsPaths = utils.getTypeIdAndTsPaths(state.stream);
+        typeIdPaths = typeIdAndTsPaths.typeIdPaths;
+        tsPaths = typeIdAndTsPaths.tsPaths;
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
             AlLogger.info(`API Daily Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
             collector.reportApiThrottling(function () {
@@ -102,7 +111,8 @@ class GsuiteCollector extends PawsCollector {
             });
         }
         else {
-            utils.listEvents(client, params, [], process.env.paws_max_pages_per_invocation)
+          
+            getApiLogs(client, params, [], process.env.paws_max_pages_per_invocation)
                 .then(({ accumulator, nextPage }) => {
                     let newState;
                     if (nextPage === undefined) {
@@ -175,7 +185,6 @@ class GsuiteCollector extends PawsCollector {
 
         const ts = parse.getMsgTs(msg, tsPaths);
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
-
         let formattedMsg = {
             hostname: collector.collector_id,
             messageTs: ts.sec,
