@@ -48,6 +48,7 @@ const DDB_DELETE_BATCH_OPTIONS = {
 };
 const MAX_ERROR_RETRIES = 5;
 const MAX_LOG_BATCH_SIZE = 10000;
+const REMAINING_CONTEXT_TIME_IN_MS = 10 * 1000;
 function getPawsParamStoreParam(){
     return new Promise((resolve, reject) => {
         if (fs.existsSync(CREDS_FILE_PATH) && fs.statSync(CREDS_FILE_PATH).size !== 0) {
@@ -505,10 +506,17 @@ class PawsCollector extends AlAwsCollector {
                             pawsState.retry_count = (!pawsState.retry_count || pawsState.retry_count >= MAX_ERROR_RETRIES) ? 1 : pawsState.retry_count + 1;
                             collector._storeCollectionState(pawsState, pawsState.priv_collector_state, 300, function(storeError){
                                 if (!storeError){
-                                    collector.reportErrorStatus(handleError, pawsState, (statusSendError, handleErrorString) => {
-                                        AlLogger.error(`PAWS000304 Error handling poll request: ${handleErrorString}`);
+                                    // if sqs message added successfully and lambda time is less than 10 seconds so return the context succeed; so it will delete the old sqs message.
+                                    if (collector.context.getRemainingTimeInMillis() < REMAINING_CONTEXT_TIME_IN_MS) {
+                                        AlLogger.error(`PAWS000303 Error handling poll request: ${collector.stringifyError(handleError)}`);
                                         collector.done(null, pawsState);
-                                    });
+                                    }
+                                    else {
+                                        collector.reportErrorStatus(handleError, pawsState, (statusSendError, handleErrorString) => {
+                                            AlLogger.error(`PAWS000304 Error handling poll request: ${handleErrorString}`);
+                                            collector.done(null, pawsState);
+                                        });
+                                    }
                                 } else {
                                     collector.done(storeError);
                                 }
