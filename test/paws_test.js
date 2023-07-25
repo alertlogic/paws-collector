@@ -9,6 +9,8 @@ const pawsMock = require('./paws_mock');
 var m_alCollector = require('@alertlogic/al-collector-js');
 var PawsCollector = require('../paws_collector').PawsCollector;
 const m_al_aws = require('@alertlogic/al-aws-collector-js');
+const moment = require('moment');
+const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 
 var alserviceStub = {};
 var responseStub = {};
@@ -583,6 +585,9 @@ describe('Unit Tests', function() {
                     sinon.assert.calledOnce(updateItemStub);
                     done();
                     
+                },
+                getRemainingTimeInMillis: function(){
+                    return 5000;
                 }
             };
 
@@ -599,6 +604,10 @@ describe('Unit Tests', function() {
                 var collector = new TestCollector(ctx, creds);
                 collector.mockGetLogsError = 'Error getting logs';
                 collector.handleEvent(testEvent);
+                // Verify that collector.done called the context succeed.
+                assert(ctx.getRemainingTimeInMillis.callCount, 1);
+                assert(AlLogger.error.calledWith(`PAWS000303 Error handling poll request: ${JSON.stringify(collector.mockGetLogsError)}`));
+                assert(ctx.succeed.calledOnce);
             });
         });
         
@@ -723,6 +732,9 @@ describe('Unit Tests', function() {
                     mockSendCollectorStatus.restore();
                     AWS.restore('CloudWatch');
                     done();
+                },
+                getRemainingTimeInMillis: function(){
+                    return moment().valueOf();
                 }
             };
             let mockSendCollectorStatus = sinon.stub(m_al_aws.AlAwsCollector.prototype, 'sendCollectorStatus').callsFake(
@@ -766,6 +778,9 @@ describe('Unit Tests', function() {
                     mockSendCollectorStatus.restore();
                     AWS.restore('CloudWatch');
                     done();
+                },
+                getRemainingTimeInMillis: function(){
+                    return moment().valueOf();
                 }
             };
             let mockSendCollectorStatus = sinon.stub(m_al_aws.AlAwsCollector.prototype, 'sendCollectorStatus').callsFake(
@@ -809,6 +824,9 @@ describe('Unit Tests', function() {
                     mockSendCollectorStatus.restore();
                     AWS.restore('CloudWatch');
                     done();
+                },
+                getRemainingTimeInMillis: function(){
+                    return moment().valueOf();
                 }
             };
             let mockSendCollectorStatus = sinon.stub(m_al_aws.AlAwsCollector.prototype, 'sendCollectorStatus').callsFake(
