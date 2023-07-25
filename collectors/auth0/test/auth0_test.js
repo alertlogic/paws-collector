@@ -33,6 +33,11 @@ function setAlServiceStub() {
                             azcollect: 'new-azcollect-endpoint'
                         };
                         break;
+                    case '/residency/default/services/collectors_status/endpoint':
+                        ret = {
+                            collector_status: 'new-collector_status-endpoint'
+                        };
+                        break;
                     default:
                         break;
                 }
@@ -51,11 +56,18 @@ function setAlServiceStub() {
                 return resolve();
             });
         });
+    alserviceStub.put = sinon.stub(m_alCollector.AlServiceC.prototype, 'put').callsFake(
+        function fakeFn(path) {
+            return new Promise(function (resolve, reject) {
+                return resolve();
+            });
+        });
 }
 
 function restoreAlServiceStub() {
     alserviceStub.get.restore();
     alserviceStub.post.restore();
+    alserviceStub.put.restore();
     alserviceStub.del.restore();
 }
 
@@ -63,10 +75,12 @@ function mockSetEnvStub() {
     setEnvStub = sinon.stub(m_al_aws, 'setEnv').callsFake((vars, callback) => {
         const {
             ingest_api,
-            azcollect_api
+            azcollect_api,
+            collector_status_api
         } = vars;
         process.env.ingest_api = ingest_api ? ingest_api : process.env.ingest_api;
         process.env.azollect_api = azcollect_api ? azcollect_api : process.env.azollect_api;
+        process.env.collector_status_api = collector_status_api ? collector_status_api : process.env.collector_status_api;
         const returnBody = {
             Environment: {
                 Varaibles: vars

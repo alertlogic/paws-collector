@@ -1,6 +1,6 @@
 {
   "name": "mimecast-collector",
-  "version": "1.0.35",
+  "version": "1.0.36",
   "description": "Alert Logic AWS based Mimecast Log Collector",
   "repository": {},
   "private": true,
@@ -20,8 +20,8 @@
     "sinon": "^15.0.1"
   },
   "dependencies": {
-    "@alertlogic/al-collector-js": "^3.0.6",
-    "@alertlogic/paws-collector": "^2.1.18",
+    "@alertlogic/al-collector-js": "^3.0.7",
+    "@alertlogic/paws-collector": "^2.1.19",
     "adm-zip": "^0.5.10",
     "async": "^3.2.4",
     "debug": "^4.3.4",
