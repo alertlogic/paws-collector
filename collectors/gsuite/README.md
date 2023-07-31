@@ -5,8 +5,14 @@ Alert Logic Gsuite AWS Based API Poll (PAWS) Log Collector Library.
 # Overview
 
 This repository contains the AWS JavaScript Lambda function and CloudFormation
-Template (CFT) for deploying a log collector in AWS which will poll Gsuite (Login, Admin, Access_transparency, Calendar, Drive, Gplus, Groups, Groups_enterprise, Mobile, Rules, Token, User_accounts) service API to collect and
+Template (CFT) for deploying a log collector in AWS which will poll Gsuite (Login, Admin, Access_transparency, Calendar, Drive, Gplus, Groups, Groups_enterprise, Mobile, Rules, Token, User_accounts, Context_aware_access, Chrome And Alerts) service API to collect and
 forward logs to the Alert Logic CloudInsight backend services.
+
+ **_NOTE:_**: The Context Aware Access feature is supported in the following editions [Compare Editions](https://support.google.com/a/answer/6043385):
+1.	Enterprise
+2.	Enterprise Essentials Plus
+3.	Cloud Identity Premium
+
 
 # Installation
 
@@ -21,15 +27,27 @@ forward logs to the Alert Logic CloudInsight backend services.
 1. Create a Google Cloud project [Link](https://console.cloud.google.com/home/dashboard)<br />
    - Click the top left dropdown menu, then New Project <br />
    Note: Preferably create the cloud project with the same user as created in the previous section.
-2. Enable ‘Admin API’ [Link](https://console.cloud.google.com/apis/library/admin.googleapis.com)
-3. Create a service account [Link](https://developers.google.com/identity/protocols/OAuth2ServiceAccount#creatinganaccount)<br />
+2. Enable ‘Admin SDK API’ [Link](https://console.cloud.google.com/apis/library/admin.googleapis.com)
+3. Enable ‘Google Workspace Alert Centre API‘ for this project on this [Link](https://console.cloud.google.com/apis/library/alertcenter.googleapis.com). If Alerts checkbox is selected in applications in UI.
+4. Create a service account [Link](https://developers.google.com/identity/protocols/OAuth2ServiceAccount#creatinganaccount)<br />
    Note: Preferably download the JSON creds file.
-4. Delegating domain-wide authority to the service account [Link](https://developers.google.com/identity/protocols/OAuth2ServiceAccount#delegatingauthority)<br />
-   Note: In Step 4 add scope as : https://www.googleapis.com/auth/admin.reports.audit.readonly
-5. - At the top right, click Add Services. 
+5. Delegating domain-wide authority to the service account [Link](https://developers.google.com/identity/protocols/OAuth2ServiceAccount#delegatingauthority)<br />
+   Note: In Step 4 add scope as : https://www.googleapis.com/auth/admin.reports.audit.readonly, https://www.googleapis.com/auth/admin.reports.usage.readonly and https://www.googleapis.com/auth/apps.alerts.
+6. - At the top right, click Add Services. 
    - Find the Add Services link at the top right
    - Below the subscription you want to add, click Add It Now.
    - Follow the on-screen instructions to add the service to your organization's Google Account [Link](https://support.google.com/a/answer/45690?hl=en)
+
+### 3. Create a custom role and enable API access in G Suite
+In G Suite, you must create a custom role and enable API access to collect logs. You must have a G Suite account set up.
+  1.	Log in to [G Suite](https://admin.google.com/).
+  2.	You must create a custom admin role with the Reports privilege. 
+  3.	You must create another custom admin role with the Alerts privilege and give full access if Alerts checkbox is selected in UI console. 
+  4.	For further instructions, see [Create, edit, and delete custom admin roles](https://support.google.com/a/answer/2406043?hl=en&ref_topic=9832445).
+   To learn more about G Suite privileges, see [Administrator privilege definitions](https://support.google.com/a/answer/1219251).
+  5.	Create an administrative user account, and then assign the role you created to that user account. Make note of the user email address for later steps. For further instructions, see [Add an administrator](https://support.google.com/domains/answer/6304528?hl=en&ref_topic=6317570).
+  6.	Enable API access for G Suite. To learn how to manage API access in G Suite, see [Control which third-party & internal apps access G Suite data](https://support.google.com/a/answer/60757?authuser=3).
+
 
 ### 3. API Docs
 

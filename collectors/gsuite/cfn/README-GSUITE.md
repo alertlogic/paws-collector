@@ -29,10 +29,10 @@ Currently, we support US regions only: `us-east-1`, `us-east-2`, `us-west-1`,
    - `AlertlogicSecretKey` - `secret_key` returned from AIMS
    - `CollectionStartTs` - example `2019-11-21T16:00:00Z` Timestamp when log collection starts
    - `CollectorId` - default `none` Optional. A collector UUID if known.
-   - `GsuiteApplicationNames` - Define Application name. Please pass JSON formatted list. Possible values are ["login", "admin", "access_transparency", "calendar", "drive", "gplus", "groups", "groups_enterprise", "mobile", "rules", "token", "user_accounts","context_aware_access", "chrome"]
+   - `GsuiteApplicationNames` - Define Application name. Please pass JSON formatted list. Possible values are ["login", "admin", "access_transparency", "calendar", "drive", "gplus", "groups", "groups_enterprise", "mobile", "rules", "token", "user_accounts","context_aware_access", "chrome", "alerts"]
    - `GsuiteClientSecret` - The JSON key for the Gsuite Client secret
    - `GsuiteEmailId` - Gsuite Email ID
-   - `GsuiteScope` - Define Scope. Possible values are ["https://www.googleapis.com/auth/admin.reports.usage.readonly","https://www.googleapis.com/auth/admin.reports.audit.readonly"]
+   - `GsuiteScope` - Define Scope. Possible values are ["https://www.googleapis.com/auth/admin.reports.usage.readonly","https://www.googleapis.com/auth/admin.reports.audit.readonly","https://www.googleapis.com/auth/apps.alerts"]
    - `PackagesBucketPrefix` - example `alertlogic-collectors` S3 bucket name prefix where collector packages are located.
    - `PawsAuthType` - use `ssws`
 
