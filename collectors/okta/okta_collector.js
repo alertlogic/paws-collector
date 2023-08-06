@@ -19,6 +19,7 @@ const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNex
 const packageJson = require('./package.json');
 
 const THROTTLING_ERROR_REGEXP = /rateLimit/g;
+const MAX_POLL_INTERVAL = 900;
 
 const typeIdPaths = [
     { path: ['eventType'] },
@@ -76,8 +77,18 @@ class OktaCollector extends PawsCollector {
         .catch((error) => {
             error.errorCode = this._isNoErrorCode(error);
             if (this._isThrottlingError(error)) {
-                collector.reportApiThrottling(function() {
-                    return callback(error);
+                // if x-rate-limit-reset value return by api then accordingly delay the api call to avoid throttle error again other wise increase the delay by 1min till max 15min.
+                let resetSeconds = state.poll_interval_sec;
+                if (error['headers'] && error['headers']['x-rate-limit-reset']) {
+                    const retryEpochSeconds = parseInt((error['headers']['x-rate-limit-reset']), 10);
+                    const currentEpochSeconds = moment().unix();
+                    resetSeconds = retryEpochSeconds - currentEpochSeconds;
+                }
+                const delaySeconds = resetSeconds && resetSeconds < MAX_POLL_INTERVAL ? resetSeconds + 60 : MAX_POLL_INTERVAL;
+                state.poll_interval_sec = delaySeconds;
+                AlLogger.info(`OKTA000003 API limit Exceeded. The quota will be reset at ${moment().add(delaySeconds, 'seconds').toISOString()}`);
+                collector.reportApiThrottling(function () {
+                    return callback(null, [], state, state.poll_interval_sec);
                 });
             } else {
                 return callback(error);
