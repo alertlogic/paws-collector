@@ -76,10 +76,10 @@ class OktaCollector extends PawsCollector {
         })
         .catch((error) => {
             error.errorCode = this._isNoErrorCode(error);
-            let isThrottle = this._isThrottlingError(error, state);
-            if (isThrottle.rateLimitError) {
-                state.poll_interval_sec = isThrottle.delaySeconds;
-                AlLogger.info(`OKTA000003 API limit Exceeded. The quota will be reset at ${moment().add(isThrottle.delaySeconds, 'seconds').toISOString()}`);
+            let maybeThrottleError = this.handleThrottleErrorWithDelay(error, state);
+            if (maybeThrottleError.throttle) {
+                state.poll_interval_sec = maybeThrottleError.delaySeconds;
+                AlLogger.info(`OKTA000003 API limit Exceeded. The quota will be reset at ${moment().add(maybeThrottleError.delaySeconds, 'seconds').toISOString()}`);
                 collector.reportApiThrottling(function () {
                     return callback(null, [], state, state.poll_interval_sec);
                 });
@@ -93,12 +93,12 @@ class OktaCollector extends PawsCollector {
         return error.errorCode ? error.errorCode : error.status;
     }
 
-    _isThrottlingError(error, state) {
-        let isThrottlingError = {}
-        isThrottlingError.rateLimitError = (error.status === 429) ||
+    handleThrottleErrorWithDelay(error, state) {
+        let mayThrottleError = {}
+        mayThrottleError.throttle = (error.status === 429) ||
             (error.message && error.message.match(THROTTLING_ERROR_REGEXP));
             
-        if (isThrottlingError.rateLimitError) {
+        if (mayThrottleError.throttle) {
             // if x-rate-limit-reset value return by api then accordingly delay the api call to avoid throttle error again other wise increase the delay by 1min till max 15min.
             let resetSeconds = state.poll_interval_sec;
             if (error['headers'] && error['headers']['x-rate-limit-reset']) {
@@ -108,9 +108,9 @@ class OktaCollector extends PawsCollector {
                 resetSeconds = retryEpochSeconds - currentEpochSeconds;
             }
             const delaySeconds = resetSeconds && resetSeconds < MAX_POLL_INTERVAL ? resetSeconds + 60 : MAX_POLL_INTERVAL;
-            isThrottlingError.delaySeconds = delaySeconds; 
+            mayThrottleError.delaySeconds = delaySeconds; 
         }
-        return isThrottlingError;
+        return mayThrottleError;
     }
 
     _getNextCollectionState(curState) {
