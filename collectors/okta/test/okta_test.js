@@ -211,28 +211,65 @@ describe('Unit Tests', function() {
             });
         });
 
-        it('gets logs throttling', function(done) {
-            const {Client} = okta;
+        it('it should return the same state with pollinterval delay if get api return throttle error', function (done) {
+            const { Client } = okta;
+            const error = { "name": "OktaApiError", "status": 429, "errorCode": "E0000047", "errorSummary": "API call exceeded rate limit due to too many requests.", "errorCauses": [], "errorLink": "E0000047", "errorId": "oaeJacBsJ0pQES61B_uegmlzA", "url": "https://alertlogic-admin.okta.com/api/v1/logs?since=2023-06-03T08%3A32%3A20.000Z&until=2023-06-03T08%3A33%3A20.000Z", "headers": {}, "message": "Okta HTTP 429 E0000047 API call exceeded rate limit due to too many requests.. " };
             const oktaSdkMock = sinon.stub(Client.prototype, 'getLogs').callsFake(() => {
                 return {
                     each: () => {
                         return new Promise((res, rej) => {
-                            rej(new Error('HTTP request time exceeded okta.client.rateLimit.requestTimeout'));
+                            rej(error);
                         });
                     }
                 };
             });
-            OktaCollector.load().then(function(creds) {
+            OktaCollector.load().then(function (creds) {
                 var collector = new OktaCollector(ctx, creds);
                 const startDate = moment().subtract(1, 'days').toISOString();
                 const mockState = {
                     since: startDate,
-                    until: moment().toISOString()
+                    until: moment().toISOString(),
+                    poll_interval_sec: 60
                 };
                 var reportSpy = sinon.spy(collector, 'reportApiThrottling');
-                
-                collector.pawsGetLogs(mockState, (err) => {
+
+                collector.pawsGetLogs(mockState, (err, logs, state, pollIntervalSec) => {
                     assert.equal(true, reportSpy.calledOnce);
+                    assert.equal(err, null);
+                    // if header not return rate-limit-resect-sec then add the 60 sec in existing pollinterval seconds
+                    assert.equal(pollIntervalSec, 120);
+                    oktaSdkMock.restore();
+                    done();
+                });
+            });
+        });
+        it('It should set the delay second if there is throttle error and header contain X-Rate-Limit-Reset', function (done) {
+            const { Client } = okta;
+            const resetSecs = moment().add(120, 'seconds').unix();
+            const error = { "name": "OktaApiError", "status": 429, "errorCode": "E0000047", "errorSummary": "API call exceeded rate limit due to too many requests.", "url": "https://alertlogic-admin.okta.com/api/v1/logs?since=2023-06-03T08%3A32%3A20.000Z&until=2023-06-03T08%3A33%3A20.000Z", "headers": { "x-rate-limit-reset": resetSecs }, "message": "Okta HTTP 429 E0000047 API call exceeded rate limit due to too many requests.. " };
+            const oktaSdkMock = sinon.stub(Client.prototype, 'getLogs').callsFake(() => {
+                return {
+                    each: () => {
+                        return new Promise((res, rej) => {
+                            rej(error);
+                        });
+                    }
+                };
+            });
+            OktaCollector.load().then(function (creds) {
+                var collector = new OktaCollector(ctx, creds);
+                const startDate = moment().subtract(1, 'days').toISOString();
+                const mockState = {
+                    since: startDate,
+                    until: moment().toISOString(),
+                    poll_interval_sec: 60
+                };
+                var reportSpy = sinon.spy(collector, 'reportApiThrottling');
+
+                collector.pawsGetLogs(mockState, (err, logs, state, poll_interval_sec) => {
+                    assert.equal(true, reportSpy.calledOnce);
+                    assert.equal(err, null);
+                    assert.equal(poll_interval_sec, 180);
                     oktaSdkMock.restore();
                     done();
                 });
