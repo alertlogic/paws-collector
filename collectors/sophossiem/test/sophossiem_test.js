@@ -168,7 +168,7 @@ describe('Unit Tests', function () {
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(BaseAPIURL, headers, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
-                        return reject({statusCode: 429});
+                        return reject({ response: { status: 429 } });
                     });
                 });
 
@@ -198,12 +198,18 @@ describe('Unit Tests', function () {
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(BaseAPIURL, headers, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
-                        return reject({ statusCode: 403,
-                            error: "Forbidden",
-                        message: "Forbidden",
-                        correlationId: "59763C8E-B687-47D0-8F7B-88113425CE3B",
-                        code: "USR00004c5",
-                        createdAt: "2019-08-15T11:25:45.987Z"});
+                        return reject({
+                            response: {
+                                status: 403,
+                                data: {
+                                    error: "Forbidden",
+                                    message: "Forbidden",
+                                    correlationId: "59763C8E-B687-47D0-8F7B-88113425CE3B",
+                                    code: "USR00004c5",
+                                    createdAt: "2019-08-15T11:25:45.987Z"
+                                }
+                            }
+                        });
                     });
                 });
 

@@ -411,10 +411,11 @@ describe('Unit Tests', function () {
             requestPost = sinon.stub(RestServiceClient.prototype, 'post').callsFake(
                 function fakeFn(path, extraOptions) {
                     return new Promise(function (resolve, reject) {
-                        return reject({statusCode:400,error:{
-                            error : "invalid_client_id",
-                            error_description: 'client identifier invalid'
-                        }  });
+                        return reject({
+                            response: {
+                                data: { error: "invalid_client_id", error_description: "client identifier invalid" }
+                            }
+                        });
                     });
                 });
         

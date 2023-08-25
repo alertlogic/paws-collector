@@ -72,8 +72,15 @@ class SentineloneCollector extends PawsCollector {
                 AlLogger.info(`SONE000002 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             }).catch((error) => {
-                error.errorCode = error.statusCode;
-                return callback(error);
+                // set the errorCode for client DD metrics
+                if (error.response && error.response.data) {
+                    error.response.data.errorCode = error.response.data.errors[0].code;
+                    return callback(error.response.data);
+                }
+                else {
+                    error.errorCode = error.response.status;
+                    return callback(error);
+                }
             });
 
     }

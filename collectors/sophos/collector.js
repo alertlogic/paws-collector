@@ -85,7 +85,7 @@ class SophosCollector extends PawsCollector {
                             AlLogger.info(`SOPH000002 Next collection in ${newState.poll_interval_sec} seconds`);
                             return callback(null, accumulator, newState, newState.poll_interval_sec);
                         }).catch((error) => {
-                            if (error.error.error && error.error.error === "TooManyRequests") {
+                            if ((error.response && error.response.data && error.response.data.errorCode === "TooManyRequests") || error.response.status === 429) {
                                 state.apiQuotaResetDate = moment().add(1, "hours").toISOString();
                                 state.poll_interval_sec = 900;
                                 AlLogger.info(`API Request Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
@@ -95,44 +95,34 @@ class SophosCollector extends PawsCollector {
                             }
                             else {
                                 // set errorCode if not available in error object to showcase client error on DDMetric
-                                if(error.error && error.error.error){
-                                    error.errorCode = error.error.error;
+                                if (error.response.data && !error.response.data.errorCode) {
+                                    error.response.data.errorCode = error.response.status;
                                 }
-                                return callback(error);
+                                return callback(error.response.data);
                             }
                         });
                 }).catch((error) => {
-                    if (error.error && error.error.error) {
-                        error.errorCode = error.error.error;
-                    } else {
-                        error.errorCode = error.statusCode;
+                    if (error.response.data && !error.response.data.errorCode) {
+                        error.response.data.errorCode = error.response.status;
                     }
-                    return callback(error);
+                    return callback(error.response.data);
                 });
-            }).catch((error) => {  
-                if (error.error && error.error.error) {
-                    error.errorCode = error.error.error;
-                } else {
-                    error.errorCode = error.statusCode;
-                }              
-                if ((error.statusCode === 401 || error.statusCode === 400) && error.message) {
-                    try {
-                        let errorStatus = JSON.parse(error.message.slice(error.message.indexOf('{'), error.message.lastIndexOf('}') + 1));
-                        if (errorStatus.errorCode) {
-                            if (errorStatus.errorCode === "oauth.invalid_client_secret" || errorStatus.errorCode === "customer.validation") {
-                                return callback(`Error code [${error.statusCode}]. Invalid client secret is provided.`);
-                            }
-                            if (errorStatus.errorCode === "oauth.client_app_does_not_exist") {
-                                return callback(`Error code [${error.statusCode}]. Invalid client ID is provided.`);
-                            }
-                        }
-                    } catch (exception) {
-                        //here it send actual error
-                        return callback(error);
+            }).catch((error) => {         
+                    
+                if (error.response && error.response.data) {
+                    const errorCode = error.response.data.errorCode;
+                    if (errorCode === "oauth.invalid_client_secret" || errorCode === "customer.validation") {
+                        error.response.data.message = `Error code [${error.response.status}]. Invalid client secret is provided.`;
                     }
+                    if (errorCode === "oauth.client_app_does_not_exist") {
+                        error.response.data.message = `Error code [${error.response.status}]. Invalid client ID is provided.`;
+                    }
+                    return callback(error.response.data);
                 }
-                
-                return callback(error);
+                else {
+                    error.errorCode = error.response.status;
+                    return callback(error);
+                }
             });
         }
     }

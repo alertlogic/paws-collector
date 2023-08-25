@@ -99,11 +99,14 @@ class SalesforceCollector extends PawsCollector {
         else {
 
             let restServiceClient = new RestServiceClient(baseUrl);
+            const formData = new URLSearchParams();
+            formData.append('grant_type', 'urn:ietf:params:oauth:grant-type:jwt-bearer');
+            formData.append('assertion', token);
             restServiceClient.post(tokenUrl, {
-                form: {
-                    grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-                    assertion: token
-                }
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                data: formData
             }).then(response => {
                 var objectQueryDetails = utils.getObjectQuery(state);
                 if (!objectQueryDetails.query) {
@@ -149,10 +152,14 @@ class SalesforceCollector extends PawsCollector {
 
             }).catch(err => {
                 // set errorCode if not available in error object to showcase client error on DDMetrics
-                if (err.error && err.error.error) {
-                    err.errorCode = err.error.error;
+                if (err.response && err.response.data) {
+                    err.response.data.errorCode = err.response.data.error;
+                    return callback(err.response.data);
                 }
-                return callback(err);
+                else {
+                    err.errorCode = err.response.status;
+                    return callback(err);
+                }
             });
         } 
     }

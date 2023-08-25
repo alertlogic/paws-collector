@@ -118,7 +118,12 @@ describe('Unit Tests', function () {
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(baseUrl, token, params, accumulator, paws_max_pages_per_invocation) {
                     return new Promise(function (resolve, reject) {
-                        return reject({name: 'StatusCodeError', statusCode: 401, message:'401 - {"errors":[{"code":4010010,"detail":null,"title":"Authentication Failed"}]}'});
+                        return reject({
+                            response: {
+                                status: 401, data:
+                                    { "errors": [{ "code": 4010010, "detail": null, "title": "Authentication Failed" }] }
+                            }
+                        });
                     });
                 });
             SentineloneCollector.load().then(function (creds) {
@@ -131,7 +136,7 @@ describe('Unit Tests', function () {
                     poll_interval_sec: 1
                 };
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(err.errorCode, 401);
+                    assert.equal(err.errorCode, 4010010);
                     getAPILogs.restore();
                     done();
                 });

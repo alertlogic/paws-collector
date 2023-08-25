@@ -13,7 +13,7 @@ describe('Unit Tests', function () {
             alserviceStub.get = sinon.stub(RestServiceClient.prototype, 'get').callsFake(
                 function fakeFn() {
                     return new Promise(function (resolve, reject) {
-                        return resolve({body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl" }, results: { total: 100 } } } });
+                        return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl" }, results: { total: 100 } } });
                     });
                 });
             let maxPagesPerInvocation = 5;
@@ -42,7 +42,7 @@ describe('Unit Tests', function () {
             alserviceStub.get = sinon.stub(RestServiceClient.prototype, 'get').callsFake(
                 function fakeFn() {
                     return new Promise(function (resolve, reject) {
-                        return resolve({body: { data: [], metadata: { links: { self: "selfPageUrl" }, results: { total: 0 } } } });
+                        return resolve({ data: [], metadata: { links: { self: "selfPageUrl" }, results: { total: 0 } } });
                     });
                 });
             let maxPagesPerInvocation = 5;
@@ -73,7 +73,7 @@ describe('Unit Tests', function () {
             alserviceStub.get = sinon.stub(RestServiceClient.prototype, 'get').callsFake(
                 function fakeFn() {
                     return new Promise(function (resolve, reject) {
-                        return resolve({ body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { next: "nextPageUrl" }, results: { total: 100 } } } });
+                        return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { next: "nextPageUrl" }, results: { total: 100 } } });
                     });
                 });
             let maxPagesPerInvocation = 5;
@@ -105,11 +105,11 @@ describe('Unit Tests', function () {
                     if (count < 3) {
                         count++;
                         return new Promise(function (resolve, reject) {
-                            return resolve({ body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: "nextPageUrl" }, results: { total: 100 } } } });
+                            return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: "nextPageUrl" }, results: { total: 100 } } });
                         });
                     } else {
                         return new Promise(function (resolve, reject) {
-                            return resolve({ body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl" }, results: { total: 100 } } } });
+                            return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl" }, results: { total: 100 } } });
                         });
                     }
 

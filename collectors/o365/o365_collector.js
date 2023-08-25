@@ -293,8 +293,8 @@ class O365Collector extends PawsCollector {
                 if (error.error_codes[0] === 700016) {
                     err.message = 'Error code [700016]. Invalid client ID is provided.';
                 }
-                if (error.error_codes[0] === 90002) {
-                    err.message = 'Error code [90002]. Please make sure you have the correct tenant ID or this may happen if there are no active subscriptions for the tenant. Check with your subscription administrator.';
+                if (error.error_codes[0] === 900023) {
+                    err.message = 'Error code [900023]. Please make sure you have the correct tenant ID or this may happen if there are no active subscriptions for the tenant. Check with your subscription administrator.';
                 } 
             }
             return err;

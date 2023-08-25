@@ -113,12 +113,11 @@ class SophossiemCollector extends PawsCollector {
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             }).catch((error) => {
                 // set errorCode if not available in error object to showcase client error on DDMetric
-                error.errorCode = error.statusCode;
-                if (error.statusCode && error.statusCode === 401) {
+                if (error.response && error.response.status === 401) {
                     AlLogger.info('Token expired or customer not authorized to make api call');
-                    return callback(error);
+                    return callback(error.response.data);
                 }
-                else if (error.statusCode && error.statusCode === 429) {
+                else if (error.response && error.response.status === 429) {
                     state.poll_interval_sec = 900;
                     AlLogger.info('API Request Limit Exceeded.');
                     collector.reportApiThrottling(function () {
@@ -126,7 +125,13 @@ class SophossiemCollector extends PawsCollector {
                     });
                 }
                 else {
-                    return callback(error);
+                    if (error.response.data) {
+                        error.response.data.errorCode = error.response.status;
+                        return callback(error.response.data);
+                    }
+                    else {
+                        return callback(error);
+                    }
                 }
             });
     }

@@ -10,7 +10,6 @@
 'use strict';
 
 const moment = require('moment');
-const request = require('request');
 const parse = require('@alertlogic/al-collector-js').Parse;
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const ManagementClient = require('auth0').ManagementClient;

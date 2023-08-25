@@ -216,7 +216,14 @@ describe('Unit Tests', function () {
             authenticate = sinon.stub(utils, 'authenticate').callsFake(
                 function fakeFn(hostName, clientId, clientSecret) {
                     return new Promise(function (resolve, reject) {
-                        return reject({ "statusCode": 401, "message": `{ "errorCode": "oauth.invalid_client_secret" }` });
+                        return reject({
+                            response: {
+                                status: 400,
+                                data: {
+                                    "errorCode": "customer.validation", "message": "Bad Request"
+                                }
+                            }
+                        });
                     });
                 });
            
@@ -232,7 +239,7 @@ describe('Unit Tests', function () {
                 };
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
                     assert.ok(err);
-                    assert.equal(err,"Error code [401]. Invalid client secret is provided.");
+                    assert.equal(err.message, "Error code [400]. Invalid client secret is provided.");
                     authenticate.restore();
                     done();
                 });
@@ -244,7 +251,7 @@ describe('Unit Tests', function () {
             authenticate = sinon.stub(utils, 'authenticate').callsFake(
                 function fakeFn(hostName, clientId, clientSecret) {
                     return new Promise(function (resolve, reject) {
-                        return reject({ "statusCode": 401, "message": `{ "errorCode": "oauth.client_app_does_not_exist" }` });
+                        return reject({response:{ "status": 401, "data": { "errorCode": "oauth.client_app_does_not_exist",message:"Unauthorized" } }});
                     });
                 });
            
@@ -260,7 +267,7 @@ describe('Unit Tests', function () {
                 };
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
                     assert.ok(err);
-                    assert.equal(err,"Error code [401]. Invalid client ID is provided.");
+                    assert.equal(err.message, "Error code [401]. Invalid client ID is provided.");
                     authenticate.restore();
                     done();
                 });
@@ -291,7 +298,7 @@ describe('Unit Tests', function () {
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(baseUrl, token, tenant_Id, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
-                        return reject({ error: {error:"TooManyRequests"} });
+                        return reject({ response: { status: 429, data: { errorCode: "TooManyRequests" } } });
                     });
                 });
             SophosCollector.load().then(function (creds) {
@@ -356,7 +363,7 @@ describe('Unit Tests', function () {
             getTenantIdAndDataRegion = sinon.stub(utils, 'getTenantIdAndDataRegion').callsFake(
                 function fakeFn(hostName, token) {
                     return new Promise(function (resolve, reject) {
-                        return reject({ error: {error:"Unauthorized",code: "USR00004c5",message: "The client needs to authenticate before making the API call. Either your credentials are invalid or blacklisted, or your JWT authorization token has expired",requestId: "6DB1D8AC-1BFA-448B-8439-5486E6D25A74"} });
+                        return reject({ response: { data: { errorCode: "Unauthorized", code: "USR00004c5", message: "The client needs to authenticate before making the API call. Either your credentials are invalid or blacklisted, or your JWT authorization token has expired", requestId: "6DB1D8AC-1BFA-448B-8439-5486E6D25A74" } } });
                     });
                 });
            

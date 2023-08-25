@@ -20,7 +20,7 @@ function getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPages
                         "authorization": `Basic ${authorization}`
                     },
                     resolveWithFullResponse: true
-                }).then(({ body }) => {
+                }).then((body) => {
                     pageCount++;
 
                     if (body.data) {

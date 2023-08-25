@@ -54,12 +54,17 @@ function getAPILogs(baseUrl, token, tenant_Id, state, accumulator, maxPagesPerIn
 
 function authenticate(baseUrl, client_id, client_secret) {
     let restServiceClient = new RestServiceClient(baseUrl);
+    const formData = new URLSearchParams();
+    formData.append('grant_type', 'client_credentials');
+    formData.append('client_id', client_id);
+    formData.append('client_secret', client_secret);
+    formData.append('scope', 'token');
     return new Promise(function (resolve, reject) {
         return restServiceClient.post(`/api/v2/oauth2/token`, {
             headers: {
                 "Content-Type": `application/x-www-form-urlencoded`
             },
-            body: `grant_type=client_credentials&client_id=${client_id}&client_secret=${client_secret}&scope=token`
+            data: formData.toString()
         }).then(response => {
             resolve(response.access_token);
         }).catch(err => {
