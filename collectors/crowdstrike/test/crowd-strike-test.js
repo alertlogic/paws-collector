@@ -230,10 +230,15 @@ describe('Unit Tests', function () {
 
     describe('pawsGetLogs get list failure', function () {
         let errorObj = {
-            statusCode: 401, error: {
-                notifications: null,
-                success: false,
-                message: 'List failure'
+            response: {
+                status: 503,
+                data: {
+                    errors: [
+                        {
+                            code: 503, message: "List failure"
+                        }
+                    ]
+                }
             }
         };
         let ctx = {
@@ -281,8 +286,8 @@ describe('Unit Tests', function () {
                 };
                 
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(err.errorCode, errorObj.statusCode);
-                    assert.equal(err.error.message, errorObj.error.message);
+                    assert.equal(err.errorCode, errorObj.response.data.errors[0].code);
+                    assert.equal(err.errors[0].message, errorObj.response.data.errors[0].message);
                     done();
                 });
             });
@@ -291,10 +296,11 @@ describe('Unit Tests', function () {
 
     describe('pawsGetLogs get authentication failure', function () {
         let errorObj = {
-            statusCode: 401, error: {
-                notifications: null,
-                success: false,
-                message: 'Authentication failure'
+            response: {
+                status: 401,
+                data: {
+                    errors: [{ code: 401, message: "access denied, authorization failed" }]
+                }
             }
         };
         let ctx = {
@@ -325,8 +331,8 @@ describe('Unit Tests', function () {
                     poll_interval_sec: 1
                 };
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(err.errorCode, errorObj.statusCode);
-                    assert.equal(err.error.message, errorObj.error.message);
+                    assert.equal(err.errorCode, errorObj.response.data.errors[0].code);
+                    assert.equal(err.errors[0].message, errorObj.response.data.errors[0].message);
                     done();
                 });
             });

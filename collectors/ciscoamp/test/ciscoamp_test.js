@@ -195,12 +195,12 @@ describe('Unit Tests', function () {
                         count++;
                         ciscoampMock.LOG_EVENT.date = lastOneHrTimeStamp;
                         return new Promise(function (resolve, reject) {
-                            return resolve({ body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: "nextPageUrl" }, results: { total: 100 } } } });
+                            return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: "nextPageUrl" }, results: { total: 100 } } });
                         });
                     } else {
                         ciscoampMock.LOG_EVENT.date = moment().subtract(2, 'days').toISOString();
                         return new Promise(function (resolve, reject) {
-                            return resolve({ body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl" }, results: { total: 100 } } } });
+                            return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl" }, results: { total: 100 } } });
                         });
                     }
                 });
@@ -246,7 +246,7 @@ describe('Unit Tests', function () {
                     count++;
                     ciscoampMock.LOG_EVENT.date = count === 1 ? lastOneHrTimeStamp : moment().subtract(count, 'hours').toISOString();
                     return new Promise(function (resolve, reject) {
-                        return resolve({ body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: `nextPageUrl${count}` }, results: { total: 100 } } } });
+                        return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: `nextPageUrl${count}` }, results: { total: 100 } } });
                     });
                 });
             getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
@@ -289,7 +289,7 @@ describe('Unit Tests', function () {
                     count++;
                     ciscoampMock.LOG_EVENT.date = moment().subtract(count, 'hours').toISOString();
                     return new Promise(function (resolve, reject) {
-                        return resolve({ body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: `nextPageUrl${10 + count}` }, results: { total: 100 } } } });
+                        return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: `nextPageUrl${10 + count}` }, results: { total: 100 } } });
                     });
                 });
             getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
@@ -334,12 +334,12 @@ describe('Unit Tests', function () {
                     if (count < 5) {
                         ciscoampMock.LOG_EVENT.date = moment().subtract(count, 'hours').toISOString();
                         return new Promise(function (resolve, reject) {
-                            return resolve({ body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: `nextPageUrl${20 + count}` }, results: { total: 100 } } } });
+                            return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: `nextPageUrl${20 + count}` }, results: { total: 100 } } });
                         });
                     } else {
                         ciscoampMock.LOG_EVENT.date = ciscoampMock.LOG_EVENT.date = moment().subtract(count, 'hours').toISOString();
                         return new Promise(function (resolve, reject) {
-                            return resolve({ body: { data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl" }, results: { total: 100 } } } });
+                            return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl" }, results: { total: 100 } } });
                         });
                     }
                 });
@@ -378,11 +378,11 @@ describe('Unit Tests', function () {
         
         it('Paws Get Logs with throttle error and set apiQuotaResetDate', function (done) {
             let errorObj = {
-                statusCode: 429,
+                status: 429,
                 response: {
-                    body: {
+                    data: {
                         version: null,
-                        data: {},
+                        data:{}, 
                         errors: [
                             {
                                 error_code: 429,
@@ -439,16 +439,18 @@ describe('Unit Tests', function () {
         });
         it('Get client error', function (done) {
             let errorObj = {
-                statusCode: 401,
-                error: {
+                status: 401,
+                response: {
                     version: null,
-                    data: {},
-                    errors:
-                        [{
-                            error_code: 401,
-                            description: 'Unauthorized',
-                            details: ['Unknown API key or Client ID']
-                        }]
+                    data: {
+                        data:{},
+                        errors:
+                            [{
+                                error_code: 401,
+                                description: 'Unauthorized',
+                                details: ['Unknown API key or Client ID']
+                            }]
+                    },
                 }
             };
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(

@@ -111,8 +111,7 @@ class CiscoampCollector extends PawsCollector {
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             }).catch((error) => {
                 const errResponse = typeof error !== 'string' ? error.response : null;
-
-                if (errResponse && errResponse.body.errors[0].error_code === API_THROTTLING_ERROR) {
+                if (errResponse && errResponse.data.errors[0].error_code === API_THROTTLING_ERROR) {
                     const rateLimitResetSecs = parseInt(errResponse['headers']['x-ratelimit-reset']);
                     const extraBufferSeconds = 60;
                     const resetSeconds = rateLimitResetSecs + extraBufferSeconds;
@@ -129,9 +128,15 @@ class CiscoampCollector extends PawsCollector {
                     });
                 }
                 else {
-                    // set errorCode if not available in error object to showcase client error on DDMetric    
-                    error.errorCode = errResponse && errResponse.body ? errResponse.body.errors[0].error_code : error.statusCode;
-                    return callback(error);
+                    // set errorCode if not available in error object to showcase client error on DDMetric 
+                    if (errResponse && errResponse.data && errResponse.data.errors) {
+                        errResponse.data.errorCode = errResponse.data.errors[0].error_code;
+                        return callback(errResponse.data);
+                    }
+                    else {
+                        error.errorCode = error.response.status;
+                        return callback(error);
+                    }   
                 }
             });
     }

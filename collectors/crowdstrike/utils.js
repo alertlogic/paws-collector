@@ -7,15 +7,16 @@ const USERAGENT = 'alertlogic_security_1.0';
 
 function authenticate(baseUrl, clientId, clientSecret) {
     let restServiceClient = new RestServiceClient(baseUrl);
+    const formData = new URLSearchParams();
+    formData.append('client_id', clientId);
+    formData.append('client_secret', clientSecret);
     return new Promise(function (resolve, reject) {
         return restServiceClient.post(`/oauth2/token`, {
-            form: {
-                client_id: clientId,
-                client_secret: clientSecret
-            },
             headers: {
-                'User-Agent': USERAGENT
-            }
+                'User-Agent': USERAGENT,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            data: formData
         }).then(response => {
             resolve(response.access_token);
         }).catch(err => {
@@ -63,7 +64,7 @@ function getIncidents(ids, apiHostName, token) {
                 'Authorization': 'Bearer ' + token,
                 'User-Agent': USERAGENT
             },
-            json: {
+            data: {
                 ids: ids
             }
         }).then(response => {
@@ -89,7 +90,7 @@ function getDetections(ids, APIHostName, token) {
                 'Authorization': 'Bearer ' + token,
                 'User-Agent': USERAGENT
             },
-            json: {
+            data: {
                 ids: ids
             }
         }).then(response => {

@@ -84,8 +84,7 @@ class CrowdstrikeCollector extends PawsCollector {
                         return callback(null, data.resources, newState, newState.poll_interval_sec);
                     }).catch((error) => {
                         AlLogger.error(`CROW000005 Error while getting incident details`);
-                        error.errorCode = error.statusCode;
-                        return callback(error);
+                        return collector.setErrorCode(error, callback);
                     });
                 } else if (state.stream === 'Detection') {
                     return utils.getDetections(accumulator, APIHostName, token).then((data) => {
@@ -94,20 +93,28 @@ class CrowdstrikeCollector extends PawsCollector {
                         return callback(null, data.resources, newState, newState.poll_interval_sec);
                     }).catch((error) => {
                         AlLogger.error(`CROW000005 Error while getting detection details`);
-                        error.errorCode = error.statusCode;
-                        return callback(error);
+                        return collector.setErrorCode(error, callback);
                     });
                 }
             }).catch((error) => {
                 AlLogger.error(`CROW000003 Error while getting API details`);
-                error.errorCode = error.statusCode;
-                return callback(error);
+                return collector.setErrorCode(error, callback);
             });
         }).catch((error) => {
             AlLogger.error(`CROW000002 Error while getting Authentication`);
-            error.errorCode = error.statusCode;
-            return callback(error);
+            return collector.setErrorCode(error, callback);
         });        
+    }
+
+    setErrorCode(error, callback) {
+        if (error.response && error.response.data) {
+            error.response.data.errorCode = error.response.data.errors[0] ? error.response.data.errors[0].code : error.response.status;
+            return callback(error.response.data);
+        }
+        else {
+            error.errorCode = error.response.status;
+            return callback(error);
+        }
     }
 
     _getNextCollectionStateWithOffset(curState, offset, receivedAll) {

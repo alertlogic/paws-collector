@@ -38,9 +38,10 @@ function getAPILogs(apiDetails, accumulator, apiEndpoint, state, clientSecret, c
                 if (pageCount < maxPagesPerInvocation) {
                     restServiceClient.post(apiDetails.url, {
                         headers: {
-                            'X-Auth-Token': `${clientSecret}/${clientId}`
+                            'X-Auth-Token': `${clientSecret}/${clientId}`,
+                            'Content-Type': 'application/json'
                         },
-                        json: apiDetails.requestBody
+                        data: apiDetails.requestBody
                     }).then(response => {
                         if (response.results.length === 0) {
                             return resolve({ accumulator, nextPage });

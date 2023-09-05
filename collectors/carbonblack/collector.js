@@ -114,8 +114,14 @@ class CarbonblackCollector extends PawsCollector {
             })
             .catch((error) => {
                 // set errorCode if not available in error object to showcase client error on DDMetric
-                error.errorCode = error.statusCode;
-                return callback(error);
+                if (error.response && error.response.data) {
+                    error.response.data.errorCode = error.response.data.error_code;
+                    return callback(error.response.data);
+                }
+                else {
+                    error.errorCode = error.response.status;
+                    return callback(error);
+                }
             });
 
 

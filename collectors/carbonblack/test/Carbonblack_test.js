@@ -238,11 +238,12 @@ describe('Unit Tests', function () {
 
     describe('pawsGetLogs', function () {
         let errorObj = {
-            statusCode: 401, error: {
-                notifications: null,
-                success: false,
-                message: 'Authentication failure'
-            }
+            response: {
+                status: 401,
+                data: { "message": "Illegal org key N2MF5397R", "error_code": "BAD_REQUEST" }
+            },
+            code: "ERR_BAD_REQUEST",
+            message: 'Request failed with status code 401'
         };
         beforeEach(function () {
             getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
@@ -283,8 +284,8 @@ describe('Unit Tests', function () {
                 };
                 
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(err.errorCode, errorObj.statusCode);
-                    assert.equal(err.error.message, errorObj.error.message);
+                    assert.equal(err.errorCode, errorObj.response.data.error_code);
+                    assert.equal(err.message, errorObj.response.data.message);
                     done();
                 });
             });
