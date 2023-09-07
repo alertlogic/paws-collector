@@ -33,7 +33,7 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                     method: 'POST',
                     url: url,
                     headers: requestHeaders,
-                    data: applicationDetails.payload,
+                    data: applicationDetails.payload
                 };
                 const payloadData = applicationDetails.encoding === null || applicationDetails.encoding ? { ...tempPayload, responseType: 'arraybuffer', encoding: applicationDetails.encoding } : tempPayload;
                 axios.request(payloadData).then(response => {
