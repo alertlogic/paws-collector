@@ -1,6 +1,6 @@
 {
   "name": "mimecast-collector",
-  "version": "1.0.38",
+  "version": "1.0.39",
   "description": "Alert Logic AWS based Mimecast Log Collector",
   "repository": {},
   "private": true,
