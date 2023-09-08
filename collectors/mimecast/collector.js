@@ -127,15 +127,20 @@ class MimecastCollector extends PawsCollector {
                 if (error.code) {
                     error.errorCode = error.code;
                 }
-                if (error.statusCode && error.statusCode == 429) {
+                if (error.response && error.response.data && error.response.data.meta.status == 429) {
                     state.poll_interval_sec = 900;
                     AlLogger.warn("MIME000004 The Mimecast service you're trying to access is temporarily busy. Please try again in a few minutes and then contact your IT helpdesk if you still have problems.");
                     collector.reportApiThrottling(function () {
                         return callback(null, [], state, state.poll_interval_sec);
                     });
                 }
-                else{
-                    return callback(error);
+                else {
+                    if (error.response && error.response.data) {
+                        return callback(error.response.data);
+                    }
+                    else {
+                        return callback(error);
+                    }
                 }
             });
     }

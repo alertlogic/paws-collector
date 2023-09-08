@@ -2,7 +2,7 @@ const utils = require("../utils");
 const assert = require('assert');
 const sinon = require('sinon');
 const mimecastMock = require('./mimecast_mock');
-var request = require('request');
+const axios = require('axios');
 const moment = require('moment');
 const path = require('path');
 const TEST_ZIP_PATH = path.join(__dirname, 'test1.zip');
@@ -11,7 +11,8 @@ var alserviceStub = {};
 describe('Unit Tests', function () {
     describe('Get API Logs (AttachmentProtectLogs)', function () {
         it('Get API Logs (AttachmentProtectLogs) success', function (done) {
-            alserviceStub.post = sinon.stub(request, 'post').yields(null, {}, JSON.stringify({ fail: [], data: [{ attachmentLogs: [mimecastMock.LOG_EVENT] }], meta: { pagination: {} } }));
+            const response = { fail: [], data: [{ attachmentLogs: [mimecastMock.LOG_EVENT] }], meta: { pagination: {} } };
+            alserviceStub.request = sinon.stub(axios, 'request').resolves({ data: response });
             let maxPagesPerInvocation = 5;
             let accumulator = [];
             const startDate = moment().subtract(5, 'days');
@@ -23,7 +24,7 @@ describe('Unit Tests', function () {
                 poll_interval_sec: 1
             };
             let authDetails = {
-                "baseUrl": "baseUrl",
+                "baseUrl": "baseUrl.com",
                 "accessKey": "accessKey",
                 "secretKey": "secretKey",
                 "appId": "appId",
@@ -31,7 +32,7 @@ describe('Unit Tests', function () {
             };
             utils.getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation).then(data => {
                 assert(accumulator.length == 1, "accumulator length is wrong");
-                alserviceStub.post.restore();
+                alserviceStub.request.restore();
                 done();
             });
         });
@@ -39,7 +40,8 @@ describe('Unit Tests', function () {
 
     describe('Get API Logs (AttachmentProtectLogs) with nextpage', function () {
         it('Get API Logs (AttachmentProtectLogs) with nextpage success', function (done) {
-            alserviceStub.post = sinon.stub(request, 'post').yields(null, {}, JSON.stringify({ fail: [], data: [{ attachmentLogs: [mimecastMock.LOG_EVENT] }], meta: { pagination: { next: "next" } } }));
+            const response = { fail: [], data: [{ attachmentLogs: [mimecastMock.LOG_EVENT] }], meta: { pagination: { next: "next" } } };
+            alserviceStub.request = sinon.stub(axios, 'request').resolves({ data: response });
             let maxPagesPerInvocation = 5;
             let accumulator = [];
             const startDate = moment().subtract(5, 'days');
@@ -59,7 +61,7 @@ describe('Unit Tests', function () {
             };
             utils.getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation).then(data => {
                 assert(accumulator.length == 5, "accumulator length is wrong");
-                alserviceStub.post.restore();
+                alserviceStub.request.restore();
                 done();
             });
         });
@@ -67,7 +69,7 @@ describe('Unit Tests', function () {
 
     describe('Get API Logs (URLProtectLogs)', function () {
         it('Get API Logs (URLProtectLogs) success', function (done) {
-            alserviceStub.post = sinon.stub(request, 'post').yields(null, {}, JSON.stringify({ fail: [], data: [{ clickLogs: [mimecastMock.URL_PROTECT_LOGS_EVENT] }], meta: { pagination: {} } }));
+            alserviceStub.request = sinon.stub(axios, 'request').resolves({ data: { fail: [], data: [{ clickLogs: [mimecastMock.URL_PROTECT_LOGS_EVENT] }], meta: { pagination: {} } } });
             let maxPagesPerInvocation = 5;
             let accumulator = [];
             const startDate = moment().subtract(5, 'days');
@@ -87,7 +89,7 @@ describe('Unit Tests', function () {
             };
             utils.getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation).then(data => {
                 assert(accumulator.length == 1, "accumulator length is wrong");
-                alserviceStub.post.restore();
+                alserviceStub.request.restore();
                 done();
             });
         });
@@ -95,7 +97,7 @@ describe('Unit Tests', function () {
 
     describe('Get API Logs (URLProtectLogs) with nextpage', function () {
         it('Get API Logs (URLProtectLogs) with nextpage success', function (done) {
-            alserviceStub.post = sinon.stub(request, 'post').yields(null, {}, JSON.stringify({ fail: [], data: [{ clickLogs: [mimecastMock.URL_PROTECT_LOGS_EVENT] }], meta: { pagination: { next: "next" } } }));
+            alserviceStub.request = sinon.stub(axios, 'request').resolves({ data: { fail: [], data: [{ clickLogs: [mimecastMock.URL_PROTECT_LOGS_EVENT] }], meta: { pagination: { next: "next" } } } });
             let maxPagesPerInvocation = 5;
             let accumulator = [];
             const startDate = moment().subtract(5, 'days');
@@ -115,7 +117,7 @@ describe('Unit Tests', function () {
             };
             utils.getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation).then(data => {
                 assert(accumulator.length == 5, "accumulator length is wrong");
-                alserviceStub.post.restore();
+                alserviceStub.request.restore();
                 done();
             });
         });
@@ -123,7 +125,7 @@ describe('Unit Tests', function () {
 
     describe('Get API Logs (MalwareFeed) with no logs', function () {
         it('Get API Logs (MalwareFeed) with no logs success', function (done) {
-            alserviceStub.post = sinon.stub(request, 'post').yields(null, { "headers": {} }, JSON.stringify({ id: "bundle--bf8be578-3953-4b80-ae84-312d149b91e8", objects: [] }));
+            alserviceStub.request = sinon.stub(axios, 'request').resolves({ "headers": {}, data: { id: "bundle--bf8be578-3953-4b80-ae84-312d149b91e8", objects: [] } });
             let maxPagesPerInvocation = 5;
             let accumulator = [];
             let state = {
@@ -140,7 +142,7 @@ describe('Unit Tests', function () {
             };
             utils.getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation).then(data => {
                 assert(accumulator.length == 0, "accumulator length is wrong");
-                alserviceStub.post.restore();
+                alserviceStub.request.restore();
                 done();
             });
         });
@@ -148,7 +150,7 @@ describe('Unit Tests', function () {
 
     describe('Get API Logs (MalwareFeed)', function () {
         it('Get API Logs (MalwareFeed) success', function (done) {
-            alserviceStub.post = sinon.stub(request, 'post').yields(null, { "headers": { "x-mc-threat-feed-next-token": "token" } }, JSON.stringify({ id: "bundle--bf8be578-3953-4b80-ae84-312d149b91e8", objects: [mimecastMock.MALWARE_FEED_LOGS_EVENT] }));
+            alserviceStub.request = sinon.stub(axios, 'request').resolves({ "headers": { "x-mc-threat-feed-next-token": "token" }, data: { id: "bundle--bf8be578-3953-4b80-ae84-312d149b91e8", objects: [mimecastMock.MALWARE_FEED_LOGS_EVENT] } });
             let maxPagesPerInvocation = 5;
             let accumulator = [];
             let state = {
@@ -165,7 +167,7 @@ describe('Unit Tests', function () {
             };
             utils.getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation).then(data => {
                 assert(accumulator.length == 5, "accumulator length is wrong");
-                alserviceStub.post.restore();
+                alserviceStub.request.restore();
                 done();
             });
         });
@@ -173,11 +175,14 @@ describe('Unit Tests', function () {
 
     describe('Get API Logs (SiemLogs)', function () {
         it('Get API Logs (SiemLogs) success with last token', function (done) {
-            alserviceStub.post = sinon.stub(request, 'post').yields(null, {
-                "meta": {
-                    "isLastToken": true
+            alserviceStub.request = sinon.stub(axios, 'request').resolves({
+                data: {
+                    "meta": {
+                        "isLastToken": true
+                    },
+                    "data": []
                 }
-            }, JSON.stringify({ "data": [] }));
+            });
             let maxPagesPerInvocation = 5;
             let accumulator = [];
             let state = {
@@ -194,7 +199,7 @@ describe('Unit Tests', function () {
             };
             utils.getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation).then(data => {
                 assert(accumulator.length == 0, "accumulator length is wrong");
-                alserviceStub.post.restore();
+                alserviceStub.request.restore();
                 done();
             });
         });
@@ -202,7 +207,7 @@ describe('Unit Tests', function () {
 
     describe('Get API Logs (SiemLogs) Download zip file', function () {
         it('Get API Logs (SiemLogs) extract zip buffer and accumulate logs from json files', function (done) {
-            alserviceStub.post = sinon.stub(request, 'post').yields(null, { "headers": { "mc-siem-token": "token" } }, TEST_ZIP_PATH);
+            alserviceStub.request = sinon.stub(axios, 'request').resolves({ "headers": { "mc-siem-token": "token" }, data: TEST_ZIP_PATH });
             let maxPagesPerInvocation = 5;
             let accumulator = [];
             let state = {
@@ -218,9 +223,8 @@ describe('Unit Tests', function () {
                 "appKey": "appKey"
             };
             utils.getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation).then(data => {
-                console.log(accumulator);
-                assert(accumulator.length ===0, "accumulator length is wrong");
-                alserviceStub.post.restore();
+                assert(accumulator.length === 0, "accumulator length is wrong");
+                alserviceStub.request.restore();
                 done();
             });
         });
@@ -229,7 +233,7 @@ describe('Unit Tests', function () {
     describe('Get API Logs (SiemLogs) Download zip file failed', function () {
         it('Get API Logs (SiemLogs) extract zip buffer failed', function (done) {
             // const unzipBufferSpy = sinon.spy(utils.unzipBuffer);
-            alserviceStub.post = sinon.stub(request, 'post').yields(null, { "headers": { "mc-siem-token": "token" } }, JSON.stringify(mimecastMock.SIEM_LOGS_EVENT));
+            alserviceStub.request = sinon.stub(axios, 'request').resolves({ "headers": { "mc-siem-token": "token" }, data: mimecastMock.SIEM_LOGS_EVENT });
             let maxPagesPerInvocation = 5;
             let accumulator = [];
             let state = {
@@ -253,7 +257,7 @@ describe('Unit Tests', function () {
                 assert(accumulator.length == 0, "accumulator length is wrong");
                 assert(errMessage === 'Invalid filename', "Returned Error message");
                 // assert(unzipBufferSpy.called, "unzipBuffer method not called");
-                alserviceStub.post.restore();
+                alserviceStub.request.restore();
                 done();
 
             });
@@ -262,7 +266,7 @@ describe('Unit Tests', function () {
 
     describe('Get API Logs (MalwareFeed)', function () {
         it('Get API Logs (MalwareFeed) with Api Throttling success', function (done) {
-            alserviceStub.post = sinon.stub(request, 'post').yields(null, { "statusCode": 429 }, "The Mimecast service you're trying to access is temporarily busy. Please try again in a few minutes and then contact your IT helpdesk if you still have problems.");
+            alserviceStub.request = sinon.stub(axios, 'request').rejects({ response: { data: { meta: { "status": 429, message: "The Mimecast service you're trying to access is temporarily busy. Please try again in a few minutes and then contact your IT helpdesk if you still have problems." } } } });
             let maxPagesPerInvocation = 5;
             let accumulator = [];
             let state = {
@@ -278,8 +282,8 @@ describe('Unit Tests', function () {
                 "appKey": "appKey"
             };
             utils.getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation).catch((error) => {
-                assert.equal(error.statusCode, 429);
-                alserviceStub.post.restore();
+                assert.equal(error.response.data.meta.status, 429);
+                alserviceStub.request.restore();
                 done();
             });
         });

@@ -1,7 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 const moment = require('moment');
-var request = require('request');
+const axios = require('axios')
 const AdmZip = require('adm-zip');
 
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
@@ -30,41 +30,27 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
 
                 AlLogger.debug(`MIME00009 calling url: ${url}`);
                 const tempPayload = {
+                    method: 'POST',
                     url: url,
                     headers: requestHeaders,
-                    body: JSON.stringify(applicationDetails.payload)
+                    data: applicationDetails.payload
                 };
-                const payloadData = applicationDetails.encoding === null ||  applicationDetails.encoding ? { ...tempPayload, encoding: applicationDetails.encoding } : tempPayload;
-                request.post(payloadData, function (error, response, body) {
-                    if (error) {
-                        return reject(error);
-                    }
-                    if (response.statusCode &&
-                        (response.statusCode === 429 ||
-                            response.statusCode >= 500)) {
-                        return reject(response);
-                    }
-
+                const payloadData = applicationDetails.encoding === null || applicationDetails.encoding ? { ...tempPayload, responseType: 'arraybuffer', encoding: applicationDetails.encoding } : tempPayload;
+                axios.request(payloadData).then(response => {
                     if (!applicationDetails.compress) {
-                        try {
-                            body = JSON.parse(body);
-                        } catch (exception) {
-                            AlLogger.error("MIME000010 Error parsing response. ", body);
-                            return reject(exception);
-                        }
+                        body = response.data;
                         if (body.fail && body.fail[0] && body.fail[0].errors) {
                             return reject(body.fail[0].errors[0]);
                         }
                     }
-
                     pageCount++;
                     switch (state.stream) {
                         case Siem_Logs:
                             //get zip file content in the body and unzip it in memory
-                            unzipBufferInMemory(body).then(function (bodyData) {
+                            unzipBufferInMemory(response.data).then(function (bodyData) {
                                 accumulator.push(...bodyData);
                                 AlLogger.debug(`MIME000011 accumulated first element: ${JSON.stringify(accumulator[1])} and accumaulator length ${accumulator.length}`);
-                                if (response.meta && response.meta.isLastToken) {
+                                if (response.data.meta && response.data.meta.isLastToken) {
                                     nextPage = undefined;
                                     if (applicationDetails.payload.data[0].token) {
                                         nextPage = applicationDetails.payload.data[0].token;
@@ -110,7 +96,10 @@ function getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation) {
                             break;
                     }
                     getData();
-                });
+                }).catch(error => {
+                    AlLogger.debug(`MIME000014 error in making api call ${JSON.stringify(error)}`);
+                    reject(error);
+                })
             }
             else {
                 return resolve({ accumulator, nextPage });
@@ -144,7 +133,7 @@ function unzipBufferInMemory(buffer) {
                 }
             });
         }
-        AlLogger.debug("MIME000013 tempAccumulator data length. ", tempAccumulator.length);
+        AlLogger.debug(`MIME000013 tempAccumulator data length. ${tempAccumulator.length}`);
         resolve(tempAccumulator);
     })
 }
