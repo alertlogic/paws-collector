@@ -266,7 +266,7 @@ describe('Unit Tests', function () {
 
     describe('Get API Logs (MalwareFeed)', function () {
         it('Get API Logs (MalwareFeed) with Api Throttling success', function (done) {
-            alserviceStub.request = sinon.stub(axios, 'request').rejects({ response: { data: { meta: { "status": 429, message: "The Mimecast service you're trying to access is temporarily busy. Please try again in a few minutes and then contact your IT helpdesk if you still have problems." } } } });
+            alserviceStub.request = sinon.stub(axios, 'request').rejects({ response:{ "status": 429, message: "The Mimecast service you're trying to access is temporarily busy. Please try again in a few minutes and then contact your IT helpdesk if you still have problems." } });
             let maxPagesPerInvocation = 5;
             let accumulator = [];
             let state = {
@@ -282,7 +282,7 @@ describe('Unit Tests', function () {
                 "appKey": "appKey"
             };
             utils.getAPILogs(authDetails, state, accumulator, maxPagesPerInvocation).catch((error) => {
-                assert.equal(error.response.data.meta.status, 429);
+                assert.equal(error.response.status, 429);
                 alserviceStub.request.restore();
                 done();
             });

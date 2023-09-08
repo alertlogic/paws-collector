@@ -178,7 +178,7 @@ describe('Unit Tests', function() {
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(authDetails, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
-                        return reject({response:{data :{meta : {status: 429}}}});
+                        return reject({response: {status: 429}});
                     });
                 });
                 MimecastCollector.load().then(function (creds) {
