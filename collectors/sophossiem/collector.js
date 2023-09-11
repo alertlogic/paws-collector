@@ -114,8 +114,11 @@ class SophossiemCollector extends PawsCollector {
             }).catch((error) => {
                 // set errorCode if not available in error object to showcase client error on DDMetric
                 if (error.response && error.response.status === 401) {
-                    AlLogger.info('Token expired or customer not authorized to make api call');
-                    return callback(error.response.data);
+                    const err = {
+                        message: 'Token expired or customer not authorized to make api call',
+                        errorCode: error.response.status
+                    }
+                    return callback(err);
                 }
                 else if (error.response && error.response.status === 429) {
                     state.poll_interval_sec = 900;
@@ -127,6 +130,7 @@ class SophossiemCollector extends PawsCollector {
                 else {
                     if (error.response.data) {
                         error.response.data.errorCode = error.response.status;
+                        error.response.data.message = error.response.data.message ? error.response.data.message : error.response.message || '';
                         return callback(error.response.data);
                     }
                     else {
