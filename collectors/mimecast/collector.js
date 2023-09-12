@@ -123,10 +123,6 @@ class MimecastCollector extends PawsCollector {
                 AlLogger.info(`MIME000003 Next collection in ${newState.poll_interval_sec} seconds`);
                 return callback(null, accumulator, newState, newState.poll_interval_sec);
             }).catch((error) => {
-                // set errorCode if not available in error object to showcase client error on DDMetrics
-                if (error.code) {
-                    error.errorCode = error.code;
-                }
                 if (error.response && error.response.status == 429) {
                     state.poll_interval_sec = 900;
                     AlLogger.warn("MIME000004 The Mimecast service you're trying to access is temporarily busy. Please try again in a few minutes and then contact your IT helpdesk if you still have problems.");
@@ -136,9 +132,23 @@ class MimecastCollector extends PawsCollector {
                 }
                 else {
                     if (error.response && error.response.data) {
-                        return callback(error.response.data);
+                        error.response.data.errorCode = error.response.status;
+                        if (state.stream === Siem_Logs) {
+                            const bufferData = Buffer.from(error.response.data, 'utf-8');
+                            const bufferString = bufferData.toString('utf-8');
+                            try {
+                                const parseError = JSON.parse(bufferString);
+                                return callback(parseError);
+                            } catch (err) {
+                                return callback(error);
+                            }
+                        }
+                        else {
+                            return callback(error.response.data);
+                        }
                     }
                     else {
+                        error.errorCode = error.code ? error.code : error.response.status;
                         return callback(error);
                     }
                 }
