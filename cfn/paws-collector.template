@@ -494,7 +494,7 @@
                     }
                 },
                 "Handler":"index.handler",
-                "Runtime":"nodejs18.x",
+                "Runtime":"nodejs14.x",
                 "MemorySize":128,
                 "Timeout": 5,
                 "Tags": [
@@ -739,7 +739,7 @@
             },
             "Architectures": ["arm64"],
             "Handler":"index.handler",
-            "Runtime":"nodejs18.x",
+            "Runtime":"nodejs14.x",
             "MemorySize": { "Ref" : "CollectorFunctionMemorySize" },
             "Timeout": { "Ref" : "CollectorFunctionTimeout" },
             "Environment":{

@@ -21,7 +21,6 @@
     "rel": "npm publish --access=public"
   },
   "devDependencies": {
-    "aws-sdk": "*",
     "aws-sdk-mock": "*",
     "clone": "*",
     "jshint": "^2.13.6",
@@ -32,7 +31,8 @@
     "yargs": "^17.6.2"
   },
   "dependencies": {
-    "@alertlogic/al-aws-collector-js": "4.1.21",
+    "@alertlogic/al-aws-collector-js": "4.1.22",
+    "aws-sdk": "*",
     "async": "^3.2.4",
     "datadog-lambda-js": "^6.85.0",
     "debug": "^4.3.4",
