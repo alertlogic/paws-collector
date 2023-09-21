@@ -114,3 +114,12 @@ Each user can create only five access keys. If a "limit exceeded" response appea
 
 - [Alert Logic AIMs service API](https://console.cloudinsight.alertlogic.com/api/aims/)
 - [How to monitor AWS Lambda functions](http://docs.aws.amazon.com/lambda/latest/dg/monitoring-functions.html)
+
+# Step to test in aws playground account(352283894008)
+- In local add some mapping under SharedPrefix which you going to used while deploying the paws-shared-resources.template(https://algithub.pd.alertlogic.net/defender/paws-collectors-deploy-pipeline/blob/integration/cfn/paws-shared-resources.template#L37)
+
+- Create the new stack with the paws-shared-resources.template which will created all the shared resources.
+
+- Deploye the paws-collector-shared.template by providing all the existing value from paws-shared-resources.template *outputs* and fill remaining value as per collector requirement.
+
+**Note:** paws-collector.template is not used in integration and production. It can also be used to deploy individual collector but might be missed some functionality.
