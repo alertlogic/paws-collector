@@ -9,13 +9,14 @@ Resources:
       KmsKeyArn: your-arn-here
       Environment:
         Variables:
-          ssm_direct:
           AWS_LAMBDA_FUNCTION_NAME:
+          maxPages:
           aims_secret_key:
           aims_access_key_id:
           al_api:
           stack_name:
           azcollect_api:
+          collector_status_api:
           ingest_api:
           DEBUG:
           paws_state_queue_arn:
@@ -26,10 +27,14 @@ Resources:
           paws_endpoint:
           paws_api_client_id:
           paws_max_pages_per_invocation:    
+          collector_streams:
           collector_id:
           paws_ddb_table_name:
-          collector_streams:
-      Runtime: nodejs14.x
+          customer_id:
+          paws_type_name:
+          ssm_direct:
+      CodeUri:
+      Runtime: nodejs18.x
       Handler: index.handler
       Timeout: 300 
       MemorySize: 1024

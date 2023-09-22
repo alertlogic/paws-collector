@@ -16,6 +16,7 @@ Resources:
           al_api:
           stack_name:
           azcollect_api:
+          collector_status_api:
           ingest_api:
           DEBUG:
           paws_state_queue_arn:
@@ -26,20 +27,15 @@ Resources:
           paws_api_client_id:
           paws_collector_param_string_1:
           collector_streams:
-          paws_api_secret:
-          APP_SUBSCRIPTION_ID:
-          AZURE_APP_TENANT_ID:
-          O365_CONTENT_STREAMS:
-          CUSTOMCONNSTR_APP_CLIENT_ID:
-          CUSTOMCONNSTR_APP_CLIENT_SECRET:
           paws_endpoint:
-          okta_token:
-          okta_collection_start_ts:
           collector_id:
           paws_ddb_table_name:
           customer_id:
-          paws_api_client_id:
-      Runtime: nodejs14.x
+          paws_type_name:
+          paws_dedup_logs_ddb_table_name:
+          ssm_direct:
+      CodeUri: 
+      Runtime: nodejs18.x
       Handler: index.handler
       Timeout: 60 
       MemorySize: 1024
