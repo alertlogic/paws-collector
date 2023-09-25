@@ -1,6 +1,6 @@
 {
   "name": "sentinelone-collector",
-  "version": "1.0.47",
+  "version": "1.0.48",
   "description": "Alert Logic AWS based Sentinelone Log Collector",
   "repository": {},
   "private": true,

@@ -14,8 +14,9 @@ Resources:
           aims_access_key_id:
           al_api:
           stack_name:
-          azollect_api:
+          azcollect_api:
           ingest_api:
+          collector_status_api:
           DEBUG:
           paws_state_queue_arn:
           paws_state_queue_url:
@@ -24,7 +25,7 @@ Resources:
           collector_id:
           ssm_direct:
           paws_type_name:
-      Runtime: nodejs14.x
+      Runtime: nodejs18.x
       Handler: index.handler
       Timeout: 300 
       MemorySize: 1024

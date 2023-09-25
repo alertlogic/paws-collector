@@ -1,6 +1,6 @@
 {
   "name": "sophossiem-collector",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "description": "Alert Logic AWS based Sophossiem Log Collector",
   "repository": {},
   "private": true,
