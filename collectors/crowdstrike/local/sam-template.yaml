@@ -15,6 +15,7 @@ Resources:
           al_api:
           stack_name:
           azcollect_api:
+          collector_status_api:
           ingest_api:
           DEBUG:
           paws_state_queue_arn:
@@ -27,9 +28,13 @@ Resources:
           paws_secret_param_name:
           paws_api_client_id:
           paws_endpoint:
+          paws_collector_param_string_2:
           collector_streams:
           customer_id:
-      Runtime: nodejs14.x
+          paws_type_name:
+          ssm_direct:
+      CodeUri: 
+      Runtime: nodejs18.x
       Handler: index.handler
       Timeout: 300
       MemorySize: 1024
