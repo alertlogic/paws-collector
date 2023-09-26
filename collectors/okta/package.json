@@ -1,6 +1,6 @@
 {
   "name": "okta-collector",
-  "version": "1.2.21",
+  "version": "1.2.22",
   "description": "Alert Logic AWS based Okta Log Collector",
   "repository": {},
   "private": true,
