@@ -140,10 +140,10 @@ function mockDDB(getItemStub, putItemStub, updateItemStub, batchWriteItemStub) {
 }
 
 function restoreDDB(){
-    pawsStub.restore(DynamoDB,'getItem');
-    pawsStub.restore(DynamoDB,'putItem');
-    pawsStub.restore(DynamoDB,'updateItem');
-    pawsStub.restore(DynamoDB,'batchWriteItem');
+    pawsStub.restore(DynamoDB, 'getItem');
+    pawsStub.restore(DynamoDB, 'putItem');
+    pawsStub.restore(DynamoDB, 'updateItem');
+    pawsStub.restore(DynamoDB, 'batchWriteItem');
 }
 
 function mockCloudWatch() {
@@ -281,13 +281,13 @@ describe('Unit Tests', function() {
     beforeEach(function(){
         pawsStub.mock(KMS, 'decrypt', function (params, callback) {
             const data = {
-                    Plaintext : Buffer.from('decrypted-aims-sercret-key')
-                };
+                Plaintext: Buffer.from('decrypted-aims-sercret-key')
+            };
             return callback(null, data);
         });
         pawsStub.mock(KMS, 'encrypt', function (params, callback) {
             const data = {
-                CiphertextBlob : Buffer.from('creds-from-file').toString('base64')
+                CiphertextBlob: Buffer.from('creds-from-file').toString('base64')
             };
             return callback(null, data);
         });
@@ -316,8 +316,8 @@ describe('Unit Tests', function() {
         restoreAlServiceStub();
         setEnvStub.restore();
         responseStub.restore();
-        pawsStub.restore(KMS,'decrypt');
-        pawsStub.restore(KMS,'encrypt');
+        pawsStub.restore(KMS, 'decrypt');
+        pawsStub.restore(KMS, 'encrypt');
         pawsStub.restore(SSM, 'getParameter');
         pawsStub.restore(SQS, 'sendMessage');
         sqsSendMessageBatchStub.restore();
@@ -963,7 +963,7 @@ describe('Unit Tests', function() {
                     assert.equal(err.errorCode, 'AWSC0018');
                     assert.equal(err.httpErrorCode, 404);
                     processLog.restore();
-                    pawsStub.restore(CloudWatch,'putMetricData');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
                     done();
                 });
             });
@@ -984,7 +984,7 @@ describe('Unit Tests', function() {
                 var collector = new TestCollector(ctx, creds);
                 collector.reportApiThrottling(function(error) {
                     assert.equal(null, error);
-                    pawsStub.restore(CloudWatch,'putMetricData');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
                     done();
                 });
             });
@@ -1002,7 +1002,7 @@ describe('Unit Tests', function() {
                 }
             };
 
-            pawsStub.restore(KMS,'encrypt');
+            pawsStub.restore(KMS, 'encrypt');
 
             pawsStub.mock(SSM, 'putParameter', (params, callback) => callback(null, {Version: 2, Tier:'Standard'}));
 
@@ -1019,7 +1019,7 @@ describe('Unit Tests', function() {
                 collector.setPawsSecret(secretValue).then((res) => {
                     assert.equal(res.Version, 2);
                     assert.equal(res.Tier, 'Standard');
-                    pawsStub.restore(SSM,'putParameter');
+                    pawsStub.restore(SSM, 'putParameter');
                     done();
                 });
             });
@@ -1042,7 +1042,7 @@ describe('Unit Tests', function() {
                 var collector = new TestCollector(ctx, creds);
                 collector.reportCollectionDelay('2020-01-26T12:08:31.316Z', function(error) {
                     assert.equal(null, error);
-                    pawsStub.restore(CloudWatch,'putMetricData');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
                     done();
                 });
             });
@@ -1090,7 +1090,7 @@ describe('Unit Tests', function() {
                 collector.reportErrorToIngestApi(errorObj, function(error) {
                     assert.equal(errorObj.errorCode, 'E0000011');
                     assert.equal(null, error);
-                    pawsStub.restore(CloudWatch,'putMetricData');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
                     done();
                 });
             });
@@ -1116,7 +1116,7 @@ describe('Unit Tests', function() {
                 var collector = new TestCollector(ctx, creds);
                 collector.reportDuplicateLogCount(6, function(error) {
                     assert.equal(null, error);
-                    pawsStub.restore(CloudWatch,'putMetricData');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
                     done();
                 });
             });
@@ -1139,7 +1139,7 @@ describe('Unit Tests', function() {
                 const status = 'ok';
                 collector.reportCollectorStatus(status, function(error) {
                     assert.equal(null, error);
-                    pawsStub.restore(CloudWatch,'putMetricData');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
                     done();
                 });
             });
@@ -1473,7 +1473,7 @@ describe('Unit Tests', function() {
                 collector.removeDuplicatedItem(pawsMock.MOCK_LOGS, 'Id', (error, uniqueLogs) => {
                     assert.equal(error, null);
                     assert.equal(uniqueLogs.length, 1);
-                    pawsStub.restore(CloudWatch,'putMetricData');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
                     done();
                 });
             });
