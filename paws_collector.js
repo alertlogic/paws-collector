@@ -12,7 +12,21 @@
 
 const async = require('async');
 const debug = require('debug')('index');
-const AWS = require('aws-sdk');
+const {
+          CloudWatch
+      } = require("@aws-sdk/client-cloudwatch"),
+      {
+          DynamoDB
+      } = require("@aws-sdk/client-dynamodb"),
+      {
+          KMS
+      } = require("@aws-sdk/client-kms"),
+      {
+          SQS
+      } = require("@aws-sdk/client-sqs"),
+      {
+          SSM
+      } = require("@aws-sdk/client-ssm");
 const fs = require('fs');
 const moment = require('moment');
 const ddLambda = require('datadog-lambda-js');
@@ -55,7 +69,7 @@ function getPawsParamStoreParam(){
             if (process.env.ssm_direct) return resolve(fs.readFileSync(CREDS_FILE_PATH, 'utf-8'));
             else return resolve(fs.readFileSync(CREDS_FILE_PATH));
         }
-        var ssm = new AWS.SSM();
+        var ssm = new SSM();
         var params = {
             Name: process.env.paws_secret_param_name
         };
@@ -93,7 +107,7 @@ function getDecryptedPawsCredentials(credsBuffer) {
             };
             return resolve(PAWS_DECRYPTED_CREDS);
         } else {
-            const kms = new AWS.KMS();
+            const kms = new KMS();
             kms.decrypt(
                 {CiphertextBlob: credsBuffer},
                 (err, data) => {
@@ -103,7 +117,7 @@ function getDecryptedPawsCredentials(credsBuffer) {
                         PAWS_DECRYPTED_CREDS = {
                             auth_type: process.env.paws_api_auth_type,
                             client_id: process.env.paws_api_client_id,
-                            secret: data.Plaintext.toString('ascii')
+                            secret: new TextDecoder("utf-8").decode(data.Plaintext)  
                         };
 
                         return resolve(PAWS_DECRYPTED_CREDS);
@@ -244,23 +258,23 @@ class PawsCollector extends AlAwsCollector {
 
     setPawsSecret(secretValue){
         const encryptPromise = new Promise((resolve, reject) => {
-            const kms = new AWS.KMS();
+            const kms = new KMS();
             const params = {
                 KeyId: process.env.paws_kms_key_arn,
-                Plaintext: secretValue
+                Plaintext: new TextEncoder().encode(secretValue)
             };
             kms.encrypt(params, function(err, data) {
                 if (err) {
                     return reject(err, err.stack);
                 }
-                const base64 = new Buffer(data.CiphertextBlob).toString('base64');
+                const base64 = Buffer.from(data.CiphertextBlob).toString('base64');
                 return resolve(base64);
             });
         });
 
         return encryptPromise.then((base64) => {
             return new Promise((resolve, reject) => {
-                var ssm = new AWS.SSM();
+                var ssm = new SSM();
                 var params = {
                     Name: process.env.paws_secret_param_name,
                     Type: 'String',
@@ -276,7 +290,7 @@ class PawsCollector extends AlAwsCollector {
                 AlLogger.error('PAWS000300 Error setting new secret', err);
                 return err;
             });
-        })
+        });
     }
 
     registerPawsCollector(event, callback) {
@@ -343,7 +357,7 @@ class PawsCollector extends AlAwsCollector {
     // there is a lot of logic here. not sur eif there is a better way of deduping. trying for an MVP
     checkStateSqsMessage(stateSqsMsg, asyncCallback) {
         const collector = this;
-        const DDB = new AWS.DynamoDB(DDB_OPTIONS);
+        const DDB = new DynamoDB(DDB_OPTIONS);
 
         const params = {
             Key: {
@@ -354,7 +368,7 @@ class PawsCollector extends AlAwsCollector {
             ConsistentRead: true
         }
 
-        const getItemPromise = DDB.getItem(params).promise();
+        const getItemPromise = DDB.getItem(params);
 
         getItemPromise.then(data => {
             // if the item is alread there, try and see if it is a duplicate
@@ -402,7 +416,7 @@ class PawsCollector extends AlAwsCollector {
 
     updateStateDBEntry(stateSqsMsg, Status, asyncCallback) {
         const collector = this;
-        const DDB = new AWS.DynamoDB(DDB_OPTIONS);
+        const DDB = new DynamoDB(DDB_OPTIONS);
 
         const updateParams = {
             Key: {
@@ -608,7 +622,7 @@ class PawsCollector extends AlAwsCollector {
     }
     reportApiThrottling(callback) {
         // TODO: report collector status via Ingest/agentstatus
-        var cloudwatch = new AWS.CloudWatch({apiVersion: '2010-08-01'});
+        var cloudwatch = new CloudWatch({apiVersion: '2010-08-01'});
         const params = {
             MetricData: [
               {
@@ -639,7 +653,7 @@ class PawsCollector extends AlAwsCollector {
      * @param callback 
      */
     reportErrorToIngestApi(error, callback) {
-        var cloudwatch = new AWS.CloudWatch({apiVersion: '2010-08-01'});
+        var cloudwatch = new CloudWatch({apiVersion: '2010-08-01'});
         const params = {
             MetricData: [
               {
@@ -677,7 +691,7 @@ class PawsCollector extends AlAwsCollector {
      * @param error 
      */
     reportClientError(error, callback) {
-        var cloudwatch = new AWS.CloudWatch({ apiVersion: '2010-08-01' });
+        var cloudwatch = new CloudWatch({ apiVersion: '2010-08-01' });
         const params = {
             MetricData: [
                 {
@@ -711,7 +725,7 @@ class PawsCollector extends AlAwsCollector {
         const delayDuration = moment.duration(nowMoment.diff(lastCollectedMoment));
         const collectionDelaySec = Math.floor(delayDuration.asSeconds());
         
-        var cloudwatch = new AWS.CloudWatch({apiVersion: '2010-08-01'});
+        var cloudwatch = new CloudWatch({apiVersion: '2010-08-01'});
         const params = {
             MetricData: [
               {
@@ -738,7 +752,7 @@ class PawsCollector extends AlAwsCollector {
     };
 
     reportDuplicateLogCount(duplicateCount, callback) {
-        var cloudwatch = new AWS.CloudWatch({ apiVersion: '2010-08-01' });
+        var cloudwatch = new CloudWatch({ apiVersion: '2010-08-01' });
         const params = {
             MetricData: [
                 {
@@ -770,7 +784,7 @@ class PawsCollector extends AlAwsCollector {
      * @returns 
      */
     reportCollectorStatus(status, callback) {
-        var cloudwatch = new AWS.CloudWatch({apiVersion: '2010-08-01'});
+        var cloudwatch = new CloudWatch({apiVersion: '2010-08-01'});
         const params = {
             MetricData: [
               {
@@ -807,7 +821,7 @@ class PawsCollector extends AlAwsCollector {
 
     _storeCollectionStateArray(pawsState, privCollectorStates, invocationTimeout, callback) {
         let collector = this;
-        var sqs = new AWS.SQS({apiVersion: '2012-11-05'});
+        var sqs = new SQS({apiVersion: '2012-11-05'});
         const nextInvocationTimeout = invocationTimeout ? invocationTimeout : collector.pollInterval;
         let SQSMsgs = privCollectorStates.map(function(privState, index) {
             let pState = pawsState;
@@ -846,7 +860,7 @@ class PawsCollector extends AlAwsCollector {
 
     _storeCollectionStateSingle(pawsState, privCollectorState, invocationTimeout, callback) {
         let collector = this;
-        var sqs = new AWS.SQS({apiVersion: '2012-11-05'});
+        var sqs = new SQS({apiVersion: '2012-11-05'});
         const nextInvocationTimeout = invocationTimeout ? invocationTimeout : collector.pollInterval;
         pawsState.priv_collector_state = privCollectorState;
 
@@ -902,7 +916,7 @@ class PawsCollector extends AlAwsCollector {
     */
     removeDuplicatedItem(logs, paramName, asyncCallback) {
         let collector = this;
-        const ddb = new AWS.DynamoDB();
+        const ddb = new DynamoDB();
         let uniqueLogs = [];
         var promises = [];
         let duplicateCount = 0;
@@ -921,7 +935,7 @@ class PawsCollector extends AlAwsCollector {
             let promise = new Promise((resolve, reject) => {
                 ddb.putItem(params, (err, res) => {
                     if (err) {
-                        if (err.code === 'ConditionalCheckFailedException') {
+                        if (err.name === 'ConditionalCheckFailedException') {
                             duplicateCount++;
                             return resolve(null);
                         } else {
@@ -1024,9 +1038,9 @@ class PawsCollector extends AlAwsCollector {
      * @returns 
      */
     dDBBatchWriteItem(tableName, batch) {
-        const ddb = new AWS.DynamoDB(DDB_OPTIONS);
+        const ddb = new DynamoDB(DDB_OPTIONS);
         const batchParams = { RequestItems: { [tableName]: batch } };
-        return ddb.batchWriteItem(batchParams).promise();
+        return ddb.batchWriteItem(batchParams);
     }
 
     /**

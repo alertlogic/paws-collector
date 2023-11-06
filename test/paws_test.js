@@ -1,7 +1,6 @@
 const fs = require('fs');
 const assert = require('assert');
 const sinon = require('sinon');
-var AWS = require('aws-sdk-mock');
 const m_response = require('cfn-response');
 const ddLambda = require('datadog-lambda-js');
 
@@ -11,10 +10,27 @@ var PawsCollector = require('../paws_collector').PawsCollector;
 const m_al_aws = require('@alertlogic/al-aws-collector-js');
 const moment = require('moment');
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
+const pawsStub = require('./paws_stub');
+const {
+    CloudWatch
+} = require("@aws-sdk/client-cloudwatch"),
+{
+    DynamoDB
+} = require("@aws-sdk/client-dynamodb"),
+{
+    KMS
+} = require("@aws-sdk/client-kms"),
+{
+    SQS
+} = require("@aws-sdk/client-sqs"),
+{
+    SSM
+} = require("@aws-sdk/client-ssm");
 
 var alserviceStub = {};
 var responseStub = {};
 var setEnvStub = {};
+var sqsSendMessageBatchStub = {};
 
 
 
@@ -91,35 +107,47 @@ function mockSetEnvStub() {
 }
 
 function mockSQSSendMessage(returnObject) {
-    AWS.mock('SQS', 'sendMessage', function (params, callback) {
-        let buf = Buffer(JSON.stringify(returnObject));
+    pawsStub.mock(SQS, 'sendMessage', function (params, callback) {
+        let buf = Buffer.from(JSON.stringify(returnObject));
         return callback(null, {Body: buf});
     });
 }
 
 function mockSQSSendMessageBatch(returnObject) {
-    AWS.mock('SQS', 'sendMessageBatch', function (params, callback) {
-        let buf = Buffer(JSON.stringify(returnObject));
+    sqsSendMessageBatchStub = pawsStub.mock(SQS, 'sendMessageBatch', function (params, callback) {
+        let buf = Buffer.from(JSON.stringify(returnObject));
         return callback(null, {Body: buf});
     });
 }
 
 function mockDDB(getItemStub, putItemStub, updateItemStub, batchWriteItemStub) {
     const defaultMock = (_params, callback) => {
-        return callback(null, { data: null });
+        return callback(null, {});
+    };
+    const promiseMock = (_params) => {
+        return new Promise((resolve,reject)=>{
+            resolve({});
+        });
     };
 
-    AWS.mock('DynamoDB', 'getItem', getItemStub ? getItemStub : defaultMock);
+    pawsStub.mock(DynamoDB, 'getItem', getItemStub ? getItemStub : promiseMock);
 
-    AWS.mock('DynamoDB', 'putItem', putItemStub ? putItemStub : defaultMock);
+    pawsStub.mock(DynamoDB, 'putItem', putItemStub ? putItemStub : defaultMock);
 
-    AWS.mock('DynamoDB', 'updateItem', updateItemStub ? updateItemStub : defaultMock);
+    pawsStub.mock(DynamoDB, 'updateItem', updateItemStub? updateItemStub : defaultMock);
 
-    AWS.mock('DynamoDB', 'batchWriteItem', batchWriteItemStub ? batchWriteItemStub : defaultMock);
+    pawsStub.mock(DynamoDB, 'batchWriteItem',batchWriteItemStub ? batchWriteItemStub : promiseMock);
+}
+
+function restoreDDB(){
+    pawsStub.restore(DynamoDB, 'getItem');
+    pawsStub.restore(DynamoDB, 'putItem');
+    pawsStub.restore(DynamoDB, 'updateItem');
+    pawsStub.restore(DynamoDB, 'batchWriteItem');
 }
 
 function mockCloudWatch() {
-    AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback());
+    pawsStub.mock(CloudWatch, 'putMetricData', (params, callback) => callback());
 }
 
 function gen_state_objects(num) {
@@ -251,22 +279,21 @@ class TestCollectorMultiState extends PawsCollector {
 
 describe('Unit Tests', function() {
     beforeEach(function(){
-        AWS.mock('KMS', 'decrypt', function (params, callback) {
+        pawsStub.mock(KMS, 'decrypt', function (params, callback) {
             const data = {
-                    Plaintext : 'decrypted-sercret-key'
-                };
+                Plaintext: Buffer.from('decrypted-aims-sercret-key')
+            };
             return callback(null, data);
         });
-
-        AWS.mock('KMS', 'encrypt', function (params, callback) {
+        pawsStub.mock(KMS, 'encrypt', function (params, callback) {
             const data = {
-                CiphertextBlob : Buffer.from('creds-from-file')
+                CiphertextBlob: Buffer.from('creds-from-file').toString('base64')
             };
             return callback(null, data);
         });
 
-        AWS.mock('SSM', 'getParameter', function (params, callback) {
-            const data = process.env.ssm_direct ? 'decrypted-sercret-key': Buffer.from('decrypted-sercret-key');
+        pawsStub.mock(SSM, 'getParameter', function (params, callback) {
+            const data = process.env.ssm_direct ? 'decrypted-aims-sercret-key': Buffer.from('decrypted-aims-sercret-key');
             return callback(null, {Parameter : { Value: process.env.ssm_direct ? data : data.toString('base64')}});
         });
 
@@ -289,15 +316,18 @@ describe('Unit Tests', function() {
         restoreAlServiceStub();
         setEnvStub.restore();
         responseStub.restore();
-        AWS.restore('KMS');
-        AWS.restore('SSM');
+        pawsStub.restore(KMS, 'decrypt');
+        pawsStub.restore(KMS, 'encrypt');
+        pawsStub.restore(SSM, 'getParameter');
+        pawsStub.restore(SQS, 'sendMessage');
+        sqsSendMessageBatchStub.restore();
     });
     
     describe('Credential file caching tests', function(){
         const TMP_CREDS_PATH = '/tmp/paws_creds';
         it('Gets a creds and set into file', function(done){
             TestCollector.load().then(function(creds) {
-                const testCred =  Buffer.from(creds.pawsCreds.secret).toString('base64');
+               const testCred =  Buffer.from(creds.pawsCreds.secret).toString('base64');
                 assert.equal(fs.existsSync(TMP_CREDS_PATH), true);
                 assert.equal(fs.readFileSync(TMP_CREDS_PATH, 'base64'), testCred);  
                 done();
@@ -357,15 +387,14 @@ describe('Unit Tests', function() {
         beforeEach(function () {
         });
         afterEach(function () {
-            AWS.restore('DynamoDB');
+            restoreDDB();  
         });
         it('creates a new DDB item when the states does not exist', function(done){
-            const fakeFun = function(_params, callback){return callback(null, {data:null});};
+            const fakeFun = function(_params, callback){return callback(null, {});};
             const putItemStub = sinon.stub().callsFake(fakeFun);
             const updateItemStub = sinon.stub().callsFake(fakeFun);
 
             mockDDB(null, putItemStub, updateItemStub);
-
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,
                 fail : function(error) {
@@ -406,15 +435,17 @@ describe('Unit Tests', function() {
                 "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
                 "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
             };
-            const fakeGetFun = function (_params, callback) {
-                const mockItem = {
-                    Item: {
-                        MessageId: { S: mockRecord.messageId },
-                        Status: {S: 'COMPLETE'},
-                        Updated: {N: `${Date.now()/1000 - 100 }`}
-                    }
-                };
-                return callback(null, mockItem);
+            const fakeGetFun = function (_params) {
+                return new Promise((resolve, reject) => {
+                    const mockItem = {
+                        Item: {
+                            MessageId: { S: mockRecord.messageId },
+                            Status: {S: 'COMPLETE'},
+                            Updated: {N: `${Date.now() / 1000 - 100}`}
+                        }
+                    };
+                    resolve(mockItem);
+                });
             };
             const fakeFun = function(_params, callback){return callback(null, {data:null});};
             const getItemStub = sinon.stub().callsFake(fakeGetFun);
@@ -462,7 +493,7 @@ describe('Unit Tests', function() {
                 "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
                 "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
             };
-            const fakeGetFun = function (_params, callback) {
+            const fakeGetFun = function(param){
                 const mockItem = {
                     Item: {
                         MessageId: { S: mockRecord.messageId },
@@ -470,7 +501,9 @@ describe('Unit Tests', function() {
                         Updated: {N: `${Date.now()/1000 - 100 }`}
                     }
                 };
-                return callback(null, mockItem);
+                return new Promise((resolve,reject)=>{
+                    resolve(mockItem);
+                });
             };
             const fakeFun = function(_params, callback){return callback(null, {data:null});};
             const getItemStub = sinon.stub().callsFake(fakeGetFun);
@@ -551,7 +584,7 @@ describe('Unit Tests', function() {
                     done();
                 },
                 succeed : function() {
-                    AWS.restore('DynamoDB');
+                    restoreDDB();
                     done();
                 }
             };
@@ -580,9 +613,9 @@ describe('Unit Tests', function() {
                 fail : function(error) {
                     assert.fail('Invocation should succeed.');
                 },
-                succeed : function() {
-                    AWS.restore('DynamoDB');
+                succeed : function() {     
                     sinon.assert.calledOnce(updateItemStub);
+                    restoreDDB();
                     done();
                     
                 },
@@ -621,7 +654,7 @@ describe('Unit Tests', function() {
                     done();
                 },
                 succeed : function() {
-                    AWS.restore('DynamoDB');
+                    restoreDDB();
                     done();
                 }
             };
@@ -643,10 +676,6 @@ describe('Unit Tests', function() {
 
         it('sends multiple SQS batches when greater than len privCollectorStates is > 10', function(done) {
 
-            let buf = Buffer(JSON.stringify({}));
-            let spy = sinon.spy((params, callback) => callback(null, {Body: buf}));
-            AWS.remock('SQS', 'sendMessageBatch', spy);
-
             let ctx = {
                 invokedFunctionArn : pawsMock.FUNCTION_ARN,
                 fail : function(error) {
@@ -667,7 +696,7 @@ describe('Unit Tests', function() {
             TestCollectorMultiState.load().then(function(creds) {
                 let collector = new TestCollectorMultiState(ctx, creds);
                 collector._storeCollectionState(initialPawsState, privCollectorStates, 0, err => {
-                    assert.equal(spy.callCount, 8);
+                    assert.equal(sqsSendMessageBatchStub.callCount, 8);
                     done();
                 });
             });
@@ -684,6 +713,7 @@ describe('Unit Tests', function() {
                 succeed: function () {
                     sinon.assert.calledThrice(mockSendLogmsgs);
                     sinon.assert.calledThrice(mockSendLmcstats);
+                    restoreDDB();
                     done();
                 }
             };
@@ -730,7 +760,8 @@ describe('Unit Tests', function() {
                     sinon.assert.calledOnce(mockPawsGetLogs);
                     mockPawsGetLogs.restore();
                     mockSendCollectorStatus.restore();
-                    AWS.restore('CloudWatch');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
+                    restoreDDB();
                     done();
                 },
                 getRemainingTimeInMillis: function(){
@@ -776,7 +807,8 @@ describe('Unit Tests', function() {
                     sinon.assert.calledOnce(mockPawsGetLogs);
                     mockPawsGetLogs.restore();
                     mockSendCollectorStatus.restore();
-                    AWS.restore('CloudWatch');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
+                    restoreDDB();
                     done();
                 },
                 getRemainingTimeInMillis: function(){
@@ -822,7 +854,8 @@ describe('Unit Tests', function() {
                     sinon.assert.calledOnce(mockPawsGetLogs);
                     mockPawsGetLogs.restore();
                     mockSendCollectorStatus.restore();
-                    AWS.restore('CloudWatch');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
+                    restoreDDB();
                     done();
                 },
                 getRemainingTimeInMillis: function(){
@@ -883,7 +916,7 @@ describe('Unit Tests', function() {
                 });
 
 
-            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback());
+            pawsStub.mock(CloudWatch, 'putMetricData', (params, callback) => callback());
 
             TestCollector.load().then(function (creds) {
                 var collector = new TestCollector(ctx, creds);
@@ -892,7 +925,7 @@ describe('Unit Tests', function() {
                     sinon.assert.calledOnce(uploadS3ObjectMock);
                     assert.equal(newState, nextState);
                     assert.equal(nextinvocationTimeout, 900);
-                    AWS.restore('CloudWatch');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
                     processLog.restore();
                     uploadS3ObjectMock.restore();
                     done();
@@ -921,7 +954,7 @@ describe('Unit Tests', function() {
                 function fakeFn(messages, formatFun, hostmetaElems, callback) {
                     return callback(ingestError);
                 });
-            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback());
+            pawsStub.mock(CloudWatch, 'putMetricData', (params, callback) => callback());
 
             TestCollector.load().then(function (creds) {
                 var collector = new TestCollector(ctx, creds);
@@ -930,7 +963,7 @@ describe('Unit Tests', function() {
                     assert.equal(err.errorCode, 'AWSC0018');
                     assert.equal(err.httpErrorCode, 404);
                     processLog.restore();
-                    AWS.restore('CloudWatch');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
                     done();
                 });
             });
@@ -946,13 +979,12 @@ describe('Unit Tests', function() {
                     done();
                 }
             };
-            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback());
+            pawsStub.mock(CloudWatch, 'putMetricData', (params, callback) => callback());
             TestCollector.load().then(function(creds) {
                 var collector = new TestCollector(ctx, creds);
                 collector.reportApiThrottling(function(error) {
                     assert.equal(null, error);
-                    AWS.restore('KMS');
-                    AWS.restore('CloudWatch');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
                     done();
                 });
             });
@@ -970,13 +1002,13 @@ describe('Unit Tests', function() {
                 }
             };
 
-            AWS.restore('KMS');
+            pawsStub.restore(KMS, 'encrypt');
 
-            AWS.mock('SSM', 'putParameter', (params, callback) => callback(null, {Version: 2, Tier:'Standard'}));
+            pawsStub.mock(SSM, 'putParameter', (params, callback) => callback(null, {Version: 2, Tier:'Standard'}));
 
-            AWS.mock('KMS', 'encrypt', function (params, callback) {
+            pawsStub.mock(KMS, 'encrypt', function (params, callback) {
                 const data = {
-                    CiphertextBlob : params.Plaintext
+                    CiphertextBlob :  Buffer.from(params.Plaintext,'base64')
                 };
                 return callback(null, data);
             });
@@ -987,8 +1019,7 @@ describe('Unit Tests', function() {
                 collector.setPawsSecret(secretValue).then((res) => {
                     assert.equal(res.Version, 2);
                     assert.equal(res.Tier, 'Standard');
-                    AWS.restore('KMS');
-                    AWS.restore('SSM');
+                    pawsStub.restore(SSM, 'putParameter');
                     done();
                 });
             });
@@ -1006,13 +1037,12 @@ describe('Unit Tests', function() {
                 }
             };
 
-            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback());
+            pawsStub.mock(CloudWatch, 'putMetricData', (params, callback) => callback());
             TestCollector.load().then(function(creds) {
                 var collector = new TestCollector(ctx, creds);
                 collector.reportCollectionDelay('2020-01-26T12:08:31.316Z', function(error) {
                     assert.equal(null, error);
-                    AWS.restore('KMS');
-                    AWS.restore('CloudWatch');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
                     done();
                 });
             });
@@ -1031,13 +1061,12 @@ describe('Unit Tests', function() {
             };
 
             let errorObj = {name:'OktaApiError',status: 401,errorCode:'E0000011',errorSummary:'Invalid token provided'};
-            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback());
+            pawsStub.mock(CloudWatch, 'putMetricData', (params, callback) => callback());
             TestCollector.load().then(function(creds) {
                 var collector = new TestCollector(ctx, creds);
                 collector.reportClientError(errorObj, function(error) {
                     assert.equal(errorObj.errorCode, 'E0000011');
-                    AWS.restore('KMS');
-                    AWS.restore('CloudWatch');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
                     done();
                 });
             });
@@ -1055,14 +1084,13 @@ describe('Unit Tests', function() {
             };
     
             let errorObj = {name:'StatusCodeError',statusCode: 401,errorCode:'E0000011',message: '401 - undefined'};
-            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback());
+            pawsStub.mock(CloudWatch, 'putMetricData', (params, callback) => callback());
             TestCollector.load().then(function(creds) {
                 var collector = new TestCollector(ctx, creds);
                 collector.reportErrorToIngestApi(errorObj, function(error) {
                     assert.equal(errorObj.errorCode, 'E0000011');
                     assert.equal(null, error);
-                    AWS.restore('KMS');
-                    AWS.restore('CloudWatch');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
                     done();
                 });
             });
@@ -1080,7 +1108,7 @@ describe('Unit Tests', function() {
                 }
             };
 
-            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => {
+            pawsStub.mock(CloudWatch, 'putMetricData', (params, callback) => {
                 callback(null, {});
             });
               
@@ -1088,8 +1116,7 @@ describe('Unit Tests', function() {
                 var collector = new TestCollector(ctx, creds);
                 collector.reportDuplicateLogCount(6, function(error) {
                     assert.equal(null, error);
-                    AWS.restore('KMS');
-                    AWS.restore('CloudWatch');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
                     done();
                 });
             });
@@ -1106,14 +1133,13 @@ describe('Unit Tests', function() {
                     done();
                 }
             };
-            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback());
+            pawsStub.mock(CloudWatch, 'putMetricData', (params, callback) => callback());
             TestCollector.load().then(function(creds) {
                 var collector = new TestCollector(ctx, creds);
                 const status = 'ok';
                 collector.reportCollectorStatus(status, function(error) {
                     assert.equal(null, error);
-                    AWS.restore('KMS');
-                    AWS.restore('CloudWatch');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
                     done();
                 });
             });
@@ -1337,7 +1363,7 @@ describe('Unit Tests', function() {
 
     describe('removeDuplicatedItem', function () {
         afterEach(function () {
-            AWS.restore('DynamoDB');
+           restoreDDB();       
         });
         it('Added the data if item not exist', function (done) {
             const fakeFun = function (_params, callback) { return callback(null, { data: null }); };
@@ -1371,7 +1397,7 @@ describe('Unit Tests', function() {
         it('Discard record if it is duplicate', function (done) {
             const ddbError = {
                 "message": "The conditional request failed",
-                "code": "ConditionalCheckFailedException",
+                "name": "ConditionalCheckFailedException",
                 "time": "2021-09-01T12:34:56.789Z",
                 "requestId": "12345678-1234-1234-1234-123456789012",
                 "statusCode": 400,
@@ -1397,13 +1423,13 @@ describe('Unit Tests', function() {
                     done();
                 }
             };
-            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback(null));
+            pawsStub.mock(CloudWatch, 'putMetricData', (params, callback) => callback(null));
             PawsCollector.load().then((creds) => {
                 var collector = new TestCollectorNoOverrides(ctx, creds);
                 collector.removeDuplicatedItem(pawsMock.MOCK_LOGS, 'Id', (error, uniqueLogs) => {
                     assert.equal(error, null);
                     assert.equal(uniqueLogs.length, 0);
-                    AWS.restore('CloudWatch');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
                     done();
                 });
             });
@@ -1412,7 +1438,7 @@ describe('Unit Tests', function() {
         it('Added only not existing item and discard duplicate item', function (done) {
             let ddbError = {
                 "message": "The conditional request failed",
-                "code": "ConditionalCheckFailedException",
+                "name": "ConditionalCheckFailedException",
                 "time": "2021-09-01T12:34:56.789Z",
                 "requestId": "12345678-1234-1234-1234-123456789012",
                 "statusCode": 400,
@@ -1441,13 +1467,13 @@ describe('Unit Tests', function() {
                     done();
                 }
             };
-            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback(null));
+            pawsStub.mock(CloudWatch, 'putMetricData', (params, callback) => callback(null));
             PawsCollector.load().then((creds) => {
                 var collector = new TestCollectorNoOverrides(ctx, creds);
                 collector.removeDuplicatedItem(pawsMock.MOCK_LOGS, 'Id', (error, uniqueLogs) => {
                     assert.equal(error, null);
                     assert.equal(uniqueLogs.length, 1);
-                    AWS.restore('CloudWatch');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
                     done();
                 });
             });
@@ -1456,7 +1482,7 @@ describe('Unit Tests', function() {
         it('Check if ddb send error except ConditionalCheckFailedException ', function (done) {
             let ddbError = {
                 "message": "The level of configured provisioned throughput for the table was exceeded. Consider increasing your provisioning level with the UpdateTable API.",
-                "code": "ProvisionedThroughputExceededException",
+                "name": "ProvisionedThroughputExceededException",
                 "time": "2021-09-01T12:34:56.789Z",
                 "requestId": "12345678-1234-1234-1234-123456789012",
                 "statusCode": 400,
@@ -1485,12 +1511,12 @@ describe('Unit Tests', function() {
                     done();
                 }
             };
-            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback(null));
+            pawsStub.mock(CloudWatch, 'putMetricData', (params, callback) => callback(null));
             PawsCollector.load().then((creds) => {
                 var collector = new TestCollectorNoOverrides(ctx, creds);
                 collector.removeDuplicatedItem(pawsMock.MOCK_LOGS, 'Id', (error, uniqueLogs) => {
                     assert.notEqual(error, null);
-                    AWS.restore('CloudWatch');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
                     done();
                 });
             });
@@ -1499,10 +1525,14 @@ describe('Unit Tests', function() {
 
     describe('handle the ingest error for deduplogs for o365 collector', function () {
         afterEach(function () {
-            AWS.restore('DynamoDB');
+           restoreDDB();
         });
         it('delete the item in batches', function (done) {
-            const fakeFun = function (_params, callback) { return callback(null, { data: null }); };
+            const fakeFun = function (_params) {
+                return new Promise((resolve, reject) => {
+                    resolve(null);
+                });
+            };
             const batchWriteItemStub = sinon.stub().callsFake(fakeFun);
 
             mockDDB(null, null, null, batchWriteItemStub);
@@ -1529,7 +1559,11 @@ describe('Unit Tests', function() {
         });
 
         it('if data is more the ddb batch size and batch size byte, it should split into different batchs', function (done) {
-            const fakeFun = function (_params, callback) { return callback(null, { data: null }); };
+            const fakeFun = function (_params) {
+                return new Promise((resolve, reject) => {
+                    resolve(null);
+                });
+            };
             const batchWriteItemStub = sinon.stub().callsFake(fakeFun);
             mockDDB(null, null, null, batchWriteItemStub);
             const logs = [];
@@ -1562,17 +1596,21 @@ describe('Unit Tests', function() {
         it('it should return the error if fail to processed the item ', function (done) {
             let ddbError = {
                 "message": "The level of configured provisioned throughput for the table was exceeded. Consider increasing your provisioning level with the UpdateTable API.",
-                "code": "ProvisionedThroughputExceededException",
+                "name": "ProvisionedThroughputExceededException",
                 "time": "2021-09-01T12:34:56.789Z",
                 "requestId": "12345678-1234-1234-1234-123456789012",
                 "statusCode": 400,
                 "retryable": true
             };
-            const fakeFunError = function (_params, callback) {
-                return callback(ddbError);
+            const fakeFunError = function (_params) {
+                return new Promise((resolve, reject) => {
+                    reject(ddbError);
+                });
             };
-            const fakeFunSuccess = function (_params, callback) {
-                return callback(null, { data: null });
+            const fakeFunSuccess = function (_params) {
+                return new Promise((resolve, reject) => {
+                    resolve(null);
+                });
             };
             let batchWriteItemStub = sinon.stub().onFirstCall().callsFake(fakeFunError)
                 .onSecondCall().callsFake(fakeFunSuccess);
@@ -1630,9 +1668,13 @@ describe('Unit Tests', function() {
             let processLog = sinon.stub(m_al_aws.AlAwsCollector.prototype, 'processLog').onFirstCall().callsFake(fakeFunSuccess)
                 .onSecondCall().callsFake(fakeFunSuccess).onThirdCall().callsFake(fakeFunError);
 
-            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback());
+            pawsStub.mock(CloudWatch, 'putMetricData', (params, callback) => callback());
 
-            const fakeFun = function (_params, callback) { return callback(null, { data: null }); };
+            const fakeFun = function (_params) {
+                return new Promise((resolve, reject) => {
+                    resolve(null);
+                });
+            };
             const batchWriteItemStub = sinon.stub().callsFake(fakeFun);
 
             mockDDB(null, null, null, batchWriteItemStub);
@@ -1648,7 +1690,7 @@ describe('Unit Tests', function() {
                     sinon.assert.calledThrice(processLog);
                     sinon.assert.callCount(batchWriteItemStub, 4);
                     assert.equal(ingestError, err);
-                    AWS.restore('CloudWatch');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
                     processLog.restore();
                     done();
                 });
@@ -1684,9 +1726,13 @@ describe('Unit Tests', function() {
             let processLog = sinon.stub(m_al_aws.AlAwsCollector.prototype, 'processLog').onFirstCall().callsFake(fakeFunSuccess)
                 .onSecondCall().callsFake(fakeFunSuccess).onThirdCall().callsFake(fakeFunError);
 
-            AWS.mock('CloudWatch', 'putMetricData', (params, callback) => callback());
+            pawsStub.mock(CloudWatch, 'putMetricData', (params, callback) => callback());
 
-            const fakeFun = function (_params, callback) { return callback(null, { data: null }); };
+            const fakeFun = function (_params) {
+                return new Promise((resolve, reject) => {
+                    resolve(null);
+                });
+            };
             const batchWriteItemStub = sinon.stub().callsFake(fakeFun);
 
             mockDDB(null, null, null, batchWriteItemStub);
@@ -1702,7 +1748,7 @@ describe('Unit Tests', function() {
                     sinon.assert.calledThrice(processLog);
                     sinon.assert.callCount(batchWriteItemStub, 0);
                     assert.equal(ingestError, err);
-                    AWS.restore('CloudWatch');
+                    pawsStub.restore(CloudWatch, 'putMetricData');
                     processLog.restore();
                     done();
                 });
