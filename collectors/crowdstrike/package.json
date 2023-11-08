@@ -1,6 +1,6 @@
 {
   "name": "crowdstrike-collector",
-  "version": "1.0.30",
+  "version": "1.0.31",
   "description": "Alert Logic AWS based Crowdstrike Log Collector",
   "repository": {},
   "private": true,
@@ -9,18 +9,18 @@
     "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=text mocha --colors"
   },
   "devDependencies": {
-    "aws-sdk-mock": "*",
+    "@aws-sdk/client-kms": "^3.441.0",
+    "@aws-sdk/client-ssm": "^3.441.0",
     "jshint": "^2.9.5",
     "mocha": "^10.2.0",
     "mocha-jenkins-reporter": "^0.4.2",
     "nyc": "^15.1.0",
     "rewire": "^7.0.0",
-    "sinon": "^15.2.0"
+    "sinon": "^17.0.0"
   },
   "dependencies": {
     "@alertlogic/al-collector-js": "^3.0.10",
-    "@alertlogic/paws-collector": "^2.1.21",
-    "aws-sdk": "^2.1457.0",
+    "@alertlogic/paws-collector": "2.2.0",
     "async": "^3.2.4",
     "debug": "^4.3.4",
     "moment": "2.29.4"
