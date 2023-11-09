@@ -2,7 +2,6 @@ const assert = require('assert');
 const sinon = require('sinon');
 const moment = require('moment');
 const nock = require('nock');
-var AWS = require('aws-sdk-mock');
 const m_response = require('cfn-response');
 const okta = require('@okta/okta-sdk-nodejs');
 
@@ -10,6 +9,9 @@ const oktaMock = require('./okta_mock');
 var m_alCollector = require('@alertlogic/al-collector-js');
 var OktaCollector = require('../okta_collector').OktaCollector;
 const m_al_aws = require('@alertlogic/al-aws-collector-js').Util;
+const { CloudWatch } = require("@aws-sdk/client-cloudwatch"),
+    { KMS } = require("@aws-sdk/client-kms"),
+    { SSM } = require("@aws-sdk/client-ssm");
 
 
 var alserviceStub = {};
@@ -82,14 +84,14 @@ describe('Unit Tests', function() {
             nock.activate();
         }
         
-        AWS.mock('SSM', 'getParameter', function (params, callback) {
-            const data = new Buffer('test-secret');
-            return callback(null, {Parameter : { Value: data.toString('base64')}});
+        sinon.stub(SSM.prototype, 'getParameter').callsFake(function (params, callback) {
+            const data = Buffer.from('test-secret');
+            return callback(null, { Parameter: { Value: data.toString('base64') } });
         });
 
-        AWS.mock('KMS', 'decrypt', function (params, callback) {
+        sinon.stub(KMS.prototype, 'decrypt').callsFake(function (params, callback) {
             const data = {
-                    Plaintext : 'decrypted-sercret-key'
+                Plaintext: Buffer.from('decrypted-sercret-key')
             };
             return callback(null, data);
         });
@@ -107,8 +109,8 @@ describe('Unit Tests', function() {
         restoreAlServiceStub();
         setEnvStub.restore();
         responseStub.restore();
-        AWS.restore('KMS');
-        AWS.restore('SSM');
+        KMS.prototype.decrypt.restore();
+        SSM.prototype.getParameter.restore();
     });
 
     describe('pawsInitCollectionState', function() {
@@ -232,13 +234,14 @@ describe('Unit Tests', function() {
                     poll_interval_sec: 60
                 };
                 var reportSpy = sinon.spy(collector, 'reportApiThrottling');
-
+                let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params, callback) => callback()) ;
                 collector.pawsGetLogs(mockState, (err, logs, state, pollIntervalSec) => {
                     assert.equal(true, reportSpy.calledOnce);
                     assert.equal(err, null);
                     // if header not return rate-limit-resect-sec then add the 60 sec in existing pollinterval seconds
                     assert.equal(pollIntervalSec, 120);
                     oktaSdkMock.restore();
+                    putMetricDataStub.restore();
                     done();
                 });
             });
@@ -265,12 +268,13 @@ describe('Unit Tests', function() {
                     poll_interval_sec: 60
                 };
                 var reportSpy = sinon.spy(collector, 'reportApiThrottling');
-
+                let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params, callback) => callback()) ;
                 collector.pawsGetLogs(mockState, (err, logs, state, poll_interval_sec) => {
                     assert.equal(true, reportSpy.calledOnce);
                     assert.equal(err, null);
                     assert.equal(poll_interval_sec, 180);
                     oktaSdkMock.restore();
+                    putMetricDataStub.restore();
                     done();
                 });
             });
@@ -292,9 +296,10 @@ describe('Unit Tests', function() {
                     until: moment().toISOString()
                 };
                 var reportSpy = sinon.spy(collector, 'reportApiThrottling');
-                
+                let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params, callback) => callback()) ;
                 collector.pawsGetLogs(mockState, (err) => {
                     assert.equal(true, reportSpy.calledOnce);
+                    putMetricDataStub.restore();
                     done();
                 });
             });

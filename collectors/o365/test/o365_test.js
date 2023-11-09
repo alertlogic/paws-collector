@@ -1,6 +1,5 @@
 const assert = require('assert');
 const sinon = require('sinon');
-var AWS = require('aws-sdk-mock');
 const moment = require('moment');
 const m_response = require('cfn-response');
 
@@ -9,6 +8,9 @@ var m_alCollector = require('@alertlogic/al-collector-js');
 const { checkO365Subscriptions } = require('../healthcheck.js');
 var O365Collector = require('../o365_collector').O365Collector;
 const m_al_aws = require('@alertlogic/al-aws-collector-js').Util;
+const { DynamoDB } = require("@aws-sdk/client-dynamodb"),
+    { KMS } = require("@aws-sdk/client-kms"),
+    { SSM } = require("@aws-sdk/client-ssm");
 
 
 var alserviceStub = {};
@@ -146,16 +148,16 @@ function mockSetEnvStub() {
 describe('O365 Collector Tests', function() {
 
     beforeEach(function(){
-        AWS.mock('KMS', 'decrypt', function (params, callback) {
+        sinon.stub(KMS.prototype, 'decrypt').callsFake(function (params, callback) {
             const data = {
-                    Plaintext : 'decrypted-aims-sercret-key'
+                Plaintext: Buffer.from('decrypted-aims-sercret-key')
             };
             return callback(null, data);
         });
 
-        AWS.mock('SSM', 'getParameter', function (params, callback) {
-            const data = new Buffer('test-secret');
-            return callback(null, {Parameter : { Value: data.toString('base64')}});
+        sinon.stub(SSM.prototype, 'getParameter').callsFake(function (params, callback) {
+            const data = Buffer.from('test-secret');
+            return callback(null, { Parameter: { Value: data.toString('base64') } });
         });
 
         responseStub = sinon.stub(m_response, 'send').callsFake(
@@ -171,8 +173,8 @@ describe('O365 Collector Tests', function() {
         restoreAlServiceStub();
         setEnvStub.restore();
         responseStub.restore();
-        AWS.restore('KMS');
-        AWS.restore('SSM');
+        KMS.prototype.decrypt.restore();
+        SSM.prototype.getParameter.restore();
     });
 
     describe('healthcheck', function() {
@@ -379,10 +381,10 @@ describe('O365 Collector Tests', function() {
                 function (_params, callback) {
                     return callback(null, { data: null });
                 });
-            AWS.mock('DynamoDB', 'putItem', putItemStub);
+            sinon.stub(DynamoDB.prototype, 'putItem').callsFake(putItemStub);
         });
         afterEach(function() {
-            AWS.restore('DynamoDB');
+            DynamoDB.prototype.putItem.restore();
         });
         let ctx = {
             invokedFunctionArn : o365Mock.FUNCTION_ARN,

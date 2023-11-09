@@ -1,24 +1,25 @@
 const assert = require('assert');
 const sinon = require('sinon');
-var AWS = require('aws-sdk-mock');
 const m_response = require('cfn-response');
 const sentineloneMock = require('./sentinelone_mock');
 var SentineloneCollector = require('../collector').SentineloneCollector;
 const moment = require('moment');
 const utils = require("../utils");
+const { KMS } = require("@aws-sdk/client-kms"),
+    { SSM } = require("@aws-sdk/client-ssm");
 
 var responseStub = {};
 let getAPILogs;
 
 describe('Unit Tests', function () {
     beforeEach(function () {
-        AWS.mock('SSM', 'getParameter', function (params, callback) {
-            const data = new Buffer('test-secret');
+        sinon.stub(SSM.prototype, 'getParameter').callsFake(function (params, callback) {
+            const data = Buffer.from('test-secret');
             return callback(null, { Parameter: { Value: data.toString('base64') } });
         });
-        AWS.mock('KMS', 'decrypt', function (params, callback) {
+        sinon.stub(KMS.prototype, 'decrypt').callsFake(function (params, callback) {
             const data = {
-                Plaintext: '{}'
+                Plaintext: Buffer.from('{}')
             };
             return callback(null, data);
         });
@@ -31,6 +32,8 @@ describe('Unit Tests', function () {
 
     afterEach(function () {
         responseStub.restore();
+        KMS.prototype.decrypt.restore();
+        SSM.prototype.getParameter.restore();
     });
 
     describe('Paws Init Collection State', function () {

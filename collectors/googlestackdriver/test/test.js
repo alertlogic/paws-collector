@@ -1,8 +1,10 @@
 const assert = require('assert');
 const sinon = require('sinon');
 const moment = require('moment');
-var AWS = require('aws-sdk-mock');
 const logging = require('@google-cloud/logging');
+const { CloudWatch } = require("@aws-sdk/client-cloudwatch"),
+    { KMS } = require("@aws-sdk/client-kms"),
+    { SSM } = require("@aws-sdk/client-ssm");
 
 const googlestackdriverMock = require('./mock');
 var GooglestackdriverCollector = require('../collector').GooglestackdriverCollector;
@@ -45,22 +47,22 @@ function restoreLoggingClientStub(){
 
 describe('Unit Tests', function() {
     beforeEach(function(){
-        AWS.mock('SSM', 'getParameter', function (params, callback) {
-            const data = new Buffer('test-secret');
-            return callback(null, {Parameter : { Value: data.toString('base64')}});
+        sinon.stub(SSM.prototype, 'getParameter').callsFake(function (params, callback) {
+            const data = Buffer.from('test-secret');
+            return callback(null, { Parameter: { Value: data.toString('base64') } });
         });
 
-        AWS.mock('KMS', 'decrypt', function (params, callback) {
+        sinon.stub(KMS.prototype, 'decrypt').callsFake(function (params, callback) {
             const data = {
-                Plaintext : '{"foo":"decrypted-sercret-key"}'
+                Plaintext: Buffer.from('{"foo":"decrypted-sercret-key"}')
             };
             return callback(null, data);
         });
     });
 
     afterEach(function(){
-        AWS.restore('KMS');
-        AWS.restore('SSM');
+        KMS.prototype.decrypt.restore();
+        SSM.prototype.getParameter.restore();
     });
 
     describe('Next state tests', function() {
@@ -181,13 +183,14 @@ describe('Unit Tests', function() {
                 };
 
                 var reportSpy = sinon.spy(collector, 'reportApiThrottling');
-
+                let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params, callback) => callback());
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
                     assert.equal(moment(curState.until).diff(newState.until, 'days'), 1);
                     assert.equal(true, reportSpy.calledOnce);
                     assert.equal(logs.length, 0);
                     assert.equal(newPollInterval, 120);
                     restoreLoggingClientStub();
+                    putMetricDataStub.restore();
                     done();
                 });
             });
@@ -215,7 +218,7 @@ describe('Unit Tests', function() {
                 };
 
                 var reportSpy = sinon.spy(collector, 'reportApiThrottling');
-
+                let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params, callback) => callback());
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
                     assert.equal(moment(newState.until).diff(newState.since, 'seconds'), 15); 
                     assert.equal(true, reportSpy.calledOnce);
@@ -223,6 +226,7 @@ describe('Unit Tests', function() {
                     assert.equal(logs.length, 0);
                     assert.equal(newPollInterval, 120);
                     restoreLoggingClientStub();
+                    putMetricDataStub.restore();
                     done();
                 });
             });

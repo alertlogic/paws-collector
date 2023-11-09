@@ -1,24 +1,26 @@
 const assert = require('assert');
 const sinon = require('sinon');
-var AWS = require('aws-sdk-mock');
 const m_response = require('cfn-response');
 const sophossiemMock = require('./sophossiem_mock');
 var SophossiemCollector = require('../collector').SophossiemCollector;
 const moment = require('moment');
 const utils = require("../utils");
+const { CloudWatch } = require("@aws-sdk/client-cloudwatch"),
+    { KMS } = require("@aws-sdk/client-kms"),
+    { SSM } = require("@aws-sdk/client-ssm");
 
 var responseStub = {};
 let getAPILogs;
 describe('Unit Tests', function () {
 
     beforeEach(function () {
-        AWS.mock('SSM', 'getParameter', function (params, callback) {
-            const data = new Buffer('test-secret');
+        sinon.stub(SSM.prototype, 'getParameter').callsFake(function (params, callback) {
+            const data = Buffer.from('test-secret');
             return callback(null, { Parameter: { Value: data.toString('base64') } });
         });
-        AWS.mock('KMS', 'decrypt', function (params, callback) {
+        sinon.stub(KMS.prototype, 'decrypt').callsFake(function (params, callback) {
             const data = {
-                Plaintext: '{}'
+                Plaintext: Buffer.from('{}')
             };
             return callback(null, data);
         });
@@ -31,6 +33,8 @@ describe('Unit Tests', function () {
 
     afterEach(function () {
         responseStub.restore();
+        KMS.prototype.decrypt.restore();
+        SSM.prototype.getParameter.restore();
     });
 
     describe('pawsInitCollectionState', function () {
@@ -182,12 +186,13 @@ describe('Unit Tests', function () {
                 };
                 
                 var reportSpy = sinon.spy(collector, 'reportApiThrottling');
-
+                let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params, callback) => callback(null));
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
                     assert.equal(true, reportSpy.calledOnce);
                     assert.equal(logs.length, 0);
                     assert.equal(newState.poll_interval_sec, 900);
                     getAPILogs.restore();
+                    putMetricDataStub.restore();
                     done();
                 });
 
