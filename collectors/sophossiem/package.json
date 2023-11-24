@@ -1,6 +1,6 @@
 {
   "name": "sophossiem-collector",
-  "version": "1.2.8",
+  "version": "1.2.9",
   "description": "Alert Logic AWS based Sophossiem Log Collector",
   "repository": {},
   "private": true,
@@ -9,9 +9,14 @@
     "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=text mocha --colors"
   },
   "devDependencies": {
-    "@aws-sdk/client-cloudwatch": "^3.445.0",
-    "@aws-sdk/client-kms": "^3.445.0",
-    "@aws-sdk/client-ssm": "^3.445.0",
+    "@aws-sdk/client-cloudformation": "^3.454.0",
+    "@aws-sdk/client-cloudwatch": "^3.454.0",
+    "@aws-sdk/client-dynamodb": "^3.454.0",
+    "@aws-sdk/client-kms": "^3.454.0",
+    "@aws-sdk/client-lambda": "^3.454.0",
+    "@aws-sdk/client-s3": "^3.456.0",
+    "@aws-sdk/client-sqs": "^3.454.0",
+    "@aws-sdk/client-ssm": "^3.454.0",
     "jshint": "^2.9.5",
     "mocha": "^10.2.0",
     "mocha-jenkins-reporter": "^0.4.2",
