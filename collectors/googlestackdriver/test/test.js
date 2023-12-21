@@ -235,13 +235,14 @@ describe('Unit Tests', function() {
         it('Stops paginiating at the pagination limit', function(done) {
             logginClientStub = sinon.stub(logging.v2.LoggingServiceV2Client.prototype, 'listLogEntries');
             
+            const nextPage = { pageToken: 'http://somenextpage.com', "pageSize": 1000, "resourceNames": ["projects/a-fake-project"] };
             logginClientStub.callsFake(() => {
                 return new Promise((res, rej) => {
                     res([
                         [
                             googlestackdriverMock.LOG_EVENT_PROTO_PAYLOAD
                         ],
-                        'http://somenextpage.com'
+                        nextPage
                     ]);
                 });
             });
@@ -258,7 +259,7 @@ describe('Unit Tests', function() {
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
                     assert.ok(logginClientStub.calledTwice);
                     assert.equal(logs.length, parseInt(process.env.paws_max_pages_per_invocation));
-                    assert.equal(newState.nextPage, 'http://somenextpage.com');
+                    assert.deepEqual(newState.nextPage, nextPage);
                     restoreLoggingClientStub();
                     done();
                 });
