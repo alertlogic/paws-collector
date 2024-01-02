@@ -1754,6 +1754,42 @@ describe('Unit Tests', function() {
                 });
             });
         });
+
+        it('Check if "Maximum payload size exceeded" error return from al-collector.js then it should reduce the batch size and make ingest api call again', function (done) {
+            mockDDB();
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+            const maxPayloadError = "Maximum payload size exceeded: 2812";
+
+            const fakeFunError = function (messages, formatFun, hostmetaElems, callback) {
+                return callback(maxPayloadError);
+            };
+            const fakeFunSuccess = function (messages, formatFun, hostmetaElems, callback) {
+                return callback(null, { data: null });
+            };
+            let processLog = sinon.stub(m_al_aws.AlAwsCollector.prototype, 'processLog').onFirstCall().callsFake(
+                fakeFunError).onSecondCall().callsFake(fakeFunSuccess).onThirdCall().callsFake(fakeFunSuccess);
+
+            TestCollector.load().then(function (creds) {
+                var collector = new TestCollector(ctx, creds);
+                const nextState = { state: 'new-state' };
+                collector.batchLogProcess(['log1', 'log2','log3'], nextState, 900, (err, newState, nextinvocationTimeout) => {
+                    assert.equal(newState, nextState);
+                    assert.equal(nextinvocationTimeout, 900);
+                    sinon.assert.callCount(processLog, 3);
+                    processLog.restore();
+                    done();
+                });
+            });
+        });
     });
 });
 
