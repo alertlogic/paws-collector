@@ -161,25 +161,34 @@ timestamp < "${state.until}"`;
     }
 
     _getNextCollectionState(curState, nextPage) {
-        // Reset the page size for next collection as log collection completed for throttling interval
-        if (nextPage && nextPage.pageSize && nextPage.pageSize < MAX_PAGE_SIZE) {
-            nextPage.pageSize = MAX_PAGE_SIZE;
-        } else if (curState.pageSize && curState.pageSize < MAX_PAGE_SIZE) {
-            curState.pageSize = MAX_PAGE_SIZE;
+        // Reset the page size for the next collection if it's less than the maximum
+        const pageSize = Math.max(MAX_PAGE_SIZE, nextPage?.pageSize || curState.pageSize || MAX_PAGE_SIZE);
+
+        const { stream, since, until } = curState;
+
+        if (nextPage) {
+            // Case: Continue with the next page
+            return {
+                since,
+                nextPage: { ...nextPage, pageSize },
+                stream,
+                until,
+                poll_interval_sec: 1
+            };
+        } else {
+            // Case: Start a new collection
+            const untilMoment = moment(curState.until);
+
+            const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('day-week-progression', untilMoment, this.pollInterval);
+
+            return {
+                since: nextSinceMoment.toISOString(),
+                nextPage,
+                stream,
+                until: nextUntilMoment.toISOString(),
+                poll_interval_sec: nextPollInterval
+            };
         }
-        const {stream} = curState;
-
-        const untilMoment = moment(curState.until);
-
-        const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('day-week-progression', untilMoment, this.pollInterval);
-
-        return  {
-            since: nextSinceMoment.toISOString(),
-            nextPage,
-            stream,
-            until: nextUntilMoment.toISOString(),
-            poll_interval_sec: nextPollInterval
-        };
     }
 
     // TODO: probably need to actually decode hte protobuf payload on these logs
