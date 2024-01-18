@@ -1,6 +1,6 @@
 {
   "name": "auth0-collector",
-  "version": "1.1.54",
+  "version": "1.1.55",
   "description": "Alert Logic AWS based Auth0 Log Collector extension",
   "repository": {},
   "private": true,
@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "@alertlogic/al-collector-js": "^3.0.10",
-    "@alertlogic/paws-collector": "^2.2.0",
+    "@alertlogic/paws-collector": "2.2.1",
     "async": "^3.2.4",
     "auth0": "^3.1.2",
     "debug": "^4.3.4",
