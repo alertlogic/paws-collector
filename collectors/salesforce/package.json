@@ -1,6 +1,6 @@
 {
   "name": "salesforce-collector",
-  "version": "1.1.53",
+  "version": "1.1.54",
   "description": "Alert Logic AWS based Salesforce Log Collector",
   "repository": {},
   "private": true,
@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "@alertlogic/al-collector-js": "3.0.10",
-    "@alertlogic/paws-collector": "2.2.0",
+    "@alertlogic/paws-collector": "2.2.1",
     "async": "^3.2.4",
     "debug": "^4.3.4",
     "jsforce": "^1.11.1",
