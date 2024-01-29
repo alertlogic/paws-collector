@@ -84,6 +84,7 @@ stages:
     commands:
       - source $NVM_DIR/nvm.sh && nvm use 18
       - cd collectors/carbonblack
+      - ls -la ~/.bashrc
       - export ALPS_SERVICE_VERSION=$(node -p "require('./package.json').version")
       - echo "ALPS_SERVICE_VERSION=$ALPS_SERVICE_VERSION"
       - export ALPS_SERVICE_NAME=paws-$(node -p "require('./package.json').name")
