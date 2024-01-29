@@ -55,19 +55,24 @@ stages:
     when:
       - pull_request:
           trigger_phrase: build-collector-auth0
+    env:
+      ALPS_SERVICE_NAME: "paws-auth0-collector"
+      ALPS_SERVICE_VERSION: "1.1.56"
     commands:
       - source $NVM_DIR/nvm.sh && nvm use 18
-      - export ALPS_SERVICE_VERSION=$(node -p "require('./collectors/auth0/package.json').version")
-      # - echo "ALPS_SERVICE_VERSION=$ALPS_SERVICE_VERSION" >> $GITHUB_ENV
+      - cd collectors/auth0
+      - export ALPS_SERVICE_VERSION=$(node -p "require('./package.json').version")
+      - echo "ALPS_SERVICE_VERSION=$ALPS_SERVICE_VERSION"
+      - export ALPS_SERVICE_NAME=paws-$(node -p "require('./package.json').name")
+      - echo "ALPS_SERVICE_NAME=$ALPS_SERVICE_NAME"
       - npm install
       - make package
-      - mkdir auth0-collecctor
+      - mkdir auth0-collector
       - cp -r cfn al-auth0-collector.zip al-auth0-collector.json auth0-collector
-    env:
-      - ALPS_SERVICE_VERSION: ${{ env.ALPS_SERVICE_VERSION }}
+      - zip -r ../../auth0-collector.zip auth0-collector
     outputs:
-      file: ./auth0-collecctor
-      packagers:
+      file: ./auth0-collector*
+    packagers:
         - basic
 
   - name: build-collector-carbonback
@@ -75,18 +80,23 @@ stages:
     compute_size: small_arm
     when:
       - pull_request:
-        trigger_phrase: build-collector-carbonback
+          trigger_phrase: build-collector-carbonback
     commands:
       - source $NVM_DIR/nvm.sh && nvm use 18
-      - export ALPS_SERVICE_VERSION=$(node -p "require('./collectors/carbonblack/package.json').version")
-      # - echo "ALPS_SERVICE_VERSION=$ALPS_SERVICE_VERSION" >> $GITHUB_ENV
+      - cd collectors/carbonblack
+      - export ALPS_SERVICE_VERSION=$(node -p "require('./package.json').version")
+      - echo "ALPS_SERVICE_VERSION=$ALPS_SERVICE_VERSION"
+      - export ALPS_SERVICE_NAME=paws-$(node -p "require('./package.json').name")
+      - echo "ALPS_SERVICE_NAME=$ALPS_SERVICE_NAME"
+      - source ~/.bashrc
       - npm install
       - make package
-      - mkdir auth0-collecctor
-      - cp -r cfn al-auth0-collector.zip al-auth0-collector.json auth0-collector
+      - mkdir carbonback-collector
+      - cp -r cfn al-carbonblack-collector.zip al-carbonblack-collector.json carbonback-collector
+      - zip -r ../../carbonback-collector.zip carbonback-collector
     env:
-      - ALPS_SERVICE_VERSION: ${{ env.ALPS_SERVICE_VERSION }}
+      ALPS_SERVICE_NAME: "paws-carbonblack-collector"
     outputs:
-      file: ./auth0-collecctor
-      packagers:
+      file: ./carbonback-collector*
+    packagers:
         - basic
