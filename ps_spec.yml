@@ -88,7 +88,8 @@ stages:
       - echo "ALPS_SERVICE_VERSION=$ALPS_SERVICE_VERSION"
       - export ALPS_SERVICE_NAME=paws-$(node -p "require('./package.json').name")
       - echo "ALPS_SERVICE_NAME=$ALPS_SERVICE_NAME"
-      - source ~/.bashrc
+      - . ~/.bashrc
+      - env
       - npm install
       - make package
       - mkdir carbonback-collector
