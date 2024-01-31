@@ -55,16 +55,14 @@ stages:
     when:
       - pull_request:
           trigger_phrase: build-collector-auth0
+      - pull_request:
+          trigger_phrase: build-collectors
     env:
       ALPS_SERVICE_NAME: "paws-auth0-collector"
-      ALPS_SERVICE_VERSION: "1.1.56"
+      ALPS_SERVICE_VERSION: "1.1.55"
     commands:
       - source $NVM_DIR/nvm.sh && nvm use 18
       - cd collectors/auth0
-      - export ALPS_SERVICE_VERSION=$(node -p "require('./package.json').version")
-      - echo "ALPS_SERVICE_VERSION=$ALPS_SERVICE_VERSION"
-      - export ALPS_SERVICE_NAME=paws-$(node -p "require('./package.json').name")
-      - echo "ALPS_SERVICE_NAME=$ALPS_SERVICE_NAME"
       - npm install
       - make package
       - mkdir auth0-collector
@@ -81,13 +79,11 @@ stages:
     when:
       - pull_request:
           trigger_phrase: build-collector-carbonback
+      - pull_request:
+          trigger_phrase: build-collectors
     commands:
       - source $NVM_DIR/nvm.sh && nvm use 18
       - cd collectors/carbonblack
-      - export ALPS_SERVICE_VERSION=$(node -p "require('./package.json').version")
-      - echo "ALPS_SERVICE_VERSION=$ALPS_SERVICE_VERSION"
-      - export ALPS_SERVICE_NAME=paws-$(node -p "require('./package.json').name")
-      - echo "ALPS_SERVICE_NAME=$ALPS_SERVICE_NAME"
       - source ~/.bashrc
       - npm install
       - make package
@@ -96,7 +92,26 @@ stages:
       - zip -r ../../carbonback-collector.zip carbonback-collector
     env:
       ALPS_SERVICE_NAME: "paws-carbonblack-collector"
+      ALPS_SERVICE_VERSION: "1.0.52"
     outputs:
       file: ./carbonback-collector*
+    packagers:
+        - basic
+
+  - name: build artifact for all collector
+    image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
+    compute_size: small_arm
+    when:
+      - pull_request:
+          trigger_phrase: build-all
+      - tag: ['\d+.\d+.\d+']
+    env:
+        ALPS_SERVICE_VERSION: "2.2.1"
+    commands:
+      - source $NVM_DIR/nvm.sh && nvm use 18
+      - make package-all
+      - zip -r artifact_folder.zip artifact_folder
+    outputs:
+      file: ./artifact_folder*
     packagers:
         - basic

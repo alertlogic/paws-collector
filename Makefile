@@ -4,7 +4,7 @@ AWS_LAMBDA_PAWS_PACKAGE_NAME ?= al-paws-collector.zip
 AWS_CFN_TEMPLATE_PATH ?= ./cfn/paws-collector.template
 AWS_CFN_TEMPLATE_SHARED_PATH ?= ./cfn/paws-collector-shared.template
 COLLECTOR_DIRS ?= $(shell find collectors/ -type d -maxdepth 1 -mindepth 1)
-COLLECTOR_NAMES ?= $(shell find collectors/ -type d -maxdepth 1 -mindepth 1 -exec basename {} \;)
+COLLECTOR_NAMES ?= $(shell find collectors/ -type d -maxdepth 1 -mindepth 1 -exec basename {} \; | grep -v "template")
 
 
 .PHONY: test
@@ -32,6 +32,15 @@ test-all: test
 	      echo "\n************ Copying Code Coverage files $$d ************\n\n"; \
               cp ./collectors/$$d/coverage/cobertura-coverage.xml ./.ps_outputs/$$d.covertool.xml; \
 	    fi; \
+	done;
+
+package-all:
+	mkdir -p artifact_folder
+	for d in $(COLLECTOR_NAMES); do \
+	    echo -e "\n************\n\n creaating package for $$d\n\n************\n\n"; \
+	    make -C collectors/$$d package || exit 1; \
+		mkdir -p artifact_folder/$$d-collector; \
+		cp -r collectors/$$d/cfn/*.template collectors/$$d/al-$$d-collector.zip collectors/$$d/al-$$d-collector.json artifact_folder/$$d-collector/; \
 	done;
 
 package: test package.zip
