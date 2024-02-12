@@ -40,8 +40,12 @@ package-all:
 	    echo -e "\n************\n\n creaating package for $$d\n\n************\n\n"; \
 	    make -C collectors/$$d package || exit 1; \
 		mkdir -p artifact_folder/$$d-collector; \
-		cp -r collectors/$$d/cfn collectors/$$d/al-$$d-collector.zip collectors/$$d/al-$$d-collector.json collectors/$$d/themis-template artifact_folder/$$d-collector/; \
+		cp -r collectors/$$d/cfn collectors/$$d/al-$$d-collector.zip collectors/$$d/al-$$d-collector.json artifact_folder/$$d-collector/; \
+		if [ -d "./collectors/$$d/themis-template" ]; then \
+			cp -r collectors/$$d/themis-template artifact_folder/$$d-collector/; \
+		fi; \
 	done;
+	cp -r cfn artifact_folder;
 
 package: test package.zip
 

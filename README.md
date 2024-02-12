@@ -103,13 +103,15 @@ make sam-local
 ## Build artifact 
 
   1. To build the single/individual collector : 
-    a. Update `ALPS_SERVICE_VERSION` from collector package.json version.
-    b. Trigger the phrase base on the collector name once the pr is approved.
+      - a. Update `ALPS_SERVICE_VERSION` from collector package.json version.
+      - b. Trigger the phrase base on the collector name once the pr is approved.
     ex. to create artifact for auth0 ,phrase will be `build-collector-auth0`
 
   2. To build all the collectors:
     There is two way of building the all collector as follow:
-    1. Update the `ALPS_SERVICE_VERSION` for each collector as per package.json and trigger the common prase `build-collectors` once pr is approved.
-
-    2. After pr is merge to master branch ,create the tag, which will build the single artifact for all collectors.
+      1. Update the `ALPS_SERVICE_VERSION` for each collector as per package.json and trigger the common prase `build-collectors` once pr is approved.
+      
+          ***OR***
+      
+      2. After pr is merge to master branch ,create the tag, which will build the single artifact for all collectors.
 

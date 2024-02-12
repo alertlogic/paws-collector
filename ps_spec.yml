@@ -69,7 +69,7 @@ stages:
     packagers:
       - basic
 
-  - name: build-collector-carbonback
+  - name: build-collector-carbonblack
     image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
     compute_size: small_arm
     when:
@@ -84,7 +84,7 @@ stages:
       ALPS_SERVICE_NAME: "paws-carbonblack-collector"
       ALPS_SERVICE_VERSION: "1.0.52" #set the value from collector package json
     outputs:
-      file: ./carbonback-collector*
+      file: ./carbonblack-collector*
     packagers:
       - basic
 
@@ -164,22 +164,22 @@ stages:
     packagers:
       - basic
 
-  - name: build-collector-gsuit
+  - name: build-collector-gsuite
     image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
     compute_size: small_arm
     when:
       - pull_request:
-          trigger_phrase: build-collector-gsuit
+          trigger_phrase: build-collector-gsuite
       - pull_request:
           trigger_phrase: build-collectors
     env:
-      ALPS_SERVICE_NAME: "paws-gsuit-collector"
+      ALPS_SERVICE_NAME: "paws-gsuite-collector"
       ALPS_SERVICE_VERSION: "1.2.53" #set the value from collector package json
     commands:
       - source $NVM_DIR/nvm.sh && nvm use 18
-      - ./build_collector.sh gsuit
+      - ./build_collector.sh gsuite
     outputs:
-      file: ./gsuit-collector*
+      file: ./gsuite-collector*
     packagers:
       - basic
 
