@@ -2,52 +2,330 @@ version: 1.0
 service_name: paws-collector
 
 stages:
-    -
-        name: PR Test
-        when:
-            - pull_request
-            - pull_request:
-                trigger_phrase: test it
-        image: node:18
-        compute_size: small
-        commands:
-            - make test
-        
-    -
-        name: Master Push - Publish
-        when:
-            - push: ['master']
-        image: node:18
-        compute_size: small
-        commands:
-            - |
-              set -ex
-              echo //registry.npmjs.org/:_authToken=$NPM_TOKEN > .npmrc
-              npm whoami
-              
-              PKGNAME=$(node -e 'console.log(require("./package.json").name)')
-              PKGVERSION=$(node -e 'console.log(require("./package.json").version)')
-              WORDCOUNT=$(npm view "${PKGNAME}@${PKGVERSION}" | wc -c)
-              
-              git config --global credential.helper \'store\' || true
-              echo "https://$ALPS_GH_USER:$ALPS_GH_TOKEN@github.com" > ~/.git-credentials
- 
-              npm install
-              
-              if [ $(git tag -l "$PKGVERSION") ]; then
-                echo "Skip tagging $PKGNAME $PKGVERSION version already exist"
-              else
-                git tag -a $PKGVERSION -m "$PKGNAME release $PKGVERSION" HEAD
-                if [ "$WORDCOUNT" -eq 0 ]; then
-                  make test-all
-                  echo "PUBLISHING $PKGNAME $PKGVERSION"
-                  npm run lint
-                  git push origin $PKGVERSION
-                  npm publish --access public
-                else
-                 echo "NOT PUBLISHING $PKGNAME $PKGVERSION"
-                fi
-              fi
-            - echo done
-        outputs:
-            file: ./.ps_outputs/* 
+  - name: PR Test
+    when:
+      - pull_request
+      - pull_request:
+          trigger_phrase: test it
+    image: node:18
+    compute_size: small
+    commands:
+      - make test
+
+  - name: Master Push - Publish
+    when:
+      - push: ["master"]
+    image: node:18
+    compute_size: small
+    commands:
+      - |
+        set -ex
+        echo //registry.npmjs.org/:_authToken=$NPM_TOKEN > .npmrc
+        npm whoami
+
+        PKGNAME=$(node -e 'console.log(require("./package.json").name)')
+        PKGVERSION=$(node -e 'console.log(require("./package.json").version)')
+        WORDCOUNT=$(npm view "${PKGNAME}@${PKGVERSION}" | wc -c)
+
+        git config --global credential.helper \'store\' || true
+        echo "https://$ALPS_GH_USER:$ALPS_GH_TOKEN@github.com" > ~/.git-credentials
+
+        npm install
+
+        if [ $(git tag -l "$PKGVERSION") ]; then
+          echo "Skip tagging $PKGNAME $PKGVERSION version already exist"
+        else
+          git tag -a $PKGVERSION -m "$PKGNAME release $PKGVERSION" HEAD
+          if [ "$WORDCOUNT" -eq 0 ]; then
+            make test-all
+            echo "PUBLISHING $PKGNAME $PKGVERSION"
+            npm run lint
+            git push origin $PKGVERSION
+            npm publish --access public
+          else
+           echo "NOT PUBLISHING $PKGNAME $PKGVERSION"
+          fi
+        fi
+      - echo done
+    outputs:
+      file: ./.ps_outputs/*
+
+  - name: build-collector-auth0
+    image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
+    compute_size: small_arm
+    when:
+      - pull_request:
+          trigger_phrase: build-collector-auth0
+      - pull_request:
+          trigger_phrase: build-collectors
+    env:
+      ALPS_SERVICE_NAME: "paws-auth0-collector"
+      ALPS_SERVICE_VERSION: "1.1.55" #set the value from collector package json
+    commands:
+      - source $NVM_DIR/nvm.sh && nvm use 18
+      - ./build_collector.sh auth0
+    outputs:
+      file: ./auth0-collector*
+    packagers:
+      - basic
+
+  - name: build-collector-carbonblack
+    image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
+    compute_size: small_arm
+    when:
+      - pull_request:
+          trigger_phrase: build-collector-carbonblack
+      - pull_request:
+          trigger_phrase: build-collectors
+    commands:
+      - source $NVM_DIR/nvm.sh && nvm use 18
+      - ./build_collector.sh carbonblack
+    env:
+      ALPS_SERVICE_NAME: "paws-carbonblack-collector"
+      ALPS_SERVICE_VERSION: "1.0.52" #set the value from collector package json
+    outputs:
+      file: ./carbonblack-collector*
+    packagers:
+      - basic
+
+  - name: build-collector-ciscoamp
+    image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
+    compute_size: small_arm
+    when:
+      - pull_request:
+          trigger_phrase: build-collector-ciscoamp
+      - pull_request:
+          trigger_phrase: build-collectors
+    env:
+      ALPS_SERVICE_NAME: "paws-ciscoamp-collector"
+      ALPS_SERVICE_VERSION: "1.0.52" #set the value from collector package json
+    commands:
+      - source $NVM_DIR/nvm.sh && nvm use 18
+      - ./build_collector.sh ciscoamp
+    outputs:
+      file: ./ciscoamp-collector*
+    packagers:
+      - basic
+
+  - name: build-collector-ciscoduo
+    image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
+    compute_size: small_arm
+    when:
+      - pull_request:
+          trigger_phrase: build-collector-ciscoduo
+      - pull_request:
+          trigger_phrase: build-collectors
+    commands:
+      - source $NVM_DIR/nvm.sh && nvm use 18
+      - ./build_collector.sh ciscoduo
+    env:
+      ALPS_SERVICE_NAME: "paws-ciscoduo-collector"
+      ALPS_SERVICE_VERSION: "1.0.51" #set the value from collector package json
+    outputs:
+      file: ./ciscoduo-collector*
+    packagers:
+      - basic
+
+  - name: build-collector-crowdstrike
+    image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
+    compute_size: small_arm
+    when:
+      - pull_request:
+          trigger_phrase: build-collector-crowdstrike
+      - pull_request:
+          trigger_phrase: build-collectors
+    env:
+      ALPS_SERVICE_NAME: "paws-crowdstrike-collector"
+      ALPS_SERVICE_VERSION: "1.0.33" #set the value from collector package json
+    commands:
+      - source $NVM_DIR/nvm.sh && nvm use 18
+      - ./build_collector.sh crowdstrike
+    outputs:
+      file: ./crowdstrike-collector*
+    packagers:
+      - basic
+
+  - name: build-collector-googlestackdriver
+    image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
+    compute_size: small_arm
+    when:
+      - pull_request:
+          trigger_phrase: build-collector-googlestackdriver
+      - pull_request:
+          trigger_phrase: build-collectors
+    commands:
+      - source $NVM_DIR/nvm.sh && nvm use 18
+      - ./build_collector.sh googlestackdriver
+    env:
+      ALPS_SERVICE_NAME: "paws-googlestackdriver-collector"
+      ALPS_SERVICE_VERSION: "1.2.8" #set the value from collector package json
+    outputs:
+      file: ./googlestackdriver-collector*
+    packagers:
+      - basic
+
+  - name: build-collector-gsuite
+    image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
+    compute_size: small_arm
+    when:
+      - pull_request:
+          trigger_phrase: build-collector-gsuite
+      - pull_request:
+          trigger_phrase: build-collectors
+    env:
+      ALPS_SERVICE_NAME: "paws-gsuite-collector"
+      ALPS_SERVICE_VERSION: "1.2.53" #set the value from collector package json
+    commands:
+      - source $NVM_DIR/nvm.sh && nvm use 18
+      - ./build_collector.sh gsuite
+    outputs:
+      file: ./gsuite-collector*
+    packagers:
+      - basic
+
+  - name: build-collector-mimecast
+    image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
+    compute_size: small_arm
+    when:
+      - pull_request:
+          trigger_phrase: build-collector-mimecast
+      - pull_request:
+          trigger_phrase: build-collectors
+    commands:
+      - source $NVM_DIR/nvm.sh && nvm use 18
+      - ./build_collector.sh mimecast
+    env:
+      ALPS_SERVICE_NAME: "paws-mimecast-collector"
+      ALPS_SERVICE_VERSION: "1.0.45" #set the value from collector package json
+    outputs:
+      file: ./mimecast-collector*
+    packagers:
+      - basic
+
+  - name: build-collector-o365
+    image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
+    compute_size: small_arm
+    when:
+      - pull_request:
+          trigger_phrase: build-collector-o365
+      - pull_request:
+          trigger_phrase: build-collectors
+    env:
+      ALPS_SERVICE_NAME: "paws-o365-collector"
+      ALPS_SERVICE_VERSION: "1.2.65" #set the value from collector package json
+    commands:
+      - source $NVM_DIR/nvm.sh && nvm use 18
+      - ./build_collector.sh o365
+    outputs:
+      file: ./o365-collector*
+    packagers:
+      - basic
+
+  - name: build-collector-okta
+    image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
+    compute_size: small_arm
+    when:
+      - pull_request:
+          trigger_phrase: build-collector-okta
+      - pull_request:
+          trigger_phrase: build-collectors
+    commands:
+      - source $NVM_DIR/nvm.sh && nvm use 18
+      - ./build_collector.sh okta
+    env:
+      ALPS_SERVICE_NAME: "paws-okta-collector"
+      ALPS_SERVICE_VERSION: "1.2.25" #set the value from collector package json
+    outputs:
+      file: ./okta-collector*
+    packagers:
+      - basic
+
+  - name: build-collector-salesforce
+    image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
+    compute_size: small_arm
+    when:
+      - pull_request:
+          trigger_phrase: build-collector-salesforce
+      - pull_request:
+          trigger_phrase: build-collectors
+    env:
+      ALPS_SERVICE_NAME: "paws-salesforce-collector"
+      ALPS_SERVICE_VERSION: "1.1.54" #set the value from collector package json
+    commands:
+      - source $NVM_DIR/nvm.sh && nvm use 18
+      - ./build_collector.sh salesforce
+    outputs:
+      file: ./salesforce-collector*
+    packagers:
+      - basic
+
+  - name: build-collector-sentinelone
+    image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
+    compute_size: small_arm
+    when:
+      - pull_request:
+          trigger_phrase: build-collector-sentinelone
+      - pull_request:
+          trigger_phrase: build-collectors
+    commands:
+      - source $NVM_DIR/nvm.sh && nvm use 18
+      - ./build_collector.sh sentinelone
+    env:
+      ALPS_SERVICE_NAME: "paws-sentinelone-collector"
+      ALPS_SERVICE_VERSION: "1.0.51" #set the value from collector package json
+    outputs:
+      file: ./sentinelone-collector*
+    packagers:
+      - basic
+
+  - name: build-collector-sophos
+    image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
+    compute_size: small_arm
+    when:
+      - pull_request:
+          trigger_phrase: build-collector-sophos
+      - pull_request:
+          trigger_phrase: build-collectors
+    env:
+      ALPS_SERVICE_NAME: "paws-sophos-collector"
+      ALPS_SERVICE_VERSION: "1.0.51" #set the value from collector package json
+    commands:
+      - source $NVM_DIR/nvm.sh && nvm use 18
+      - ./build_collector.sh sophos
+    outputs:
+      file: ./sophos-collector*
+    packagers:
+      - basic
+
+  - name: build-collector-sophossiem
+    image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
+    compute_size: small_arm
+    when:
+      - pull_request:
+          trigger_phrase: build-collector-sophossiem
+      - pull_request:
+          trigger_phrase: build-collectors
+    commands:
+      - source $NVM_DIR/nvm.sh && nvm use 18
+      - ./build_collector.sh sophossiem
+    env:
+      ALPS_SERVICE_NAME: "paws-sophossiem-collector"
+      ALPS_SERVICE_VERSION: "1.2.10" #set the value from collector package json
+    outputs:
+      file: ./sophossiem-collector*
+    packagers:
+      - basic
+
+  - name: build single artifact for all collectors on tag creation
+    image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
+    compute_size: small_arm
+    when:
+      - tag: ['\d+.\d+.\d+']
+    commands:
+      - source $NVM_DIR/nvm.sh && nvm use 18
+      - make package-all
+      - zip -r artifact_folder.zip artifact_folder
+    outputs:
+      file: ./artifact_folder*
+    packagers:
+      - basic
