@@ -12,7 +12,7 @@ describe('Unit Tests', function () {
         alserviceStub.post = sinon.stub(RestServiceClient.prototype, 'post').callsFake(
             function fakeFn(path, extraOptions) {
                 return new Promise(function (resolve, reject) {
-                    return resolve({ results: [carbonblackMock.LOG_EVENT] });
+                    return resolve({ results: [carbonblackMock.LOG_EVENT],num_found : 2500 });
                 });
             });
         alserviceStub.get = sinon.stub(RestServiceClient.prototype, 'get').callsFake(
@@ -70,17 +70,20 @@ describe('Unit Tests', function () {
                 url: "url",
                 method: "POST",
                 requestBody:{
-                    "criteria": {
-                        "create_time": {
-                            "end": state.until,
-                            "start": state.since
-                        },
+                    "time_range": {
+                         "start": state.since,
+                        "end": state.until
                     },
-                    "rows": 0,
-                    "start": 0
+                    "start": "0",
+                    "rows": "0",
+                    "exclusions": {
+                        "type": [
+                            "CB_ANALYTICS","WATCHLIST"
+                        ]
+                    }
                 },
                 typeIdPaths: [{ path: ["id"] }],
-                tsPaths: [{ path: ["last_update_time"] }]
+                tsPaths: [{ path: ["backend_update_timestamp"] }]
             };
             let accumulator = [];
             const apiEndpoint = process.env.paws_endpoint;

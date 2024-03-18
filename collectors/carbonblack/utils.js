@@ -43,14 +43,14 @@ function getAPILogs(apiDetails, accumulator, apiEndpoint, state, clientSecret, c
                         },
                         data: apiDetails.requestBody
                     }).then(response => {
-                        if (response.results.length === 0) {
-                            return resolve({ accumulator, nextPage });
-                        }
                         accumulator.push(...response.results);
                         offset = offset + limit;
-                        apiDetails.requestBody.start = offset;
-                        pageCount++;
-                        return getCarbonBlackData();
+                        if (response.results.length > 0 && response.num_found >= offset) {
+                            apiDetails.requestBody.start = offset;
+                            pageCount++;
+                            return getCarbonBlackData();
+                        }
+                        return resolve({ accumulator, nextPage });
                     }).catch(err => {
                         return reject(err);
                     });
@@ -78,48 +78,53 @@ function getAPIDetails(state, orgKey) {
             tsPaths = [{ path: ["eventTime"] }];
             break;
         case Search_Alerts:
-            url = `/appservices/v6/orgs/${orgKey}/alerts/_search`;
+            url = `/api/alerts/v7/orgs/${orgKey}/alerts/_search`;
             typeIdPaths = [{ path: ["id"] }];
-            tsPaths = [{ path: ["last_update_time"] }];
+            tsPaths = [{ path: ["backend_update_timestamp"] }];
             method = "POST";
             requestBody = {
-                "criteria": {
-                    "create_time": {
-                        "end": state.until,
-                        "start": state.since
-                    },
+                "time_range": {
+                    "start": state.since,
+                    "end": state.until
                 },
                 "rows": 0,
-                "start": 0
+                "start": 0,
+                "exclusions": {
+                    "type": ["CB_ANALYTICS", "WATCHLIST"]
+                }
             };
             break;
         case Search_Alerts_CB_Analytics:
-            url = `/appservices/v6/orgs/${orgKey}/alerts/cbanalytics/_search`;
+            url = `/api/alerts/v7/orgs/${orgKey}/alerts/_search`;
             typeIdPaths = [{ path: ["id"] }];
-            tsPaths = [{ path: ["last_update_time"] }];
+            tsPaths = [{ path: ["backend_update_timestamp"] }];
             method = "POST";
             requestBody = {
+                "time_range": {
+                    "start": state.since,
+                    "end": state.until
+                },
                 "criteria": {
-                    "create_time": {
-                        "end": state.until,
-                        "start": state.since
-                    },
+                    "type": ["CB_ANALYTICS"]
                 },
                 "rows": 0,
                 "start": 0
             };
             break;
         case Search_Alerts_Watchlist:
-            url = `/appservices/v6/orgs/${orgKey}/alerts/watchlist/_search`;
+            url = `/api/alerts/v7/orgs/${orgKey}/alerts/_search`;
             typeIdPaths = [{ path: ["id"] }];
-            tsPaths = [{ path: ["last_update_time"] }];
+            tsPaths = [{ path: ["backend_update_timestamp"] }];
             method = "POST";
             requestBody = {
+                "time_range": {
+                    "start": state.since,
+                    "end": state.until
+                },
                 "criteria": {
-                    "create_time": {
-                        "end": state.until,
-                        "start": state.since
-                    },
+                    "type": [
+                        "WATCHLIST"
+                    ]
                 },
                 "rows": 0,
                 "start": 0
