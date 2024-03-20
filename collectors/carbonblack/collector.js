@@ -119,7 +119,9 @@ class CarbonblackCollector extends PawsCollector {
                     return callback(error.response.data);
                 }
                 else {
-                    error.errorCode = error.response.status;
+                    if (error.response) {
+                        error.errorCode = error.response.status
+                    }
                     return callback(error);
                 }
             });

@@ -1,6 +1,6 @@
 {
     "method": "GET",
-    "url": "{{endpoint}}/appservices/v6/orgs/{{collector_param_string2}}/alerts/search_suggestions?suggest.q=",
+    "url": "{{endpoint}}/api/alerts/v7/orgs/{{collector_param_string2}}/alerts/search_suggestions?query=n/a",
     "headers": {
         "X-Auth-Token": "{{secret}}/{{client_id}}"
     },
