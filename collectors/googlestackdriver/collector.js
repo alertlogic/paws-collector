@@ -18,10 +18,10 @@ const logging = require('@google-cloud/logging');
 const packageJson = require('./package.json');
 const protoFiles = require('google-proto-files');
 
-
 const API_THROTTLING_ERROR = 8;
 const MAX_POLL_INTERVAL = 900;
 const MAX_PAGE_SIZE = 1000;
+const AUDIT_PAYLOAD_TYPE_URL = 'type.googleapis.com/google.cloud.audit.AuditLog';
 
 const typeIdPaths = [
     {path: ['jsonPayload', 'fields', 'event_type', 'stringValue']},
@@ -33,6 +33,14 @@ class GooglestackdriverCollector extends PawsCollector {
 
     constructor(context, creds){
         super(context, creds, packageJson.version);
+        this._initAuditLogDecoder();
+    }
+
+    _initAuditLogDecoder() {
+        const protoPath = protoFiles.getProtoPath('cloud', 'audit', 'audit_log.proto');
+        const root = protoFiles.loadSync(protoPath);
+        const auditLogDecoder = root.lookupType('google.cloud.audit.AuditLog');
+        this._auditLogDecoder = auditLogDecoder;
     }
     
     pawsInitCollectionState(event, callback) {
@@ -88,22 +96,11 @@ timestamp < "${state.until}"`;
         const paginationCallback = (result, acc = []) => {
             AlLogger.info(`Getting page: ${pagesRetireved + 1} Logs retrieved: ${result[0].length}`);
             pagesRetireved++;
-            let logs = result[0].map(logEntry => {
-                // Decode protoPayload buffer if it's a LogEntry google.cloud.audit.AuditLog
-                if (logEntry.protoPayload && (logEntry.protoPayload.type_url === 'type.googleapis.com/google.cloud.audit.AuditLog')) {
-                    const protoPath = `./node_modules/google-proto-files/google/cloud/audit/audit_log.proto`;
-                    const root = protoFiles.loadSync(protoPath);
-                    const AuditLog = root.lookupType('google.cloud.audit.AuditLog');
-                    try {
-                        const buffer = Buffer.from(logEntry.protoPayload.value);
-                        let decodedData = AuditLog.decode(buffer);
-                        logEntry.protoPayload.value = decodedData.toJSON();
-                    } catch(error) {
-                        AlLogger.error(`Error decoding data ${error}`);
-                    }
-                }
-                return logEntry;
+            //decode the protoPayload if it's an AuditLog message
+            let logs = result[0].map(function (logEntry) {
+                return collector.decodeProtoPayload(logEntry);
             });
+
             const nextPage = result[1];
             const newAcc = [...acc, ...logs];
             AlLogger.info(`Total Logs ${newAcc.length}`);
@@ -175,6 +172,20 @@ timestamp < "${state.until}"`;
                     return callback(err);
                 }
             });
+    }
+
+    decodeProtoPayload(logEntry) {
+        let collector = this;
+        if (logEntry.protoPayload && (logEntry.protoPayload.type_url === AUDIT_PAYLOAD_TYPE_URL)) {
+            try {
+                const buffer = Buffer.from(logEntry.protoPayload.value);
+                let decodedData = collector._auditLogDecoder.decode(buffer);
+                logEntry.protoPayload.value = decodedData.toJSON();
+            } catch(error) {
+                AlLogger.error(`Error decoding data ${error}`);
+            }
+        }
+        return logEntry;
     }
 
     _getNextCollectionState(curState, nextPage) {
