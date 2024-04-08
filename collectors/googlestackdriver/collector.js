@@ -16,6 +16,8 @@ const parse = require('@alertlogic/al-collector-js').Parse;
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const logging = require('@google-cloud/logging');
 const packageJson = require('./package.json');
+const protoFiles = require('google-proto-files');
+
 
 const API_THROTTLING_ERROR = 8;
 const MAX_POLL_INTERVAL = 900;
@@ -86,7 +88,22 @@ timestamp < "${state.until}"`;
         const paginationCallback = (result, acc = []) => {
             AlLogger.info(`Getting page: ${pagesRetireved + 1} Logs retrieved: ${result[0].length}`);
             pagesRetireved++;
-            const logs = result[0];
+            let logs = result[0].map(logEntry => {
+                // Decode protoPayload buffer if it's a LogEntry google.cloud.audit.AuditLog
+                if (logEntry.protoPayload && (logEntry.protoPayload.type_url === 'type.googleapis.com/google.cloud.audit.AuditLog')) {
+                    const protoPath = `./node_modules/google-proto-files/google/cloud/audit/audit_log.proto`;
+                    const root = protoFiles.loadSync(protoPath);
+                    const AuditLog = root.lookupType('google.cloud.audit.AuditLog');
+                    try {
+                        const buffer = Buffer.from(logEntry.protoPayload.value);
+                        let decodedData = AuditLog.decode(buffer);
+                        logEntry.protoPayload.value = decodedData.toJSON();
+                    } catch(error) {
+                        AlLogger.error(`Error decoding data ${error}`);
+                    }
+                }
+                return logEntry;
+            });
             const nextPage = result[1];
             const newAcc = [...acc, ...logs];
             AlLogger.info(`Total Logs ${newAcc.length}`);
