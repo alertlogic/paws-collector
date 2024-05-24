@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion : '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: Run it locally
+Resources:
+  LocalLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      KmsKeyArn: arn:aws:kms:us-east-1:352283894008:key/c31cd559-a589-417b-91bb-19bfbcba903f
+      Environment:
+        Variables:
+          AWS_LAMBDA_FUNCTION_NAME:
+          aims_secret_key:
+          LOG_LEVEL:
+          # DEBUG:
+          aims_access_key_id:
+          al_api:
+          stack_name:
+          azcollect_api:
+          ingest_api:
+          collector_status_api:
+          paws_state_queue_arn:
+          paws_state_queue_url:
+          paws_poll_interval:
+          paws_extension:
+          paws_collector_param_string_1:
+          paws_collector_param_string_2:
+          paws_api_client_id:
+          collector_streams:
+          paws_type_name: "ciscomeraki"
+          paws_max_pages_per_invocation:
+          paws_secret_param_name:
+          paws_api_secret:
+          collector_id:
+          customer_id:
+          paws_endpoint:
+          paws_ddb_table_name:
+          ssm_direct:
+          collector_status_api:
+          paws_poll_interval_delay:
+          secret:
+          dl_s3_bucket_name:
+      CodeUri: /Users/imransyed/Downloads/projects/may232024/paws-collector/collectors/ciscomeraki
+      Runtime: nodejs18.x
+      Handler: index.handler
+      Timeout: 300 
+      MemorySize: 1024
+
