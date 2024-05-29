@@ -19,6 +19,7 @@ const packageJson = require('./package.json');
 const protoFiles = require('google-proto-files');
 
 const API_THROTTLING_ERROR = 8;
+const API_THROTTLING_STATUS_CODE = 429;
 const MAX_POLL_INTERVAL = 900;
 const MAX_PAGE_SIZE = 1000;
 const AUDIT_PAYLOAD_TYPE_URL = 'type.googleapis.com/google.cloud.audit.AuditLog';
@@ -132,7 +133,7 @@ timestamp < "${state.until}"`;
                 return callback(null, logs, newState, newState.poll_interval_sec);
             })
             .catch(err => {
-                AlLogger.error(`GSTA000003 err in collection ${err}`);
+                AlLogger.error(`GSTA000003 err in collection ${JSON.stringify(err.details)}`);
 
                 // Stackdriver Logging api has some rate limits that we might run into.
                 // If we run inot a rate limit error, instead of returning the error,
@@ -141,32 +142,31 @@ timestamp < "${state.until}"`;
                 // Error: 8 RESOURCE_EXHAUSTED: Received message larger than max (4518352 vs. 4194304),
                 // so half the given interval and if interval is less than 15 sec then reduce the page size to half.
 
-                if(err.code === API_THROTTLING_ERROR){
+                if (err.code === API_THROTTLING_ERROR || (err.response && err.response.status === API_THROTTLING_STATUS_CODE)) {
+                    const currentInterval = moment(state.until).diff(state.since, 'seconds');
                     const interval = state.poll_interval_sec < 60 ? 60 : state.poll_interval_sec;
                     const nextPollInterval = state.poll_interval_sec < MAX_POLL_INTERVAL ?
                         interval + 60 : MAX_POLL_INTERVAL;
-                    const currentInterval = moment(state.until).diff(state.since, 'seconds');
-                    if (currentInterval <= 15 && err.details.includes('Received message larger than max')) {
-                        // Reduce the page size to half to pull the data for throttling interval
-                        if (state.nextPage && state.nextPage.pageSize) {
-                            state.nextPage.pageSize = Math.ceil(state.nextPage.pageSize / 2);
+            
+                    if (state.nextPage && state.nextPage.pageSize) {
+                        state.nextPage.pageSize = Math.ceil(state.nextPage.pageSize / 2);
+                        AlLogger.debug(`Throttling error with nextPage: ${err.message}. Retrying with smaller pageSize.`);
+                    } else {
+                        if (currentInterval <= 15 && err.details.includes('Received message larger than max')) {
+                            state.pageSize = state.pageSize ? Math.ceil(state.pageSize / 2) : Math.ceil(params.pageSize / 2);
+                            AlLogger.debug(`Throttling error with no nextPage and large message: ${err.message}. Reducing pageSize.`);
+                        } else {
+                            state.until = moment(state.since).add(Math.ceil(currentInterval / 2), 'seconds').toISOString();
+                            AlLogger.debug(`Throttling error with no nextPage: ${err.message}. Reducing time range.`);
                         }
-                        else {
-                            state.pageSize = Math.ceil(params.pageSize / 2)
-                        }
-                        AlLogger.warn(`RESOURCE_EXHAUSTED for ${currentInterval} sec time interval`);
-                    }
-                    else {
-                        state.until = moment(state.since).add(Math.ceil(currentInterval / 2), 'seconds').toISOString();
                     }
                     const backOffState = Object.assign({}, state, {poll_interval_sec:nextPollInterval});
                     collector.reportApiThrottling(function () {
                         return callback(null, [], backOffState, nextPollInterval);
                     });
-                }
-                else {
-                    // set errorCode if not available in error object to showcase client error on DDMetrics
-                    if (err.code) {
+                } else {
+                     // set errorCode if not available in error object to showcase client error on DDMetrics
+                     if (err.code) {
                         err.errorCode = err.code;
                     }
                     return callback(err);
