@@ -132,7 +132,7 @@ stages:
       - ./build_collector.sh googlestackdriver
     env:
       ALPS_SERVICE_NAME: "paws-googlestackdriver-collector"
-      ALPS_SERVICE_VERSION: "1.2.9" #set the value from collector package json
+      ALPS_SERVICE_VERSION: "1.2.10" #set the value from collector package json
     outputs:
       file: ./googlestackdriver-collector*
     packagers:

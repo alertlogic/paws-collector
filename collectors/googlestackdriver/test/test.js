@@ -196,7 +196,7 @@ describe('Unit Tests', function() {
             });
         });
 
-       it(`Get Logs check API Throttling with 'Received message larger than max (4776477 vs. 4194304)' for time interval less than 15 sec then check with reduce page size able to fetch the data`, function(done) {
+       it(`Get Logs check API Throttling when going through pagination then check if it reduce page size and able to fetch the data`, function(done) {
             logginClientStub = sinon.stub(logging.v2.LoggingServiceV2Client.prototype, 'listLogEntries');
             
             logginClientStub.onCall(0).callsFake(() => {
@@ -223,6 +223,40 @@ describe('Unit Tests', function() {
                     assert.equal(moment(newState.until).diff(newState.since, 'seconds'), 15); 
                     assert.equal(true, reportSpy.calledOnce);
                     assert.equal(newState.nextPage.pageSize, 500);
+                    assert.equal(logs.length, 0);
+                    assert.equal(newPollInterval, 120);
+                    restoreLoggingClientStub();
+                    putMetricDataStub.restore();
+                    done();
+                });
+            });
+        });
+
+        it(`Get Logs check API Throttling with 'Received message larger than max (4776477 vs. 4194304)' for time interval less than 15 sec then check with reduce page size able to fetch the data`, function(done) {
+            logginClientStub = sinon.stub(logging.v2.LoggingServiceV2Client.prototype, 'listLogEntries');
+            
+            logginClientStub.onCall(0).callsFake(() => {
+                return new Promise((res, rej) => {
+                    rej({code: 8,
+                        details: 'Received message larger than max (4776477 vs. 4194304)'});
+                });
+            });
+
+            GooglestackdriverCollector.load().then(function(creds) {
+                var collector = new GooglestackdriverCollector(ctx, creds);
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    since: startDate.toISOString(),
+                    until: startDate.add(15, 'seconds').toISOString(),
+                    stream: "projects/project-test",
+                    poll_interval_sec: 60
+                };
+
+                var reportSpy = sinon.spy(collector, 'reportApiThrottling');
+                let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params, callback) => callback());
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
+                    assert.equal(newState.pageSize, 500);
+                    assert.equal(true, reportSpy.calledOnce);
                     assert.equal(logs.length, 0);
                     assert.equal(newPollInterval, 120);
                     restoreLoggingClientStub();
