@@ -1,7 +1,7 @@
 {
   "name": "ciscomeraki-collector",
   "version": "1.0.0",
-  "description": "Alert Logic AWS based Ciscomeraki Log Collector",
+  "description": "Alert Logic AWS based Cisco Meraki Log Collector",
   "repository": {},
   "private": true,
   "scripts": {

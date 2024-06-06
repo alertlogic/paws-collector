@@ -14,32 +14,36 @@ const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const parse = require('@alertlogic/al-collector-js').Parse;
 const packageJson = require('./package.json');
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
-const utils = require("./utils");
+const merakiClient = require("./meraki_client");
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const MAX_POLL_INTERVAL = 900;
 const API_THROTTLING_ERROR = 429;
 const API_NOT_FOUND_ERROR = 404;
+const NOT_FOUND_ERROR_MAX_RETRIES = 3;
 
-let typeIdPaths = [{ path: ["type"] }];
-let tsPaths = [{ path: ["occurredAt"] }];
+const typeIdPaths = [{ path: ["type"] }];
+const tsPaths = [{ path: ["occurredAt"] }];
 
 class CiscomerakiCollector extends PawsCollector {
     constructor(context, creds) {
         super(context, creds, packageJson.version);
+        this.productTypes = process.env.paws_collector_param_string_1 ? JSON.parse(process.env.paws_collector_param_string_1) : [];
+        this.apiEndpoint = process.env.paws_endpoint.replace(/^https:\/\/|\/$/g, '');
+        this.orgKey = process.env.paws_collector_param_string_2;
     }
 
     async pawsInitCollectionState(event, callback) {
         let collector = this;
-        const resourceNames = process.env.collector_streams ? JSON.parse(process.env.collector_streams) : [];
         try {
+            const resourceNames = process.env.collector_streams ? JSON.parse(process.env.collector_streams) : [];
             if (resourceNames.length > 0) {
                 const initialStates = this.generateInitialStates(resourceNames);
                 return callback(null, initialStates, 1);
             }
             else {
                 try {
-                    const payloadObj = utils.getOrgKeySecretEndPoint(collector.secret);
-                    let networks = await utils.getAllNetworks(payloadObj);
+                    const payloadObj = merakiClient.getOrgKeySecretEndPoint(collector);
+                    let networks = await merakiClient.listNetworkIds(payloadObj);
                     if (networks.length > 0) {
                         const initialStates = this.generateInitialStates(networks);
                         return callback(null, initialStates, 1);
@@ -94,49 +98,54 @@ class CiscomerakiCollector extends PawsCollector {
     async handleUpdateStreamsFromNetworks() {
         let collector = this;
         try {
-            const payloadObj = utils.getOrgKeySecretEndPoint(collector.secret);
+            const payloadObj = merakiClient.getOrgKeySecretEndPoint(collector);
             //get networks from api
-            let networks = await utils.getAllNetworks(payloadObj);
+            let networks = await merakiClient.listNetworkIds(payloadObj);
             const keyValue = `${process.env.customer_id}/${collector._pawsCollectorType}/${collector.collector_id}/networks_${collector.collector_id}.json`;
-            let params = await utils.getS3ObjectParams(keyValue, undefined);
+            let params = await merakiClient.getS3ObjectParams(keyValue, undefined);
             
             //get networks json from s3 bucket
-            let networksFromS3 = await utils.fetchJsonFromS3Bucket(params.bucketName, params.key);
+            let networksFromS3 = await merakiClient.fetchJsonFromS3Bucket(params.bucketName, params.key);
             AlLogger.debug(`CMRI0000025 networks: ${JSON.stringify(networks)} networksFromS3 ${JSON.stringify(params)} ${JSON.stringify(networksFromS3)}`);
             if (networks.length > 0 && Array.isArray(networksFromS3) && networksFromS3.length > 0) {
-                let differenceNetworks = utils.differenceOfNetworksArray(networks, networksFromS3);
+                let differenceNetworks = merakiClient.differenceOfNetworksArray(networks, networksFromS3);
                 AlLogger.debug(`CMRI0000024 Networks updated ${JSON.stringify(differenceNetworks)}`);
 
                 if (differenceNetworks.length > 0) {
                     const initialStates = this.generateInitialStates(differenceNetworks);
                     AlLogger.debug(`CMRI0000020: SQS message added ${JSON.stringify(initialStates)}`);
                     collector._storeCollectionState({}, initialStates, this.pollInterval, async () => {
-                        await utils.uploadNetworksListInS3Bucket(keyValue, networks);
+                        await merakiClient.uploadNetworksListInS3Bucket(keyValue, networks);
                     });
                 } 
-            } else if (networksFromS3 && (networksFromS3.Code === 'NoSuchKey' || networksFromS3.Code === 'AccessDenied')) {
+            } else if (networksFromS3 && collector._isFileMissingError(networksFromS3.code)) {
                 AlLogger.debug(`CMRI0000026 networks ${JSON.stringify(params)} ${JSON.stringify(networks)}`);
-                await utils.uploadNetworksListInS3Bucket(keyValue, networks);
+                await merakiClient.uploadNetworksListInS3Bucket(keyValue, networks);
             }
         } catch (error) {
             AlLogger.debug(`Error updating streams from networks: ${error.message}`);
         }
     }
 
+    _isFileMissingError(code) { 
+        return code === 'NoSuchKey' || code === 'AccessDenied';
+    }
+
     pawsGetLogs(state, callback) {
         const collector = this;
 
-        const productTypes = process.env.paws_collector_param_string_1 ? JSON.parse(process.env.paws_collector_param_string_1) : [];
-        if (!productTypes) {
+        if (!collector.productTypes) {
             return callback("The Product Types was not found!");
         }
-        const { clientSecret, apiEndpoint, orgKey } = utils.getOrgKeySecretEndPoint(collector.secret, callback);
-        const apiDetails = utils.getAPIDetails(orgKey, productTypes);
+
+        const { clientSecret, apiEndpoint, orgKey } = merakiClient.getOrgKeySecretEndPoint(collector);
+
+        const apiDetails = merakiClient.getAPIDetails(orgKey, collector.productTypes);
         if (!apiDetails.url) {
             return callback("The API name was not found!");
         }
         AlLogger.info(`CMRI000001 Collecting data for NetworkId-${state.networkId} from ${state.since}`);
-        utils.getAPILogs(apiDetails, [], apiEndpoint, state, clientSecret, process.env.paws_max_pages_per_invocation)
+        merakiClient.getAPILogs(apiDetails, [], apiEndpoint, state, clientSecret, process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextPage }) => {
                 let newState;
                 if (nextPage === undefined) {
@@ -171,7 +180,7 @@ class CiscomerakiCollector extends PawsCollector {
     handleOtherErrors(error, state, callback) {
         if (error && error.response && error.response.status == API_NOT_FOUND_ERROR) {
             state.retry = state.retry ? state.retry + 1 : 1;
-            if (state.retry > 3) {
+            if (state.retry > NOT_FOUND_ERROR_MAX_RETRIES) {
                 AlLogger.debug(`CMRI0000021 Deleted SQS message from Queue${JSON.stringify(state)}`);
                 this._invokeContext.succeed();
             } else {
@@ -217,7 +226,6 @@ class CiscomerakiCollector extends PawsCollector {
     }
 
     pawsFormatLog(msg) {
-        // TODO: double check that this message parsing fits your use case
         let collector = this;
 
         let ts = parse.getMsgTs(msg, tsPaths);

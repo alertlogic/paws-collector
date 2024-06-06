@@ -4,8 +4,8 @@ const axios = require('axios');
 const ciscomerakiMock = require('./ciscomeraki_mock');
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const AlAwsUtil = require('@alertlogic/al-aws-collector-js').Util;
-const { getAPILogs, makeApiCall, getAllNetworks, fetchAllNetworks, getAPIDetails,
-    fetchJsonFromS3Bucket, differenceOfNetworksArray, getOrgKeySecretEndPoint, getS3ObjectParams, uploadToS3Bucket } = require('../utils');
+const { getAPILogs, makeApiCall, listNetworkIds, fetchAllNetworks, getAPIDetails,
+    fetchJsonFromS3Bucket, differenceOfNetworksArray, getOrgKeySecretEndPoint, getS3ObjectParams, uploadToS3Bucket } = require('../meraki_client');
 const { S3Client } = require("@aws-sdk/client-s3");
 
 describe('API Tests', function () {
@@ -144,7 +144,7 @@ describe('API Tests', function () {
     describe('Rate Limiting', function () {
         it('should apply exponential backoff on rate limit errors', async function () {
             axiosGetStub.rejects({ response: { status: 429 } });
-            const attemptApiCall = getAllNetworks('/api/v1/networks', 'your-api-key', 'api.meraki.com');
+            const attemptApiCall = listNetworkIds('/api/v1/networks', 'your-api-key', 'api.meraki.com');
             attemptApiCall.catch((error) => {
                 assert.include(error.message, '429');
             });
@@ -321,28 +321,28 @@ describe('API Tests', function () {
 
     describe('getOrgKeySecretEndPoint', function () {
         it('should return clientSecret, apiEndpoint, and orgKey when all parameters are provided', function () {
-            process.env.paws_endpoint = 'https://meraki.com';
-            process.env.paws_collector_param_string_2 = 'orgKey123';
-
-            const result = getOrgKeySecretEndPoint('mockSecret');
-
+            const secret = 'mockSecret';
+            const apiEndpoint = process.env.paws_endpoint = 'meraki.com';
+            const orgKey = process.env.paws_collector_param_string_2 = 'orgKey123';
+            const result = getOrgKeySecretEndPoint({ secret, apiEndpoint, orgKey });
             assert.equal(result.clientSecret, 'mockSecret');
             assert.equal(result.apiEndpoint, 'meraki.com');
             assert.equal(result.orgKey, 'orgKey123');
         });
 
-        it('should call callback with error message if clientSecret is missing', function () {
-            process.env.paws_endpoint = 'https://example.com';
-            process.env.paws_collector_param_string_2 = 'orgKey123';
-            const result = getOrgKeySecretEndPoint(null);
+        it('should call with error message if clientSecret is missing', function () {
+            const secret = null;
+            const apiEndpoint = process.env.paws_endpoint = 'example.com';
+            const orgKey = process.env.paws_collector_param_string_2 = 'orgKey123';
+            const result = getOrgKeySecretEndPoint({ secret, apiEndpoint, orgKey });
             assert.strictEqual(result, 'The Client Secret was not found!');
         });
 
-        it('should call callback with error message if orgKey is missing', function () {
-            process.env.paws_endpoint = 'https://example.com';
-            process.env.paws_collector_param_string_2 = '';
-            const result = getOrgKeySecretEndPoint('mockSecret');
-
+        it('should call with error message if orgKey is missing', function () {
+            const secret = 'mockSecret';
+            const apiEndpoint = process.env.paws_endpoint = 'https://example.com';
+            const orgKey = process.env.paws_collector_param_string_2 = '';
+            const result = getOrgKeySecretEndPoint({ secret, apiEndpoint, orgKey });
             assert.strictEqual(result, 'orgKey was not found!');
         });
     });

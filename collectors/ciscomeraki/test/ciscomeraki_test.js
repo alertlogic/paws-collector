@@ -5,7 +5,7 @@ const ciscomerakiMock = require('./ciscomeraki_mock');
 var CiscomerakiCollector = require('../collector').CiscomerakiCollector;
 const m_response = require('cfn-response');
 const moment = require('moment');
-const utils = require("../utils");
+const merakiClient = require("../meraki_client");
 
 const { CloudWatch } = require("@aws-sdk/client-cloudwatch"),
     { KMS } = require("@aws-sdk/client-kms"),
@@ -14,7 +14,7 @@ const { CloudWatch } = require("@aws-sdk/client-cloudwatch"),
 var responseStub = {};
 let getAPIDetails;
 let getAPILogs;
-let getAllNetworks;
+let listNetworkIds;
 
 describe('Unit Tests', function () {
     beforeEach(function () {
@@ -77,7 +77,7 @@ describe('Unit Tests', function () {
             succeed: function () { }
         };
         it('Paws Init Collection State Success', function (done) {
-            getAllNetworks = sinon.stub(utils, 'getAllNetworks').callsFake(
+            listNetworkIds = sinon.stub(merakiClient, 'listNetworkIds').callsFake(
                 function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
                         return resolve(ciscomerakiMock.NETWORKS);
@@ -106,8 +106,8 @@ describe('Unit Tests', function () {
         });
         it('Paws Init Collection State with networks', function (done) {
             process.env.collector_streams = [];
-            // Mocking utils.getAllNetworks to return a non-empty array
-            getAllNetworks = sinon.stub(utils, 'getAllNetworks').callsFake(
+            // Mocking merakiClient.listNetworkIds to return a non-empty array
+            listNetworkIds = sinon.stub(merakiClient, 'listNetworkIds').callsFake(
                 function fakeFn(callback) {
                     return new Promise(function (resolve, reject) {
                         resolve(ciscomerakiMock.NETWORKS);
@@ -132,7 +132,7 @@ describe('Unit Tests', function () {
 
         it('Paws Init Collection State without networks', function (done) {
             process.env.collector_streams = [];
-            getAllNetworks = sinon.stub(utils, 'getAllNetworks').callsFake(
+            listNetworkIds = sinon.stub(merakiClient, 'listNetworkIds').callsFake(
                 function fakeFn(callback) {
                     return new Promise(function (resolve, reject) {
                         resolve([]); // Assuming no networks found
@@ -153,7 +153,7 @@ describe('Unit Tests', function () {
         });
 
         it('Paws Init Collection State error handling', function (done) {
-            getAllNetworks = sinon.stub(utils, 'getAllNetworks').rejects(new Error('Network error'));
+            listNetworkIds = sinon.stub(merakiClient, 'listNetworkIds').rejects(new Error('Network error'));
 
             CiscomerakiCollector.load().then(function (creds) {
                 var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
@@ -168,7 +168,7 @@ describe('Unit Tests', function () {
         });
 
         afterEach(function () {
-            getAllNetworks.restore();
+            listNetworkIds.restore();
         });
     });
 
@@ -181,13 +181,13 @@ describe('Unit Tests', function () {
             succeed: function () { }
         };
         it('Paws Get Logs Success', function (done) {
-            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+            getAPILogs = sinon.stub(merakiClient, 'getAPILogs').callsFake(
                 function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
                         return resolve({ accumulator: [ciscomerakiMock.LOG_EVENT, ciscomerakiMock.LOG_EVENT] });
                     });
                 });
-            getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
+            getAPIDetails = sinon.stub(merakiClient, 'getAPIDetails').callsFake(
                 function fakeFn(state) {
                     return {
                         url: "api_url",
@@ -198,7 +198,7 @@ describe('Unit Tests', function () {
 
                     };
                 });
-            getAllNetworks = sinon.stub(utils, 'getAllNetworks').callsFake(
+            listNetworkIds = sinon.stub(merakiClient, 'listNetworkIds').callsFake(
                 function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
                         return resolve(ciscomerakiMock.NETWORKS);
@@ -218,7 +218,7 @@ describe('Unit Tests', function () {
                     assert.equal(newState.poll_interval_sec, 300);
                     assert.ok(logs[0].type);
                     getAPILogs.restore();
-                    getAllNetworks.restore();
+                    listNetworkIds.restore();
                     getAPIDetails.restore();
                 });
 
@@ -228,19 +228,19 @@ describe('Unit Tests', function () {
         });
 
         it('Paws Get Logs With NextPage Success', function (done) {
-            getAllNetworks = sinon.stub(utils, 'getAllNetworks').callsFake(
+            listNetworkIds = sinon.stub(merakiClient, 'listNetworkIds').callsFake(
                 function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
                         return resolve(ciscomerakiMock.NETWORKS);
                     });
                 });
-            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+            getAPILogs = sinon.stub(merakiClient, 'getAPILogs').callsFake(
                 function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
                         return resolve({ accumulator: [ciscomerakiMock.LOG_EVENT, ciscomerakiMock.LOG_EVENT], nextPage: "nextPage" });
                     });
                 });
-            getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
+            getAPIDetails = sinon.stub(merakiClient, 'getAPIDetails').callsFake(
                 function fakeFn(state) {
                     return {
                         url: "api_url",
@@ -268,7 +268,7 @@ describe('Unit Tests', function () {
                     assert.ok(logs[0].type);
                     getAPILogs.restore();
                     getAPIDetails.restore();
-                    getAllNetworks.restore();
+                    listNetworkIds.restore();
 
                     done();
                 });
@@ -278,7 +278,7 @@ describe('Unit Tests', function () {
 
         it('Paws Get client error', function (done) {
 
-            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+            getAPILogs = sinon.stub(merakiClient, 'getAPILogs').callsFake(
                 function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
                         return reject({
@@ -291,7 +291,7 @@ describe('Unit Tests', function () {
                         });
                     });
                 });
-            getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
+            getAPIDetails = sinon.stub(merakiClient, 'getAPIDetails').callsFake(
                 function fakeFn(state) {
                     return {
                         url: "api_url",
@@ -323,7 +323,7 @@ describe('Unit Tests', function () {
 
         it('Paws Get Logs check throttling error', function (done) {
 
-            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+            getAPILogs = sinon.stub(merakiClient, 'getAPILogs').callsFake(
                 function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
                         return reject({
@@ -338,7 +338,7 @@ describe('Unit Tests', function () {
                         });
                     });
                 });
-            getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
+            getAPIDetails = sinon.stub(merakiClient, 'getAPIDetails').callsFake(
                 function fakeFn(state) {
                     return {
                         url: "api_url",
@@ -373,51 +373,6 @@ describe('Unit Tests', function () {
 
             });
         });
-        // it('Handles successful API log retrieval with logs and next page', function (done) {
-        //     getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
-        //         function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
-        //             return new Promise(function (resolve, reject) {
-        //                 return resolve({ accumulator: [ciscomerakiMock.LOG_EVENT, ciscomerakiMock.LOG_EVENT], nextPage: "nextPage" });
-        //             });
-        //         });
-        //     getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
-        //         function fakeFn(state) {
-        //             return {
-        //                 url: "api_url",
-        //                 method: "GET",
-        //                 requestBody:"",
-        //                 orgKey:"1234",
-        //                 productTypes:["appliance"]
-
-        //             };
-        //         });
-        //     getAllNetworks = sinon.stub(utils, 'getAllNetworks').callsFake(
-        //         function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
-        //             return new Promise(function (resolve, reject) {
-        //                 return resolve(ciscomerakiMock.NETWORKS);
-        //             });
-        //         });
-        //     CiscomerakiCollector.load().then(function (creds) {
-        //         var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
-        //         const curState = {
-        //             networkId: "L_686235993220604684",
-        //             since: "2024-03-19T05:10:47.055027Z",
-        //             until: null,
-        //             nextPage: null,
-        //             poll_interval_sec: 1
-        //         };
-        //         collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-        //             assert.equal(logs.length, 2);
-        //             assert.equal(newState.poll_interval_sec, 300);
-        //             assert.ok(logs[0].type);
-        //             assert.equal(newState.nextPage, "nextPage");
-        //             getAPILogs.restore();
-        //             getAPIDetails.restore();
-        //             getAllNetworks.restore();
-        //             done();
-        //         });
-        //     });
-        // });
     });
 
     describe('Next state tests', function () {
@@ -740,11 +695,11 @@ describe('Unit Tests', function () {
 describe('handleUpdateStreamsFromNetworks Function', function () {
     let uploadStub;
     beforeEach(function () {
-        sinon.stub(utils, 'getAllNetworks').resolves(['network1', 'network2']);
-        sinon.stub(utils, 'getS3ObjectParams').resolves({ bucketName: 'testBucket', key: 'testKey' });
-        sinon.stub(utils, 'fetchJsonFromS3Bucket').resolves(['network1']);
-        sinon.stub(utils, 'differenceOfNetworksArray').returns(['network2']);
-        uploadStub = sinon.stub(utils, 'uploadNetworksListInS3Bucket').resolves();
+        sinon.stub(merakiClient, 'listNetworkIds').resolves(['network1', 'network2']);
+        sinon.stub(merakiClient, 'getS3ObjectParams').resolves({ bucketName: 'testBucket', key: 'testKey' });
+        sinon.stub(merakiClient, 'fetchJsonFromS3Bucket').resolves(['network1']);
+        sinon.stub(merakiClient, 'differenceOfNetworksArray').returns(['network2']);
+        uploadStub = sinon.stub(merakiClient, 'uploadNetworksListInS3Bucket').resolves();
     });
 
     afterEach(function () {
@@ -770,10 +725,10 @@ describe('handleUpdateStreamsFromNetworks Function', function () {
 
             await collector.handleUpdateStreamsFromNetworks();
 
-            assert.strictEqual(utils.getAllNetworks.callCount, 1);
-            assert.strictEqual(utils.getS3ObjectParams.callCount, 1);
-            assert.strictEqual(utils.fetchJsonFromS3Bucket.callCount, 1);
-            assert.strictEqual(utils.differenceOfNetworksArray.callCount, 1);
+            assert.strictEqual(merakiClient.listNetworkIds.callCount, 1);
+            assert.strictEqual(merakiClient.getS3ObjectParams.callCount, 1);
+            assert.strictEqual(merakiClient.fetchJsonFromS3Bucket.callCount, 1);
+            assert.strictEqual(merakiClient.differenceOfNetworksArray.callCount, 1);
             assert.strictEqual(uploadStub.callCount, 1);
             sinon.restore();
         });
@@ -796,9 +751,9 @@ describe('handleUpdateStreamsFromNetworks Function', function () {
 
             await collector.handleUpdateStreamsFromNetworks();
 
-            assert.strictEqual(utils.getAllNetworks.callCount, 1);
-            assert.strictEqual(utils.getS3ObjectParams.callCount, 1);
-            assert.strictEqual(utils.fetchJsonFromS3Bucket.callCount, 1);
+            assert.strictEqual(merakiClient.listNetworkIds.callCount, 1);
+            assert.strictEqual(merakiClient.getS3ObjectParams.callCount, 1);
+            assert.strictEqual(merakiClient.fetchJsonFromS3Bucket.callCount, 1);
             assert.strictEqual(uploadStub.callCount, 1);
         });
     });
@@ -818,9 +773,9 @@ describe('handleUpdateStreamsFromNetworks Function', function () {
             });
 
             await collector.handleUpdateStreamsFromNetworks();
-            assert.strictEqual(utils.getAllNetworks.callCount, 1);
-            assert.strictEqual(utils.getS3ObjectParams.callCount, 1);
-            assert.strictEqual(utils.fetchJsonFromS3Bucket.callCount, 1);
+            assert.strictEqual(merakiClient.listNetworkIds.callCount, 1);
+            assert.strictEqual(merakiClient.getS3ObjectParams.callCount, 1);
+            assert.strictEqual(merakiClient.fetchJsonFromS3Bucket.callCount, 1);
             assert.strictEqual(uploadStub.callCount, 1);
         });
     });

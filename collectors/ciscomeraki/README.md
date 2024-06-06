@@ -1,9 +1,9 @@
-# Ciscomeraki collector
-Alert Logic Ciscomeraki AWS Based API Poll (PAWS) Log Collector Library.
+# Cisco Meraki collector
+Alert Logic Cisco Meraki AWS Based API Poll (PAWS) Log Collector Library.
 
 # Overview
 This repository contains the AWS JavaScript Lambda function and CloudFormation 
-Template (CFT) for deploying a log collector in AWS which will poll Ciscomeraki (Network Events) service API to collect and 
+Template (CFT) for deploying a log collector in AWS which will poll Cisco Meraki (Network Events) service API to collect and 
 forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
@@ -22,7 +22,7 @@ Instructions for setting up log collection from Cisco Meraki Dashboard using its
 1. **Enable API Access**:
    - Log in to your [Cisco Meraki Dashboard](https://dashboard.meraki.com) account.
    - You need to have access to organizational level administrative privileges.
-   -  Get the Organization ID at the bottom of the page ![ScreenShot](./docs/Ciscomerakiorg.png).
+   - Get the Organization ID at the bottom of the page ![ScreenShot](./docs/Ciscomerakiorg.png).
    - Navigate to *Organization > Settings*.
    - Under *Dashboard API access*, enable API access ![ScreenShot](./docs/Ciscomeraki_img1.png).
 
@@ -49,14 +49,14 @@ Instructions for setting up log collection from Cisco Meraki Dashboard using its
 - Throttling errors occur when your API requests exceed the allowed rate limit. When a throttling error occurs, the API will return an HTTP 429 status code along with an error message.
 - Refer to the [Throttling Errors documentation](https://developer.cisco.com/meraki/api/#/rest/guides/throttling-errors) for information on how to handle throttling errors and retry mechanisms.
 
-### 2. API Docs
+### API Docs
 
 1. [Network Events](https://developer.cisco.com/meraki/api-v1/get-network-events/)
 
    This endpoint allows you to retrieve network events from **all networks** within an organization, filtered by specific product types such as "appliance", "switch", and more. These events provide insights into network changes, device status updates, and other relevant activities.
 
 
-API URLs required for Ciscomeraki collector for Example
+API URLs required for Cisco Meraki collector for Example
 
 |     URL                              |
 |--------------------------------------|
@@ -145,5 +145,3 @@ make test
 make sam-local
 ```
   4. Please see `local/event.json` for the event payload used for local invocation.
-Please write your readme here
-

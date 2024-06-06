@@ -2,7 +2,7 @@
  * @copyright (C) 2019, Alert Logic, Inc
  * @doc
  *
- * Ciscomeraki System logs extension.
+ * Cisco Meraki System logs extension.
  *
  * @end
  * -----------------------------------------------------------------------------

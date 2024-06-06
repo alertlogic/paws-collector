@@ -6,13 +6,12 @@ Resources:
   LocalLambda:
     Type: AWS::Serverless::Function
     Properties:
-      KmsKeyArn: arn:aws:kms:us-east-1:352283894008:key/c31cd559-a589-417b-91bb-19bfbcba903f
+      KmsKeyArn:
       Environment:
         Variables:
           AWS_LAMBDA_FUNCTION_NAME:
           aims_secret_key:
           LOG_LEVEL:
-          # DEBUG:
           aims_access_key_id:
           al_api:
           stack_name:
@@ -40,7 +39,7 @@ Resources:
           paws_poll_interval_delay:
           secret:
           dl_s3_bucket_name:
-      CodeUri: /Users/imransyed/Downloads/projects/may232024/paws-collector/collectors/ciscomeraki
+      CodeUri: 
       Runtime: nodejs18.x
       Handler: index.handler
       Timeout: 300 

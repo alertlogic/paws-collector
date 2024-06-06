@@ -7,7 +7,7 @@ const AlAwsUtil = require('@alertlogic/al-aws-collector-js').Util;
 const NETWORKS_PER_PAGE = 1000;
 const EVENTS_PER_PAGE = 500;
 const API_THROTTLING_ERROR = 429;
-const DELAY_IN_SECS = 1000;
+const DEFAULT_RETRY_DELAY_MILLIS = 1000;
 
 async function getAPILogs(apiDetails, accumulator, apiEndpoint, state, clientSecret, maxPagesPerInvocation) {
     let nextPage;
@@ -42,7 +42,7 @@ async function getAPILogs(apiDetails, accumulator, apiEndpoint, state, clientSec
                     headers = response.headers;
                     const linkHeader = response.headers.link;
                     if (linkHeader && linkHeader.includes('rel=next')) {
-                        const nextLink = linkHeader.match(/<([^>]+)>; rel=next/)[1];
+                        const nextLink = linkHeader.match(/<(.*?)>; rel=next/)[1];
                         startingAfter = new URL(nextLink).searchParams.get('startingAfter');
                         since = startingAfter;
                         await getData(productType);
@@ -89,22 +89,22 @@ async function makeApiCall(url, apiKey, perPage, productType, startingAfter = nu
     }
 }
 
-async function getAllNetworks(payloadObj) {
-    const url = `/api/v1/organizations/${payloadObj.orgKey}/networks`;
+async function listNetworkIds(payloadObj) {
+    const resourcePath = `/api/v1/organizations/${payloadObj.orgKey}/networks`;
 
     try {
-        const networks = await fetchAllNetworks(url, payloadObj.clientSecret, payloadObj.apiEndpoint);
+        const networks = await fetchAllNetworks(resourcePath, payloadObj.clientSecret, payloadObj.apiEndpoint);
         return networks.map(network => network.id);
     } catch (error) {
         return error;
     }
 }
 
-async function fetchAllNetworks(url, apiKey, apiEndpoint) {
-    let delay = DELAY_IN_SECS; // Initial delay of 1 second
+async function fetchAllNetworks(resourcePath, apiKey, apiEndpoint) {
+    let delay = DEFAULT_RETRY_DELAY_MILLIS; // Initial delay of 1 second
     async function attemptApiCall() {
         try {
-            let response = await makeApiCall(`https://${apiEndpoint}/${url}`, apiKey, NETWORKS_PER_PAGE);
+            let response = await makeApiCall(`https://${apiEndpoint}/${resourcePath}`, apiKey, NETWORKS_PER_PAGE);
             return response.data;
         } catch (error) {
             if (error.response && error.response.status === API_THROTTLING_ERROR) {
@@ -120,18 +120,16 @@ async function fetchAllNetworks(url, apiKey, apiEndpoint) {
     return attemptApiCall();
 }
 
-function getOrgKeySecretEndPoint(secret) {
-    const clientSecret = secret;
+function getOrgKeySecretEndPoint(collector) {
+    const clientSecret = collector.secret;
     if (!clientSecret) {
         return "The Client Secret was not found!";
     }
-
-    const apiEndpoint = process.env.paws_endpoint.replace(/^https:\/\/|\/$/g, '');
-    const orgKey = process.env.paws_collector_param_string_2;
+    const apiEndpoint = collector.apiEndpoint;
+    const orgKey = collector.orgKey;
     if (!orgKey) {
         return "orgKey was not found!";
     }
-
     return { clientSecret, apiEndpoint, orgKey };
 }
 
@@ -210,9 +208,9 @@ module.exports = {
     getAPIDetails: getAPIDetails,
     makeApiCall: makeApiCall,
     getAPILogs: getAPILogs,
-    getAllNetworks: getAllNetworks,
-    fetchAllNetworks:fetchAllNetworks,
-    getOrgKeySecretEndPoint:getOrgKeySecretEndPoint,
+    listNetworkIds: listNetworkIds,
+    fetchAllNetworks: fetchAllNetworks,
+    getOrgKeySecretEndPoint: getOrgKeySecretEndPoint,
     uploadNetworksListInS3Bucket: uploadNetworksListInS3Bucket,
     getS3ObjectParams: getS3ObjectParams,
     uploadToS3Bucket: uploadToS3Bucket,
