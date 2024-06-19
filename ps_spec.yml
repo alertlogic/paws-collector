@@ -7,7 +7,7 @@ stages:
       - pull_request
       - pull_request:
           trigger_phrase: test it
-    image: node:18
+    image: node:20
     compute_size: small
     commands:
       - make test
@@ -15,7 +15,7 @@ stages:
   - name: Master Push - Publish
     when:
       - push: ["master"]
-    image: node:18
+    image: node:20
     compute_size: small
     commands:
       - set -ex
@@ -36,7 +36,7 @@ stages:
       ALPS_SERVICE_NAME: "paws-auth0-collector"
       ALPS_SERVICE_VERSION: "1.1.55" #set the value from collector package json
     commands:
-      - source $NVM_DIR/nvm.sh && nvm use 18
+      - source $NVM_DIR/nvm.sh && nvm use 20
       - ./build_collector.sh auth0
     outputs:
       file: ./auth0-collector*
@@ -52,7 +52,7 @@ stages:
       - pull_request:
           trigger_phrase: build-collectors
     commands:
-      - source $NVM_DIR/nvm.sh && nvm use 18
+      - source $NVM_DIR/nvm.sh && nvm use 20
       - ./build_collector.sh carbonblack
     env:
       ALPS_SERVICE_NAME: "paws-carbonblack-collector"
@@ -74,7 +74,7 @@ stages:
       ALPS_SERVICE_NAME: "paws-ciscoamp-collector"
       ALPS_SERVICE_VERSION: "1.0.52" #set the value from collector package json
     commands:
-      - source $NVM_DIR/nvm.sh && nvm use 18
+      - source $NVM_DIR/nvm.sh && nvm use 20
       - ./build_collector.sh ciscoamp
     outputs:
       file: ./ciscoamp-collector*
@@ -90,7 +90,7 @@ stages:
       - pull_request:
           trigger_phrase: build-collectors
     commands:
-      - source $NVM_DIR/nvm.sh && nvm use 18
+      - source $NVM_DIR/nvm.sh && nvm use 20
       - ./build_collector.sh ciscoduo
     env:
       ALPS_SERVICE_NAME: "paws-ciscoduo-collector"
@@ -109,7 +109,7 @@ stages:
       - pull_request:
           trigger_phrase: build-collectors
     commands:
-      - source $NVM_DIR/nvm.sh && nvm use 18
+      - source $NVM_DIR/nvm.sh && nvm use 20
       - ./build_collector.sh ciscomeraki
     env:
       ALPS_SERVICE_NAME: "paws-ciscomeraki-collector"
@@ -131,7 +131,7 @@ stages:
       ALPS_SERVICE_NAME: "paws-crowdstrike-collector"
       ALPS_SERVICE_VERSION: "1.0.33" #set the value from collector package json
     commands:
-      - source $NVM_DIR/nvm.sh && nvm use 18
+      - source $NVM_DIR/nvm.sh && nvm use 20
       - ./build_collector.sh crowdstrike
     outputs:
       file: ./crowdstrike-collector*
@@ -147,7 +147,7 @@ stages:
       - pull_request:
           trigger_phrase: build-collectors
     commands:
-      - source $NVM_DIR/nvm.sh && nvm use 18
+      - source $NVM_DIR/nvm.sh && nvm use 20
       - ./build_collector.sh googlestackdriver
     env:
       ALPS_SERVICE_NAME: "paws-googlestackdriver-collector"
@@ -169,7 +169,7 @@ stages:
       ALPS_SERVICE_NAME: "paws-gsuite-collector"
       ALPS_SERVICE_VERSION: "1.2.53" #set the value from collector package json
     commands:
-      - source $NVM_DIR/nvm.sh && nvm use 18
+      - source $NVM_DIR/nvm.sh && nvm use 20
       - ./build_collector.sh gsuite
     outputs:
       file: ./gsuite-collector*
@@ -185,7 +185,7 @@ stages:
       - pull_request:
           trigger_phrase: build-collectors
     commands:
-      - source $NVM_DIR/nvm.sh && nvm use 18
+      - source $NVM_DIR/nvm.sh && nvm use 20
       - ./build_collector.sh mimecast
     env:
       ALPS_SERVICE_NAME: "paws-mimecast-collector"
@@ -207,7 +207,7 @@ stages:
       ALPS_SERVICE_NAME: "paws-o365-collector"
       ALPS_SERVICE_VERSION: "1.2.65" #set the value from collector package json
     commands:
-      - source $NVM_DIR/nvm.sh && nvm use 18
+      - source $NVM_DIR/nvm.sh && nvm use 20
       - ./build_collector.sh o365
     outputs:
       file: ./o365-collector*
@@ -223,7 +223,7 @@ stages:
       - pull_request:
           trigger_phrase: build-collectors
     commands:
-      - source $NVM_DIR/nvm.sh && nvm use 18
+      - source $NVM_DIR/nvm.sh && nvm use 20
       - ./build_collector.sh okta
     env:
       ALPS_SERVICE_NAME: "paws-okta-collector"
@@ -245,7 +245,7 @@ stages:
       ALPS_SERVICE_NAME: "paws-salesforce-collector"
       ALPS_SERVICE_VERSION: "1.1.54" #set the value from collector package json
     commands:
-      - source $NVM_DIR/nvm.sh && nvm use 18
+      - source $NVM_DIR/nvm.sh && nvm use 20
       - ./build_collector.sh salesforce
     outputs:
       file: ./salesforce-collector*
@@ -261,7 +261,7 @@ stages:
       - pull_request:
           trigger_phrase: build-collectors
     commands:
-      - source $NVM_DIR/nvm.sh && nvm use 18
+      - source $NVM_DIR/nvm.sh && nvm use 20
       - ./build_collector.sh sentinelone
     env:
       ALPS_SERVICE_NAME: "paws-sentinelone-collector"
@@ -283,7 +283,7 @@ stages:
       ALPS_SERVICE_NAME: "paws-sophos-collector"
       ALPS_SERVICE_VERSION: "1.0.51" #set the value from collector package json
     commands:
-      - source $NVM_DIR/nvm.sh && nvm use 18
+      - source $NVM_DIR/nvm.sh && nvm use 20
       - ./build_collector.sh sophos
     outputs:
       file: ./sophos-collector*
@@ -299,7 +299,7 @@ stages:
       - pull_request:
           trigger_phrase: build-collectors
     commands:
-      - source $NVM_DIR/nvm.sh && nvm use 18
+      - source $NVM_DIR/nvm.sh && nvm use 20
       - ./build_collector.sh sophossiem
     env:
       ALPS_SERVICE_NAME: "paws-sophossiem-collector"
@@ -315,7 +315,7 @@ stages:
     when:
       - tag: ['\d+.\d+.\d+']
     commands:
-      - source $NVM_DIR/nvm.sh && nvm use 18
+      - source $NVM_DIR/nvm.sh && nvm use 20
       - make package-all
       - zip -r artifact_folder.zip artifact_folder
     outputs:

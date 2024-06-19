@@ -1,6 +1,6 @@
 {
   "name": "@alertlogic/paws-collector",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "license": "MIT",
   "description": "Alert Logic AWS based API Poll Log Collector Library",
   "repository": {
@@ -21,28 +21,28 @@
     "rel": "npm publish --access=public"
   },
   "devDependencies": {
-    "@aws-sdk/client-cloudformation": "^3.423.0",
-    "@aws-sdk/client-cloudwatch": "^3.423.0",
-    "@aws-sdk/client-dynamodb": "^3.423.0",
-    "@aws-sdk/client-kms": "^3.423.0",
-    "@aws-sdk/client-lambda": "^3.423.0",
-    "@aws-sdk/client-s3": "^3.423.0",
-    "@aws-sdk/client-sqs": "^3.423.0",
-    "@aws-sdk/client-ssm": "^3.423.0",
+    "@aws-sdk/client-cloudformation": "^3.600.0",
+    "@aws-sdk/client-cloudwatch": "^3.600.0",
+    "@aws-sdk/client-dynamodb": "^3.600.0",
+    "@aws-sdk/client-kms": "^3.600.0",
+    "@aws-sdk/client-lambda": "^3.600.0",
+    "@aws-sdk/client-s3": "^3.600.0",
+    "@aws-sdk/client-sqs": "^3.600.0",
+    "@aws-sdk/client-ssm": "^3.600.0",
     "clone": "*",
     "jshint": "^2.13.6",
-    "mocha": "^10.2.0",
-    "nyc": "^15.1.0",
-    "rewire": "^6.0.0",
-    "sinon": "^15.2.0",
-    "yargs": "^17.6.2"
+    "mocha": "^10.4.0",
+    "nyc": "^17.0.0",
+    "rewire": "^7.0.0",
+    "sinon": "^18.0.0",
+    "yargs": "^17.7.2"
   },
   "dependencies": {
-    "@alertlogic/al-aws-collector-js": "4.1.25",
-    "async": "^3.2.4",
-    "datadog-lambda-js": "^6.85.0",
-    "debug": "^4.3.4",
-    "moment": "^2.29.4"
+    "@alertlogic/al-aws-collector-js": "4.1.26",
+    "async": "^3.2.5",
+    "datadog-lambda-js": "^9.112.0",
+    "debug": "^4.3.5",
+    "moment": "^2.30.1"
   },
   "author": "Alert Logic Inc."
 }
