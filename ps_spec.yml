@@ -100,6 +100,25 @@ stages:
     packagers:
       - basic
 
+  - name: build-collector-ciscomeraki
+    image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
+    compute_size: small_arm
+    when:
+      - pull_request:
+          trigger_phrase: build-collector-ciscomeraki
+      - pull_request:
+          trigger_phrase: build-collectors
+    commands:
+      - source $NVM_DIR/nvm.sh && nvm use 18
+      - ./build_collector.sh ciscomeraki
+    env:
+      ALPS_SERVICE_NAME: "paws-ciscomeraki-collector"
+      ALPS_SERVICE_VERSION: "1.0.0" #set the value from collector package json
+    outputs:
+      file: ./ciscomeraki-collector*
+    packagers:
+      - basic
+
   - name: build-collector-crowdstrike
     image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
     compute_size: small_arm

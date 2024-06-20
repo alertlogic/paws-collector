@@ -1,0 +1,15 @@
+{
+  "esversion": 8,
+  "shadow": "outer",
+  "undef": true,
+  "unused": "vars",
+  "node":  true,
+  "predef": [
+    "it",
+    "describe",
+    "before",
+    "after",
+    "beforeEach",
+    "afterEach"
+  ]
+}

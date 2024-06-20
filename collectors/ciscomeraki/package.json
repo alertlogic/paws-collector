@@ -1,0 +1,36 @@
+{
+  "name": "ciscomeraki-collector",
+  "version": "1.0.0",
+  "description": "Alert Logic AWS based Cisco Meraki Log Collector",
+  "repository": {},
+  "private": true,
+  "scripts": {
+    "lint": "jshint --exclude \"./node_modules/*\" **/*.js",
+    "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=text mocha --colors"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-cloudformation": "^3.454.0",
+    "@aws-sdk/client-cloudwatch": "^3.454.0",
+    "@aws-sdk/client-dynamodb": "^3.454.0",
+    "@aws-sdk/client-kms": "^3.454.0",
+    "@aws-sdk/client-lambda": "^3.454.0",
+    "@aws-sdk/client-s3": "^3.456.0",
+    "@aws-sdk/client-sqs": "^3.454.0",
+    "@aws-sdk/client-ssm": "^3.454.0",
+    "jshint": "^2.9.5",
+    "mocha": "^10.2.0",
+    "mocha-jenkins-reporter": "^0.4.2",
+    "nyc": "^15.1.0",
+    "rewire": "^7.0.0",
+    "sinon": "^17.0.0"
+  },
+  "dependencies": {
+    "@alertlogic/al-collector-js": "3.0.10",
+    "@alertlogic/paws-collector": "2.2.1",
+    "async": "^3.2.4",
+    "debug": "^4.3.4",
+    "moment": "2.29.4"
+
+  },
+  "author": "Alert Logic Inc."
+}
