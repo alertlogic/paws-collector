@@ -32,14 +32,20 @@ stages:
 
         npm install
 
-        if [ "$WORDCOUNT" -eq 0 ]; then
+        if [ $(git tag -l "$PKGVERSION") ]; then
+          echo "Skip tagging $PKGNAME $PKGVERSION version already exist"
+        else
+          git tag -a $PKGVERSION -m "$PKGNAME release $PKGVERSION" HEAD
+          if [ "$WORDCOUNT" -eq 0 ]; then
             make test-all
             echo "PUBLISHING $PKGNAME $PKGVERSION"
             npm run lint
+            git push origin $PKGVERSION
             npm publish --access public
           else
            echo "NOT PUBLISHING $PKGNAME $PKGVERSION"
           fi
+        fi
       - echo done
     outputs:
       file: ./.ps_outputs/*
@@ -333,7 +339,8 @@ stages:
     image: 422372788747.dkr.ecr.us-east-1.amazonaws.com/al-paws-collector-pipeline:latest
     compute_size: small_arm
     when:
-      - tag: ['\d+.\d+.\d+']
+      - pull_request:
+          trigger_phrase: build-all-collectors
     commands:
       - source $NVM_DIR/nvm.sh && nvm use 20
       - make package-all
