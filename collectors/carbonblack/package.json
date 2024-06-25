@@ -1,6 +1,6 @@
 {
   "name": "carbonblack-collector",
-  "version": "1.0.53",
+  "version": "1.0.54",
   "description": "Alert Logic AWS based Carbonblack Log Collector",
   "repository": {},
   "private": true,
@@ -9,28 +9,28 @@
     "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=text mocha --colors"
   },
   "devDependencies": {
-    "@aws-sdk/client-cloudformation": "^3.454.0",
-    "@aws-sdk/client-cloudwatch": "^3.454.0",
-    "@aws-sdk/client-dynamodb": "^3.454.0",
-    "@aws-sdk/client-kms": "^3.454.0",
-    "@aws-sdk/client-lambda": "^3.454.0",
-    "@aws-sdk/client-s3": "^3.456.0",
-    "@aws-sdk/client-sqs": "^3.454.0",
-    "@aws-sdk/client-ssm": "^3.454.0",
-    "jshint": "^2.9.5",
-    "mocha": "^10.2.0",
-    "mocha-jenkins-reporter": "^0.4.2",
-    "nyc": "^15.1.0",
+    "@aws-sdk/client-cloudformation": "^3.600.0",
+    "@aws-sdk/client-cloudwatch": "^3.600.0",
+    "@aws-sdk/client-dynamodb": "^3.602.0",
+    "@aws-sdk/client-kms": "^3.600.0",
+    "@aws-sdk/client-lambda": "^3.600.0",
+    "@aws-sdk/client-s3": "^3.600.0",
+    "@aws-sdk/client-sqs": "^3.600.0",
+    "@aws-sdk/client-ssm": "^3.600.0",
+    "jshint": "^2.13.6",
+    "mocha": "^10.4.0",
+    "mocha-jenkins-reporter": "^0.4.8",
+    "nyc": "^17.0.0",
     "rewire": "^7.0.0",
-    "sinon": "^17.0.0"
+    "sinon": "^18.0.0"
   },
   "dependencies": {
-    "@alertlogic/al-collector-js": "3.0.10",
-    "@alertlogic/paws-collector": "2.2.1",
-    "async": "^3.2.4",
-    "debug": "^4.3.4",
-    "moment": "2.29.4",
-    "test": "^3.2.1"
+    "@alertlogic/al-collector-js": "3.0.11",
+    "@alertlogic/paws-collector": "2.2.3",
+    "async": "^3.2.5",
+    "debug": "^4.3.5",
+    "moment": "2.30.1",
+    "test": "^3.3.0"
   },
   "author": "Alert Logic Inc."
 }

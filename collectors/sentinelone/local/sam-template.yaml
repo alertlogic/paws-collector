@@ -32,7 +32,7 @@ Resources:
           paws_type_name:
           ssm_direct:
       CodeUri: 
-      Runtime: nodejs18.x
+      Runtime: nodejs20.x
       Handler: index.handler
       Timeout: 300 
       MemorySize: 1024
