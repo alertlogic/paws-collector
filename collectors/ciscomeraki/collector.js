@@ -118,7 +118,7 @@ class CiscomerakiCollector extends PawsCollector {
                         await merakiClient.uploadNetworksListInS3Bucket(keyValue, networks);
                     });
                 } 
-            } else if (networksFromS3 && collector._isFileMissingError(networksFromS3.code)) {
+            } else if (networksFromS3 && collector._isFileMissingError(networksFromS3.Code)) {
                 AlLogger.debug(`CMRI0000026 networks ${JSON.stringify(params)} ${JSON.stringify(networks)}`);
                 await merakiClient.uploadNetworksListInS3Bucket(keyValue, networks);
             }
