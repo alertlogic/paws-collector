@@ -15,17 +15,17 @@ const { CloudWatch } = require("@aws-sdk/client-cloudwatch"),
 var responseStub = {};
 let listEvent;
 let listAlert;
-let authenticationT;
+let mockAuthenticationObject;
 
 function setAlServiceStub() {
-    authenticationT = sinon.stub(auth, 'fromJSON').callsFake(
+    mockAuthenticationObject = sinon.stub(auth, 'fromJSON').callsFake(
         function fakeFn(path) {
             return {};
         });
 }
 
 function restoreAlServiceStub() {
-    authenticationT.restore();
+    mockAuthenticationObject.restore();
 }
 describe('Unit Tests', function () {
 

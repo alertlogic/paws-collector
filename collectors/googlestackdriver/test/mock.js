@@ -38,14 +38,15 @@ const LOG_EVENT_JSON_PAYLOAD = {
     "receiveTimestamp": "2024-06-19T11:35:55.669107201Z"
 };
 
-const LOG_EVENT_TEXT_PAYLOAD = { labels: {},
+const LOG_EVENT_TEXT_PAYLOAD = {
+    labels: {},
     insertId: '-qwnqhydhp96',
     httpRequest: null,
     resource: { labels: [Object], type: 'project' },
     timestamp: { seconds: '1577807973', nanos: 776000000 },
     severity: 'NOTICE',
     logName:
-     'projects/joe-test-8675309/logs/cloudaudit.googleapis.com%2Factivity',
+        'projects/joe-test-8675309/logs/cloudaudit.googleapis.com%2Factivity',
     operation: null,
     trace: '',
     sourceLocation: null,
@@ -53,60 +54,61 @@ const LOG_EVENT_TEXT_PAYLOAD = { labels: {},
     metadata: null,
     spanId: '',
     traceSampled: false,
-    textPayload:"An arbitrary payload string",
-    payload: 'textPayload' };
+    textPayload: "An arbitrary payload string",
+    payload: 'textPayload'
+};
 
-const LOG_EVENT_PROTO_PAYLOAD =  {
+const LOG_EVENT_PROTO_PAYLOAD = {
     "protoPayload": {
-      "@type": "type.googleapis.com/google.cloud.audit.AuditLog",
-      "status": {},
-      "authenticationInfo": {
-        "principalEmail": "imran@imranalisyed.com",
-        "principalSubject": "user:imran@imranalisyed.com"
-      },
-      "requestMetadata": {
-        "callerIp": "117.247.121.80",
-        "callerSuppliedUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36,gzip(gfe)",
-        "requestAttributes": {
-          "time": "2024-04-02T08:17:37.461922381Z",
-          "auth": {}
+        "@type": "type.googleapis.com/google.cloud.audit.AuditLog",
+        "status": {},
+        "authenticationInfo": {
+            "principalEmail": "imran@imranalisyed.com",
+            "principalSubject": "user:imran@imranalisyed.com"
         },
-        "destinationAttributes": {}
-      },
-      "serviceName": "iam.googleapis.com",
-      "methodName": "google.iam.admin.v1.DisableServiceAccount",
-      "authorizationInfo": [
-        {
-          "resource": "projects/-/serviceAccounts/109840067714345269337",
-          "permission": "iam.serviceAccounts.disable",
-          "granted": true,
-          "resourceAttributes": {
-            "name": "projects/-/serviceAccounts/109840067714345269337"
-          },
-          "permissionType": "ADMIN_WRITE"
-        }
-      ],
-      "resourceName": "projects/-/serviceAccounts/109840067714345269337",
-      "request": {
-        "@type": "type.googleapis.com/google.iam.admin.v1.DisableServiceAccountRequest",
-        "name": "projects/imran-49253/serviceAccounts/109840067714345269337"
-      },
-      "response": {"@type": "type.googleapis.com/google.protobuf.Empty"}
+        "requestMetadata": {
+            "callerIp": "117.247.121.80",
+            "callerSuppliedUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36,gzip(gfe)",
+            "requestAttributes": {
+                "time": "2024-04-02T08:17:37.461922381Z",
+                "auth": {}
+            },
+            "destinationAttributes": {}
+        },
+        "serviceName": "iam.googleapis.com",
+        "methodName": "google.iam.admin.v1.DisableServiceAccount",
+        "authorizationInfo": [
+            {
+                "resource": "projects/-/serviceAccounts/109840067714345269337",
+                "permission": "iam.serviceAccounts.disable",
+                "granted": true,
+                "resourceAttributes": {
+                    "name": "projects/-/serviceAccounts/109840067714345269337"
+                },
+                "permissionType": "ADMIN_WRITE"
+            }
+        ],
+        "resourceName": "projects/-/serviceAccounts/109840067714345269337",
+        "request": {
+            "@type": "type.googleapis.com/google.iam.admin.v1.DisableServiceAccountRequest",
+            "name": "projects/imran-49253/serviceAccounts/109840067714345269337"
+        },
+        "response": { "@type": "type.googleapis.com/google.protobuf.Empty" }
     },
     "insertId": "5010heeipdi5",
     "resource": {
-      "type": "service_account",
-      "labels": {
-        "project_id": "imran-49253",
-        "unique_id": "109840067714345269337",
-        "email_id": "im-service-account-private@imran-49253.iam.gserviceaccount.com"
-      }
+        "type": "service_account",
+        "labels": {
+            "project_id": "imran-49253",
+            "unique_id": "109840067714345269337",
+            "email_id": "im-service-account-private@imran-49253.iam.gserviceaccount.com"
+        }
     },
     "timestamp": "2024-04-02T08:17:37.433885372Z",
     "severity": "NOTICE",
     "logName": "projects/imran-49253/logs/cloudaudit.googleapis.com%2Factivity",
     "receiveTimestamp": "2024-04-02T08:17:37.896768264Z"
-  };
+};
 
 const LOG_EVENT_PROTO_PAYLOAD2 =
 {
