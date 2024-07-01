@@ -6,7 +6,7 @@ Resources:
   LocalLambda:
     Type: AWS::Serverless::Function
     Properties:
-      KmsKeyArn: arn:aws:kms:us-east-1:352283894008:key/cdda86d5-615b-4dcc-9319-77ab34510473
+      KmsKeyArn: 
       Environment:
         Variables:
           AWS_LAMBDA_FUNCTION_NAME:
@@ -25,6 +25,7 @@ Resources:
           paws_api_client_id:
           paws_max_pages_per_invocation:
           paws_collector_param_string_2:
+          paws_collector_param_string_1:
           paws_endpoint:
           paws_extension:
           collector_id:
@@ -33,8 +34,9 @@ Resources:
           customer_id:
           paws_type_name:
           ssm_direct:
+          collector_status_api: api.product.dev.alertlogic.com
       CodeUri: 
       Runtime: nodejs20.x
       Handler: index.handler
-      Timeout: 60 
+      Timeout: 600
       MemorySize: 1024

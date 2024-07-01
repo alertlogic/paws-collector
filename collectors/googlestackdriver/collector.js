@@ -14,35 +14,36 @@ const PawsCollector = require('@alertlogic/paws-collector').PawsCollector;
 const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNextCollectionInterval;
 const parse = require('@alertlogic/al-collector-js').Parse;
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
-const logging = require('@google-cloud/logging');
 const packageJson = require('./package.json');
-const protoFiles = require('google-proto-files');
+const { auth } = require("google-auth-library");
+const { google } = require("googleapis");
 
 const API_THROTTLING_ERROR = 8;
 const API_THROTTLING_STATUS_CODE = 429;
 const MAX_POLL_INTERVAL = 900;
 const MAX_PAGE_SIZE = 1000;
-const AUDIT_PAYLOAD_TYPE_URL = 'type.googleapis.com/google.cloud.audit.AuditLog';
+const SCOPES = [
+    'https://www.googleapis.com/auth/cloud-platform',
+    'https://www.googleapis.com/auth/cloud-platform.read-only',
+    'https://www.googleapis.com/auth/logging.admin',
+    'https://www.googleapis.com/auth/logging.read',
+    'https://www.googleapis.com/auth/logging.write',
+];
 
 const typeIdPaths = [
-    {path: ['jsonPayload', 'fields', 'event_type', 'stringValue']},
-    {path: ['protoPayload', 'type_url']},
+    {path: ['jsonPayload']},
+    {path: ['protoPayload', '@type']},
     {path: ['payload']}
 ];
+
+const tsPaths = [{ path: ["timestamp"] }];
 
 class GooglestackdriverCollector extends PawsCollector {
 
     constructor(context, creds){
         super(context, creds, packageJson.version);
-        this._initAuditLogDecoder();
     }
 
-    _initAuditLogDecoder() {
-        const protoPath = protoFiles.getProtoPath('cloud', 'audit', 'audit_log.proto');
-        const root = protoFiles.loadSync(protoPath);
-        const auditLogDecoder = root.lookupType('google.cloud.audit.AuditLog');
-        this._auditLogDecoder = auditLogDecoder;
-    }
     
     pawsInitCollectionState(event, callback) {
         const startTs = process.env.paws_collection_start_ts ?
@@ -79,9 +80,18 @@ class GooglestackdriverCollector extends PawsCollector {
         if (!state.stream) {
             state = collector.setStreamToCollectionState(state);
         }
+        const keysEnvVar = collector.secret;
+        if (!keysEnvVar) {
+            throw new Error("The $CREDS environment variable was not found!");
+        }
         // Start API client
-        const client = new logging.v2.LoggingServiceV2Client({
-            credentials: JSON.parse(collector.secret)
+        const keys = JSON.parse(keysEnvVar);
+        const client = auth.fromJSON(keys);
+        client.subject = collector.clientId;
+        client.scopes = SCOPES;
+        const logging = google.logging({
+            version: 'v2',
+            auth: client,
         });
 
 
@@ -92,49 +102,46 @@ class GooglestackdriverCollector extends PawsCollector {
 timestamp < "${state.until}"`;
 
         let pagesRetireved = 0;
-        const options = {autoPaginate: false};
-
+       
         const paginationCallback = (result, acc = []) => {
-            AlLogger.info(`Getting page: ${pagesRetireved + 1} Logs retrieved: ${result[0].length}`);
+            let logs = result.data.entries || [];
+            AlLogger.info(`Getting page: ${pagesRetireved + 1} Logs retrieved: ${logs.length}`);
             pagesRetireved++;
-            //decode the protoPayload if it's an AuditLog message
-            let logs = result[0].map(function (logEntry) {
-                return collector.decodeProtoPayload(logEntry);
-            });
-
-            const nextPage = result[1];
+            const nextPage = { ...params, pageToken: result.data.nextPageToken };
             const newAcc = [...acc, ...logs];
             AlLogger.info(`Total Logs ${newAcc.length}`);
 
-            if(nextPage && pagesRetireved < process.env.paws_max_pages_per_invocation){
+            if (nextPage.pageToken && pagesRetireved < process.env.paws_max_pages_per_invocation) {
 
-                return client.listLogEntries(nextPage, options)
-                    .then(res => paginationCallback(res, newAcc));
-            } else{
-                return {logs: newAcc, nextPage};
+                return logging.entries.list(params)
+                    .then(res => {
+                        return paginationCallback(res, newAcc)
+                    });
+            } else {
+                return { logs: newAcc, nextPage };
             }
         };
 
         const pageSize = state.pageSize > 0 ? state.pageSize : MAX_PAGE_SIZE;
         let params = state.nextPage ?
-            state.nextPage:
+            state.nextPage :
             {
                 filter,
                 pageSize: pageSize,
-                resourceNames:[state.stream]
+                resourceNames: [state.stream]
             };
 
-        client.listLogEntries(params, options)
+        logging.entries.list(params)
             .then(paginationCallback)
-            .then(({logs, nextPage}) => {
+            .then(({ logs, nextPage }) => {
+
                 const newState = collector._getNextCollectionState(state, nextPage);
                 AlLogger.info(`GSTA000002 Next collection in ${newState.poll_interval_sec} seconds`);
 
                 return callback(null, logs, newState, newState.poll_interval_sec);
             })
             .catch(err => {
-                AlLogger.error(`GSTA000003 err in collection ${JSON.stringify(err.details)}`);
-
+                    AlLogger.error(`GSTA000003 err in collection ${JSON.stringify(err)}`);
                 // Stackdriver Logging api has some rate limits that we might run into.
                 // If we run inot a rate limit error, instead of returning the error,
                 // we return the state back to the queue with an additional second added, up to 15 min
@@ -147,12 +154,11 @@ timestamp < "${state.until}"`;
                     const interval = state.poll_interval_sec < 60 ? 60 : state.poll_interval_sec;
                     const nextPollInterval = state.poll_interval_sec < MAX_POLL_INTERVAL ?
                         interval + 60 : MAX_POLL_INTERVAL;
-            
-                    if (state.nextPage && state.nextPage.pageSize) {
+                    if (state.nextPage && state.nextPage.pageToken && state.nextPage.pageSize) {
                         state.nextPage.pageSize = Math.ceil(state.nextPage.pageSize / 2);
                         AlLogger.debug(`Throttling error with nextPage: ${err.message}. Retrying with smaller pageSize.`);
                     } else {
-                        if (currentInterval <= 15 && err.details.includes('Received message larger than max')) {
+                        if (currentInterval <= 15 && err.message && err.message.indexOf('Received message larger than max') >= 0) {
                             state.pageSize = state.pageSize ? Math.ceil(state.pageSize / 2) : Math.ceil(params.pageSize / 2);
                             AlLogger.debug(`Throttling error with no nextPage and large message: ${err.message}. Reducing pageSize.`);
                         } else {
@@ -160,13 +166,13 @@ timestamp < "${state.until}"`;
                             AlLogger.debug(`Throttling error with no nextPage: ${err.message}. Reducing time range.`);
                         }
                     }
-                    const backOffState = Object.assign({}, state, {poll_interval_sec:nextPollInterval});
+                    const backOffState = Object.assign({}, state, { poll_interval_sec: nextPollInterval });
                     collector.reportApiThrottling(function () {
                         return callback(null, [], backOffState, nextPollInterval);
                     });
                 } else {
-                     // set errorCode if not available in error object to showcase client error on DDMetrics
-                     if (err.code) {
+                    // set errorCode if not available in error object to showcase client error on DDMetrics
+                    if (err.code) {
                         err.errorCode = err.code;
                     }
                     return callback(err);
@@ -174,19 +180,6 @@ timestamp < "${state.until}"`;
             });
     }
 
-    decodeProtoPayload(logEntry) {
-        let collector = this;
-        if (logEntry.protoPayload && (logEntry.protoPayload.type_url === AUDIT_PAYLOAD_TYPE_URL)) {
-            try {
-                const buffer = Buffer.from(logEntry.protoPayload.value);
-                let decodedData = collector._auditLogDecoder.decode(buffer);
-                logEntry.protoPayload.value = decodedData.toJSON();
-            } catch(error) {
-                AlLogger.error(`Error decoding data ${error}`);
-            }
-        }
-        return logEntry;
-    }
 
     _getNextCollectionState(curState, nextPage) {
         // Reset the page size for the next collection if it's less than the maximum
@@ -194,7 +187,7 @@ timestamp < "${state.until}"`;
 
         const { stream, since, until } = curState;
 
-        if (nextPage) {
+        if (nextPage && nextPage.pageToken) {
             // Case: Continue with the next page
             return {
                 since,
@@ -222,15 +215,14 @@ timestamp < "${state.until}"`;
     // TODO: probably need to actually decode hte protobuf payload on these logs
     pawsFormatLog(msg) {
         let collector = this;
-
-        const ts = msg.timestamp ? msg.timestamp : {seconds: Date.now() / 1000};
+        const ts = parse.getMsgTs(msg, tsPaths);
 
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
 
         let formattedMsg = {
             // TODO: figure out if this TS is always a string or if they API is goofy...
             hostname: collector.collector_id,
-            messageTs: parseInt(ts.seconds),
+            messageTs: ts.sec,
             priority: 11,
             progName: 'GooglestackdriverCollector',
             message: JSON.stringify(msg),
