@@ -46,7 +46,7 @@ function calcNextCollectionInterval(strategy, curUntilMoment, pollInterval) {
             }
             break;
         case 'hour-cap':
-            if (hoursDiff > 1) {
+            if (hoursDiff >= 1) {
                 nextUntilMoment = moment(nextSinceMoment).add(1, 'hours');
             }
             else {
