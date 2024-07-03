@@ -10,18 +10,18 @@ const googlestackdriverMock = require('./mock');
 const logEntriesService = google.logging('v2');
 var GooglestackdriverCollector = require('../collector').GooglestackdriverCollector;
 const { auth } = require("google-auth-library");
-let authenticationT;
+let mockauthenticationObject;
 let mocklogEntriesServiceObject;
 
 function setAlServiceStub() {
-    authenticationT = sinon.stub(auth, 'fromJSON').callsFake(
+    mockauthenticationObject = sinon.stub(auth, 'fromJSON').callsFake(
         function fakeFn(path) {
             return {};
         });
 }
 
 function restoreAlServiceStub() {
-    authenticationT.restore();
+    mockauthenticationObject.restore();
 }
 var logginClientStub = {};
 
