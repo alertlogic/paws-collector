@@ -1,42 +1,60 @@
 const assert = require('assert');
 const sinon = require('sinon');
 const moment = require('moment');
-const logging = require('@google-cloud/logging');
+const { google } = require('googleapis');
 const { CloudWatch } = require("@aws-sdk/client-cloudwatch"),
     { KMS } = require("@aws-sdk/client-kms"),
     { SSM } = require("@aws-sdk/client-ssm");
 
 const googlestackdriverMock = require('./mock');
+const logEntriesService = google.logging('v2');
 var GooglestackdriverCollector = require('../collector').GooglestackdriverCollector;
+const { auth } = require("google-auth-library");
+let mockauthenticationObject;
+let mocklogEntriesServiceObject;
 
+function setAlServiceStub() {
+    mockauthenticationObject = sinon.stub(auth, 'fromJSON').callsFake(
+        function fakeFn(path) {
+            return {};
+        });
+}
+
+function restoreAlServiceStub() {
+    mockauthenticationObject.restore();
+}
 var logginClientStub = {};
 
 function setLoggingClientStub(){
-    logginClientStub = sinon.stub(logging.v2.LoggingServiceV2Client.prototype, 'listLogEntries');
-    
+    logginClientStub = sinon.stub(logEntriesService.entries, 'list');
+
     logginClientStub.onCall(0).callsFake(() => {
         return new Promise((res, rej) => {
-            res([
-                [
-                    googlestackdriverMock.LOG_EVENT_PROTO_PAYLOAD,
-                    googlestackdriverMock.LOG_EVENT_TEXT_PAYLOAD,
-                    googlestackdriverMock.LOG_EVENT_JSON_PAYLOAD
-                ],
-                'http://somenextpage.com'
-            ]);
+            res({
+                data: {
+                    entries: [
+                        googlestackdriverMock.LOG_EVENT_PROTO_PAYLOAD2,
+                        googlestackdriverMock.LOG_EVENT_TEXT_PAYLOAD,
+                        googlestackdriverMock.LOG_EVENT_JSON_PAYLOAD
+                    ],
+                    nextPageToken: 'http://somenextpage.com'
+                }
+            });
         });
     });
 
     logginClientStub.onCall(1).callsFake(() => {
         return new Promise((res, rej) => {
-            res([
-                [
-                    googlestackdriverMock.LOG_EVENT_PROTO_PAYLOAD,
-                    googlestackdriverMock.LOG_EVENT_TEXT_PAYLOAD,
-                    googlestackdriverMock.LOG_EVENT_JSON_PAYLOAD
-                ],
-                null
-            ]);
+            res({
+                data: {
+                    entries: [
+                        googlestackdriverMock.LOG_EVENT_PROTO_PAYLOAD,
+                        googlestackdriverMock.LOG_EVENT_TEXT_PAYLOAD,
+                        googlestackdriverMock.LOG_EVENT_JSON_PAYLOAD
+                    ],
+                    nextPageToken: null
+                }
+            });
         });
     });
 }
@@ -58,9 +76,17 @@ describe('Unit Tests', function() {
             };
             return callback(null, data);
         });
+        logEntriesService.entries = googlestackdriverMock.MOCK_ENTRIES;
+        mocklogEntriesServiceObject = sinon.stub(google, 'logging').callsFake(
+            function fakeFn(path) {
+                return logEntriesService;
+            });
+        setAlServiceStub();
     });
 
     afterEach(function(){
+        restoreAlServiceStub();
+        mocklogEntriesServiceObject.restore();
         KMS.prototype.decrypt.restore();
         SSM.prototype.getParameter.restore();
     });
@@ -138,8 +164,7 @@ describe('Unit Tests', function() {
         });
 
         it('Get Logs Cloudy', function(done) {
-            logginClientStub = sinon.stub(logging.v2.LoggingServiceV2Client.prototype, 'listLogEntries');
-            
+            logginClientStub = sinon.stub(logEntriesService.entries, 'list');
             logginClientStub.onCall(0).callsFake(() => {
                 return new Promise((res, rej) => {
                     rej("Here is an error");
@@ -164,8 +189,7 @@ describe('Unit Tests', function() {
         });
 
         it('Get Logs check API Throttling', function(done) {
-            logginClientStub = sinon.stub(logging.v2.LoggingServiceV2Client.prototype, 'listLogEntries');
-            
+            logginClientStub = sinon.stub(logEntriesService.entries, 'list');
             logginClientStub.onCall(0).callsFake(() => {
                 return new Promise((res, rej) => {
                     rej({code:8,
@@ -197,9 +221,8 @@ describe('Unit Tests', function() {
         });
 
        it(`Get Logs check API Throttling when going through pagination then check if it reduce page size and able to fetch the data`, function(done) {
-            logginClientStub = sinon.stub(logging.v2.LoggingServiceV2Client.prototype, 'listLogEntries');
-            
-            logginClientStub.onCall(0).callsFake(() => {
+        logginClientStub = sinon.stub(logEntriesService.entries, 'list');
+                    logginClientStub.onCall(0).callsFake(() => {
                 return new Promise((res, rej) => {
                     rej({code: 8,
                         details: 'Received message larger than max (4776477 vs. 4194304)'});
@@ -220,7 +243,7 @@ describe('Unit Tests', function() {
                 var reportSpy = sinon.spy(collector, 'reportApiThrottling');
                 let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params, callback) => callback());
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
-                    assert.equal(moment(newState.until).diff(newState.since, 'seconds'), 15); 
+                    assert.equal(moment(newState.until).diff(newState.since, 'seconds'), 15);
                     assert.equal(true, reportSpy.calledOnce);
                     assert.equal(newState.nextPage.pageSize, 500);
                     assert.equal(logs.length, 0);
@@ -231,14 +254,13 @@ describe('Unit Tests', function() {
                 });
             });
         });
-
+      
         it(`Get Logs check API Throttling with 'Received message larger than max (4776477 vs. 4194304)' for time interval less than 15 sec then check with reduce page size able to fetch the data`, function(done) {
-            logginClientStub = sinon.stub(logging.v2.LoggingServiceV2Client.prototype, 'listLogEntries');
-            
+            logginClientStub = sinon.stub(logEntriesService.entries, 'list');            
             logginClientStub.onCall(0).callsFake(() => {
                 return new Promise((res, rej) => {
                     rej({code: 8,
-                        details: 'Received message larger than max (4776477 vs. 4194304)'});
+                        message: 'Received message larger than max (4776477 vs. 4194304)'});
                 });
             });
 
@@ -267,29 +289,33 @@ describe('Unit Tests', function() {
         });
 
         it('Stops paginiating at the pagination limit', function(done) {
-            logginClientStub = sinon.stub(logging.v2.LoggingServiceV2Client.prototype, 'listLogEntries');
-            
-            const nextPage = { pageToken: 'http://somenextpage.com', "pageSize": 1000, "resourceNames": ["projects/a-fake-project"] };
+            logginClientStub = sinon.stub(logEntriesService.entries, 'list');
+            const startDate = moment().subtract(3, 'days');
+            let since = startDate.toISOString();
+            let until = startDate.add(2, 'days').toISOString();
+            const filter = `timestamp >= "${since}"
+timestamp < "${until}"`;
+            let nextPage = { pageToken: 'http://somenextpage.com', "pageSize": 1000, "resourceNames": ["projects/a-fake-project"], filter };
+           
             logginClientStub.callsFake(() => {
                 return new Promise((res, rej) => {
-                    res([
-                        [
-                            googlestackdriverMock.LOG_EVENT_PROTO_PAYLOAD
-                        ],
-                        nextPage
-                    ]);
+                    res({
+                        data: {
+                            entries: [googlestackdriverMock.LOG_EVENT_PROTO_PAYLOAD2],
+                            nextPageToken: 'http://somenextpage.com'
+                        }
+                        });
                 });
             });
             GooglestackdriverCollector.load().then(function(creds) {
                 var collector = new GooglestackdriverCollector(ctx, creds);
-                const startDate = moment().subtract(3, 'days');
                 const curState = {
                     stream: "projects/a-fake-project",
-                    since: startDate.toISOString(),
-                    until: startDate.add(2, 'days').toISOString(),
+                    since,
+                    until,
                     poll_interval_sec: 1
                 };
-
+                
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
                     assert.ok(logginClientStub.calledTwice);
                     assert.equal(logs.length, parseInt(process.env.paws_max_pages_per_invocation));
@@ -301,7 +327,7 @@ describe('Unit Tests', function() {
         });
 
         it('Get Logs check client error', function(done) {
-            logginClientStub = sinon.stub(logging.v2.LoggingServiceV2Client.prototype, 'listLogEntries');
+            logginClientStub = sinon.stub(logEntriesService.entries, 'list');
             
             logginClientStub.onCall(0).callsFake(() => {
                 return new Promise((res, rej) => {
@@ -449,9 +475,7 @@ describe('Unit Tests', function() {
                     fmt.messageTypeId,
                     googlestackdriverMock.
                         LOG_EVENT_JSON_PAYLOAD.
-                        jsonPayload.
-                        fields.
-                        event_type.stringValue
+                        jsonPayload
                 );
                 done();
             });
@@ -501,11 +525,10 @@ describe('Unit Tests', function() {
                     fmt.messageTypeId,
                     googlestackdriverMock.
                         LOG_EVENT_PROTO_PAYLOAD.
-                        protoPayload.
-                        type_url
+                        protoPayload['@type']
                 );
                 done();
             });
         });
     });
-});
+    });
