@@ -122,7 +122,7 @@ class CiscoduoCollector extends PawsCollector {
                 if (error.code && error.code === API_THROTTLING_ERROR) {
                     state.poll_interval_sec = state.poll_interval_sec < MAX_POLL_INTERVAL ?
                     state.poll_interval_sec + POLL_INTERVAL_SECS : MAX_POLL_INTERVAL;
-                    AlLogger.warn(`CDUO000003 API Request Limit Exceeded`, error);
+                    AlLogger.warn(`CDUO000003 API Request Limit Exceeded ${JSON.stringify(error)}`);
                     collector.reportApiThrottling(function () {
                         return callback(null, [], state, state.poll_interval_sec);
                     });
@@ -140,9 +140,9 @@ class CiscoduoCollector extends PawsCollector {
         if (curState.stream === Authentication) {
 
             const untilMoment = moment(parseInt(curState.until));
-             // Used hour-cap instead of making api call for 1 min interval, may help to reduce throtling issue.
+            // As Cisco duo api allows one call per minute, we used an hour cap instead of making API calls for 1-minute intervals. This will help reduce collection delay and throttling.
             const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-cap', untilMoment, this.pollInterval);
-            const nextPollIntervalSec = nextPollInterval >= POLL_INTERVAL_SECS ? nextPollInterval : POLL_INTERVAL_SECS * JSON.parse(process.env.collector_streams).length;
+            const nextPollIntervalSec = nextPollInterval >= POLL_INTERVAL_SECS ? nextPollInterval : POLL_INTERVAL_SECS;
             return {
                 stream: curState.stream,
                 since: nextSinceMoment.valueOf(),
