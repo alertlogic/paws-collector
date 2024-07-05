@@ -120,7 +120,7 @@ stages:
       - ./build_collector.sh ciscoduo
     env:
       ALPS_SERVICE_NAME: "paws-ciscoduo-collector"
-      ALPS_SERVICE_VERSION: "1.0.52" #set the value from collector package json
+      ALPS_SERVICE_VERSION: "1.0.53" #set the value from collector package json
     outputs:
       file: ./ciscoduo-collector*
     packagers:
