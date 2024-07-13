@@ -107,13 +107,15 @@ timestamp < "${state.until}"`;
             let logs = result.data.entries || [];
             AlLogger.info(`Getting page: ${pagesRetireved + 1} Logs retrieved: ${logs.length}`);
             pagesRetireved++;
-            const nextPage = { ...params, pageToken: result.data.nextPageToken };
+            const nextPageToken = result.data && result.data.nextPageToken ? result.data.nextPageToken : null;
+            let nextPage;
+            if (nextPageToken) {
+                nextPage = { ...params, filter: filter, pageToken: nextPageToken };
+            } 
             const newAcc = [...acc, ...logs];
             AlLogger.info(`Total Logs ${newAcc.length}`);
-
-            if (nextPage.pageToken && pagesRetireved < process.env.paws_max_pages_per_invocation) {
-
-                return logging.entries.list(params)
+            if (nextPage && nextPage.pageToken && pagesRetireved < process.env.paws_max_pages_per_invocation) {
+                return logging.entries.list(nextPage)
                     .then(res => {
                         return paginationCallback(res, newAcc)
                     });
@@ -123,7 +125,7 @@ timestamp < "${state.until}"`;
         };
 
         const pageSize = state.pageSize > 0 ? state.pageSize : MAX_PAGE_SIZE;
-        let params = state.nextPage ?
+        let params = state.nextPage && state.nextPage.pageToken ?
             state.nextPage :
             {
                 filter,
@@ -134,10 +136,9 @@ timestamp < "${state.until}"`;
         logging.entries.list(params)
             .then(paginationCallback)
             .then(({ logs, nextPage }) => {
-
                 const newState = collector._getNextCollectionState(state, nextPage);
+                AlLogger.debug(`GSTA000012 NextCollectionState ${JSON.stringify(newState)}`);
                 AlLogger.info(`GSTA000002 Next collection in ${newState.poll_interval_sec} seconds`);
-
                 return callback(null, logs, newState, newState.poll_interval_sec);
             })
             .catch(err => {
