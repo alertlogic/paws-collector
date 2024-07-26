@@ -27,6 +27,9 @@ const {
       {
           SSM
       } = require("@aws-sdk/client-ssm");
+const { NodeHttpHandler } = require("@smithy/node-http-handler");
+const http = require("http");
+const https = require("https");
 const fs = require('fs');
 const moment = require('moment');
 const ddLambda = require('datadog-lambda-js');
@@ -52,10 +55,23 @@ const ERROR_CODE_COMPLETED_STATE = 'COMPLETED_STATE';
 const SQS_VISIBILITY_TIMEOUT = 900;
 const DDB_TTL_DAYS = 14;
 const DEDUP_LOG_TTL_SECONDS = 86400;
-const DDB_OPTIONS = {
-    maxRetries: 10,
-    ConsistentRead: true
+let maxSocket = process.env.maxSocket ? parseInt(process.env.maxSocket, 10) : 100;
+
+const agent = {
+    maxSockets: maxSocket,
+    keepAlive: true
 };
+
+// Configure the NodeHttpHandler with the custom agents
+const nodeHttpHandler = new NodeHttpHandler({
+    httpAgent: new http.Agent(agent),
+    httpsAgent: new https.Agent(agent)
+});
+
+const DDB_OPTIONS = {
+    maxAttempts: 10,
+    requestHandler: nodeHttpHandler
+}
 const DDB_DELETE_BATCH_OPTIONS = {
     maxBatchSize: 25,
     maxBatchSizeBytes: 16 * 1024 * 1024
@@ -925,7 +941,7 @@ class PawsCollector extends AlAwsCollector {
     */
     removeDuplicatedItem(logs, paramName, asyncCallback) {
         let collector = this;
-        const ddb = new DynamoDB();
+        const ddb = new DynamoDB(DDB_OPTIONS);
         let uniqueLogs = [];
         var promises = [];
         let duplicateCount = 0;
