@@ -142,7 +142,7 @@ timestamp < "${state.until}"`;
                 return callback(null, logs, newState, newState.poll_interval_sec);
             })
             .catch(err => {
-                    AlLogger.error(`GSTA000003 err in collection ${JSON.stringify(err)}`);
+                AlLogger.debug(`GSTA000003 err in collection ${JSON.stringify(err)}`);
                 // Stackdriver Logging api has some rate limits that we might run into.
                 // If we run inot a rate limit error, instead of returning the error,
                 // we return the state back to the queue with an additional second added, up to 15 min
@@ -172,11 +172,12 @@ timestamp < "${state.until}"`;
                         return callback(null, [], backOffState, nextPollInterval);
                     });
                 } else {
+                    let error = err.response && err.response.data ? err.response.data : err;
                     // set errorCode if not available in error object to showcase client error on DDMetrics
-                    if (err.code) {
-                        err.errorCode = err.code;
+                    if (err.errors && err.errors.length > 0 && err.errors[0].reason) {
+                        error.errorCode = err.errors[0].reason;
                     }
-                    return callback(err);
+                    return callback(error);
                 }
             });
     }
