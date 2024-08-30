@@ -17,6 +17,8 @@ const { CloudWatch } = require("@aws-sdk/client-cloudwatch"),
 var alserviceStub = {};
 var responseStub = {};
 var setEnvStub = {};
+let stubOktaClient = {};
+var stubListLogEvents = {};
 
 function setAlServiceStub() {
     alserviceStub.get = sinon.stub(m_alCollector.AlServiceC.prototype, 'get').callsFake(
@@ -78,12 +80,19 @@ function mockSetEnvStub() {
 }
 
 describe('Unit Tests', function() {
-    
+
     beforeEach(function(){
         if (!nock.isActive()) {
             nock.activate();
         }
-        
+
+        stubOktaClient = sinon.stub(okta, 'Client').returns({
+            systemLogApi: {
+                listLogEvents: sinon.stub()
+            }
+        });
+
+        stubListLogEvents = stubOktaClient().systemLogApi.listLogEvents;
         sinon.stub(SSM.prototype, 'getParameter').callsFake(function (params, callback) {
             const data = Buffer.from('test-secret');
             return callback(null, { Parameter: { Value: data.toString('base64') } });
@@ -111,6 +120,7 @@ describe('Unit Tests', function() {
         responseStub.restore();
         KMS.prototype.decrypt.restore();
         SSM.prototype.getParameter.restore();
+        stubOktaClient.restore();
     });
 
     describe('pawsInitCollectionState', function() {
@@ -185,8 +195,7 @@ describe('Unit Tests', function() {
             succeed : function() {}
         };
         it('gets logs correctly', function(done) {
-            const {Client} = okta;
-            const oktaSdkMock = sinon.stub(Client.prototype, 'getLogs').callsFake(() => {
+            stubListLogEvents.callsFake(() => {
                 return {
                     each: (callback) => {
                         ['foo', 'bar', 'baz'].forEach(callback);
@@ -205,18 +214,22 @@ describe('Unit Tests', function() {
                 };
 
                 collector.pawsGetLogs(mockState, (err, logs, newState, nextPoll) => {
-                    assert.equal(logs.length, 3);
-                    assert.equal(newState.since, mockState.until);
-                    oktaSdkMock.restore();
-                    done();
+                    try {
+                        assert.equal(logs.length, 3);
+                        assert.equal(newState.since, mockState.until);
+                        done();
+                    } catch (e) {
+                        console.error(e);
+                    } finally {
+                        stubListLogEvents.restore();
+                    }
                 });
             });
         });
 
         it('it should return the same state with pollinterval delay if get api return throttle error', function (done) {
-            const { Client } = okta;
             const error = { "name": "OktaApiError", "status": 429, "errorCode": "E0000047", "errorSummary": "API call exceeded rate limit due to too many requests.", "errorCauses": [], "errorLink": "E0000047", "errorId": "oaeJacBsJ0pQES61B_uegmlzA", "url": "https://alertlogic-admin.okta.com/api/v1/logs?since=2023-06-03T08%3A32%3A20.000Z&until=2023-06-03T08%3A33%3A20.000Z", "headers": {}, "message": "Okta HTTP 429 E0000047 API call exceeded rate limit due to too many requests.. " };
-            const oktaSdkMock = sinon.stub(Client.prototype, 'getLogs').callsFake(() => {
+            stubListLogEvents.callsFake(() => {
                 return {
                     each: () => {
                         return new Promise((res, rej) => {
@@ -234,23 +247,25 @@ describe('Unit Tests', function() {
                     poll_interval_sec: 60
                 };
                 var reportSpy = sinon.spy(collector, 'reportApiThrottling');
-                let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params, callback) => callback()) ;
+                let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params, callback) => callback());
                 collector.pawsGetLogs(mockState, (err, logs, state, pollIntervalSec) => {
-                    assert.equal(true, reportSpy.calledOnce);
-                    assert.equal(err, null);
-                    // if header not return rate-limit-resect-sec then add the 60 sec in existing pollinterval seconds
-                    assert.equal(pollIntervalSec, 120);
-                    oktaSdkMock.restore();
-                    putMetricDataStub.restore();
-                    done();
+                    try {
+                        assert.equal(true, reportSpy.calledOnce);
+                        assert.equal(err, null);
+                        // if header not return rate-limit-resect-sec then add the 60 sec in existing pollinterval seconds
+                        assert.equal(pollIntervalSec, 120);
+                        putMetricDataStub.restore();
+                        done();
+                    } finally {
+                        stubListLogEvents.restore();
+                    }
                 });
             });
         });
         it('It should set the delay second if there is throttle error and header contain X-Rate-Limit-Reset', function (done) {
-            const { Client } = okta;
             const resetSecs = moment().add(120, 'seconds').unix();
             const error = { "name": "OktaApiError", "status": 429, "errorCode": "E0000047", "errorSummary": "API call exceeded rate limit due to too many requests.", "url": "https://alertlogic-admin.okta.com/api/v1/logs?since=2023-06-03T08%3A32%3A20.000Z&until=2023-06-03T08%3A33%3A20.000Z", "headers": { "x-rate-limit-reset": resetSecs }, "message": "Okta HTTP 429 E0000047 API call exceeded rate limit due to too many requests.. " };
-            const oktaSdkMock = sinon.stub(Client.prototype, 'getLogs').callsFake(() => {
+            stubListLogEvents.callsFake(() => {
                 return {
                     each: () => {
                         return new Promise((res, rej) => {
@@ -270,25 +285,36 @@ describe('Unit Tests', function() {
                 var reportSpy = sinon.spy(collector, 'reportApiThrottling');
                 let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params, callback) => callback()) ;
                 collector.pawsGetLogs(mockState, (err, logs, state, poll_interval_sec) => {
-                    assert.equal(true, reportSpy.calledOnce);
-                    assert.equal(err, null);
-                    assert.equal(poll_interval_sec, 180);
-                    oktaSdkMock.restore();
-                    putMetricDataStub.restore();
-                    done();
+                    try {
+                        // Perform assertions
+                        assert.equal(true, reportSpy.calledOnce);
+                        assert.equal(err, null);
+                        assert.equal(poll_interval_sec, 180);
+                        putMetricDataStub.restore();
+                        done();
+                    } catch (e) {
+                        console.error(e);
+                    } finally {
+                        stubListLogEvents.restore();
+                    }
                 });
             });
         });
         
         it('gets logs throttling response', function(done) {
-            
+
             // Okta endpoints mock
-            nock('https://test.alertlogic.com:443', {'encodedQueryParams':true})
-            .get('/api/v1/logs')
-            .query(true)
-            .times(1)
-            .reply(429);
-            OktaCollector.load().then(function(creds) {
+            const error = { "name": "OktaApiError", "status": 429, "errorCode": "E0000047", "errorSummary": "API call exceeded rate limit due to too many requests.", "url": "https://alertlogic-admin.okta.com/api/v1/logs?since=2023-06-03T08%3A32%3A20.000Z&until=2023-06-03T08%3A33%3A20.000Z", "message": "Okta HTTP 429 E0000047 API call exceeded rate limit due to too many request" };
+            stubListLogEvents.callsFake(() => {
+                return {
+                    each: () => {
+                        return new Promise((res, rej) => {
+                            rej(error);
+                        });
+                    }
+                };
+            });
+            OktaCollector.load().then(function (creds) {
                 var collector = new OktaCollector(ctx, creds);
                 const startDate = moment().subtract(1, 'days').toISOString();
                 const mockState = {
@@ -298,9 +324,16 @@ describe('Unit Tests', function() {
                 var reportSpy = sinon.spy(collector, 'reportApiThrottling');
                 let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params, callback) => callback()) ;
                 collector.pawsGetLogs(mockState, (err) => {
-                    assert.equal(true, reportSpy.calledOnce);
-                    putMetricDataStub.restore();
-                    done();
+                    try {
+                        assert.equal(true, reportSpy.calledOnce);
+                        putMetricDataStub.restore();
+                        done();
+                    } catch (e) {
+                        console.error(e);
+                    }
+                    finally {
+                        stubListLogEvents.restore();
+                    }
                 });
             });
         });
@@ -400,7 +433,6 @@ describe('Unit Tests', function() {
         });
 
         it('no error code', function(done) {
-            const {Client} = okta;
             let errorObj = {
                 status: 401,
                 url: "https://ft-test.oktapreview.com/api/v1/logs?since=2020-08-13T20%3A00%3A04.000Z&until=2020-08-13T20%3A01%3A04.000Z"
@@ -415,7 +447,7 @@ describe('Unit Tests', function() {
                     done();
                 }
             };
-            const oktaSdkMock = sinon.stub(Client.prototype, 'getLogs').callsFake(() => {
+             stubListLogEvents.callsFake(() => {
                 return {
                     each: (callback) => {
                         ['foo', 'bar', 'baz'].forEach(callback);
@@ -434,9 +466,14 @@ describe('Unit Tests', function() {
                 };
 
                 collector.pawsGetLogs(mockState, (err, logs, newState, nextPoll) => {
-                    oktaSdkMock.restore();
-                    assert.equal(err.status, "401");
+                    try{
+                        assert.equal(err.status, "401");
                     done();
+                    }catch(e){
+
+                    }finally{
+                        stubListLogEvents.restore();
+                    }   
                 });
             });
         });

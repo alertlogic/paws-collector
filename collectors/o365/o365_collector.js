@@ -151,7 +151,7 @@ class O365Collector extends PawsCollector {
                 const contentUriFun = ({contentUri}) => collector.o365_mgmnt_client.getPreFormedUrl(contentUri);
                 const poolLimit = 20;
 
-                return asyncPool(poolLimit, parsedBody, contentUriFun).then(content => {
+                return this.asyncPoolAll(poolLimit, parsedBody, contentUriFun).then(content => {
                     return {
                         logs: content.reduce((agg, {parsedBody}) => [...parsedBody, ...agg], []),
                         nextPage: nextPageUri
@@ -200,6 +200,19 @@ class O365Collector extends PawsCollector {
             }
         });
     }
+
+    /**
+     * Upgraded asyncPool to 2.x which use the async iterator (ES9) 
+     * @param  {...any} args 
+     * @returns 
+     */
+    async asyncPoolAll(...args) {
+        const results = [];
+        for await (const result of asyncPool(...args)) {
+          results.push(result);
+        }
+        return results;
+      }
 
     _getNextCollectionState(curState) {
         const untilMoment = moment(curState.until);

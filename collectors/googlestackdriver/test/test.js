@@ -331,7 +331,15 @@ timestamp < "${until}"`;
             
             logginClientStub.onCall(0).callsFake(() => {
                 return new Promise((res, rej) => {
-                    rej({code:401});
+                    rej({
+                        code: 401,
+                        errors:
+                            [{
+                                message: 'unauthorized_client',
+                                domain: 'global',
+                                reason: 'Unauthorized'
+                            }]
+                    });
                 });
             });
 
@@ -345,7 +353,7 @@ timestamp < "${until}"`;
                 };
 
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) =>{
-                    assert.equal(err.errorCode, 401);
+                    assert.equal(err.errorCode, 'Unauthorized');
                     restoreLoggingClientStub();
                     done();
                 });

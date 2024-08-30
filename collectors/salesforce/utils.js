@@ -14,7 +14,7 @@ function getObjectLogs(response, objectQueryDetails, accumulator, state, maxPage
     let lastValue = state.nextPage ? state.nextPage : null;
     return new Promise(function (resolve, reject) {
         getSalesforceData();
-        function getSalesforceData() {
+       async function getSalesforceData() {
             if (pageCount < maxPagesPerInvocation) {
                 var conn = new jsforce.Connection({
                     accessToken: response.access_token,
@@ -35,8 +35,8 @@ function getObjectLogs(response, objectQueryDetails, accumulator, state, maxPage
                         break;
                 }
                 queryWithLimit = `${queryWithLimit} ORDER BY ${objectQueryDetails.sortFieldName} ${objectQueryDetails.sortType} LIMIT ${limit}`;
-                conn.query(queryWithLimit, function (err, result) {
-                    if (err) { return reject(err); }
+                try {
+                    const result = await conn.query(queryWithLimit);
                     if (result.records.length === 0) {
                         return resolve({ accumulator, nextPage });
                     }
@@ -44,7 +44,11 @@ function getObjectLogs(response, objectQueryDetails, accumulator, state, maxPage
                     lastValue = accumulator[accumulator.length - 1][objectQueryDetails.sortFieldName];
                     pageCount++;
                     return getSalesforceData();
-                });
+
+                }
+                catch (err) {
+                    return reject(err);
+                }
             }
             else {
                 nextPage = lastValue;

@@ -24,7 +24,9 @@ describe('Unit Tests', function () {
         it('Get Object Logs', function (done) {
             mockActivityObject = sinon.stub(conn, 'query').callsFake(
                 function fakeFn(err, result) {
-                    return result(null, { records: [salesforceMock.LOG_EVENT] });
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ records: [salesforceMock.LOG_EVENT] });
+                    });
                 });
             let maxPagesPerInvocation = 5;
             let response = {
@@ -55,7 +57,9 @@ describe('Unit Tests', function () {
         it('Get Object Logs with no records', function (done) {
             mockActivityObject = sinon.stub(conn, 'query').callsFake(
                 function fakeFn(err, result) {
-                    return result(null, { records: [] });
+                    return new Promise(function (resolve, reject) {
+                        return resolve({ records: [] });
+                    });
                 });
             let maxPagesPerInvocation = 5;
             let response = {

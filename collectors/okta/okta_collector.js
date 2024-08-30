@@ -54,16 +54,16 @@ class OktaCollector extends PawsCollector {
         return callback(null, initialState, initialState.poll_interval_sec);
     }
 
-    pawsGetLogs(state, callback) {
+    async pawsGetLogs(state, callback) {
         let collector = this;
         const oktaClient = new okta.Client({
             orgUrl: collector.pawsHttpsEndpoint,
             token: collector.secret
         });
         AlLogger.info(`OKTA000001 Collecting data from ${state.since} till ${state.until}`);
-        const collection = oktaClient.getLogs({
-            since: state.since,
-            until: state.until
+        const collection = await oktaClient.systemLogApi.listLogEvents({
+            since: new Date(state.since),
+            until: new Date(state.until)
         });
         let logAcc = [];
         collection.each(log => {
