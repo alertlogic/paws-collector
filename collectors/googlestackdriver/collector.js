@@ -61,13 +61,15 @@ class GooglestackdriverCollector extends PawsCollector {
             endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
         }
         const resourceNames = JSON.parse(process.env.collector_streams);
-        const initialStates = resourceNames.map(stream => ({
-            stream,
-            nextPage:null,
-            since: startTs,
-            until: endTs,
-            poll_interval_sec: 1
-        }));
+        const initialStates = resourceNames
+            .filter(stream => stream && stream.trim() !== "")  // Filter out empty or invalid values
+            .map(stream => ({
+                stream,
+                nextPage: null,
+                since: startTs,
+                until: endTs,
+                poll_interval_sec: 1
+            }));
         return callback(null, initialStates, 1);
     }
 
