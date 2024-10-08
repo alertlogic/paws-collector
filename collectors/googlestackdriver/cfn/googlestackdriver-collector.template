@@ -58,7 +58,7 @@
             "Type": "String"
         },
         "LogNameFilters": {
-            "Description": "A JSON list of Google Cloud log names used to filter logs. The format should be 'service.googleapis.com%2Flog_type', for example: 'compute.googleapis.com%2Factivity_log'.",
+            "Description": "A JSON list of Google Cloud log names used to filter logs. The format should be 'service.googleapis.com%2Flog_type', for example: 'cloudaudit.googleapis.com%2Factivity'.",
             "Type": "String"
         },
         "CollectionStartTs": {
