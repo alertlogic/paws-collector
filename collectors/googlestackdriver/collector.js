@@ -98,8 +98,7 @@ class GooglestackdriverCollector extends PawsCollector {
         AlLogger.info(`GSTA000001 Collecting data from ${state.since} till ${state.until} for ${state.stream}`);
 
         // TODO: figure out a better way to format this. I'm pretty sure that it needs the newlines in it.
-        const filter = `timestamp >= "${state.since}"
-timestamp < "${state.until}"`;
+        const filter = collector.generateFilter(state);
 
         let pagesRetireved = 0;
        
@@ -180,6 +179,33 @@ timestamp < "${state.until}"`;
                     return callback(error);
                 }
             });
+    }
+
+    generateFilter(state) {
+        const logTypes = process.env.paws_collector_param_string_2 ? JSON.parse(process.env.paws_collector_param_string_2) : [];
+        let filterParts = [];
+        let logNameFilter;
+
+        if (logTypes && logTypes.length > 0) {
+            logTypes.forEach(logType => {
+                if (state.stream && logType && logType.trim() !== "") {  // Check that logType is not empty
+                    filterParts.push(`logName="${state.stream}/logs/${logType}"`);
+                } else if (!logType || logType.trim() === "") {
+                    AlLogger.warn("Skipping empty log type.");
+                }
+            });
+            if (filterParts.length > 0) {
+                logNameFilter = filterParts.join(" OR ");
+            }
+        }
+        // Construct the basic timestamp filter
+        let filter = `timestamp >= "${state.since}" AND timestamp < "${state.until}"`;
+
+        if (logNameFilter) {
+            // Combine the LogName and timesamp filter
+            filter = `${filter} AND (${logNameFilter})`;
+        }
+        return filter;
     }
 
 

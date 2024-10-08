@@ -293,10 +293,8 @@ describe('Unit Tests', function() {
             const startDate = moment().subtract(3, 'days');
             let since = startDate.toISOString();
             let until = startDate.add(2, 'days').toISOString();
-            const filter = `timestamp >= "${since}"
-timestamp < "${until}"`;
+            const filter = `timestamp >= "${since}" AND timestamp < "${until}"`;
             let nextPage = { pageToken: 'http://somenextpage.com', "pageSize": 1000, "resourceNames": ["projects/a-fake-project"], filter };
-           
             logginClientStub.callsFake(() => {
                 return new Promise((res, rej) => {
                     res({
@@ -539,4 +537,107 @@ timestamp < "${until}"`;
             });
         });
     });
+    describe('log filter Tests', function() {
+        it('should generate correct filter excluding empty logType values', function (done) {
+            let ctx = {
+                invokedFunctionArn: googlestackdriverMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+            
+            GooglestackdriverCollector.load().then(function (creds) {
+                var collector = new GooglestackdriverCollector(ctx, creds, 'googlestackdriver');
+                const startDate = moment().subtract(20, 'minutes');
+                let since = startDate.toISOString();
+                let until = startDate.add(collector.pollInterval, 'seconds').toISOString();
+                process.env.paws_collector_param_string_2 = "[\"cloudaudit.googleapis.com%2Factivity\",\"\",\"cloudfunctions.googleapis.com%2Fcloud-functions\"]";
+                const curState = {
+                    since: since,
+                    until: until,
+                    poll_interval_sec: 1,
+                    stream: 'projects/imran-49253',
+                };
+                // Expected filter string
+                const expectedFilter = `timestamp >= "${since}" AND timestamp < "${until}" AND (logName="projects/imran-49253/logs/cloudaudit.googleapis.com%2Factivity" OR logName="projects/imran-49253/logs/cloudfunctions.googleapis.com%2Fcloud-functions")`;
+
+                // Call the function to generate the filter
+                const filter = collector.generateFilter(curState);
+                assert.equal(expectedFilter, filter);
+                done();
+            });
+        });
+
+        it('should generate filter without logNameFilter when all logTypes are empty', function (done) {
+            let ctx = {
+                invokedFunctionArn: googlestackdriverMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+            
+            GooglestackdriverCollector.load().then(function (creds) {
+                var collector = new GooglestackdriverCollector(ctx, creds, 'googlestackdriver');
+                const startDate = moment().subtract(20, 'minutes');
+                let since = startDate.toISOString();
+                let until = startDate.add(collector.pollInterval, 'seconds').toISOString();
+                process.env.paws_collector_param_string_2 = "[\"\",\"\"]";
+                const curState = {
+                    since: since,
+                    until: until,
+                    poll_interval_sec: 1,
+                    stream: 'projects/imran-49253',
+                };
+                // Expected filter string
+                const expectedFilter = `timestamp >= "${since}" AND timestamp < "${until}"`;
+
+                // Call the function to generate the filter
+                const filter = collector.generateFilter(curState);
+                assert.equal(expectedFilter, filter);
+                done();
+            });
+        });
+        it('should handle case when logTypes is undefined or null', function (done) {
+            let ctx = {
+                invokedFunctionArn: googlestackdriverMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                    done();
+                },
+                succeed: function () {
+                    done();
+                }
+            };
+            
+            GooglestackdriverCollector.load().then(function (creds) {
+                var collector = new GooglestackdriverCollector(ctx, creds, 'googlestackdriver');
+                const startDate = moment().subtract(20, 'minutes');
+                let since = startDate.toISOString();
+                let until = startDate.add(collector.pollInterval, 'seconds').toISOString();
+                process.env.paws_collector_param_string_2 = null;
+                const curState = {
+                    since: since,
+                    until: until,
+                    poll_interval_sec: 1,
+                    stream: 'projects/imran-49253',
+                };
+                // Expected filter string
+                const expectedFilter = `timestamp >= "${since}" AND timestamp < "${until}"`;
+
+                // Call the function to generate the filter
+                const filter = collector.generateFilter(curState);
+                assert.equal(expectedFilter, filter);
+                done();
+            });
+        });     
     });
+});
+   
