@@ -1,6 +1,6 @@
 {
   "name": "@alertlogic/paws-collector",
-  "version": "2.2.5",
+  "version": "2.2.6",
   "license": "MIT",
   "description": "Alert Logic AWS based API Poll Log Collector Library",
   "repository": {
@@ -34,12 +34,12 @@
     "mocha": "^10.4.0",
     "nyc": "^17.0.0",
     "rewire": "^7.0.0",
-    "sinon": "^18.0.0",
+    "sinon": "^19.0.2",
     "yargs": "^17.7.2"
   },
   "dependencies": {
-    "@alertlogic/al-aws-collector-js": "4.1.26",
-    "@smithy/node-http-handler":"3.1.3",
+    "@alertlogic/al-aws-collector-js": "^4.1.28",
+    "@smithy/node-http-handler": "^3.2.4",
     "async": "^3.2.5",
     "datadog-lambda-js": "^9.112.0",
     "debug": "^4.3.5",
