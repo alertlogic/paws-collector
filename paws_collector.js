@@ -68,10 +68,14 @@ const nodeHttpHandler = new NodeHttpHandler({
     httpsAgent: new https.Agent(agent)
 });
 
+
 const DDB_OPTIONS = {
-    maxAttempts: 10,
+    maxAttempts: 5,
     requestHandler: nodeHttpHandler
 }
+
+const DDB = new DynamoDB(DDB_OPTIONS);
+
 const DDB_DELETE_BATCH_OPTIONS = {
     maxBatchSize: 25,
     maxBatchSizeBytes: 16 * 1024 * 1024
@@ -373,8 +377,6 @@ class PawsCollector extends AlAwsCollector {
     // there is a lot of logic here. not sur eif there is a better way of deduping. trying for an MVP
     checkStateSqsMessage(stateSqsMsg, asyncCallback) {
         const collector = this;
-        const DDB = new DynamoDB(DDB_OPTIONS);
-
         const params = {
             Key: {
                 "CollectorId": {S: collector._collectorId},
@@ -432,8 +434,6 @@ class PawsCollector extends AlAwsCollector {
 
     updateStateDBEntry(stateSqsMsg, Status, asyncCallback) {
         const collector = this;
-        const DDB = new DynamoDB(DDB_OPTIONS);
-
         const updateParams = {
             Key: {
                 CollectorId: {S: collector._collectorId},
@@ -941,7 +941,6 @@ class PawsCollector extends AlAwsCollector {
     */
     removeDuplicatedItem(logs, paramName, asyncCallback) {
         let collector = this;
-        const ddb = new DynamoDB(DDB_OPTIONS);
         let uniqueLogs = [];
         var promises = [];
         let duplicateCount = 0;
@@ -958,7 +957,7 @@ class PawsCollector extends AlAwsCollector {
                 ConditionExpression: 'attribute_not_exists(Id)'
             };
             let promise = new Promise((resolve, reject) => {
-                ddb.putItem(params, (err, res) => {
+                DDB.putItem(params, (err, res) => {
                     if (err) {
                         if (err.name === 'ConditionalCheckFailedException') {
                             duplicateCount++;
@@ -1063,9 +1062,8 @@ class PawsCollector extends AlAwsCollector {
      * @returns 
      */
     dDBBatchWriteItem(tableName, batch) {
-        const ddb = new DynamoDB(DDB_OPTIONS);
         const batchParams = { RequestItems: { [tableName]: batch } };
-        return ddb.batchWriteItem(batchParams);
+        return DDB.batchWriteItem(batchParams);
     }
 
     /**
