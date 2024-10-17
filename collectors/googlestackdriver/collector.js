@@ -99,7 +99,6 @@ class GooglestackdriverCollector extends PawsCollector {
 
         AlLogger.info(`GSTA000001 Collecting data from ${state.since} till ${state.until} for ${state.stream}`);
 
-        // TODO: figure out a better way to format this. I'm pretty sure that it needs the newlines in it.
         const filter = collector.generateFilter(state);
 
         let pagesRetireved = 0;
@@ -184,30 +183,37 @@ class GooglestackdriverCollector extends PawsCollector {
     }
 
     generateFilter(state) {
-        const logTypes = process.env.paws_collector_param_string_2 ? JSON.parse(process.env.paws_collector_param_string_2) : [];
-        let filterParts = [];
-        let logNameFilter;
+        const logIds = process.env.paws_collector_param_string_2 ? JSON.parse(process.env.paws_collector_param_string_2) : [];
+        const filterConditions = [];
+        let logFilterCondition;
 
-        if (logTypes && logTypes.length > 0) {
-            logTypes.forEach(logType => {
-                if (state.stream && logType && logType.trim() !== "") {  // Check that logType is not empty
-                    filterParts.push(`logName="${state.stream}/logs/${logType}"`);
-                } else if (!logType || logType.trim() === "") {
-                    AlLogger.warn("Skipping empty log type.");
+        if (logIds.length > 0) {
+            logIds.forEach(logId => {
+                const trimmedLogId = logId?.trim();
+
+                if (trimmedLogId) {
+                    const encodeLogId = this.isUriEncoded(logId) ? logId : encodeURIComponent(logId);
+                    filterConditions.push(`logName:"${encodeLogId}"`);
+                } else {
+                    AlLogger.warn("Skipping empty log ID.");
                 }
             });
-            if (filterParts.length > 0) {
-                logNameFilter = filterParts.join(" OR ");
+            if (filterConditions.length > 0) {
+                logFilterCondition = filterConditions.join(" OR ");
             }
         }
         // Construct the basic timestamp filter
-        let filter = `timestamp >= "${state.since}" AND timestamp < "${state.until}"`;
+        let filterQuery = `timestamp >= "${state.since}" AND timestamp < "${state.until}"`;
 
-        if (logNameFilter) {
+        if (logFilterCondition) {
             // Combine the LogName and timesamp filter
-            filter = `${filter} AND (${logNameFilter})`;
+            filterQuery = `${filterQuery} AND (${logFilterCondition})`;
         }
-        return filter;
+        return filterQuery;
+    }
+
+    isUriEncoded(logId) {
+        return decodeURIComponent(logId) !== logId;
     }
 
 
