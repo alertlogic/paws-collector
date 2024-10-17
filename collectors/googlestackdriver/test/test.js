@@ -555,7 +555,7 @@ describe('Unit Tests', function() {
                 const startDate = moment().subtract(20, 'minutes');
                 let since = startDate.toISOString();
                 let until = startDate.add(collector.pollInterval, 'seconds').toISOString();
-                process.env.paws_collector_param_string_2 = "[\"cloudaudit.googleapis.com%2Factivity\",\"\",\"cloudfunctions.googleapis.com%2Fcloud-functions\"]";
+                process.env.paws_collector_param_string_2 = "[\"cloudaudit.googleapis.com%2Factivity\",\"\",\"cloudfunctions.googleapis.com/cloud-functions\"]";
                 const curState = {
                     since: since,
                     until: until,
@@ -563,7 +563,7 @@ describe('Unit Tests', function() {
                     stream: 'projects/imran-49253',
                 };
                 // Expected filter string
-                const expectedFilter = `timestamp >= "${since}" AND timestamp < "${until}" AND (logName="projects/imran-49253/logs/cloudaudit.googleapis.com%2Factivity" OR logName="projects/imran-49253/logs/cloudfunctions.googleapis.com%2Fcloud-functions")`;
+                const expectedFilter = `timestamp >= "${since}" AND timestamp < "${until}" AND (logName:"cloudaudit.googleapis.com%2Factivity" OR logName:"cloudfunctions.googleapis.com%2Fcloud-functions")`;
 
                 // Call the function to generate the filter
                 const filter = collector.generateFilter(curState);
@@ -622,7 +622,6 @@ describe('Unit Tests', function() {
                 const startDate = moment().subtract(20, 'minutes');
                 let since = startDate.toISOString();
                 let until = startDate.add(collector.pollInterval, 'seconds').toISOString();
-                process.env.paws_collector_param_string_2 = null;
                 const curState = {
                     since: since,
                     until: until,

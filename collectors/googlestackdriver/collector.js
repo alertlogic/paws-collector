@@ -183,17 +183,17 @@ class GooglestackdriverCollector extends PawsCollector {
     }
 
     generateFilter(state) {
-        const logIds = process.env.paws_collector_param_string_2 ? JSON.parse(process.env.paws_collector_param_string_2) : [];
+        const logNames = process.env.paws_collector_param_string_2 ? JSON.parse(process.env.paws_collector_param_string_2) : [];
         const filterConditions = [];
         let logFilterCondition;
 
-        if (logIds.length > 0) {
-            logIds.forEach(logId => {
-                const trimmedLogId = logId?.trim();
+        if (logNames.length > 0) {
+            logNames.forEach(logName => {
+                const trimmedlogName = logName?.trim();
 
-                if (trimmedLogId) {
-                    const encodeLogId = this.isUriEncoded(logId) ? logId : encodeURIComponent(logId);
-                    filterConditions.push(`logName:"${encodeLogId}"`);
+                if (trimmedlogName) {
+                    const encodelogName = this.isUriEncoded(logName) ? logName : encodeURIComponent(logName);
+                    filterConditions.push(`logName:"${encodelogName}"`);
                 } else {
                     AlLogger.warn("Skipping empty log ID.");
                 }
@@ -204,7 +204,6 @@ class GooglestackdriverCollector extends PawsCollector {
         }
         // Construct the basic timestamp filter
         let filterQuery = `timestamp >= "${state.since}" AND timestamp < "${state.until}"`;
-
         if (logFilterCondition) {
             // Combine the LogName and timesamp filter
             filterQuery = `${filterQuery} AND (${logFilterCondition})`;
@@ -212,8 +211,8 @@ class GooglestackdriverCollector extends PawsCollector {
         return filterQuery;
     }
 
-    isUriEncoded(logId) {
-        return decodeURIComponent(logId) !== logId;
+    isUriEncoded(logName) {
+        return decodeURIComponent(logName) !== logName;
     }
 
 
