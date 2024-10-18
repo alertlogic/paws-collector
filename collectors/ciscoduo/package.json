@@ -1,6 +1,6 @@
 {
   "name": "ciscoduo-collector",
-  "version": "1.0.55",
+  "version": "1.0.56",
   "description": "Alert Logic AWS based Ciscoduo Log Collector",
   "repository": {},
   "private": true,
@@ -22,7 +22,7 @@
     "mocha-jenkins-reporter": "^0.4.8",
     "nyc": "^17.0.0",
     "rewire": "^7.0.0",
-    "sinon": "^18.0.0"
+    "sinon": "^19.0.2"
   },
   "dependencies": {
     "@alertlogic/al-collector-js": "3.0.14",
