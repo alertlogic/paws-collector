@@ -61,13 +61,15 @@ class GooglestackdriverCollector extends PawsCollector {
             endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
         }
         const resourceNames = JSON.parse(process.env.collector_streams);
-        const initialStates = resourceNames.map(stream => ({
-            stream,
-            nextPage:null,
-            since: startTs,
-            until: endTs,
-            poll_interval_sec: 1
-        }));
+        const initialStates = resourceNames
+            .filter(stream => stream && stream.trim() !== "")  // Filter out empty or invalid values
+            .map(stream => ({
+                stream,
+                nextPage: null,
+                since: startTs,
+                until: endTs,
+                poll_interval_sec: 1
+            }));
         return callback(null, initialStates, 1);
     }
 
@@ -97,9 +99,7 @@ class GooglestackdriverCollector extends PawsCollector {
 
         AlLogger.info(`GSTA000001 Collecting data from ${state.since} till ${state.until} for ${state.stream}`);
 
-        // TODO: figure out a better way to format this. I'm pretty sure that it needs the newlines in it.
-        const filter = `timestamp >= "${state.since}"
-timestamp < "${state.until}"`;
+        const filter = collector.generateFilter(state);
 
         let pagesRetireved = 0;
        
@@ -180,6 +180,39 @@ timestamp < "${state.until}"`;
                     return callback(error);
                 }
             });
+    }
+
+    generateFilter(state) {
+        const logNames = process.env.paws_collector_param_string_2 ? JSON.parse(process.env.paws_collector_param_string_2) : [];
+        const filterConditions = [];
+        let logFilterCondition;
+
+        if (logNames.length > 0) {
+            logNames.forEach(logName => {
+                const trimmedlogName = logName?.trim();
+
+                if (trimmedlogName) {
+                    const encodelogName = this.isUriEncoded(logName) ? logName : encodeURIComponent(logName);
+                    filterConditions.push(`logName:"${encodelogName}"`);
+                } else {
+                    AlLogger.warn("Skipping empty log ID.");
+                }
+            });
+            if (filterConditions.length > 0) {
+                logFilterCondition = filterConditions.join(" OR ");
+            }
+        }
+        // Construct the basic timestamp filter
+        let filterQuery = `timestamp >= "${state.since}" AND timestamp < "${state.until}"`;
+        if (logFilterCondition) {
+            // Combine the LogName and timesamp filter
+            filterQuery = `${filterQuery} AND (${logFilterCondition})`;
+        }
+        return filterQuery;
+    }
+
+    isUriEncoded(logName) {
+        return decodeURIComponent(logName) !== logName;
     }
 
 
