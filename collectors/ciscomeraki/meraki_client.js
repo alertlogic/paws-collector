@@ -8,6 +8,7 @@ const NETWORKS_PER_PAGE = 1000;
 const EVENTS_PER_PAGE = 500;
 const API_THROTTLING_ERROR = 429;
 const DEFAULT_RETRY_DELAY_MILLIS = 1000;
+const PRODUCT_TYPE_NOTAPPLICABLE_MESSAGE = "productType is not applicable to this network";
 
 async function getAPILogs(apiDetails, accumulator, apiEndpoint, state, clientSecret, maxPagesPerInvocation) {
     let nextPage;
@@ -55,7 +56,11 @@ async function getAPILogs(apiDetails, accumulator, apiEndpoint, state, clientSec
                     throw new Error(`CMRI000007 Error:NetworkId required in ${url}`);
                 }
             } catch (error) {
-                throw error;
+                if (error && error.response && error.response.data && (error.response.data.errors == PRODUCT_TYPE_NOTAPPLICABLE_MESSAGE)) {
+                    AlLogger.warn(`CMRI0000027 ${productType} ${error.response.data.errors} : ${state.networkId}`);
+                } else {
+                    throw error;
+                }
             }
         } else {
             nextPage = since;
