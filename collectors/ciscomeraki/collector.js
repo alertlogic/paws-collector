@@ -20,7 +20,6 @@ const MAX_POLL_INTERVAL = 900;
 const API_THROTTLING_ERROR = 429;
 const API_NOT_FOUND_ERROR = 404;
 const NOT_FOUND_ERROR_MAX_RETRIES = 3;
-const PRODUCT_TYPE_NOTAPPLICABLE_MESSAGE = "productType is not applicable to this network";
 const typeIdPaths = [{ path: ["type"] }];
 const tsPaths = [{ path: ["occurredAt"] }];
 
@@ -187,14 +186,9 @@ class CiscomerakiCollector extends PawsCollector {
                 return callback(error);
             }
         } else if (error && error.response && error.response.data) {
-            if (error.response.data.errors == PRODUCT_TYPE_NOTAPPLICABLE_MESSAGE) {
-                AlLogger.warn(`CMRI0000023 ${error.response.data.errors} : ${state.networkId}`);
-                return callback(null, [], state, state.poll_interval_sec);
-            } else {
-                AlLogger.debug(`CMRI0000022 error ${error.response.data.errors} - status: ${error.response.status}`);
-                error.response.data.errorCode = error.response.status;
-                return callback(error.response.data);
-            }
+            AlLogger.debug(`CMRI0000022 error ${error.response.data.errors} - status: ${error.response.status}`);
+            error.response.data.errorCode = error.response.status;
+            return callback(error.response.data);
         } else {
             return callback(error);
         }
