@@ -30,6 +30,11 @@ describe('API Tests', function () {
                 headers: {}
             }));
 
+            axiosGetStub.onThirdCall().returns(Promise.resolve({
+                data: { events: [], pageEndAt: '2024-04-15T11:00:00Z' },
+                headers: {}
+            }));
+
             const apiDetails = { productTypes: ['appliance', 'switch'] };
             const accumulator = [];
             const apiEndpoint = 'api.meraki.com';
@@ -38,7 +43,6 @@ describe('API Tests', function () {
             const maxPagesPerInvocation = 2;
 
             const result = await getAPILogs(apiDetails, accumulator, apiEndpoint, state, clientSecret, maxPagesPerInvocation);
-
             assert.deepStrictEqual(result.accumulator, [ciscomerakiMock.LOG_EVENT, ciscomerakiMock.LOG_EVENT, ciscomerakiMock.LOG_EVENT, ciscomerakiMock.LOG_EVENT]);
             assert.strictEqual(result.nextPage, undefined);
         });
@@ -234,14 +238,18 @@ describe('API Tests', function () {
             const maxPagesPerInvocation = 2;
 
             axiosGetStub.onFirstCall().returns(Promise.resolve({
-                data: { events: [ciscomerakiMock.LOG_EVENT, ciscomerakiMock.LOG_EVENT], startingAfter: '2024-04-15T10:00:00Z' },
+                data: { events: [ciscomerakiMock.LOG_EVENT, ciscomerakiMock.LOG_EVENT], pageEndAt: '2024-04-15T10:00:00Z' },
                 headers: { link: '<https://api.meraki.com/next>; rel=next' }
             }));
             axiosGetStub.onSecondCall().returns(Promise.resolve({
-                data: { events: [ciscomerakiMock.LOG_EVENT, ciscomerakiMock.LOG_EVENT], startingAfter: '2024-04-16T10:00:00Z' },
+                data: { events: [ciscomerakiMock.LOG_EVENT, ciscomerakiMock.LOG_EVENT], pageEndAt: '2024-04-16T10:00:00Z' },
                 headers: {}
             }));
 
+            axiosGetStub.onThirdCall().returns(Promise.resolve({
+                data: { events: [], pageEndAt: '2024-04-16T10:00:00Z' },
+                headers: {}
+            }));
             const result = await getAPILogs(apiDetails, [], apiEndpoint, state, clientSecret, maxPagesPerInvocation);
 
             assert.deepStrictEqual(result.accumulator.length, 4); // Total events from both pages

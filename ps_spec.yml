@@ -139,7 +139,7 @@ stages:
       - ./build_collector.sh ciscomeraki
     env:
       ALPS_SERVICE_NAME: "paws-ciscomeraki-collector"
-      ALPS_SERVICE_VERSION: "1.0.7" #set the value from collector package json
+      ALPS_SERVICE_VERSION: "1.0.8" #set the value from collector package json
     outputs:
       file: ./ciscomeraki-collector*
     packagers:
