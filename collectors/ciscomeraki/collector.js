@@ -165,7 +165,7 @@ class CiscomerakiCollector extends PawsCollector {
     }
 
     handleThrottlingError(error, state, callback) {
-        const maxRandom = 5;
+        const maxRandom = parseInt(process.env.ciscomeraki_throttlingmaxrandom, 10) || 5;
         let retry = parseInt(error.response.headers['retry-after']) || 1;
         retry += Math.floor(Math.random() * (maxRandom + 1));
         state.poll_interval_sec = state.poll_interval_sec < MAX_POLL_INTERVAL ?

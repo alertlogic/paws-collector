@@ -37,11 +37,8 @@ async function getAPILogs(apiDetails, accumulator, apiEndpoint, state, clientSec
                     let data = response && response.data ? response.data.events : [];
                     if (data.length) {
                         accumulator = accumulator.concat(data);
-                    } else {
-                        return accumulator;
                     }
-                    headers = response.headers;
-                    const linkHeader = response.headers.link;
+                    const linkHeader = response && response.headers ? response.headers.link : undefined;
                     if (linkHeader && linkHeader.includes('rel=next')) {
                         const nextLink = linkHeader.match(/<(.*?)>; rel=next/)[1];
                         startingAfter = new URL(nextLink).searchParams.get('startingAfter');
