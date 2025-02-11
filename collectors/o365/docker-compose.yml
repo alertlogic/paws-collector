@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  o365-collector:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file: "./local/.env"
+    volumes:
+      - ~/.aws:/root/.aws:ro
+
+    depends_on:
+      - dynamodb-local
+    networks:
+      - my-network
+
+  dynamodb-local:
+    image: amazon/dynamodb-local
+    ports:
+      - "8000:8000"
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb"]
+    volumes:
+      - dynamodb_data:/home/dynamodblocal/data
+    networks:
+      - my-network
+
+networks:
+  my-network:
+    driver: bridge
+volumes:
+  dynamodb_data:
