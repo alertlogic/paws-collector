@@ -434,6 +434,24 @@
             "FunctionName" : { "Ref":"CollectLambdaFunction" }
          }
       },
+      "CollectCloudWatchGroup": {
+        "Type": "AWS::Logs::LogGroup",
+        "DependsOn": [
+            "CollectLambdaFunction"
+        ],
+        "Properties": {
+            "LogGroupName": {
+                "Fn::Join": [
+                "",
+                [
+                    "/aws/lambda/",
+                    { "Ref": "CollectLambdaFunction" }
+                ]
+            ]
+        },
+        "RetentionInDays": 400
+        }
+      },
       "RegistrationResource": {
          "Type": "Custom::RegistrationResource",
          "DependsOn": [
