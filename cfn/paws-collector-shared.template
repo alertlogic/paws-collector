@@ -442,16 +442,17 @@
         "Properties": {
             "LogGroupName": {
                 "Fn::Join": [
-                "",
-                [
-                    "/aws/lambda/",
-                    { "Ref": "CollectLambdaFunction" }
+                    "",
+                    [
+                        "/aws/lambda/",
+                        { "Ref": "CollectLambdaFunction" }
+                    ]
                 ]
-            ]
+            },
+            "RetentionInDays": 400
         },
-        "RetentionInDays": 400
-        }
-      },
+        "DeletionPolicy": "Retain"
+     },
       "RegistrationResource": {
          "Type": "Custom::RegistrationResource",
          "DependsOn": [
