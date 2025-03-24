@@ -8,15 +8,16 @@ forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
 
-### 1. How to obtain token
+### 1. How to obtain Client ID and secret key.
 
-1. In Sophos Central Admin, go to Global Settings > API Token Management.<br />
-![ScreenShot](./docs/img1.png)<br />
-2. To create a new token, click Add token from the top-right corner of the screen.<br />
-3. Select a token name and click Save. The API Token Summary for this token is displayed.<br />
-![ScreenShot](./docs/img2.png)<br />
-4. Click on Copy to copy your API Access URL and Headers from the API Token Summary section into your clipboard.<br />
-![ScreenShot](./docs/img3.png)<br />
+1. Sign in to Sophos Central Admin. Go to https://central.sophos.com/manage. Click 'General Settings' and then click the "API Credentials Management" link. <br /><br />
+![ScreenShot](./docs/sophossiem_img1.png)<br />
+2. Click on "Add Credential".<br /><br />
+![ScreenShot](./docs/sophossiem_img2.png)<br />
+3. Supply a name for your credential set, description and role as `Service Principal ReadOnly`, then click 'Add'.<br /><br />
+![ScreenShot](./docs/sophossiem_img3.png)<br />
+4. Click 'Copy' to note down the client ID. Also show the client secret.<br /><br />
+![ScreenShot](./docs/sophossiem_img4.png)<br />
 
 ### 2. API Docs
 

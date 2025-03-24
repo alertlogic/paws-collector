@@ -51,16 +51,12 @@
             "Type": "String",
             "Default": "none"
         },
-        "SophosSiemEndpoint": {
-            "Description": "Sophos Siem end point API access URL.",
+        "SophosSiemClientId": {
+            "Description": "Sophos Siem  Client Id for authentication.",
             "Type": "String"
         },
-        "SophosSiemXAPIKey": {
-            "Description": "Sophos Siem x-api-key for authentication.",
-            "Type": "String"
-        },
-        "SophosSiemAuthorizationToken": {
-            "Description": "Sophos Siem Authorization token for authentication. eg `Basic token_value`",
+        "SophosSiemSecret": {
+            "Description": "Sophos Siem  Secret key for authentication.",
             "Type": "String",
             "NoEcho": true
         },
@@ -96,10 +92,10 @@
             "AlertlogicCustomerId" : { "Ref":"AlertlogicCustomerId" },
             "CollectorId" : { "Ref":"CollectorId" },
             "PollingInterval" : 60,
-            "PawsEndpoint" : { "Ref":"SophosSiemEndpoint" },
+            "PawsEndpoint" : "",
             "PawsAuthType" : "oauth2",
-            "PawsClientId" : { "Ref":"SophosSiemXAPIKey" },
-            "PawsSecret" : { "Ref":"SophosSiemAuthorizationToken" },
+            "PawsClientId" : { "Ref":"SophosSiemClientId" },
+            "PawsSecret" : { "Ref":"SophosSiemSecret" },
             "CollectorStreams" : { "Ref":"SophosSiemObjectNames" },
             "CollectionStartTs" : { "Ref":"CollectionStartTs" }
           }
