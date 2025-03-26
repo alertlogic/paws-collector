@@ -10,7 +10,7 @@ const { CloudWatch } = require("@aws-sdk/client-cloudwatch"),
     { SSM } = require("@aws-sdk/client-ssm");
 
 var responseStub = {};
-let getAPILogs;
+let authenticate, getTenantIdAndDataRegion, getAPILogs;
 describe('Unit Tests', function () {
 
     beforeEach(function () {
@@ -114,6 +114,27 @@ describe('Unit Tests', function () {
             succeed: function () { }
         };
         it('Paws Get Logs Success', function (done) {
+
+            authenticate = sinon.stub(utils, 'authenticate').callsFake(
+                function fakeFn(hostName, clientId, clientSecret) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve("token");
+                    });
+                });
+            getTenantIdAndDataRegion = sinon.stub(utils, 'getTenantIdAndDataRegion').callsFake(
+                function fakeFn(hostName, token) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({
+                            "id": "57ca9a6b-885f-4e36-95ec-290548c26059",
+                            "idType": "tenant",
+                            "apiHosts": {
+                                "global": "https://api.central.sophos.com",
+                                "dataRegion": "https://api-us03.central.sophos.com"
+                            }
+                        });
+                    });
+                });
+
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(BaseAPIURL, headers, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
@@ -135,6 +156,8 @@ describe('Unit Tests', function () {
                     assert.equal(newState.nextPage, "nextPage");
                     assert.ok(logs[0].id);
                     getAPILogs.restore();
+                    getTenantIdAndDataRegion.restore();
+                    authenticate.restore();
                     done();
                 });
 
@@ -142,6 +165,25 @@ describe('Unit Tests', function () {
         });
 
         it('Paws Get Logs with has more true Success', function (done) {
+            authenticate = sinon.stub(utils, 'authenticate').callsFake(
+                function fakeFn(hostName, clientId, clientSecret) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve("token");
+                    });
+                });
+            getTenantIdAndDataRegion = sinon.stub(utils, 'getTenantIdAndDataRegion').callsFake(
+                function fakeFn(hostName, token) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({
+                            "id": "57ca9a6b-885f-4e36-95ec-290548c26059",
+                            "idType": "tenant",
+                            "apiHosts": {
+                                "global": "https://api.central.sophos.com",
+                                "dataRegion": "https://api-us03.central.sophos.com"
+                            }
+                        });
+                    });
+                });
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(BaseAPIURL, headers, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
@@ -162,6 +204,8 @@ describe('Unit Tests', function () {
                     assert.equal(newState.nextPage, "nextPage");
                     assert.ok(logs[0].id);
                     getAPILogs.restore();
+                    getTenantIdAndDataRegion.restore();
+                    authenticate.restore();
                     done();
                 });
 
@@ -169,10 +213,30 @@ describe('Unit Tests', function () {
         });
 
         it('Get Logs check API throttling error', function (done) {
-            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
-                function fakeFn(BaseAPIURL, headers, state, accumulator, maxPagesPerInvocation) {
+
+            authenticate = sinon.stub(utils, 'authenticate').callsFake(
+                function fakeFn(hostName, clientId, clientSecret) {
                     return new Promise(function (resolve, reject) {
-                        return reject({ response: { status: 429 } });
+                        return resolve("token");
+                    });
+                });
+            getTenantIdAndDataRegion = sinon.stub(utils, 'getTenantIdAndDataRegion').callsFake(
+                function fakeFn(hostName, token) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve({
+                            "id": "57ca9a6b-885f-4e36-95ec-290548c26059",
+                            "idType": "tenant",
+                            "apiHosts": {
+                                "global": "https://api.central.sophos.com",
+                                "dataRegion": "https://api-us03.central.sophos.com"
+                            }
+                        });
+                    });
+                });
+            getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
+                function fakeFn(baseUrl, token, tenant_Id, state, accumulator, maxPagesPerInvocation) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ response: { status: 429, data: { errorCode: "TooManyRequests" } } });
                     });
                 });
 
@@ -184,7 +248,7 @@ describe('Unit Tests', function () {
                     from_date: startDate.unix(),
                     poll_interval_sec: 1
                 };
-                
+
                 var reportSpy = sinon.spy(collector, 'reportApiThrottling');
                 let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params, callback) => callback(null));
                 collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
@@ -193,6 +257,8 @@ describe('Unit Tests', function () {
                     assert.equal(newState.poll_interval_sec, 900);
                     getAPILogs.restore();
                     putMetricDataStub.restore();
+                    getTenantIdAndDataRegion.restore();
+                    authenticate.restore();
                     done();
                 });
 
@@ -200,6 +266,19 @@ describe('Unit Tests', function () {
         });
 
         it('Paws Get Logs api Failed and show client error on DDMetric', function (done) {
+            authenticate = sinon.stub(utils, 'authenticate').callsFake(
+                function fakeFn(hostName, clientId, clientSecret) {
+                    return new Promise(function (resolve, reject) {
+                        return resolve("token");
+                    });
+                });
+            getTenantIdAndDataRegion = sinon.stub(utils, 'getTenantIdAndDataRegion').callsFake(
+                function fakeFn(hostName, token) {
+                    return new Promise(function (resolve, reject) {
+                        return reject({ response: { data: { errorCode: "Unauthorized", code: "USR00004c5", message: "The client needs to authenticate before making the API call. Either your credentials are invalid or blacklisted, or your JWT authorization token has expired", requestId: "6DB1D8AC-1BFA-448B-8439-5486E6D25A74" } } });
+                    });
+                });
+
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(BaseAPIURL, headers, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
@@ -227,8 +306,10 @@ describe('Unit Tests', function () {
                     poll_interval_sec: 1
                 };
                 collector.pawsGetLogs(curState, (err) => {
-                    assert.equal(err.errorCode,403);
+                    assert.equal(err.errorCode,"Unauthorized");
                     getAPILogs.restore();
+                    getTenantIdAndDataRegion.restore();
+                    authenticate.restore();
                     done();
                 });
 

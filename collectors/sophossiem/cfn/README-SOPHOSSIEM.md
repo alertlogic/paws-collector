@@ -31,9 +31,8 @@ Currently, we support US regions only: `us-east-1`, `us-east-2`, `us-west-1`,
    - `CollectorId` - default `none` Optional. A collector UUID if known.
    - `PackagesBucketPrefix` - example `alertlogic-collectors` S3 bucket name prefix where collector packages are located.
    - `PawsCollectorTypeName` - `sophossiem`
-   - `SophosSiemXAPIKey` - Sophos Siem x-api-key for authentication.
-   - `SophosSiemEndpoint` - Sophos Siem end point API access URL.
-   - `SophosSiemAuthorizationToken` - Sophos Siem Authorization token for authentication. eg `Basic token_value`.
+   - `SophosSiemClientId` - Sophos Siem Client Id for authentication.
+   - `SophosSiemSecret` - Sophos Siem Secret key for authentication.
    - `SophosSiemObjectNames` - Define object names. Please pass JSON formatted list. Possible values are ["Events", "Alerts"].
 
 1. Continue to finish the stack.

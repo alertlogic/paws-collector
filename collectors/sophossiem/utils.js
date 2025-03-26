@@ -56,6 +56,44 @@ function getAPILogs(BaseAPIURL, headers, state, accumulator, maxPagesPerInvocati
     });
 }
 
+function authenticate(baseUrl, client_id, client_secret) {
+    let restServiceClient = new RestServiceClient(baseUrl);
+    const formData = new URLSearchParams();
+    formData.append('grant_type', 'client_credentials');
+    formData.append('client_id', client_id);
+    formData.append('client_secret', client_secret);
+    formData.append('scope', 'token');
+    return new Promise(function (resolve, reject) {
+        return restServiceClient.post(`/api/v2/oauth2/token`, {
+            headers: {
+                "Content-Type": `application/x-www-form-urlencoded`
+            },
+            data: formData.toString()
+        }).then(response => {
+            resolve(response.access_token);
+        }).catch(err => {
+            reject(err);
+        });
+    });
+}
+
+function getTenantIdAndDataRegion(baseUrl, token) {
+    let restServiceClient = new RestServiceClient(baseUrl);
+    return new Promise(function (resolve, reject) {
+        return restServiceClient.get(`/whoami/v1`, {
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        }).then(response => {
+            resolve(response);
+        }).catch(err => {
+            reject(err);
+        });
+    });
+}
+
 module.exports = {
-    getAPILogs: getAPILogs
+    getAPILogs: getAPILogs,
+    authenticate: authenticate,
+    getTenantIdAndDataRegion: getTenantIdAndDataRegion
 };

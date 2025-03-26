@@ -16,6 +16,9 @@ const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const packageJson = require('./package.json');
 const utils = require("./utils");
 
+//Sophos base endpoints. These appear to be universal per the docs
+const SOPHOS_AUTH_BASE_URL = "id.sophos.com";
+const SOPHOS_API_BASE_URL = "api.central.sophos.com";
 
 const typeIdPaths = [{ path: ['id'] }];
 
@@ -66,6 +69,7 @@ class SophossiemCollector extends PawsCollector {
         if (!process.env.collector_streams) {
             collector.setCollectorStreamsEnv(process.env.paws_collector_param_string_1);
         }
+
         if (!state.stream) {
             state = collector.setStreamToCollectionState(state);
         }
@@ -74,7 +78,7 @@ class SophossiemCollector extends PawsCollector {
             const previuosDate = state.from_date;
             state.from_date = moment().subtract(23.75, 'hours').unix();
             AlLogger.warn(`Adjusted date from  ${moment.unix(parseInt(previuosDate)).format("YYYY-MM-DDTHH:mm:ssZ")} to ${moment.unix(parseInt(state.from_date)).format("YYYY-MM-DDTHH:mm:ssZ")} as api require date must be within last 24 hours`);
-            const skipDuration = moment.unix(parseInt(state.from_date)).diff(moment.unix(parseInt(previuosDate)),'hours');
+            const skipDuration = moment.unix(parseInt(state.from_date)).diff(moment.unix(parseInt(previuosDate)), 'hours');
             if (skipDuration > 24) {
                 collector.reportDDMetric("adjust_collection_interval", 1, [`skip_hrs:24h`]);
             }
@@ -82,62 +86,99 @@ class SophossiemCollector extends PawsCollector {
                 collector.reportDDMetric("adjust_collection_interval", 1, [`skip_hrs:${skipDuration}h`]);
             }
         }
-        const clientSecret = collector.secret;
-        if (!clientSecret) {
-            return callback("The Authorization token was not found!");
-        }
-
-        const x_api_key = collector.clientId;
-        if (!x_api_key) {
-            return callback("The x-api-key was not found!");
-        }
-
-        const headers = {
-            "x-api-key": x_api_key,
-            "Authorization": clientSecret
-        };
 
         const APIHostName = collector.pawsDomainEndpoint;
-        if (!APIHostName) {
-            return callback("The Host Name was not found!");
+        // TODO: Remove this isGatewayHostccondition once the new collectors are created and stable.
+        const isGatewayHost = APIHostName && APIHostName.includes("/gateway");
+        const clientSecret = collector.secret;
+        if (!clientSecret) {
+            return callback(isGatewayHost ? "The Authorization token was not found!" : "The Client Secret was not found!");
+        }
+
+        const clientId = collector.clientId;
+        if (!clientId) {
+            return callback(isGatewayHost ? "The x-api-key was not found!" : "The Client ID was not found!");
         }
 
         let messageString = state.nextPage ? collector.decodebase64string(state.nextPage) : `from ${moment.unix(parseInt(state.from_date)).format("YYYY-MM-DDTHH:mm:ssZ")}`;
-
         AlLogger.info(`SIEM000001 Collecting data for ${state.stream} ${messageString}`);
+        // TODO: Remove this isGatewayHostccondition once the new collectors are created and stable.
+        if (isGatewayHost) {
+            const headers = {
+                "x-api-key": clientId,
+                Authorization: clientSecret
+            };
 
-        utils.getAPILogs(APIHostName, headers, state, [], process.env.paws_max_pages_per_invocation)
-            .then(({ accumulator, nextPage, has_more }) => {
-                const newState = collector._getNextCollectionState(state, nextPage, has_more);
-                AlLogger.info(`SIEM000002 Next collection in ${newState.poll_interval_sec} seconds`);
-                return callback(null, accumulator, newState, newState.poll_interval_sec);
-            }).catch((error) => {
-                // set errorCode if not available in error object to showcase client error on DDMetric
-                if (error.response && error.response.status === 401) {
-                    const err = {
-                        message: 'Token expired or customer not authorized to make api call',
-                        errorCode: error.response.status
+            utils.getAPILogs(APIHostName, headers, state, [], process.env.paws_max_pages_per_invocation)
+                .then(({ accumulator, nextPage, has_more }) => {
+                    const newState = collector._getNextCollectionState(state, nextPage, has_more);
+                    AlLogger.info(`SIEM000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                    return callback(null, accumulator, newState, newState.poll_interval_sec);
+                })
+                .catch((error) => collector.handleApiError(error, state, callback));
+        } else {
+            utils.authenticate(SOPHOS_AUTH_BASE_URL, clientId, clientSecret).then((token) => {
+                utils.getTenantIdAndDataRegion(SOPHOS_API_BASE_URL, token).then((response) => {
+                    if (!response.id) {
+                        return callback("TenantId not found.");
                     }
-                    return callback(err);
-                }
-                else if (error.response && error.response.status === 429) {
-                    state.poll_interval_sec = 900;
-                    AlLogger.info('API Request Limit Exceeded.');
-                    collector.reportApiThrottling(function () {
-                        return callback(null, [], state, state.poll_interval_sec);
-                    });
-                }
-                else {
-                    if (error.response.data) {
-                        error.response.data.errorCode = error.response.status;
-                        error.response.data.message = error.response.data.message ? error.response.data.message : error.response.message || '';
-                        return callback(error.response.data);
+                    let tenantId = response.id;
+                    if (!response.apiHosts.dataRegion) {
+                        return callback("Please generate credentials for the tenant. Currently, we do not support credentials for Organization and Partner.");
                     }
-                    else {
-                        return callback(error);
-                    }
-                }
-            });
+                    const apiHostsURL = response.apiHosts.dataRegion.replace(/^https:\/\/|\/$/g, "");
+                    let headers = { "X-Tenant-ID": tenantId, Authorization: `Bearer ${token}`};
+                    utils.getAPILogs(apiHostsURL, headers, state, [], process.env.paws_max_pages_per_invocation)
+                        .then(({ accumulator, nextPage, has_more }) => {
+                            const newState = collector._getNextCollectionState(state, nextPage, has_more);
+                            AlLogger.info(`SIEM000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                            return callback(null, accumulator, newState, newState.poll_interval_sec);
+                        })
+                        .catch((error) => collector.handleApiError(error, state, callback));
+                }).catch((error) => collector.handleErrors(error, callback));
+            }).catch((error) => collector.handleAuthError(error, callback));
+        }
+    }
+
+    handleApiError(error, state, callback) {
+        if (error.response) {
+            if (error.response.status === 401) {
+                return callback({ message: "Invalid Credentials or Token expired or customer not authorized to make API call", errorCode: error.response.status });
+            }
+            if (error.response.status === 429) {
+                state.poll_interval_sec = 900;
+                AlLogger.info("API Request Limit Exceeded.");
+                this.reportApiThrottling(() => callback(null, [], state, state.poll_interval_sec));
+                return;
+            }
+            if (error.response.data) {
+                error.response.data.errorCode = error.response.status;
+                error.response.data.message = error.response.data.message || error.response.message || "";
+                return callback(error.response.data);
+            }
+        }
+        return callback(error);
+    }
+
+    handleErrors(error, callback) {
+        if (error.response.data && !error.response.data.errorCode) {
+            error.response.data.errorCode = error.response.status;
+        }
+        return callback(error.response.data);
+    }
+
+    handleAuthError(error, callback) {
+        if (error.response && error.response.data) {
+            const errorCode = error.response.data.errorCode;
+            if (errorCode === "oauth.invalid_client_secret" || errorCode === "customer.validation") {
+                error.response.data.message = `Error code [${error.response.status}]. Invalid client secret is provided.`;
+            }
+            if (errorCode === "oauth.client_app_does_not_exist") {
+                error.response.data.message = `Error code [${error.response.status}]. Invalid client ID is provided.`;
+            }
+            return callback(error.response.data);
+        }
+        return callback({ errorCode: error.response && error.response.status, message: error.message || "Unknown authentication error" });
     }
 
     _getNextCollectionState(curState, nextPage, has_more) {
