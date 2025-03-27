@@ -1,12 +1,11 @@
 {
-    "method": "GET",
-    "url": "{{endpoint}}/siem/v1/events?limit=10",
+    "method": "POST",
+    "url": "https://id.sophos.com/api/v2/oauth2/token",
     "headers": {
         "Accept": "*/*",
-        "x-api-key": "{{client_id}}",
-        "Authorization": "{{secret}}"
+        "Content-Type": "application/x-www-form-urlencoded"
     },
-    "body": "",
+    "body": "grant_type=client_credentials&client_id={{client_id}}&client_secret={{secret}}&scope=token",
     "expect": {
         "response": 200,
         "body": "ANY"

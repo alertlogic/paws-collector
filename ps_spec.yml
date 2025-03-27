@@ -329,7 +329,7 @@ stages:
       - ./build_collector.sh sophossiem
     env:
       ALPS_SERVICE_NAME: "paws-sophossiem-collector"
-      ALPS_SERVICE_VERSION: "1.2.15" #set the value from collector package json
+      ALPS_SERVICE_VERSION: "1.2.16" #set the value from collector package json
     outputs:
       file: ./sophossiem-collector*
     packagers:
