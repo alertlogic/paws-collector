@@ -1,7 +1,7 @@
 process.env.AWS_REGION = 'us-east-1';
 process.env.al_api = 'api.global-services.global.alertlogic.com';
 process.env.ingest_api = 'ingest.global-services.global.alertlogic.com';
-process.env.azollect_api = 'azcollect.global-services.global.alertlogic.com';
+process.env.azcollect_api = 'azcollect.global-services.global.alertlogic.com';
 process.env.collector_status_api = 'collector_status.global-services.global.alertlogic.com';
 
 process.env.aims_access_key_id = 'aims-key-id';
