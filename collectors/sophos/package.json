@@ -19,7 +19,7 @@
     "@aws-sdk/client-sqs": "^3.777.0",
     "@aws-sdk/client-ssm": "^3.777.0",
     "jshint": "^2.13.6",
-    "mocha": "10.7.3",
+    "mocha": "^10.7.3",
     "mocha-jenkins-reporter": "^0.4.8",
     "mockserver": "^3.1.1",
     "nyc": "^17.1.0",
