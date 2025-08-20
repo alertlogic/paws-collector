@@ -86,13 +86,23 @@ class CrowdstrikeCollector extends PawsCollector {
                         AlLogger.error(`CROW000005 Error while getting incident details`);
                         return collector.setErrorCode(error, callback);
                     });
-                } else if (state.stream === 'Detection') {
+                } // @deprecated: This implementation will be removed in a future release. Use the Alert API to retrieve detect events instead of Detection 
+                else if (state.stream === 'Detection') {
                     return utils.getDetections(accumulator, APIHostName, token).then((data) => {
                         const newState = collector._getNextCollectionStateWithOffset(state, offset, receivedAll);
                         AlLogger.info(`CROW000004 Next collection in ${newState.poll_interval_sec} seconds for ${state.stream}`);
                         return callback(null, data.resources, newState, newState.poll_interval_sec);
                     }).catch((error) => {
                         AlLogger.error(`CROW000005 Error while getting detection details`);
+                        return collector.setErrorCode(error, callback);
+                    });
+                } else if (state.stream === 'Alerts') {
+                    return utils.getAlerts(accumulator, APIHostName, token).then((data) => {
+                        const newState = collector._getNextCollectionStateWithOffset(state, offset, receivedAll);
+                        AlLogger.info(`CROW000004 Next collection in ${newState.poll_interval_sec} seconds for ${state.stream}`);
+                        return callback(null, data.resources, newState, newState.poll_interval_sec);
+                    }).catch((error) => {
+                        AlLogger.error(`CROW000005 Error while getting Alerts details`);
                         return collector.setErrorCode(error, callback);
                     });
                 }

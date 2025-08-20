@@ -60,9 +60,9 @@
             "NoEcho": true
         },
         "CrowdstrikeAPINames": {
-            "Description": "Define API names. Please pass JSON formatted list. Possible values are [\"Incident\", \"Detection\"]",
+            "Description": "Define API names. Please pass JSON formatted list. Possible values are [\"Incident\", \"Detection\",\"Alerts\"]",
             "Type": "String",
-            "Default": "[\"Incident\", \"Detection\"]"
+            "Default": "[\"Incident\", \"Detection\", \"Alerts\"]"
         },
         "CollectionStartTs": {
             "Description": "Timestamp when log collection starts. For example, 2019-11-21T16:00:00Z",

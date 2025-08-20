@@ -126,6 +126,32 @@ describe('Unit Tests', function () {
         });
     });
 
+    describe('POST Alerts Request', function () {
+        it('POST Alerts Request', function (done) {
+            exeStub();
+            let hostName = process.env.paws_endpoint;
+            const token = crowdstrikeMock.AUTHENTICATE.access_token;
+
+            utils.getAlerts(crowdstrikeMock.LIST.resources, hostName, token).then(data => {
+                assert(data.resources.length == 2, "accumulator length is wrong");
+                done();
+            });
+        });
+    });
+
+    describe('POST Alerts Request with empty IDs array', function () {
+        it('POST Alerts Request', function (done) {
+            exeStub();
+            let hostName = process.env.paws_endpoint;
+            const token = crowdstrikeMock.AUTHENTICATE.access_token;
+
+            utils.getAlerts([], hostName, token).then(data => {
+                assert(data.resources.length == 0, "accumulator length is wrong");
+                done();
+            });
+        });
+    });
+
     describe('Authentication Request', function () {
         beforeEach(function() {
             alserviceStub.post = sinon.stub(RestServiceClient.prototype, 'post').callsFake(
