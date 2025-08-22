@@ -14,6 +14,7 @@ let getList;
 let getAPIDetails;
 let getIncidents;
 let getDetections;
+let getAlerts;
 
 function setAlServiceStub() {
     authenticate = sinon.stub(utils, 'authenticate').callsFake(
@@ -41,6 +42,12 @@ function setAlServiceStub() {
                 return resolve({ resources: crowdstrikeMock.DETECTION_LOG_EVENT.resources});
             });
         });
+    getAlerts = sinon.stub(utils, 'getAlerts').callsFake(
+        function fakeFn(ids, apiEndpoint, token) {
+            return new Promise(function (resolve, reject) {
+                return resolve({ resources: crowdstrikeMock.ALERTS_LOG_EVENT.resources });
+            });
+        });
     getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
         function fakeFn(state) {
             return {
@@ -60,6 +67,7 @@ function restoreAlServiceStub() {
     getDetections.restore();
     getIncidents.restore();
     getAPIDetails.restore();
+    getAlerts.restore();
 }
 
 describe('Unit Tests', function () {
@@ -132,7 +140,7 @@ describe('Unit Tests', function () {
                 const sampleEvent = { ResourceProperties: { StackName: 'a-stack-name' } };
                 collector.pawsGetRegisterParameters(sampleEvent, (err, regValues) => {
                     const expectedRegValues = {
-                        crowdstrikeAPINames: '["Incident", "Detection"]'
+                        crowdstrikeAPINames: '["Incident", "Detection", "Alerts"]'
                     };
                     assert.deepEqual(regValues, expectedRegValues);
                     done();
@@ -169,6 +177,28 @@ describe('Unit Tests', function () {
                     done();
                 });
 
+            });
+        });
+
+        it('Get Alerts Logs Success', function (done) {
+            setAlServiceStub();
+            CrowdstrikeCollector.load().then(function (creds) {
+                var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
+                const startDate = moment().subtract(3, 'days');
+                const curState = {
+                    stream: "Alerts",
+                    since: startDate.toISOString(),
+                    until: startDate.add(2, 'days').toISOString(),
+                    offset: 0,
+                    poll_interval_sec: 1
+                };
+
+                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                    assert.equal(logs.length, 1);
+                    assert.equal(newState.poll_interval_sec, 1);
+                    assert.ok(logs[0].composite_id);
+                    done();
+                });
             });
         });
     });

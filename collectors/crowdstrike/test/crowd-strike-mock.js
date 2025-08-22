@@ -17,7 +17,7 @@ process.env.paws_poll_interval = 60;
 process.env.paws_type_name = "crowdstrike";
 process.env.paws_api_client_id = "client-id";
 process.env.paws_api_secret = "client-secret";
-process.env.collector_streams = "[\"Incident\", \"Detection\"]";
+process.env.collector_streams = "[\"Incident\", \"Detection\", \"Alerts\"]";
 process.env.paws_endpoint = "https://api.crowdstrike.com";
 
 const AIMS_TEST_CREDS = {
@@ -88,6 +88,32 @@ const INCIDENT_LOG_EVENT = {
     "errors" : []
 };
 
+const ALERTS_LOG_EVENT = {
+    "meta": {
+        "query_time": 0.01414002,
+        "powered_by": "msa-api",
+        "trace_id": "d4d3158c-731c-4cb6-97ed-8b999f65fedf"
+    },
+    "resources": [
+        {
+            "agent_id": "36f66221fa044c74a9e3ffa5ba8ab2d3",
+            "aggregate_id": "806b5e44b7bce1006b1704c86c42f6f3813367dca081ba24ed1572",
+            "composite_id": "fa23ab2e36fc4d12930f404ce0070d52:ind:36f66221fa044c74a9e3ffa5ba8ab2d3:4369786211892-10335-11200272",
+            "context_timestamp": "2025-08-17T15:31:37.962Z",
+            "crawled_timestamp": "2025-08-17T16:31:41.180070674Z",
+            "created_timestamp": "2025-08-17T15:32:41.196001085Z",
+            "show_in_ui": false,
+            "confidence": 80,
+            "severity": 70,
+            "severity_name": "High",
+            "status": "new",
+            "product": "epp",
+        }
+    ],
+    "errors": []
+};
+
+
 const FUNCTION_ARN = 'arn:aws:lambda:us-east-1:352283894008:function:test-01-CollectLambdaFunction-2CWNLPPW5XO8';
 const FUNCTION_NAME = 'test-TestCollectLambdaFunction-1JNNKQIPOTEST';
 
@@ -97,6 +123,7 @@ module.exports = {
     FUNCTION_NAME: FUNCTION_NAME,
     DETECTION_LOG_EVENT: DETECTION_LOG_EVENT,
     INCIDENT_LOG_EVENT: INCIDENT_LOG_EVENT,
+    ALERTS_LOG_EVENT: ALERTS_LOG_EVENT,
     LIST: LIST,
     AUTHENTICATE: AUTHENTICATE
 };

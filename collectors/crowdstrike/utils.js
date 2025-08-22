@@ -3,6 +3,7 @@ const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 
 const INCIDENT = 'Incident';
 const DETECTION = 'Detection';
+const ALERTS = 'Alerts';
 const USERAGENT = 'alertlogic_security_1.0';
 
 function authenticate(baseUrl, clientId, clientSecret) {
@@ -74,7 +75,7 @@ function getIncidents(ids, apiHostName, token) {
         });
     });
 }
-
+// @deprecated: The Detection API endpoints are deprecated and will be decommissioned on September 30th, 2025. Please remove or refactor this code if it begins to fail.
 function getDetections(ids, APIHostName, token) {
     let restServiceClient = new RestServiceClient(`${APIHostName}/detects/entities/summaries/GET/v1`);
     if (!ids || !ids.length) {
@@ -100,6 +101,43 @@ function getDetections(ids, APIHostName, token) {
         });
     });
 }
+/**
+ * 
+ * @param {*} ids - The ids of the alerts to retrieve.
+ * @param {*} apiHostName - The crowdstrike base url. 
+ * @param {*} token - A authorization token to make a api call.
+ * @returns the Alerts details
+ */
+function getAlerts(ids, apiHostName, token) {
+    let restServiceClient = new RestServiceClient(`${apiHostName}/alerts/entities/alerts/v2`);
+
+    if (!ids || !ids.length) {
+        return new Promise((resolve, reject) => {
+            resolve({
+                resources: []
+            });
+        });
+    }
+    return new Promise(function (resolve, reject) {
+        const headers = {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': USERAGENT
+        }
+        return restServiceClient.post('', {
+            headers: headers,
+            data: {
+                "composite_ids": ids
+            }
+        }).then(response => {
+            resolve(response);
+        }).catch(err => {
+            reject(err);
+        });
+    });
+}
+
 
 function getAPIDetails(state) {
     let url = "";
@@ -121,6 +159,12 @@ function getAPIDetails(state) {
             typeIdPaths = [];
             tsPaths = [{ path: ["created_timestamp"] }];
             break;
+        case ALERTS:
+            filter = `product:'epp'+created_timestamp:>"${state.since}"+created_timestamp:<"${state.until}"`;
+            url = `/alerts/queries/alerts/v2?limit=100&offset=${state.offset}&filter=${encodeURIComponent(filter)}`;
+            typeIdPaths = [{ path: ["composite_id"] }];
+            tsPaths = [{ path: ["created_timestamp"] }];
+            break;
         default:
             url = null;
             AlLogger.error(`CROW000006 Not supported stream: ${state.stream}`);
@@ -139,5 +183,6 @@ module.exports = {
     getIncidents: getIncidents,
     getDetections: getDetections,
     getAPIDetails: getAPIDetails,
-    getList: getList
+    getList: getList,
+    getAlerts: getAlerts
 };
