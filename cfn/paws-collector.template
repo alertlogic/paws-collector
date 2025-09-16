@@ -500,7 +500,7 @@
                     }
                 },
                 "Handler":"index.handler",
-                "Runtime":"nodejs20.x",
+                "Runtime":"nodejs22.x",
                 "MemorySize":128,
                 "Timeout": 5,
                 "Tags": [
@@ -609,7 +609,7 @@
                     }
                 },
                 "Handler":"index.handler",
-                "Runtime":"nodejs20.x",
+                "Runtime":"nodejs22.x",
                 "MemorySize":128,
                 "Timeout": 5,
                 "Tags": [
@@ -748,7 +748,7 @@
             },
             "Architectures": ["arm64"],
             "Handler":"index.handler",
-            "Runtime":"nodejs20.x",
+            "Runtime":"nodejs22.x",
             "MemorySize": { "Ref" : "CollectorFunctionMemorySize" },
             "Timeout": { "Ref" : "CollectorFunctionTimeout" },
             "Environment":{
