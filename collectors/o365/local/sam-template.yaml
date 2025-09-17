@@ -35,7 +35,7 @@ Resources:
           paws_dedup_logs_ddb_table_name:
           ssm_direct:
       CodeUri: 
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Handler: index.handler
       Timeout: 60 
       MemorySize: 1024

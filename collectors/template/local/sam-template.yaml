@@ -25,7 +25,7 @@ Resources:
           collector_id:
           ssm_direct:
           paws_type_name:
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Handler: index.handler
       Timeout: 300 
       MemorySize: 1024

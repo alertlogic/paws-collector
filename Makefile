@@ -80,8 +80,8 @@ clean:
 	rm -rf *.coverage.xml
 	rm -rf *.covertool.xml
 	for d in $(COLLECTOR_DIRS); do \
-        echo "\n************\n\cleaning for $$d\n\n************\n\n"; \
-        if [ "$$d" != "collectors//template" ]; then \
+        echo "\n************\n\ncleaning for $$d\n\n************\n\n"; \
+        if [ "$$d" != "collectors/template" ]; then \
                 make -C $$d clean || exit 1; \
-        fi \
-    done;
+        fi; \
+    done
