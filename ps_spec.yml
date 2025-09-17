@@ -7,7 +7,7 @@ stages:
       - pull_request
       - pull_request:
           trigger_phrase: test it
-    image: node:20
+    image: node:22
     compute_size: small
     commands:
       - make test
@@ -15,7 +15,7 @@ stages:
   - name: Master Push - Publish
     when:
       - push: ["master"]
-    image: node:20
+    image: node:22
     compute_size: small
     commands:
       - |
