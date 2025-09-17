@@ -36,7 +36,7 @@ Resources:
           ssm_direct:
           collector_status_api: api.product.dev.alertlogic.com
       CodeUri: 
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Handler: index.handler
       Timeout: 600
       MemorySize: 1024
