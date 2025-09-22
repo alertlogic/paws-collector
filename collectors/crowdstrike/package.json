@@ -1,6 +1,6 @@
 {
   "name": "crowdstrike-collector",
-  "version": "1.0.40",
+  "version": "1.0.41",
   "description": "Alert Logic AWS based Crowdstrike Log Collector",
   "repository": {},
   "private": true,
@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "@alertlogic/al-collector-js": "^3.0.15",
-    "@alertlogic/paws-collector": "2.2.8",
+    "@alertlogic/paws-collector": "2.2.9",
     "async": "^3.2.6",
     "debug": "^4.4.3",
     "moment": "2.30.1"
