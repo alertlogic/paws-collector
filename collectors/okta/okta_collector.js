@@ -62,8 +62,8 @@ class OktaCollector extends PawsCollector {
         });
         AlLogger.info(`OKTA000001 Collecting data from ${state.since} till ${state.until}`);
         const collection = await oktaClient.systemLogApi.listLogEvents({
-            since: new Date(state.since),
-            until: new Date(state.until)
+            since: state.since,
+            until: state.until
         });
         let logAcc = [];
         collection.each(log => {
