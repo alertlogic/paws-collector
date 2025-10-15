@@ -1,6 +1,6 @@
 {
   "name": "okta-collector",
-  "version": "1.2.32",
+  "version": "1.2.33",
   "description": "Alert Logic AWS based Okta Log Collector",
   "repository": {},
   "private": true,
@@ -28,7 +28,7 @@
   "dependencies": {
     "@alertlogic/al-collector-js": "3.0.16",
     "@alertlogic/paws-collector": "2.2.9",
-    "@okta/okta-sdk-nodejs": "^7.1.1",
+    "@okta/okta-sdk-nodejs": "~7.3.0",
     "async": "^3.2.6",
     "debug": "^4.4.3",
     "moment": "2.30.1"
