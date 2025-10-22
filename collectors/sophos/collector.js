@@ -94,37 +94,42 @@ class SophosCollector extends PawsCollector {
                                 });
                             }
                             else {
-                                // set errorCode if not available in error object to showcase client error on DDMetric
-                                if (error.response.data && !error.response.data.errorCode) {
-                                    error.response.data.errorCode = error.response.status;
-                                }
-                                return callback(error.response.data);
+                                return callback(collector.createErrorObject(error));
                             }
                         });
                 }).catch((error) => {
-                    if (error.response.data && !error.response.data.errorCode) {
-                        error.response.data.errorCode = error.response.status;
-                    }
-                    return callback(error.response.data);
+                    return callback(collector.createErrorObject(error));
                 });
             }).catch((error) => {         
-                    
+                const errorObject = collector.createErrorObject(error);
+                
                 if (error.response && error.response.data) {
                     const errorCode = error.response.data.errorCode;
                     if (errorCode === "oauth.invalid_client_secret" || errorCode === "customer.validation") {
-                        error.response.data.message = `Error code [${error.response.status}]. Invalid client secret is provided.`;
+                        errorObject.message = `Error code [${error.response.status}]. Invalid client secret is provided.`;
                     }
                     if (errorCode === "oauth.client_app_does_not_exist") {
-                        error.response.data.message = `Error code [${error.response.status}]. Invalid client ID is provided.`;
+                        errorObject.message = `Error code [${error.response.status}]. Invalid client ID is provided.`;
                     }
-                    return callback(error.response.data);
+                } else if (!errorObject.message || errorObject.message === "Unknown error") {
+                    errorObject.message = "Unknown authentication error";
                 }
-                else {
-                    error.errorCode = error.response.status;
-                    return callback(error);
-                }
+                
+                return callback(errorObject);
             });
         }
+    }
+
+    createErrorObject(error) {
+        const errorObject = {
+            message: error.message || (error.response && error.response.data && error.response.data.message) || (error.response && error.response.message) || "Unknown error",
+            errorCode: error.errorCode || (error.response && error.response.data && error.response.data.errorCode) || (error.response && error.response.status) || error.code,
+            status: error.status || (error.response && error.response.status),
+            statusText: error.statusText || (error.response && error.response.statusText),
+            code: error.code,
+            errno: error.errno
+        };
+        return errorObject;
     }
 
     _getNextCollectionState(curState) {

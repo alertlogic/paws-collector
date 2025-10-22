@@ -140,10 +140,24 @@ class SophossiemCollector extends PawsCollector {
         }
     }
 
+    createErrorObject(error) {
+        const errorObject = {
+            message: error.message || (error.response && error.response.data && error.response.data.message) || (error.response && error.response.message) || "Unknown error",
+            errorCode: error.errorCode || (error.response && error.response.data && error.response.data.errorCode) || (error.response && error.response.status) || error.code,
+            status: error.status || (error.response && error.response.status),
+            statusText: error.statusText || (error.response && error.response.statusText),
+            code: error.code,
+            errno: error.errno
+        };
+        return errorObject;
+    }
+
     handleApiError(error, state, callback) {
         if (error.response) {
             if (error.response.status === 401) {
-                return callback({ message: "Invalid Credentials or Token expired or customer not authorized to make API call", errorCode: error.response.status });
+                const errorObject = this.createErrorObject(error);
+                errorObject.message = "Invalid Credentials or Token expired or customer not authorized to make API call";
+                return callback(errorObject);
             }
             if (error.response.status === 429) {
                 state.poll_interval_sec = 900;
@@ -151,34 +165,30 @@ class SophossiemCollector extends PawsCollector {
                 this.reportApiThrottling(() => callback(null, [], state, state.poll_interval_sec));
                 return;
             }
-            if (error.response.data) {
-                error.response.data.errorCode = error.response.status;
-                error.response.data.message = error.response.data.message || error.response.message || "";
-                return callback(error.response.data);
-            }
         }
-        return callback(error);
+        return callback(this.createErrorObject(error));
     }
 
     handleErrors(error, callback) {
-        if (error.response.data && !error.response.data.errorCode) {
-            error.response.data.errorCode = error.response.status;
-        }
-        return callback(error.response.data);
+        return callback(this.createErrorObject(error));
     }
 
     handleAuthError(error, callback) {
+        const errorObject = this.createErrorObject(error);
+        
         if (error.response && error.response.data) {
             const errorCode = error.response.data.errorCode;
             if (errorCode === "oauth.invalid_client_secret" || errorCode === "customer.validation") {
-                error.response.data.message = `Error code [${error.response.status}]. Invalid client secret is provided.`;
+                errorObject.message = `Error code [${error.response.status}]. Invalid client secret is provided.`;
             }
             if (errorCode === "oauth.client_app_does_not_exist") {
-                error.response.data.message = `Error code [${error.response.status}]. Invalid client ID is provided.`;
+                errorObject.message = `Error code [${error.response.status}]. Invalid client ID is provided.`;
             }
-            return callback(error.response.data);
+        } else if (!errorObject.message || errorObject.message === "Unknown error") {
+            errorObject.message = "Unknown authentication error";
         }
-        return callback({ errorCode: error.response && error.response.status, message: error.message || "Unknown authentication error" });
+        
+        return callback(errorObject);
     }
 
     _getNextCollectionState(curState, nextPage, has_more) {

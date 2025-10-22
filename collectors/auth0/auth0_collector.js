@@ -71,11 +71,21 @@ class Auth0Collector extends PawsCollector {
                     });
                 }
                 else {
-                    // set error code for DDMetrics
-                    error.errorCode = error.statusCode;
-                    return callback(error);
+                    return callback(collector.createErrorObject(error));
                 }
             });
+    }
+
+    createErrorObject(error) {
+        const errorObject = {
+            message: error.message || (error.response && error.response.data && error.response.data.message) || (error.response && error.response.message) || "Unknown error",
+            errorCode: error.errorCode || (error.response && error.response.data && error.response.data.errorCode) || (error.response && error.response.status) || error.code || error.statusCode,
+            status: error.status || (error.response && error.response.status) || error.statusCode,
+            statusText: error.statusText || (error.response && error.response.statusText),
+            code: error.code,
+            errno: error.errno
+        };
+        return errorObject;
     }
 
     _getNextCollectionState(curState, nextLogId, lastLogTs) {
