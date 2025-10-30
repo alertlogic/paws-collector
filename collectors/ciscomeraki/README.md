@@ -26,17 +26,22 @@ Instructions for setting up log collection from Cisco Meraki Dashboard using its
    - Navigate to *Organization > Settings*.
    - Under *Dashboard API access*, enable API access ![ScreenShot](./docs/Ciscomeraki_img1.png).
 
-2. **Generate API Key**:
+2. **Select Base URL**:
+   - In most regions, every API request will begin with the following base URI:
+    `https://api.meraki.com/api/v1`
+   - If your organization’s dashboard is hosted in a specific country, please use the corresponding base URI for that region. Refere to the [Cisco Meraki Dashboard Base URI](https://developer.cisco.com/meraki/api-v1/getting-started/#base-uri) for the appropriate endpoint.
+
+3. **Generate API Key**:
    - Go to *My Profile*.
    - Under *API access*, generate a new API key ![ScreenShot](./docs/Ciscomeraki_img2.png).
 
-3. **Collect Network Events**:
+4. **Collect Network Events**:
    - Refer to the [Cisco Meraki Dashboard API documentation](https://developer.cisco.com/meraki/api/) for details on how to use the API to retrieve [network events](https://developer.cisco.com/meraki/api-v1/get-network-events/).
    - Example API endpoint: `GET /organizations/{organizationId}/networks/{networkId}/events`
 
-4. **Handle Authentication**:
-   - Include your API key in the request headers for authentication.
-   - Example: `X-Cisco-Meraki-API-Key: YOUR_API_KEY`
+5. **Handle Authentication**:
+   - Dashboard API v1 supports Bearer Auth using the standard Authorization header parameter. The value will be a string that begins with the word Bearer, followed by your Meraki API key.
+   - Example: `Authorization: Bearer {API_KEY}`
 
 ### Rate Limits
 - Cisco Meraki Dashboard imposes rate limits on API requests to ensure fair usage and prevent abuse. Refer to the [Rate Limits documentation](https://developer.cisco.com/meraki/api-v1/rate-limit/) for details on the specific limits for different endpoints.

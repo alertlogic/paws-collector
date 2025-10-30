@@ -19,6 +19,8 @@ const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const MAX_POLL_INTERVAL = 900;
 const API_THROTTLING_ERROR = 429;
 const API_NOT_FOUND_ERROR = 404;
+const CISCO_MERAKI_API_BASE_URL = "api.meraki.com";
+const CISCO_MERAKI_SUB_STRING = "api";
 const NOT_FOUND_ERROR_MAX_RETRIES = 3;
 const typeIdPaths = [{ path: ["type"] }];
 const tsPaths = [{ path: ["occurredAt"] }];
@@ -27,7 +29,7 @@ class CiscomerakiCollector extends PawsCollector {
     constructor(context, creds) {
         super(context, creds, packageJson.version);
         this.productTypes = process.env.paws_collector_param_string_1 ? JSON.parse(process.env.paws_collector_param_string_1) : [];
-        this.apiEndpoint = process.env.paws_endpoint.replace(/^https:\/\/|\/$/g, '');
+        this.apiEndpoint = process.env.paws_endpoint.includes(CISCO_MERAKI_SUB_STRING) ? process.env.paws_endpoint.replace(/^https:\/\/|\/$/g, '') : CISCO_MERAKI_API_BASE_URL;
         this.orgKey = process.env.paws_collector_param_string_2;
     }
 

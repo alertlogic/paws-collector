@@ -52,7 +52,7 @@
             "Default": "none"
         },
         "CiscoMerakiEndpoint": {
-            "Description": "Cisco Meraki API URL to poll.  For Example https://n149.meraki.com/api/v1",
+            "Description": "Cisco Meraki API URL to poll.  For Example https://api.meraki.com/api/v1",
             "Type": "String"
         },
         "CiscoMerakiClientId": {

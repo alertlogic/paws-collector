@@ -66,7 +66,7 @@ async function getAPILogs(apiDetails, accumulator, apiEndpoint, state, clientSec
 }
 
 async function makeApiCall(url, apiKey, perPage, productType, startingAfter = null) {
-    let fullUrl = `${url}`
+    let fullUrl = `${url}`;
 
     if (perPage) {
         fullUrl += `?perPage=${perPage}`;
@@ -81,7 +81,7 @@ async function makeApiCall(url, apiKey, perPage, productType, startingAfter = nu
     try {
         const response = await axios.get(fullUrl, {
             headers: {
-                "X-Cisco-Meraki-API-Key": apiKey,
+                "Authorization": `Bearer ${apiKey}`,
                 "Accept": "application/json"
             },
         });
@@ -92,13 +92,12 @@ async function makeApiCall(url, apiKey, perPage, productType, startingAfter = nu
 }
 
 async function listNetworkIds(payloadObj) {
-    const resourcePath = `/api/v1/organizations/${payloadObj.orgKey}/networks`;
-
+    const resourcePath = `api/v1/organizations/${payloadObj.orgKey}/networks`;
     try {
         const networks = await fetchAllNetworks(resourcePath, payloadObj.clientSecret, payloadObj.apiEndpoint);
         return networks.map(network => network.id);
     } catch (error) {
-        return error;
+        throw error;
     }
 }
 
