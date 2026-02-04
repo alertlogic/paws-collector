@@ -36,7 +36,6 @@ const crypto = require('crypto');
 const AlAwsCollectorV2 = require('@alertlogic/al-aws-collector-js').AlAwsCollectorV2;
 const AlAwsCommon = require('@alertlogic/al-aws-collector-js').AlAwsCommon;
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
-const AlAwsHealth = require('@alertlogic/al-aws-collector-js').Health
 const HealthChecks = require('./paws_health_checks');
 const packageJson = require('./package.json');
 
@@ -555,7 +554,7 @@ class PawsCollector extends AlAwsCollectorV2 {
             await collector.reportErrorToIngestApi(error);
             let params = collector.getS3ObjectParams(logs);
             try {
-                await AlAwsHealth.handleIngestEncodingInvalidError(error, params);
+                await AlAwsCommon.handleIngestEncodingInvalidError(error, params);
                 return { privCollectorState, nextInvocationTimeout };
             } catch (err) {
                 throw err;
@@ -1017,7 +1016,7 @@ class PawsCollector extends AlAwsCollectorV2 {
      * @returns object
      *
      */
-    async pawsGetRegisterParameters(event) {
+     pawsGetRegisterParameters(event) {
         return {};
     }
 
