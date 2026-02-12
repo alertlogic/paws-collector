@@ -291,7 +291,7 @@ class PawsCollector extends AlAwsCollectorV2 {
 
     async registerPawsCollector(event) {
         let collector = this;
-        let pawsRegisterProps = this.getProperties();
+        let pawsRegisterProps = collector.getProperties();
         try {
             const customRegister = await collector.pawsGetRegisterParameters(event);
             let registerProps = Object.assign(pawsRegisterProps, customRegister);
@@ -319,7 +319,7 @@ class PawsCollector extends AlAwsCollectorV2 {
         try {
             let customRegister = await collector.pawsGetRegisterParameters(event);
             let registerProps = Object.assign(pawsRegisterProps, customRegister);
-            return await AlAwsCollectorV2.prototype.deregister.call(collector, event, registerProps);
+            await AlAwsCollectorV2.prototype.deregister.call(collector, event, registerProps);
         } catch (error) {
             AlLogger.warn(`PAWS000102 Error during deregistration ${collector.stringifyError(error)}`);
             throw error;
@@ -821,11 +821,10 @@ class PawsCollector extends AlAwsCollectorV2 {
         let collectorStreams = { collector_streams: streams };
         try {
             return await AlAwsCommon.setEnvAsync(collectorStreams);
-
         } catch (error) {
-            AlLogger.error('PAWS000301 Paws error while adding collector_streams in environment variable')
+            AlLogger.error('PAWS000301 Paws error while adding collector_streams in environment variable');
+            return null;
         }
-
     }
 
     /**
@@ -1016,7 +1015,7 @@ class PawsCollector extends AlAwsCollectorV2 {
      * @returns object
      *
      */
-     pawsGetRegisterParameters(event) {
+     async pawsGetRegisterParameters(event) {
         return {};
     }
 
