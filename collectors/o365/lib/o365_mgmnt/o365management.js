@@ -80,7 +80,7 @@ class O365Management extends msRestAzure.AzureServiceClient {
                 error.statusCode = status;
                 error.request = msRest.stripRequest(httpRequest);
                 error.response = msRest.stripResponse(res);
-                throw error
+                throw error;
             }
             const nextPageUri = headers.get('NextPageUri');
             return { parsedBody, nextPageUri };
@@ -220,8 +220,7 @@ class O365Management extends msRestAzure.AzureServiceClient {
         return client.sendRequest(httpRequest).then(handler);
     }
     
-    getPreFormedUrl(uri, options, callback) {
-        let client = this;
+    getPreFormedUrl(uri, options) {
         let publisherId = this.publisherId;
         let requestUrl = uri;
         
@@ -260,7 +259,7 @@ class O365Management extends msRestAzure.AzureServiceClient {
         // Request Handler
         const handler = this.requestHandler(httpRequest);
         // Send Request
-        return client.sendRequest(httpRequest).then(handler);
+        return this.sendRequest(httpRequest).then(handler);
     }
 }
 

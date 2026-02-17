@@ -40,7 +40,7 @@ class O365Collector extends PawsCollector {
         super(context, creds, packageJson.version, [checkO365Subscriptions], []);
         this.o365_mgmnt_client =  m_o365mgmnt.getO365ManagmentClient(creds.pawsCreds);
     }
-    pawsInitCollectionState(event, callback) {
+    async pawsInitCollectionState(event) {
         let startTs = process.env.paws_collection_start_ts ?
                 process.env.paws_collection_start_ts :
                     moment().toISOString();
@@ -68,23 +68,21 @@ class O365Collector extends PawsCollector {
                 poll_interval_sec: 1
             }
         });
-        // bind the this to checkO365Subscriptions to acces the pawsCreds
-        const checkSubscriptions = checkO365Subscriptions.bind(this);
-        return checkSubscriptions((err) => {
-            return callback(err, initialStates, 1);
-        });
+        // bind the this to checkO365Subscriptions to access the pawsCreds
+        await checkO365Subscriptions.call(this);
+        return { state: initialStates, nextInvocationTimeout: 1 };
     }
 
-    pawsGetRegisterParameters(event, callback){
+    async pawsGetRegisterParameters(event){
         const regValues = {
             azureTenantId: process.env.paws_collector_param_string_1,
             azureStreams: process.env.collector_streams
         };
 
-        callback(null, regValues);
+        return  regValues;
     }
 
-    pawsGetLogs(state, callback) {
+    async pawsGetLogs(state) {
         let collector = this;
         // This code can remove once exsisting code set collector_streams env variable
         if (!process.env.collector_streams) {
@@ -97,7 +95,7 @@ class O365Collector extends PawsCollector {
             state.until = nextUntilMoment.toISOString();
             state.nextPage = null;
             state.poll_interval_sec = nextPollInterval;
-            return callback(null, [], state, state.poll_interval_sec);
+            return [[], state, state.poll_interval_sec];
         }
 
         if(moment().diff(state.since, 'days', true) > 7){
@@ -151,7 +149,7 @@ class O365Collector extends PawsCollector {
                 const contentUriFun = ({contentUri}) => collector.o365_mgmnt_client.getPreFormedUrl(contentUri);
                 const poolLimit = 20;
 
-                return this.asyncPoolAll(poolLimit, parsedBody, contentUriFun).then(content => {
+                return collector.asyncPoolAll(poolLimit, parsedBody, contentUriFun).then(content => {
                     return {
                         logs: content.reduce((agg, {parsedBody}) => [...parsedBody, ...agg], []),
                         nextPage: nextPageUri
@@ -160,43 +158,40 @@ class O365Collector extends PawsCollector {
             });
 
         // Now that we have all the content uri promises agregated, we can call them and collect the data
-        contentPromise.then(({logs, nextPage}) => {
+        return contentPromise.then(async ({logs, nextPage}) => {
             let newState;
             if(nextPage === undefined){
-                newState = this._getNextCollectionState(state);
+                newState = collector._getNextCollectionState(state);
             } else {
-                newState = this._getNextCollectionStateWithNextPage(state, nextPage);
+                newState = collector._getNextCollectionStateWithNextPage(state, nextPage);
             }
 
             let uniqueLogs = [];
-            collector.removeDuplicatedItem(logs, "Id", (err, res) => {
-                if (err) {
-                    return callback(err);
-                }
-                else {
-                    if (res.length > 0) {
-                        uniqueLogs = [...res];
-                    }
-                    return callback(null, uniqueLogs, newState, newState.poll_interval_sec);
-                }
-            });
+            const res = await collector.removeDuplicatedItem(logs, "Id");
+            if (res.length > 0) {
+                uniqueLogs = [...res];
+            }
+            return [uniqueLogs, newState, newState.poll_interval_sec];
         }).catch(err => {
             // set errorCode to showcase client error on DDMetric
-            if (typeof err === 'object') {
+            if (typeof err === 'object' && err !== null) {
                 err.errorCode = err.code ? err.code : (err.statusCode ? err.statusCode : err.status);
             }
-            let newState = this._handleMSManagementApiError(err, state);
+            let newState = collector._handleMSManagementApiError(err, state);
             if (newState) {
-                return callback(null, [], newState, newState.poll_interval_sec);
+                return [[], newState, newState.poll_interval_sec];
             }
  
             if (!err.code && err.message) {
-              const formatedError = this._formatErrorMessage(err);
-              AlLogger.error(`O365000003 Error in collection: ${err.message}`);
-              return callback(formatedError);
+                const formatedError = collector._formatErrorMessage(err);
+                AlLogger.error(`O365000003 Error in collection: ${formatedError.message || err.message}`);
+                throw formatedError;
+            } else if (typeof err === 'string') {
+                // if error is a string, wrap it in Error
+                throw new Error(err);
             } else {
-                // if error is string or don't have err.code  in error object, then return complete error object/string.
-                return callback(err);
+                // if error is already an Error object or object with details, throw as is
+                throw err;
             }
         });
     }
