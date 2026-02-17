@@ -10,23 +10,21 @@
  */
 'use strict';
 
-const async = require('async');
-const debug = require('debug')('index');
 const {
-          CloudWatch
-      } = require("@aws-sdk/client-cloudwatch"),
-      {
-          DynamoDB
-      } = require("@aws-sdk/client-dynamodb"),
-      {
-          KMS
-      } = require("@aws-sdk/client-kms"),
-      {
-          SQS
-      } = require("@aws-sdk/client-sqs"),
-      {
-          SSM
-      } = require("@aws-sdk/client-ssm");
+    CloudWatch
+} = require("@aws-sdk/client-cloudwatch"),
+    {
+        DynamoDB
+    } = require("@aws-sdk/client-dynamodb"),
+    {
+        KMS
+    } = require("@aws-sdk/client-kms"),
+    {
+        SQS
+    } = require("@aws-sdk/client-sqs"),
+    {
+        SSM
+    } = require("@aws-sdk/client-ssm");
 const { NodeHttpHandler } = require("@smithy/node-http-handler");
 const http = require("http");
 const https = require("https");
@@ -35,10 +33,9 @@ const moment = require('moment');
 const ddLambda = require('datadog-lambda-js');
 const crypto = require('crypto');
 
-const AlAwsCollector = require('@alertlogic/al-aws-collector-js').AlAwsCollector;
-const AlAwsUtil = require('@alertlogic/al-aws-collector-js').Util;
+const AlAwsCollectorV2 = require('@alertlogic/al-aws-collector-js').AlAwsCollectorV2;
+const AlAwsCommon = require('@alertlogic/al-aws-collector-js').AlAwsCommon;
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
-const AlAwsHealth = require('@alertlogic/al-aws-collector-js').Health
 const HealthChecks = require('./paws_health_checks');
 const packageJson = require('./package.json');
 
@@ -62,7 +59,6 @@ const agent = {
     keepAlive: true
 };
 
-// Configure the NodeHttpHandler with the custom agents
 const nodeHttpHandler = new NodeHttpHandler({
     httpAgent: new http.Agent(agent),
     httpsAgent: new https.Agent(agent)
@@ -83,102 +79,95 @@ const DDB_DELETE_BATCH_OPTIONS = {
 const MAX_ERROR_RETRIES = 5;
 let MAX_LOG_BATCH_SIZE = 10000;
 const REMAINING_CONTEXT_TIME_IN_MS = 10 * 1000;
-function getPawsParamStoreParam(){
-    return new Promise((resolve, reject) => {
-        if (fs.existsSync(CREDS_FILE_PATH) && fs.statSync(CREDS_FILE_PATH).size !== 0) {
-            if (process.env.ssm_direct) return resolve(fs.readFileSync(CREDS_FILE_PATH, 'utf-8'));
-            else return resolve(fs.readFileSync(CREDS_FILE_PATH));
-        }
-        var ssm = new SSM();
-        var params = {
-            Name: process.env.paws_secret_param_name
-        };
+
+async function getPawsParamStoreParam() {
+    if (fs.existsSync(CREDS_FILE_PATH) && fs.statSync(CREDS_FILE_PATH).size !== 0) {
         if (process.env.ssm_direct) {
-            params.WithDecryption = true;
+            return fs.readFileSync(CREDS_FILE_PATH, 'utf-8');
         }
-        ssm.getParameter(params, function(err, res) {
-            if(err){
-                reject(err, err.stack);
-            } else{
-                const {Parameter:{Value}} = res;
-                let data = null;
-                if (process.env.ssm_direct) {
-                    data = Value;
-                    fs.writeFileSync(CREDS_FILE_PATH, data);
-                } else {
-                    data = Buffer.from(Value, 'base64');
-                    fs.writeFileSync(CREDS_FILE_PATH, data, 'base64');
-                }
-                resolve(data);
-            }
-        });
-    });
-}
-
-function getDecryptedPawsCredentials(credsBuffer) {
-    return new Promise((resolve, reject) => {
-        if (PAWS_DECRYPTED_CREDS) {
-            return resolve(PAWS_DECRYPTED_CREDS);
-        } else if (process.env.ssm_direct) {
-            PAWS_DECRYPTED_CREDS = {
-                auth_type: process.env.paws_api_auth_type,
-                client_id: process.env.paws_api_client_id,
-                secret: credsBuffer
-            };
-            return resolve(PAWS_DECRYPTED_CREDS);
-        } else {
-            const kms = new KMS();
-            kms.decrypt(
-                {CiphertextBlob: credsBuffer},
-                (err, data) => {
-                    if (err) {
-                        return reject(err);
-                    } else {
-                        PAWS_DECRYPTED_CREDS = {
-                            auth_type: process.env.paws_api_auth_type,
-                            client_id: process.env.paws_api_client_id,
-                            secret: new TextDecoder("utf-8").decode(data.Plaintext)  
-                        };
-
-                        return resolve(PAWS_DECRYPTED_CREDS);
-                    }
-                });
-        }
-    });
-}
-
-class PawsCollector extends AlAwsCollector {
-
-    static load() {
-        return AlAwsCollector.load().then(function(aimsCreds) {
-
-            return getPawsParamStoreParam()
-                .then(getDecryptedPawsCredentials)
-                .then(pawsCreds => ({aimsCreds, pawsCreds}));
-        });
+        return fs.readFileSync(CREDS_FILE_PATH);
     }
 
-    // we can do whatever conditional handler wrapping here
+    const ssm = new SSM();
+    const params = {
+        Name: process.env.paws_secret_param_name
+    };
+
+    if (process.env.ssm_direct) {
+        params.WithDecryption = true;
+    }
+
+    const ssmParamRes = await ssm.getParameter(params);
+    const { Parameter: { Value } } = ssmParamRes;
+
+    let data = null;
+    if (process.env.ssm_direct) {
+        data = Value;
+        fs.writeFileSync(CREDS_FILE_PATH, data);
+    } else {
+        data = Buffer.from(Value, 'base64');
+        fs.writeFileSync(CREDS_FILE_PATH, data, 'base64');
+    }
+
+    return data;
+}
+
+async function getDecryptedPawsCredentials(credsBuffer) {
+    if (PAWS_DECRYPTED_CREDS) {
+        return PAWS_DECRYPTED_CREDS;
+    }
+
+    if (process.env.ssm_direct) {
+        PAWS_DECRYPTED_CREDS = {
+            auth_type: process.env.paws_api_auth_type,
+            client_id: process.env.paws_api_client_id,
+            secret: credsBuffer
+        };
+        return PAWS_DECRYPTED_CREDS;
+    }
+
+    const kms = new KMS();
+    const data = await kms.decrypt({ CiphertextBlob: credsBuffer });
+
+    PAWS_DECRYPTED_CREDS = {
+        auth_type: process.env.paws_api_auth_type,
+        client_id: process.env.paws_api_client_id,
+        secret: new TextDecoder("utf-8").decode(data.Plaintext)
+    };
+
+    return PAWS_DECRYPTED_CREDS;
+}
+
+class PawsCollector extends AlAwsCollectorV2 {
+
+    static async load() {
+
+        const aimsCreds = await AlAwsCollectorV2.load();
+        const credsBuffer = await getPawsParamStoreParam();
+        const pawsCreds = await getDecryptedPawsCredentials(credsBuffer);
+        return { aimsCreds, pawsCreds };
+    }
+
+  
     static makeHandler(handlerFunc) {
-        if(process.env.DD_API_KEY || process.env.DD_KMS_API_KEY){
+        if (process.env.DD_API_KEY || process.env.DD_KMS_API_KEY) {
             return ddLambda.datadog(handlerFunc);
         } else {
             return handlerFunc;
         }
     }
-    constructor(context, {aimsCreds, pawsCreds}, childVersion, healthChecks = [], statsChecks = []) {
+    constructor(context, { aimsCreds, pawsCreds }, childVersion, healthChecks = [], statsChecks = []) {
         const version = childVersion ? childVersion : packageJson.version;
         const endpointDomain = process.env.paws_endpoint.replace(DOMAIN_REGEXP, '');
-        // add the customHealthCheck for those collectors which does not have its own health check.
         if (healthChecks.length === 0) {
             healthChecks.push(HealthChecks.customHealthCheck);
         }
         let collectorStreams = process.env.collector_streams && Array.isArray(JSON.parse(process.env.collector_streams)) ? JSON.parse(process.env.collector_streams) : [];
         super(context, 'paws',
-              AlAwsCollector.IngestTypes.LOGMSGS,
-              version,
-              aimsCreds,
-              null, healthChecks, statsChecks, collectorStreams);
+            AlAwsCollectorV2.IngestTypes.LOGMSGS,
+            version,
+            aimsCreds,
+            null, healthChecks, statsChecks, collectorStreams);
         AlLogger.info(`PAWS000100 Loading collector ${process.env.paws_type_name}`);
         this._pawsCreds = pawsCreds;
         this._pawsCollectorType = process.env.paws_type_name;
@@ -190,22 +179,22 @@ class PawsCollector extends AlAwsCollector {
         this._pawsDeDupLogsTableName = process.env.paws_dedup_logs_ddb_table_name;
     };
 
-    get secret () {
+    get secret() {
         return this._pawsCreds.secret;
     };
 
-    get clientId () {
+    get clientId() {
         return this._pawsCreds.client_id;
     };
 
     get authType() {
         return this._pawsCreds.auth_type;
     };
-    
+
     get pawsCollectorType() {
         return this._pawsCollectorType;
     };
-    
+
     get pawsEndpoint() {
         return this._pawsEndpoint;
     };
@@ -213,24 +202,23 @@ class PawsCollector extends AlAwsCollector {
     get pawsDomainEndpoint() {
         return this._pawsDomainEndpoint;
     };
-    
+
     get pawsHttpsEndpoint() {
         return this._pawsHttpsEndpoint;
     };
 
-    done(error, pawsState, sendStatus = true) {
+    async done(error, pawsState, sendStatus = true) {
         // If stream exist in state then post the error status as part of stream specific ; 
         // In check-in or self-update we don't get state ,so check collector_streams env variable and post error as part of paws_{applicationId}_status
         const streamType = pawsState && pawsState.priv_collector_state.stream ?
             pawsState.priv_collector_state.stream :
             process.env.al_application_id;
 
-        super.done(error, streamType, sendStatus);
+        await super.done(error, streamType, sendStatus);
     }
-    
+
     reportDDMetric(name, value, tags = []) {
-        // check if the API key is present. This will be a good proxy for if the handler is working
-        if (!process.env.DD_API_KEY){
+        if (!process.env.DD_API_KEY) {
             return
         }
 
@@ -250,8 +238,8 @@ class PawsCollector extends AlAwsCollector {
     getProperties() {
         const baseProps = super.getProperties();
         let pawsProps = {
-            pawsCollectorType : this._pawsCollectorType,
-            pawsEndpoint : process.env.paws_endpoint
+            pawsCollectorType: this._pawsCollectorType,
+            pawsEndpoint: process.env.paws_endpoint
         };
         return Object.assign(pawsProps, baseProps);
     };
@@ -263,307 +251,256 @@ class PawsCollector extends AlAwsCollector {
      * Override the super method to send the status to CloudWatch and DataDog metrics
      * @param {*} stream 
      * @param {*} collectorStatus 
-     * @param {*} callback 
      */
-    sendCollectorStatus(stream, collectorStatus, callback) {
-        super.sendCollectorStatus(stream, collectorStatus, (err) => {
-            // report status to metrics if collector_status send the responce succesful.
-            if (!err) {
-                return this.reportCollectorStatus(collectorStatus.status, callback);
-            }
-            else return callback(err);
+    async sendCollectorStatus(stream, collectorStatus) {
+        try {
+            await super.sendCollectorStatus(stream, collectorStatus);
+            return await this.reportCollectorStatus(collectorStatus.status)
+        } catch (error) {
+            AlLogger.debug(`PAWS000302 Error sending collector status: ${this.stringifyError(error)}`);
+            throw error;
         }
-        );
     }
 
-    setPawsSecret(secretValue){
-        const encryptPromise = new Promise((resolve, reject) => {
-            const kms = new KMS();
-            const params = {
-                KeyId: process.env.paws_kms_key_arn,
-                Plaintext: new TextEncoder().encode(secretValue)
-            };
-            kms.encrypt(params, function(err, data) {
-                if (err) {
-                    return reject(err, err.stack);
-                }
-                const base64 = Buffer.from(data.CiphertextBlob).toString('base64');
-                return resolve(base64);
-            });
-        });
+    async setPawsSecret(secretValue) {
+        const kms = new KMS();
+        const params = {
+            KeyId: process.env.paws_kms_key_arn,
+            Plaintext: new TextEncoder().encode(secretValue)
+        };
 
-        return encryptPromise.then((base64) => {
-            return new Promise((resolve, reject) => {
-                var ssm = new SSM();
-                var params = {
-                    Name: process.env.paws_secret_param_name,
-                    Type: 'String',
-                    Overwrite: true,
-                    Value: base64,
-                    Tier: process.env.paws_secret_param_tier ? process.env.paws_secret_param_tier : DEFAULT_PAWS_SECRET_PARAM_TIER
-                };
-                ssm.putParameter(params, function(err, data) {
-                    if (err) return reject(err, err.stack);
-                    else     return resolve(data);
-                });
-            }).catch(err => {
-                AlLogger.error('PAWS000300 Error setting new secret', err);
-                return err;
-            });
-        });
+        const encryptData = await kms.encrypt(params);
+        const base64 = Buffer.from(encryptData.CiphertextBlob).toString('base64');
+
+        const ssm = new SSM();
+        const putParams = {
+            Name: process.env.paws_secret_param_name,
+            Type: 'String',
+            Overwrite: true,
+            Value: base64,
+            Tier: process.env.paws_secret_param_tier ? process.env.paws_secret_param_tier : DEFAULT_PAWS_SECRET_PARAM_TIER
+        };
+
+        try {
+            return await ssm.putParameter(putParams);
+        } catch (error) {
+            AlLogger.error('PAWS000300 Error setting new secret', error);
+            throw error;
+        }
     }
 
-    registerPawsCollector(event, callback) {
+    async registerPawsCollector(event) {
         let collector = this;
-        let pawsRegisterProps = this.getProperties();
-        collector.pawsGetRegisterParameters(event, function(err, customRegister) {
-            if (err) {
-                AlLogger.error(`PAWS000101 Error during registration ${collector.stringifyError(err)}`);
-                return callback(err);
-            } else {
-                let registerProps = Object.assign(pawsRegisterProps, customRegister);
-                AlAwsCollector.prototype.register.call(collector, event, registerProps, callback);
-                
-            }
-        });
+        let pawsRegisterProps = collector.getProperties();
+        try {
+            const customRegister = await collector.pawsGetRegisterParameters(event);
+            let registerProps = Object.assign(pawsRegisterProps, customRegister);
+            await AlAwsCollectorV2.prototype.register.call(collector, event, registerProps);
+        } catch (error) {
+            AlLogger.error(`PAWS000101 Error during registration ${collector.stringifyError(error)}`);
+            throw error;
+        };
     }
-    
-    register(event, customUnused, callback) {
+
+    async register(event, customUnused) {
         let collector = this;
 
-        async.waterfall([
-            function(asyncCallback) {
-                collector.registerPawsCollector(event, asyncCallback);
-            },
-            function(regResp, asyncCallback) {
-                return collector.pawsInitCollectionState(event, asyncCallback);
-            },
-            function(state, nextInvocationTimeout, asyncCallback) {
-                return collector._storeCollectionState({}, state, nextInvocationTimeout, asyncCallback);
-            }
-        ],
-        callback);
+        await collector.registerPawsCollector(event);
+        const { state, nextInvocationTimeout } = await collector.pawsInitCollectionState(event);
+        return await collector._storeCollectionState({}, state, nextInvocationTimeout);
+
     };
-    
-    deregister(event, customUnused, callback) {
+
+    async deregister(event, customUnused) {
         let collector = this;
         let pawsRegisterProps = {
-            pawsCollectorType : collector._pawsCollectorType
+            pawsCollectorType: collector._pawsCollectorType
         };
-        let custom = collector.pawsGetRegisterParameters(event, function(err, customRegister) {
-            if (err) {
-                AlLogger.warn(`PAWS000102 Error during deregistration ${collector.stringifyError(err)}`);
-            }
+        try {
+            let customRegister = await collector.pawsGetRegisterParameters(event);
             let registerProps = Object.assign(pawsRegisterProps, customRegister);
-            return AlAwsCollector.prototype.deregister.call(collector, event, registerProps, callback);
-        });
+            await AlAwsCollectorV2.prototype.deregister.call(collector, event, registerProps);
+        } catch (error) {
+            AlLogger.warn(`PAWS000102 Error during deregistration ${collector.stringifyError(error)}`);
+            throw error;
+        }
     };
 
-    handleEvent(event) {
+    async handleEvent(event) {
         let collector = this;
         if (event.Records) {
             let stateMsg = event.Records[0];
             if (stateMsg.eventSourceARN === process.env.paws_state_queue_arn) {
-                return collector.handlePollRequest(stateMsg);
+                return await collector.handlePollRequest(stateMsg);
             } else {
-                return super.handleEvent(event);
+                return await super.handleEvent(event);
             }
         } else {
-            return super.handleEvent(event);
+            return await super.handleEvent(event);
         }
     };
 
     // check the status of the state in DDB to avoid duplication
-    // there is a lot of logic here. not sur eif there is a better way of deduping. trying for an MVP
-    checkStateSqsMessage(stateSqsMsg, asyncCallback) {
-        const collector = this;
+    async checkStateSqsMessage(stateSqsMsg) {
         const params = {
             Key: {
-                "CollectorId": {S: collector._collectorId},
-                "MessageId": {S: stateSqsMsg.messageId}
+                "CollectorId": { S: this._collectorId },
+                "MessageId": { S: stateSqsMsg.messageId }
             },
             TableName: this._pawsDdbTableName,
             ConsistentRead: true
         }
-
-        const getItemPromise = DDB.getItem(params);
-
-        getItemPromise.then(data => {
-            // if the item is alread there, try and see if it is a duplicate
+        try {
+            const data = await DDB.getItem(params);
             if (data.Item) {
                 const Item = data.Item;
                 // check to see if record was updated within the visibility timeout of the SQS queue.
                 // if it is within that limit, then it likely to be processed by another invocation and this is a duplicate
-                if(Item.Status.S === STATE_RECORD_INCOMPLETE && moment().unix() - parseInt(Item.Updated.N) < SQS_VISIBILITY_TIMEOUT) {
+                if (Item.Status.S === STATE_RECORD_INCOMPLETE && moment().unix() - parseInt(Item.Updated.N) < SQS_VISIBILITY_TIMEOUT) {
                     AlLogger.info(`PAWS000400 Duplicate state: ${Item.MessageId.S}, already in progress. skipping`);
-                    return asyncCallback({errorCode: ERROR_CODE_DUPLICATE_STATE});
-                } else if (Item.Status.S === STATE_RECORD_COMPLETE){
+                    throw { errorCode: ERROR_CODE_DUPLICATE_STATE };
+                } else if (Item.Status.S === STATE_RECORD_COMPLETE) {
                     AlLogger.info(`PAWS000401 Duplicate state: ${Item.MessageId.S}, already processed. skipping`);
-                    return asyncCallback({errorCode: ERROR_CODE_COMPLETED_STATE});
+                    throw { errorCode: ERROR_CODE_COMPLETED_STATE };
                 } else {
-                    return collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_INCOMPLETE, asyncCallback);
+                    return await this.updateStateDBEntry(stateSqsMsg, STATE_RECORD_INCOMPLETE);
                 }
-            // otherwise, put a new item in ddb.
             } else {
                 const newRecord = {
                     Item: {
-                        CollectorId: {S: collector._collectorId},
-                        MessageId: {S: stateSqsMsg.messageId},
-                        Updated: {N: moment().unix().toString()},
-                        Cid: {S: collector.cid ? collector.cid : 'none'},
-                        Status: {S: STATE_RECORD_INCOMPLETE},
-                        // setting DDB time to life. This is the same as the sqs queue message retention
-                        ExpireDate: {N: moment().add(DDB_TTL_DAYS, 'days').unix().toString()}
+                        CollectorId: { S: this._collectorId },
+                        MessageId: { S: stateSqsMsg.messageId },
+                        Updated: { N: moment().unix().toString() },
+                        Cid: { S: this.cid ? this.cid : 'none' },
+                        Status: { S: STATE_RECORD_INCOMPLETE },
+                        ExpireDate: { N: moment().add(DDB_TTL_DAYS, 'days').unix().toString() }
                     },
                     TableName: this._pawsDdbTableName
                 }
-                DDB.putItem(newRecord, (err) => {
-                    if(err){
-                        return asyncCallback(err);
-                    } else {
-                        return asyncCallback(null)
-                    }
-                });
+                return await DDB.putItem(newRecord);
             }
-            
-        }).catch(err => {
+        } catch (error) {
             AlLogger.error(`PAWS000402 ${this._pawsDdbTableName} table not found`);
-            return asyncCallback(err);
-        });
+            throw error;
+        }
     }
 
-    updateStateDBEntry(stateSqsMsg, Status, asyncCallback) {
+    async updateStateDBEntry(stateSqsMsg, Status) {
         const collector = this;
         const updateParams = {
             Key: {
-                CollectorId: {S: collector._collectorId},
-                MessageId: {S: stateSqsMsg.messageId}
+                CollectorId: { S: collector._collectorId },
+                MessageId: { S: stateSqsMsg.messageId }
             },
             AttributeUpdates: {
                 Updated: {
                     Action: 'PUT',
-                    Value:{N: moment().unix().toString()}
+                    Value: { N: moment().unix().toString() }
                 },
                 Cid: {
                     Action: 'PUT',
-                    Value:{S: collector.cid ? collector.cid : 'none'}
+                    Value: { S: collector.cid ? collector.cid : 'none' }
                 },
                 Status: {
                     Action: 'PUT',
-                    Value: {S: Status}
+                    Value: { S: Status }
                 },
             },
             TableName: this._pawsDdbTableName
         };
-        DDB.updateItem(updateParams, (err) => {
-            if(err){
-                return asyncCallback(err);
-            } else {
-                return asyncCallback(null)
-            }
-        });
+
+        try {
+            return await DDB.updateItem(updateParams);
+        } catch (err) {
+            throw err;
+        }
     }
-    
-    handlePollRequest(stateSqsMsg) {
+
+
+    async handlePollRequest(stateSqsMsg) {
         let collector = this;
-        
+
         try {
             let pawsState = JSON.parse(stateSqsMsg.body);
-            async.waterfall([
-                function(asyncCallback) {
-                    if (!collector.registered) {
-                        return asyncCallback('PAWS000103 Collection attempt for unregistrered collector');
-                    } else {
-                        return asyncCallback();
-                    }
-                },
-                function(asyncCallback) {
-                    return collector.checkStateSqsMessage(stateSqsMsg, asyncCallback);
-                },
-                function(asyncCallback) {
-                    return collector.pawsGetLogs(pawsState.priv_collector_state, (err, ...remainingParams) => {
-                        if (err) {
-                            collector.reportClientError(err, () => {
-                                return asyncCallback(err);
-                            });
-                        } else {
-                            return asyncCallback(null, ...remainingParams);
-                        }
-                    });
-                },
-                function(logs, privCollectorState, nextInvocationTimeout, asyncCallback) {
-                    AlLogger.info(`PAWS000200 Log events received ${logs.length}`);
-                    return collector.batchLogProcess(logs, privCollectorState, nextInvocationTimeout, asyncCallback);
-                },
-                function(privCollectorState, nextInvocationTimeout, asyncCallback) {
-                    // Try to find last collected message ts in collector private state.
-                    const lastCollectedTs = 
-                        privCollectorState.last_collected_ts ? privCollectorState.last_collected_ts :
-                        privCollectorState.since ? privCollectorState.since :
-                        privCollectorState.until ? privCollectorState.until :
-                        null;
-                    
-                    if (lastCollectedTs) {
-                        collector.reportCollectionDelay(lastCollectedTs, () => {
-                            return asyncCallback(null, privCollectorState, nextInvocationTimeout);
-                        });
-                    } else {
-                        return asyncCallback(null, privCollectorState, nextInvocationTimeout);
-                    }
-                },
-                function(privCollectorState, nextInvocationTimeout, asyncCallback) {
-                    // Reset the retry count to 0 on successful log processing. 
-                    pawsState.retry_count = 0;
-                    return collector._storeCollectionState(pawsState, privCollectorState, nextInvocationTimeout, asyncCallback);
-                }
-            ], function(handleError) {
-                if( handleError && handleError.errorCode === ERROR_CODE_DUPLICATE_STATE) {
+
+            if (!collector.registered) {
+                throw new Error('PAWS000103 Collection attempt for unregistrered collector');
+            }
+
+            await collector.checkStateSqsMessage(stateSqsMsg);
+
+            let logs, privCollectorState, nextInvocationTimeout;
+            try {
+                [logs, privCollectorState, nextInvocationTimeout] = await collector.pawsGetLogs(pawsState.priv_collector_state);
+            } catch (err) {
+                await collector.reportClientError(err);
+                throw err;
+            }
+            AlLogger.info(`PAWS000200 Log events received ${logs.length}`);
+
+            const result = await collector.batchLogProcess(logs, privCollectorState, nextInvocationTimeout);
+            let finalPrivCollectorState = result.privCollectorState;
+            let finalNextInvocationTimeout = result.nextInvocationTimeout;
+
+            const lastCollectedTs =
+                finalPrivCollectorState.last_collected_ts ? finalPrivCollectorState.last_collected_ts :
+                    finalPrivCollectorState.since ? finalPrivCollectorState.since :
+                        finalPrivCollectorState.until ? finalPrivCollectorState.until :
+                            null;
+
+            if (lastCollectedTs) {
+                await collector.reportCollectionDelay(lastCollectedTs);
+            }
+
+            // Reset the retry count to 0 on successful log processing
+            pawsState.retry_count = 0;
+            await collector._storeCollectionState(pawsState, finalPrivCollectorState, finalNextInvocationTimeout);
+            await collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_COMPLETE);
+            await collector.done(null, pawsState);
+        } catch (handleError) {
+            try {
+                if (handleError && handleError.errorCode === ERROR_CODE_DUPLICATE_STATE) {
                     // We need to fail invocation for duplicate state handling
                     // because we don't want delete SQS message which is being handled by another invocation
-                    collector.done(handleError, pawsState, false);
+                    await collector.done(handleError, JSON.parse(stateSqsMsg.body), false);
                 } else if (handleError && handleError.errorCode === ERROR_CODE_COMPLETED_STATE) {
                     // For already completed states we need to just remove the state message from SQS
-                    collector.done(null, pawsState, false);
+                    await collector.done(null, JSON.parse(stateSqsMsg.body), false);
                 } else {
-                   const ddbStatus = handleError ? STATE_RECORD_FAILED : STATE_RECORD_COMPLETE;
-                    collector.updateStateDBEntry(stateSqsMsg, ddbStatus, function() {
-                        if(handleError) {
-                            // If collector failed to handle poll state we'd like to refresh the state message in SQS
-                            // in order to avoid expiration of that message due to retention period.
-                            // Here we just upload same state messaged into SQS and  send error status to the backend.
-                            // The invocation is marked as succeed in order to clean up current state message in SQS.
-                            // Increment/reset the retry count if error occured. 
-                            pawsState.retry_count = (!pawsState.retry_count || pawsState.retry_count >= MAX_ERROR_RETRIES) ? 1 : pawsState.retry_count + 1;
-                            collector._storeCollectionState(pawsState, pawsState.priv_collector_state, 300, function(storeError){
-                                if (!storeError){
-                                    // if sqs message added successfully and lambda time is less than 10 seconds so return the context succeed; so it will delete the old sqs message.
-                                    if (collector.context.getRemainingTimeInMillis() < REMAINING_CONTEXT_TIME_IN_MS) {
-                                        AlLogger.error(`PAWS000303 Error handling poll request: ${collector.stringifyError(handleError)}`);
-                                        collector.done(null, pawsState);
-                                    }
-                                    else {
-                                        collector.reportErrorStatus(handleError, pawsState, (statusSendError, handleErrorString) => {
-                                            AlLogger.error(`PAWS000304 Error handling poll request: ${handleErrorString}`);
-                                            collector.done(null, pawsState);
-                                        });
-                                    }
-                                } else {
-                                    collector.done(storeError);
-                                }
-                            });
+                    const pawsState = JSON.parse(stateSqsMsg.body);
+                    await collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_FAILED);
+
+                    // If collector failed to handle poll state we'd like to refresh the state message in SQS
+                    // in order to avoid expiration of that message due to retention period.
+                    // Here we just upload same state messaged into SQS and send error status to the backend.
+                    // The invocation is marked as succeed in order to clean up current state message in SQS.
+                    // Increment/reset the retry count if error occured.
+                    pawsState.retry_count = (!pawsState.retry_count || pawsState.retry_count >= MAX_ERROR_RETRIES) ? 1 : pawsState.retry_count + 1;
+
+                    try {
+                        await collector._storeCollectionState(pawsState, pawsState.priv_collector_state, 300);
+
+                        // if sqs message added successfully and lambda time is less than 10 seconds so return the context succeed; so it will delete the old sqs message.
+                        if (collector.context.getRemainingTimeInMillis() < REMAINING_CONTEXT_TIME_IN_MS) {
+                            AlLogger.error(`PAWS000303 Error handling poll request: ${collector.stringifyError(handleError)}`);
+                            await collector.done(null, pawsState);
                         } else {
-                            collector.done(null, pawsState);
+                            const handleErrorString = await collector.reportErrorStatus(handleError, pawsState);
+                            AlLogger.error(`PAWS000304 Error handling poll request: ${handleErrorString}`);
+                            await collector.done(null, pawsState);
                         }
-                    });
+                    } catch (storeError) {
+                        await collector.done(storeError);
+                    }
                 }
-            });
-        } catch(exception) {
-            AlLogger.error(`PAWS000201 Exception handling poll request: ${collector.stringifyError(exception)}`);
-            return collector.done(exception, null, false);
+            } catch (exception) {
+                AlLogger.error(`PAWS000201 Exception handling poll request: ${collector.stringifyError(exception)}`);
+                return collector.done(exception, null, false);
+            }
         }
     };
-    
-    reportErrorStatus(error, pawsState, callback) {
+
+    async reportErrorStatus(error, pawsState) {
         const streamType = pawsState && pawsState.priv_collector_state.stream ?
             pawsState.priv_collector_state.stream :
             process.env.al_application_id;
@@ -572,12 +509,9 @@ class PawsCollector extends AlAwsCollector {
         // Send the error status to assets only if retry count reached to 5. 
         // To reduce the status fluctuation from healthy  to unhealthy.
         if (pawsState.retry_count === MAX_ERROR_RETRIES) {
-            this.sendCollectorStatus(streamType, status, (sendError) => {
-                return callback(sendError, errorString);
-            });
-        } else {
-            return callback(null, errorString);
+            await this.sendCollectorStatus(streamType, status);
         }
+        return errorString;
     }
     /**
      * Split data per 10K messages batch.
@@ -585,53 +519,47 @@ class PawsCollector extends AlAwsCollector {
      * @param {*} logs 
      * @param {*} privCollectorState 
      * @param {*} nextInvocationTimeout 
-     * @param {*} callback 
+     * @returns {Promise<{privCollectorState, nextInvocationTimeout}>}
      */
-    batchLogProcess(logs, privCollectorState, nextInvocationTimeout, callback) {
+    async batchLogProcess(logs, privCollectorState, nextInvocationTimeout) {
         let collector = this;
 
-        function processBatch(logs) {
+        async function processBatch(logs) {
             let indexArray = [];
             const batches = Math.ceil(logs.length / MAX_LOG_BATCH_SIZE);
             for (let i = 0; i < batches; i++) {
                 indexArray.push({ start: MAX_LOG_BATCH_SIZE * i, stop: MAX_LOG_BATCH_SIZE * (i + 1) });
             }
-            let promises = indexArray.map((logpart) => {
-                return new Promise((resolve, reject) => {
-                    collector.processLog(logs.slice(logpart.start, logpart.stop), collector.pawsFormatLog.bind(collector), null, (err, res) => {
-                        if (err) {
-                            if (typeof err === 'string' && err.includes("Maximum payload size exceeded")) {
-                                let logsSlice = logs.slice(logpart.start, logpart.stop)
-                                MAX_LOG_BATCH_SIZE = Math.ceil(logsSlice.length / 2);
-                                return processBatch(logsSlice).then(resolve(null)).catch(reject(err));
-                            } else {
-                                collector.handleDeDupIngestError(err, logs.slice(logpart.start, logpart.stop), (error) => {
-                                    reject(error);
-                                });
-                            }
-                        }
-                        else {
-                            resolve(res);
-                        }
-                    });
-                });
+            let promises = indexArray.map(async (logpart) => {
+                try {
+                    return await collector.processLog(logs.slice(logpart.start, logpart.stop), collector.pawsFormatLog.bind(collector), null);
+                } catch (err) {
+                    if (typeof err === 'string' && err.includes("Maximum payload size exceeded")) {
+                        let logsSlice = logs.slice(logpart.start, logpart.stop);
+                        MAX_LOG_BATCH_SIZE = Math.ceil(logsSlice.length / 2);
+                        return await processBatch(logsSlice);
+                    } else {
+                        await collector.handleDeDupIngestError(err, logs.slice(logpart.start, logpart.stop));
+                        throw err;
+                    }
+                }
             });
-            return Promise.all(promises);
+            return await Promise.all(promises);
         }
 
-        processBatch(logs).then((res) => {
-            return callback(null, privCollectorState, nextInvocationTimeout);
-        }).catch((error) => {
-            collector.reportErrorToIngestApi(error, () => {
-                let params = collector.getS3ObjectParams(logs);
-                return AlAwsHealth.handleIngestEncodingInvalidError(error, params, (err) => {
-                    if (err) {
-                        return callback(err);
-                    }
-                    else return callback(null, privCollectorState, nextInvocationTimeout);
-                });
-            });
-        });
+        try {
+            await processBatch(logs);
+            return { privCollectorState, nextInvocationTimeout };
+        } catch (error) {
+            await collector.reportErrorToIngestApi(error);
+            let params = collector.getS3ObjectParams(logs);
+            try {
+                await AlAwsCommon.handleIngestEncodingInvalidError(error, params);
+                return { privCollectorState, nextInvocationTimeout };
+            } catch (err) {
+                throw err;
+            }
+        }
     }
 
     getS3ObjectParams(data) {
@@ -645,58 +573,56 @@ class PawsCollector extends AlAwsCollector {
         }
         return params;
     }
-    reportApiThrottling(callback) {
-        // TODO: report collector status via Ingest/agentstatus
-        var cloudwatch = new CloudWatch({apiVersion: '2010-08-01'});
+    async reportApiThrottling() {
+        var cloudwatch = new CloudWatch({ apiVersion: '2010-08-01' });
         const params = {
             MetricData: [
-              {
-                MetricName: 'PawsApiThrottling',
-                Dimensions: [
-                  {
-                    Name: 'CollectorType',
-                    Value: this._pawsCollectorType
-                  },
-                  {
-                    Name: 'FunctionName',
-                    Value: process.env.AWS_LAMBDA_FUNCTION_NAME
-                  }
-                ],
-                Timestamp: new Date(),
-                Unit: 'Count',
-                Value: 1
-              }
+                {
+                    MetricName: 'PawsApiThrottling',
+                    Dimensions: [
+                        {
+                            Name: 'CollectorType',
+                            Value: this._pawsCollectorType
+                        },
+                        {
+                            Name: 'FunctionName',
+                            Value: process.env.AWS_LAMBDA_FUNCTION_NAME
+                        }
+                    ],
+                    Timestamp: new Date(),
+                    Unit: 'Count',
+                    Value: 1
+                }
             ],
             Namespace: 'PawsCollectors'
         };
         this.reportDDMetric('api_throttling', 1)
-        return cloudwatch.putMetricData(params, callback);
+        return await cloudwatch.putMetricData(params);
     };
     /**
      * Report the error to Ingest api service and show case on DDMetrics
      * @param error 
-     * @param callback 
      */
-    reportErrorToIngestApi(error, callback) {
-        var cloudwatch = new CloudWatch({apiVersion: '2010-08-01'});
+    async reportErrorToIngestApi(error) {
+        var cloudwatch = new CloudWatch({ apiVersion: '2010-08-01' });
         const params = {
             MetricData: [
-              {
-                MetricName: 'PawsIngestApi',
-                Dimensions: [
-                  {
-                    Name: 'CollectorType',
-                    Value: this._pawsCollectorType
-                  },
-                  {
-                    Name: 'FunctionName',
-                    Value: process.env.AWS_LAMBDA_FUNCTION_NAME
-                  }
-                ],
-                Timestamp: new Date(),
-                Unit: 'Count',
-                Value: 1
-              }
+                {
+                    MetricName: 'PawsIngestApi',
+                    Dimensions: [
+                        {
+                            Name: 'CollectorType',
+                            Value: this._pawsCollectorType
+                        },
+                        {
+                            Name: 'FunctionName',
+                            Value: process.env.AWS_LAMBDA_FUNCTION_NAME
+                        }
+                    ],
+                    Timestamp: new Date(),
+                    Unit: 'Count',
+                    Value: 1
+                }
             ],
             Namespace: 'PawsCollectors'
         };
@@ -707,15 +633,14 @@ class PawsCollector extends AlAwsCollector {
             errorCode = error.errorCode;
         }
         this.reportDDMetric("ingest_api", 1, [`result:error`, `error_code:${errorCode}`]);
-        return cloudwatch.putMetricData(params, callback);
+        return await cloudwatch.putMetricData(params);
     };
 
     /**
      * Report the client errors and show case on DDMetrics and cloudwatch
-     * @param callback 
      * @param error 
      */
-    reportClientError(error, callback) {
+    async reportClientError(error) {
         var cloudwatch = new CloudWatch({ apiVersion: '2010-08-01' });
         const params = {
             MetricData: [
@@ -739,44 +664,44 @@ class PawsCollector extends AlAwsCollector {
             Namespace: 'PawsCollectors'
         };
         let errorCode = typeof (error) === 'object' && error.errorCode ? error.errorCode : 'unknown';
-        this.reportDDMetric("client", 1, [`result:error`,`error_code:${errorCode}`]);
-        return cloudwatch.putMetricData(params, callback);
+        this.reportDDMetric("client", 1, [`result:error`, `error_code:${errorCode}`]);
+        return await cloudwatch.putMetricData(params);
     };
-    
-    reportCollectionDelay(lastCollectedTs, callback) {
+
+    async reportCollectionDelay(lastCollectedTs) {
         const nowMoment = moment();
         // converting the time from seconds to milliseconds . 
         const lastCollectedMoment = !isNaN(lastCollectedTs) && lastCollectedTs.toString().length == 10 ? moment.unix(lastCollectedTs) : moment(lastCollectedTs);
         const delayDuration = moment.duration(nowMoment.diff(lastCollectedMoment));
         const collectionDelaySec = Math.floor(delayDuration.asSeconds());
-        
-        var cloudwatch = new CloudWatch({apiVersion: '2010-08-01'});
+
+        var cloudwatch = new CloudWatch({ apiVersion: '2010-08-01' });
         const params = {
             MetricData: [
-              {
-                MetricName: 'CollectionDelay',
-                Dimensions: [
-                  {
-                    Name: 'CollectorType',
-                    Value: this._pawsCollectorType
-                  },
-                  {
-                    Name: 'FunctionName',
-                    Value: process.env.AWS_LAMBDA_FUNCTION_NAME
-                  }
-                ],
-                Timestamp: new Date(),
-                Unit: 'Seconds',
-                Value: collectionDelaySec
-              }
+                {
+                    MetricName: 'CollectionDelay',
+                    Dimensions: [
+                        {
+                            Name: 'CollectorType',
+                            Value: this._pawsCollectorType
+                        },
+                        {
+                            Name: 'FunctionName',
+                            Value: process.env.AWS_LAMBDA_FUNCTION_NAME
+                        }
+                    ],
+                    Timestamp: new Date(),
+                    Unit: 'Seconds',
+                    Value: collectionDelaySec
+                }
             ],
             Namespace: 'PawsCollectors'
         };
         this.reportDDMetric('collection_delay', collectionDelaySec);
-        return cloudwatch.putMetricData(params, callback);
+        return await cloudwatch.putMetricData(params);
     };
 
-    reportDuplicateLogCount(duplicateCount, callback) {
+    async reportDuplicateLogCount(duplicateCount) {
         var cloudwatch = new CloudWatch({ apiVersion: '2010-08-01' });
         const params = {
             MetricData: [
@@ -800,92 +725,81 @@ class PawsCollector extends AlAwsCollector {
             Namespace: 'PawsCollectors'
         };
         this.reportDDMetric("duplicate_messages", duplicateCount);
-        return cloudwatch.putMetricData(params, callback);
+        return await cloudwatch.putMetricData(params);
     };
     /**
      * Report the collector status(ok/error)to dd metrics
      * @param {*} status 
-     * @param {*} callback 
      * @returns 
      */
-    reportCollectorStatus(status, callback) {
-        var cloudwatch = new CloudWatch({apiVersion: '2010-08-01'});
+    async reportCollectorStatus(status) {
+        var cloudwatch = new CloudWatch({ apiVersion: '2010-08-01' });
         const params = {
             MetricData: [
-              {
-                MetricName: 'PawsCollectorStatus',
-                Dimensions: [
-                  {
-                    Name: 'CollectorType',
-                    Value: this._pawsCollectorType
-                  },
-                  {
-                    Name: 'FunctionName',
-                    Value: process.env.AWS_LAMBDA_FUNCTION_NAME
-                  }
-                ],
-                Timestamp: new Date(),
-                Unit: 'Count',
-                Value: 1
-              }
+                {
+                    MetricName: 'PawsCollectorStatus',
+                    Dimensions: [
+                        {
+                            Name: 'CollectorType',
+                            Value: this._pawsCollectorType
+                        },
+                        {
+                            Name: 'FunctionName',
+                            Value: process.env.AWS_LAMBDA_FUNCTION_NAME
+                        }
+                    ],
+                    Timestamp: new Date(),
+                    Unit: 'Count',
+                    Value: 1
+                }
             ],
             Namespace: 'PawsCollectors'
         };
 
         this.reportDDMetric("collector_status", 1, [`status:${status}`]);
-        return cloudwatch.putMetricData(params, callback);
+        return await cloudwatch.putMetricData(params);
     };
 
-    _storeCollectionState(pawsState, privCollectorState, invocationTimeout, callback) {
+    async _storeCollectionState(pawsState, privCollectorState, invocationTimeout) {
         if (Array.isArray(privCollectorState)) {
-            return this._storeCollectionStateArray(pawsState, privCollectorState, invocationTimeout, callback);
+            return await this._storeCollectionStateArray(pawsState, privCollectorState, invocationTimeout);
         } else {
-            return this._storeCollectionStateSingle(pawsState, privCollectorState, invocationTimeout, callback);
+            return await this._storeCollectionStateSingle(pawsState, privCollectorState, invocationTimeout);
         }
     }
 
-    _storeCollectionStateArray(pawsState, privCollectorStates, invocationTimeout, callback) {
-        let collector = this;
-        var sqs = new SQS({apiVersion: '2012-11-05'});
-        const nextInvocationTimeout = invocationTimeout ? invocationTimeout : collector.pollInterval;
-        let SQSMsgs = privCollectorStates.map(function(privState, index) {
-            let pState = pawsState;
+    async _storeCollectionStateArray(pawsState, privCollectorStates, invocationTimeout) {
+        const sqs = new SQS({ apiVersion: '2012-11-05' });
+        const nextInvocationTimeout = invocationTimeout ? invocationTimeout : this.pollInterval;
+
+        const SQSMsgs = privCollectorStates.map((privState, index) => {
+            const pState = { ...pawsState };
             pState.priv_collector_state = privState;
             return {
                 Id: index.toString(),
-                MessageBody: JSON.stringify(pawsState),
+                MessageBody: JSON.stringify(pState),
                 DelaySeconds: nextInvocationTimeout
             };
         });
 
-        var promises = [];
-        const SQS_BATCH_LIMIT = 10
+        const promises = [];
+        const SQS_BATCH_LIMIT = 10;
+
         for (let i = 0; i < SQSMsgs.length; i += SQS_BATCH_LIMIT) {
-            let params = {
+            const params = {
                 Entries: SQSMsgs.slice(i, i + SQS_BATCH_LIMIT),
                 QueueUrl: process.env.paws_state_queue_url
             };
-            let promise = new Promise((resolve, reject) => {
-                sqs.sendMessageBatch(params, (err, data) => {
-                    if(err) reject(err);
-                    resolve(data);
-                })
-            });
-            promises.push(promise);
+            promises.push(sqs.sendMessageBatch(params));
         }
 
         // Current state message will be removed by Lambda trigger upon successful completion
-        Promise.all(promises)
-        .then(results => {
-            return callback(null, results);
-        }).catch(error => {
-            return callback(error);
-        });
+        return await Promise.all(promises);
     }
 
-    _storeCollectionStateSingle(pawsState, privCollectorState, invocationTimeout, callback) {
+    async _storeCollectionStateSingle(pawsState, privCollectorState, invocationTimeout) {
         let collector = this;
-        var sqs = new SQS({apiVersion: '2012-11-05'});
+        var sqs = new SQS({ apiVersion: '2012-11-05' });
         const nextInvocationTimeout = invocationTimeout ? invocationTimeout : collector.pollInterval;
         pawsState.priv_collector_state = privCollectorState;
 
@@ -895,7 +809,7 @@ class PawsCollector extends AlAwsCollector {
             DelaySeconds: nextInvocationTimeout
         };
         // Current state message will be removed by Lambda trigger upon successful completion
-        sqs.sendMessage(params, callback);
+        await sqs.sendMessage(params);
     };
 
     /**
@@ -903,13 +817,14 @@ class PawsCollector extends AlAwsCollector {
      * Streams are pass to AL-aws-collector to post stream specific status if there is no error.
      * @param {*} streams 
      */
-    setCollectorStreamsEnv(streams) {
+    async setCollectorStreamsEnv(streams) {
         let collectorStreams = { collector_streams: streams };
-        return AlAwsUtil.setEnv(collectorStreams, (err) => {
-            if (err) {
-                AlLogger.error('PAWS000301 Paws error while adding collector_streams in environment variable')
-            }
-        });
+        try {
+            return await AlAwsCommon.setEnvAsync(collectorStreams);
+        } catch (error) {
+            AlLogger.error('PAWS000301 Paws error while adding collector_streams in environment variable');
+            return null;
+        }
     }
 
     /**
@@ -932,14 +847,13 @@ class PawsCollector extends AlAwsCollector {
         return expireTTLDate;
     }
 
-   /**
-    * 
-    * @param {*} logs 
-    * @param {*} paramName :Uniquely identified parameter key 
-    * @param {*} callback 
-    * @returns  callback - (error, uniqueLogs)
-    */
-    removeDuplicatedItem(logs, paramName, asyncCallback) {
+    /**
+     * 
+     * @param {*} logs 
+     * @param {*} paramName :Uniquely identified parameter key 
+     * @returns uniqueLogs array
+     */
+    async removeDuplicatedItem(logs, paramName) {
         let collector = this;
         let uniqueLogs = [];
         var promises = [];
@@ -956,65 +870,60 @@ class PawsCollector extends AlAwsCollector {
                 TableName: collector._pawsDeDupLogsTableName,
                 ConditionExpression: 'attribute_not_exists(Id)'
             };
-            let promise = new Promise((resolve, reject) => {
-                DDB.putItem(params, (err, res) => {
-                    if (err) {
-                        if (err.name === 'ConditionalCheckFailedException') {
-                            duplicateCount++;
-                            return resolve(null);
-                        } else {
-                            AlLogger.warn('PAWS000404 Error storing event in DynamoDB:', err);
-                            return reject(err);
-                        }
-                    }
-                    else {
-                        uniqueLogs.push(message);
-                        return resolve(null);
+
+            let promise = DDB.putItem(params)
+                .then(() => {
+                    uniqueLogs.push(message);
+                })
+                .catch(err => {
+                    if (err.name === 'ConditionalCheckFailedException') {
+                        duplicateCount++;
+                    } else {
+                        AlLogger.warn('PAWS000404 Error storing event in DynamoDB:', err);
+                        throw err;
                     }
                 });
-            });
             promises.push(promise);
         });
 
-        Promise.all(promises).then(result => {
+        try {
+            await Promise.all(promises);
             if (duplicateCount > 0) {
-                collector.reportDuplicateLogCount(duplicateCount, (err) => {
-                    if (err){
-                        AlLogger.warn(`PAWS000405 error from custom cloud watch metrics ${JSON.stringify(err)}`);
-                    }
-                });
+                try {
+                    await collector.reportDuplicateLogCount(duplicateCount);
+                } catch (err) {
+                    AlLogger.warn(`PAWS000405 error from custom cloud watch metrics ${JSON.stringify(err)}`);
+                }
             }
-            return asyncCallback(null, uniqueLogs);
-        }).catch(err => {
-            return asyncCallback(err);
-        });
+            return uniqueLogs;
+        } catch (err) {
+            throw err;
+        }
     }
     /**
      * Return the original error after deleting the entry from DDB
      * @param {*} error 
      * @param {*} logs 
-     * @param {*} asyncCallback 
      * @returns 
      */
-    handleDeDupIngestError(error, logs, asyncCallback) {
+    async handleDeDupIngestError(error, logs) {
         let collector = this;
         if (collector.pawsCollectorType === 'o365') {
-            collector.deleteDedupLogItemEntry(logs, (err) => {
-                if (err) {
-                    AlLogger.warn(`PAWS000406 Error while delete item in DynamoDB ${err}`);
-                }
-                return asyncCallback(error);
-            });
+            try {
+                await collector.deleteDedupLogItemEntry(logs)
+            } catch (error) {
+                AlLogger.warn(`PAWS000406 Error while delete item in DynamoDB ${err}`);
+                throw error;
+            }
         } else {
-            return asyncCallback(error);
+            throw error;
         }
     }
     /**
      * delete the item entry from DDB
      * @param {*} logs 
-     * @param {*} callback 
      */
-    deleteDedupLogItemEntry(logs, callback) {
+    async deleteDedupLogItemEntry(logs) {
         const collector = this;
         const tableName = collector._pawsDeDupLogsTableName
         let promises = [];
@@ -1037,11 +946,11 @@ class PawsCollector extends AlAwsCollector {
             promises.push(collector.dDBBatchWriteItem(tableName, currentBatch));
         }
 
-        Promise.all(promises).then(res => {
-            return callback(null)
-        }).catch(err => {
-            return callback(err);
-        });
+        try {
+            return await Promise.all(promises);
+        } catch (error) {
+            throw error;
+        }
     }
     /**
      * Form the unique item id which used as primary key
@@ -1061,9 +970,9 @@ class PawsCollector extends AlAwsCollector {
      * @param {*} batch 
      * @returns 
      */
-    dDBBatchWriteItem(tableName, batch) {
+    async dDBBatchWriteItem(tableName, batch) {
         const batchParams = { RequestItems: { [tableName]: batch } };
-        return DDB.batchWriteItem(batchParams);
+        return await DDB.batchWriteItem(batchParams);
     }
 
     /**
@@ -1077,40 +986,41 @@ class PawsCollector extends AlAwsCollector {
         return batchFull;
     }
     /**
-     * @function collector callback to initialize collection state
+     * @function collector initialize collection state
      * @param event - collector register event coming in from CFT.
-     * @param callback
-     * @returns callback - (error, stateObjectOrArray, nextInvocationTimeoutSec).
+     * @returns Promise that resolves to { state, nextInvocationTimeout } or throws Error
      *
      */
-    pawsInitCollectionState(event, callback) {
+    async pawsInitCollectionState(event) {
+        // Return object: { state, nextInvocationTimeout }
+        // or throw Error
         throw Error("not implemented pawsInitCollectionState()");
     }
 
     /**
      * @function collector callback to receive logs data
      * @param state - collection state specific to a PAWS collector.
-     * @param callback
-     * @returns callback - (error, logsArray, stateObjectOrArray, nextInvocationTimeoutSec).
+     * @returns Promise that resolves to [logs, privCollectorState, nextInvocationTimeout] or throws Error
      *
      */
-    pawsGetLogs(state, callback) {
+    async pawsGetLogs(state) {
+        // Return array: [logs, privCollectorState, nextInvocationTimeout]
+        // or throw Error
         throw Error("not implemented pawsGetLogs()");
-    };
+    }
 
     /**
-     * @function collector callback to get specific (de)registration parameters
+     * @function collector 
      * @param event - optional, collector register event coming in from CFT during stack Create/Delete operations.
-     * @param callback
-     * @returns callback - (error, objectWithRegistrationProperties)
+     * @returns object
      *
      */
-    pawsGetRegisterParameters(event, callback) {
-        return callback(null, {});
-    };
+     async pawsGetRegisterParameters(event) {
+        return {};
+    }
 
     /**
-     * @function collector callback to format received data
+     * @function collector 
      * Refer to al-collector-js.buildPayload parseCallback parameter
      */
     pawsFormatLog() {
