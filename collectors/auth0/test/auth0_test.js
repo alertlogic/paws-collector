@@ -6,7 +6,7 @@ const m_response = require('cfn-response');
 const auth0Mock = require('./auth0_mock');
 var m_alCollector = require('@alertlogic/al-collector-js');
 var Auth0Collector = require('../auth0_collector').Auth0Collector;
-const m_al_aws = require('@alertlogic/al-aws-collector-js').Util;
+const m_al_aws = require('@alertlogic/al-aws-collector-js');
 const utils = require("../utils");
 
 const { CloudWatch } = require("@aws-sdk/client-cloudwatch"),
@@ -74,7 +74,7 @@ function restoreAlServiceStub() {
 }
 
 function mockSetEnvStub() {
-    setEnvStub = sinon.stub(m_al_aws, 'setEnv').callsFake((vars, callback) => {
+    setEnvStub = sinon.stub(m_al_aws.AlAwsCommon, 'setEnvAsync').callsFake((vars) => {
         const {
             ingest_api,
             azcollect_api,
@@ -88,23 +88,23 @@ function mockSetEnvStub() {
                 Varaibles: vars
             }
         };
-        return callback(null, returnBody);
+        return Promise.resolve(returnBody);
     });
 }
 
 describe('Unit Tests', function () {
 
     beforeEach(function () {
-        sinon.stub(SSM.prototype, 'getParameter').callsFake(function (params, callback) {
-            const data = Buffer.from('test-secret');
-            return callback(null, { Parameter: { Value: data.toString('base64') } });
+        sinon.stub(SSM.prototype, 'getParameter').callsFake(function (params) {
+            const data = process.env.ssm_direct ? 'decrypted-aims-sercret-key' : Buffer.from('decrypted-aims-sercret-key');
+            return Promise.resolve({ Parameter: { Value: process.env.ssm_direct ? data : data.toString('base64') } });
         });
 
-        sinon.stub(KMS.prototype, 'decrypt').callsFake(function (params, callback) {
+        sinon.stub(KMS.prototype, 'decrypt').callsFake(function (params) {
             const data = {
                 Plaintext: Buffer.from('decrypted-sercret-key')
             };
-            return callback(null, data);
+            return Promise.resolve(data);
         });
 
         responseStub = sinon.stub(m_response, 'send').callsFake(
@@ -132,7 +132,7 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
-        it('sets up intial state', function (done) {
+        it('sets up intial state', function () {
             Auth0Collector.load().then(function (creds) {
                 const testPollInterval = 60;
                 var collector = new Auth0Collector(ctx, creds);
@@ -140,25 +140,22 @@ describe('Unit Tests', function () {
                 process.env.paws_collection_start_ts = startDate;
                 collector.pollInterval = testPollInterval;
 
-                collector.pawsInitCollectionState({}, (err, initialState, nextPoll) => {
-                    assert.equal(initialState.since, startDate, "Dates are not equal");
-                    assert.equal(initialState.poll_interval_sec, 1);
-                    assert.equal(nextPoll, 1);
-                    done();
+                collector.pawsInitCollectionState({}).then(({state, nextInvocationTimeout}) => {
+                    assert.equal(state.since, startDate, "Dates are not equal");
+                    assert.equal(state.poll_interval_sec, 1);
+                    assert.equal(nextInvocationTimeout, 1);
                 });
             });
         });
     });
     describe('Format Tests', function () {
-        it('log format success', function (done) {
+        it('log format success', function () {
             let ctx = {
                 invokedFunctionArn: auth0Mock.FUNCTION_ARN,
                 fail: function (error) {
                     assert.fail(error);
-                    done();
                 },
                 succeed: function () {
-                    done();
                 }
             };
 
@@ -167,12 +164,17 @@ describe('Unit Tests', function () {
                 let fmt = collector.pawsFormatLog(auth0Mock.AUTH0_LOG_EVENT);
                 assert.equal(fmt.progName, 'Auth0Collector');
                 assert.ok(fmt.messageTypeId);
-                done();
             });
         });
     });
 
     describe('pawsGetLogs', function () {
+
+        afterEach(function () {
+            if (getAPILogs && getAPILogs.restore) {
+                getAPILogs.restore();
+            }
+        });
         let ctx = {
             invokedFunctionArn: auth0Mock.FUNCTION_ARN,
             fail: function (error) {
@@ -180,7 +182,7 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
-        it('Paws Get Logs Success', function (done) {
+        it('Paws Get Logs Success', function () {
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(auth0Client, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
@@ -195,13 +197,11 @@ describe('Unit Tests', function () {
                     poll_interval_sec: 1
                 };
 
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                collector.pawsGetLogs(curState).then(([logs, newState, newPollInterval]) => {
                     assert.equal(logs.length, 2);
                     assert.equal(newState.poll_interval_sec, collector.pollInterval);
                     assert.equal(newState.last_log_id, "nextLogId");
                     assert.ok(logs[0].log_id);
-                    getAPILogs.restore();
-                    done();
                 });
 
             });
@@ -216,7 +216,7 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
-        it('log format success', function (done) {
+        it('log format success', function () {
             Auth0Collector.load().then(function (creds) {
                 var collector = new Auth0Collector(ctx, creds);
                 const startDate = moment();
@@ -230,10 +230,9 @@ describe('Unit Tests', function () {
                 assert.equal(nextState.last_log_id, 'nextLogId');
                 assert.equal(nextState.last_collected_ts, lastLogTs);
                 assert.equal(nextState.poll_interval_sec, collector.pollInterval);
-                done();
             });
         });
-        it('log format success with nextLogId null', function (done) {
+        it('log format success with nextLogId null', function () {
             Auth0Collector.load().then(function (creds) {
                 var collector = new Auth0Collector(ctx, creds);
                 const startDate = moment();
@@ -246,11 +245,10 @@ describe('Unit Tests', function () {
                 let nextState = collector._getNextCollectionState(curState, nextLogId, lastLogTs);
                 assert.ok(nextState.since);
                 assert.equal(nextState.since, curState.since);
-                assert.equal(nextState.poll_interval_sec, 1);
-                done();
+                assert.equal(nextState.poll_interval_sec, 1); 
             });
         });
-        it('log format success with nextLogId null and lastLogTs is not null', function (done) {
+        it('log format success with nextLogId null and lastLogTs is not null', function () {
             Auth0Collector.load().then(function (creds) {
                 var collector = new Auth0Collector(ctx, creds);
                 const startDate = moment();
@@ -264,7 +262,6 @@ describe('Unit Tests', function () {
                 assert.ok(nextState.since);
                 assert.equal(nextState.since, lastLogTs);
                 assert.equal(nextState.poll_interval_sec, 1);
-                done();
             });
         });
     });
@@ -278,12 +275,17 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
+        afterEach(function () {
+            if (getAPILogs && getAPILogs.restore) {
+                getAPILogs.restore();
+            }
+        });
 
         let errorObj ={
             statusCode:401,
             message:'error'
         };
-        it('Paws Get Logs Failed', function (done) {
+        it('Paws Get Logs Failed', function () {
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(auth0Client, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
@@ -298,16 +300,14 @@ describe('Unit Tests', function () {
                     poll_interval_sec: 1
                 };
 
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                collector.pawsGetLogs(curState).catch((err) => {
                     assert.equal(err.errorCode,401);
-                    getAPILogs.restore();
-                    done();
                 });
 
             });
         });
 
-        it('Paws Get Logs check throttling error', function (done) {
+        it('Paws Get Logs check throttling error', function () {
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(auth0Client, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
@@ -324,14 +324,15 @@ describe('Unit Tests', function () {
                 };
 
                 var reportSpy = sinon.spy(collector, 'reportApiThrottling');
-                let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params, callback) => callback(null));
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
+                let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params) => Promise.resolve({
+                    httpStatusCode: 200,
+                    requestId: '12345'
+                }));
+                collector.pawsGetLogs(curState).then(([logs, newState, newPollInterval]) => {
                     assert.equal(true, reportSpy.calledOnce);
                     assert.equal(logs.length, 0);
                     assert.equal(newState.poll_interval_sec, 10);
-                    getAPILogs.restore();
                     putMetricDataStub.restore();
-                    done();
                 });
             });
         });

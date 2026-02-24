@@ -15,8 +15,8 @@ const Auth0Collector = require('./auth0_collector').Auth0Collector;
 exports.handler = Auth0Collector.makeHandler(function(event, context) {
     debug('input event: ', event);
     AlLogger.defaultMeta = { requestId: context.awsRequestId };
-    Auth0Collector.load().then(function(creds) {
+    Auth0Collector.load().then(async function (creds) {
         var auth0c = new Auth0Collector(context, creds);
-        auth0c.handleEvent(event);
+        await auth0c.handleEvent(event);
     });
 });
