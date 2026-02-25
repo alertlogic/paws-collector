@@ -15,8 +15,8 @@ const CarbonblackCollector = require('./collector').CarbonblackCollector;
 exports.handler = CarbonblackCollector.makeHandler(function(event, context) {
     debug('input event: ', event);
     AlLogger.defaultMeta = { requestId: context.awsRequestId };
-    CarbonblackCollector.load().then(function(creds) {
+    return CarbonblackCollector.load().then(async function (creds) {
         var carbonblackc = new CarbonblackCollector(context, creds);
-        carbonblackc.handleEvent(event);
+        await carbonblackc.handleEvent(event);
     });
 });

@@ -29,7 +29,7 @@ class CarbonblackCollector extends PawsCollector {
         super(context, creds, packageJson.version);
     }
 
-    pawsInitCollectionState(event, callback) {
+    async pawsInitCollectionState(event) {
 
         const apiNames = JSON.parse(process.env.collector_streams);
         const initialStates = apiNames.map(stream => {
@@ -54,38 +54,37 @@ class CarbonblackCollector extends PawsCollector {
                 poll_interval_sec: 1
             }
         });
-        return callback(null, initialStates, 1);
+        return { state: initialStates, nextInvocationTimeout: 1 };
 
     }
 
-    pawsGetRegisterParameters(event, callback) {
+    pawsGetRegisterParameters(event) {
         const regValues = {
             carbonblackAPINames: process.env.collector_streams,
             carbonblackOrgKey: process.env.paws_collector_param_string_2
         };
 
-        callback(null, regValues);
+        return regValues;
     }
 
-    pawsGetLogs(state, callback) {
+    async pawsGetLogs(state) {
+        let collector = this;
         // This code can remove once exsisting code set stream and collector_streams env variable
         if (!process.env.collector_streams) {
-            this.setCollectorStreamsEnv(process.env.paws_collector_param_string_1);
+            collector.setCollectorStreamsEnv(process.env.paws_collector_param_string_1);
         }
         if (!state.stream) {
-            state = this.setStreamToCollectionState(state);
+            state = collector.setStreamToCollectionState(state);
         }
-
-        let collector = this;
 
         const clientSecret = collector.secret;
         if (!clientSecret) {
-            return callback("The Client Secret was not found!");
+            throw new Error("The Client Secret was not found!");
         }
 
         const clientId = collector.clientId;
         if (!clientId) {
-            return callback("The Client ID was not found!");
+            throw new Error("The Client ID was not found!");
         }
 
         const apiEndpoint = process.env.paws_endpoint.replace(/^https:\/\/|\/$/g, '');
@@ -93,7 +92,7 @@ class CarbonblackCollector extends PawsCollector {
         const apiDetails = utils.getAPIDetails(state, orgKey);
 
         if (!apiDetails.url) {
-            return callback("The API name was not found!");
+            throw new Error("The API name was not found!");
         }
 
         typeIdPaths = apiDetails.typeIdPaths;
@@ -101,7 +100,7 @@ class CarbonblackCollector extends PawsCollector {
 
         AlLogger.info(`CABL000001 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
 
-        utils.getAPILogs(apiDetails, [], apiEndpoint, state, clientSecret, clientId, process.env.paws_max_pages_per_invocation)
+        return utils.getAPILogs(apiDetails, [], apiEndpoint, state, clientSecret, clientId, process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextPage }) => {
                 let newState;
                 if (nextPage === undefined) {
@@ -110,19 +109,19 @@ class CarbonblackCollector extends PawsCollector {
                     newState = this._getNextCollectionStateWithNextPage(state, nextPage);
                 }
                 AlLogger.info(`CABL000002 Next collection in ${newState.poll_interval_sec} seconds`);
-                return callback(null, accumulator, newState, newState.poll_interval_sec);  
+                return [accumulator, newState, newState.poll_interval_sec];  
             })
             .catch((error) => {
                 // set errorCode if not available in error object to showcase client error on DDMetric
                 if (error.response && error.response.data) {
                     error.response.data.errorCode = error.response.data.error_code ? error.response.data.error_code : error.response.status;
-                    return callback(error.response.data);
+                    throw error.response.data;
                 }
                 else {
                     if (error.response) {
                         error.errorCode = error.response.status
                     }
-                    return callback(error);
+                    throw error;
                 }
             });
 
