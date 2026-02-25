@@ -60,7 +60,7 @@ stages:
           trigger_phrase: build-collectors
     env:
       ALPS_SERVICE_NAME: "paws-auth0-collector"
-      ALPS_SERVICE_VERSION: "1.1.64" #set the value from collector package json
+      ALPS_SERVICE_VERSION: "1.2.0" #set the value from collector package json
     commands:
       - source $NVM_DIR/nvm.sh && nvm use 22
       - ./build_collector.sh auth0
