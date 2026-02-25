@@ -133,14 +133,14 @@ describe('Unit Tests', function () {
             succeed: function () { }
         };
         it('sets up intial state', function () {
-            Auth0Collector.load().then(function (creds) {
+            return Auth0Collector.load().then(function (creds) {
                 const testPollInterval = 60;
                 var collector = new Auth0Collector(ctx, creds);
                 const startDate = moment().subtract(1, 'days').toISOString();
                 process.env.paws_collection_start_ts = startDate;
                 collector.pollInterval = testPollInterval;
 
-                collector.pawsInitCollectionState({}).then(({state, nextInvocationTimeout}) => {
+                return collector.pawsInitCollectionState({}).then(({state, nextInvocationTimeout}) => {
                     assert.equal(state.since, startDate, "Dates are not equal");
                     assert.equal(state.poll_interval_sec, 1);
                     assert.equal(nextInvocationTimeout, 1);
@@ -159,7 +159,7 @@ describe('Unit Tests', function () {
                 }
             };
 
-            Auth0Collector.load().then(function (creds) {
+            return Auth0Collector.load().then(function (creds) {
                 var collector = new Auth0Collector(ctx, creds);
                 let fmt = collector.pawsFormatLog(auth0Mock.AUTH0_LOG_EVENT);
                 assert.equal(fmt.progName, 'Auth0Collector');
@@ -189,7 +189,7 @@ describe('Unit Tests', function () {
                         return resolve({ accumulator: [auth0Mock.AUTH0_LOG_EVENT, auth0Mock.AUTH0_LOG_EVENT], nextLogId: "nextLogId", lastLogTs: null });
                     });
                 });
-            Auth0Collector.load().then(function (creds) {
+            return Auth0Collector.load().then(function (creds) {
                 var collector = new Auth0Collector(ctx, creds);
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
@@ -197,7 +197,7 @@ describe('Unit Tests', function () {
                     poll_interval_sec: 1
                 };
 
-                collector.pawsGetLogs(curState).then(([logs, newState, newPollInterval]) => {
+                return collector.pawsGetLogs(curState).then(([logs, newState, newPollInterval]) => {
                     assert.equal(logs.length, 2);
                     assert.equal(newState.poll_interval_sec, collector.pollInterval);
                     assert.equal(newState.last_log_id, "nextLogId");
@@ -217,7 +217,7 @@ describe('Unit Tests', function () {
             succeed: function () { }
         };
         it('log format success', function () {
-            Auth0Collector.load().then(function (creds) {
+            return Auth0Collector.load().then(function (creds) {
                 var collector = new Auth0Collector(ctx, creds);
                 const startDate = moment();
                 const curState = {
@@ -233,7 +233,7 @@ describe('Unit Tests', function () {
             });
         });
         it('log format success with nextLogId null', function () {
-            Auth0Collector.load().then(function (creds) {
+            return Auth0Collector.load().then(function (creds) {
                 var collector = new Auth0Collector(ctx, creds);
                 const startDate = moment();
                 const curState = {
@@ -249,7 +249,7 @@ describe('Unit Tests', function () {
             });
         });
         it('log format success with nextLogId null and lastLogTs is not null', function () {
-            Auth0Collector.load().then(function (creds) {
+            return Auth0Collector.load().then(function (creds) {
                 var collector = new Auth0Collector(ctx, creds);
                 const startDate = moment();
                 const curState = {
@@ -292,7 +292,7 @@ describe('Unit Tests', function () {
                         return reject(errorObj);
                     });
                 });
-            Auth0Collector.load().then(function (creds) {
+            return Auth0Collector.load().then(function (creds) {
                 var collector = new Auth0Collector(ctx, creds);
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
@@ -300,7 +300,7 @@ describe('Unit Tests', function () {
                     poll_interval_sec: 1
                 };
 
-                collector.pawsGetLogs(curState).catch((err) => {
+                return collector.pawsGetLogs(curState).catch((err) => {
                     assert.equal(err.errorCode,401);
                 });
 
@@ -315,7 +315,7 @@ describe('Unit Tests', function () {
                             message:'Too many requests'});
                     });
                 });
-            Auth0Collector.load().then(function (creds) {
+            return Auth0Collector.load().then(function (creds) {
                 var collector = new Auth0Collector(ctx, creds);
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
@@ -328,7 +328,7 @@ describe('Unit Tests', function () {
                     httpStatusCode: 200,
                     requestId: '12345'
                 }));
-                collector.pawsGetLogs(curState).then(([logs, newState, newPollInterval]) => {
+                return collector.pawsGetLogs(curState).then(([logs, newState, newPollInterval]) => {
                     assert.equal(true, reportSpy.calledOnce);
                     assert.equal(logs.length, 0);
                     assert.equal(newState.poll_interval_sec, 10);

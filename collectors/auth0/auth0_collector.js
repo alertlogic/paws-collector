@@ -51,12 +51,12 @@ class Auth0Collector extends PawsCollector {
             clientSecret: collector.secret,
             scope: 'read:logs'
         });
-        utils.getAPILogs(auth0Client, state, [], process.env.paws_max_pages_per_invocation)
+        return utils.getAPILogs(auth0Client, state, [], process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextLogId, lastLogTs }) => {
                 const newState = collector._getNextCollectionState(state, nextLogId, lastLogTs);
                 AlLogger.info(`AUTZ000002 Next collection in ${newState.poll_interval_sec} seconds`);
                 return [accumulator, newState, newState.poll_interval_sec];
-            }).catch((error) => {
+            }).catch(async (error) => {
                 // Auth0 Logging api has some rate limits that we might run into.
                 // If we run into a rate limit error, instead of returning the error,
                 // we return the state back to the queue with an additional 10 second added.
@@ -66,9 +66,8 @@ class Auth0Collector extends PawsCollector {
                     state.poll_interval_sec = state.poll_interval_sec < 10 ?
                         10 : state.poll_interval_sec + 1;
                     AlLogger.warn(`AUTZ000003 API Request Limit Exceeded`, error);
-                    collector.reportApiThrottling(function () {
-                        return [[], state, state.poll_interval_sec];
-                    });
+                    await collector.reportApiThrottling();
+                    return [[], state, state.poll_interval_sec];
                 }
                 else {
                     throw collector.createErrorObject(error);
