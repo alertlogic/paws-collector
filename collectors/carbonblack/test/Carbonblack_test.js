@@ -1,6 +1,6 @@
 const assert = require('assert');
 const sinon = require('sinon');
-const m_response = require('cfn-response');
+const m_response = require('@alertlogic/al-aws-collector-js').CfnResponse;
 const carbonblackMock = require('./carbonblack_mock');
 var CarbonblackCollector = require('../collector').CarbonblackCollector;
 const moment = require('moment');
@@ -17,7 +17,7 @@ function setAlServiceStub() {
     getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
         function fakeFn(apiDetails, accumulator, state, clientSecret, clientId, maxPagesPerInvocation) {
             return new Promise(function (resolve, reject) {
-                return resolve({ accumulator: [carbonblackMock.LOG_EVENT, carbonblackMock.LOG_EVENT]});
+                return resolve({ accumulator: [carbonblackMock.LOG_EVENT, carbonblackMock.LOG_EVENT] });
             });
         });
 
@@ -55,7 +55,7 @@ describe('Unit Tests', function () {
 
         responseStub = sinon.stub(m_response, 'send').callsFake(
             function fakeFn(event, mockContext, responseStatus, responseData, physicalResourceId) {
-                mockContext.succeed();
+                return Promise.resolve();
             });
     });
 
@@ -74,43 +74,40 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
-        it('Paws Init Collection State Success', function () {
+        it('Paws Init Collection State Success', async function () {
             setAlServiceStub();
-            return CarbonblackCollector.load().then(function (creds) {
-                var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
-                const startDate = moment().subtract(1, 'days').toISOString();
-                process.env.paws_collection_start_ts = startDate;
+            const creds = await CarbonblackCollector.load();
+            var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
+            const startDate = moment().subtract(1, 'days').toISOString();
+            process.env.paws_collection_start_ts = startDate;
 
-                return collector.pawsInitCollectionState().then(({ state, nextInvocationTimeout }) => {
-                    state.forEach((eachInitialState) => {
-                        assert.equal(moment(eachInitialState.until).diff(eachInitialState.since, 'seconds'), 60);
-                    });
-                });
+            const { state } = await collector.pawsInitCollectionState();
+            state.forEach((eachInitialState) => {
+                assert.equal(moment(eachInitialState.until).diff(eachInitialState.since, 'seconds'), 60);
             });
         });
     });
 
     describe('Paws Get Register Parameters', function () {
-        it('Paws Get Register Parameters Success', function () {
+        it('Paws Get Register Parameters Success', async function () {
             setAlServiceStub();
             let ctx = {
                 invokedFunctionArn: carbonblackMock.FUNCTION_ARN,
                 fail: function (error) {
                     assert.fail(error);
                 },
-                succeed: function () {  
+                succeed: function () {
                 }
             };
             const expectedRegValues = {
                 carbonblackAPINames: '["AuditLogEvents", "SearchAlerts","SearchAlertsCBAnalytics", "SearchAlertsWatchlist"]',
                 carbonblackOrgKey: 'carbonblackOrgKey'
             };
-            return CarbonblackCollector.load().then(function (creds) {
-                var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
-                const sampleEvent = { ResourceProperties: { StackName: 'a-stack-name' } };
-                const regValues = collector.pawsGetRegisterParameters(sampleEvent);
-                assert.deepEqual(regValues, expectedRegValues);
-            });
+            const creds = await CarbonblackCollector.load();
+            var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
+            const sampleEvent = { ResourceProperties: { StackName: 'a-stack-name' } };
+            const regValues = collector.pawsGetRegisterParameters(sampleEvent);
+            assert.deepEqual(regValues, expectedRegValues);
         });
     });
 
@@ -122,58 +119,55 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
-        it('Paws Get Logs Success', function () {
+        it('Paws Get Logs Success', async function () {
             setAlServiceStub();
-            return CarbonblackCollector.load().then(function (creds) {
-                var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
-                const startDate = moment().subtract(3, 'days');
-                const curState = {
-                    stream: "AuditLogEvents",
-                    since: startDate.toISOString(),
-                    until: startDate.add(2, 'days').toISOString(),
-                    nextPage: null,
-                    poll_interval_sec: 1
-                };
+            const creds = await CarbonblackCollector.load();
+            var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
+            const startDate = moment().subtract(3, 'days');
+            const curState = {
+                stream: "AuditLogEvents",
+                since: startDate.toISOString(),
+                until: startDate.add(2, 'days').toISOString(),
+                nextPage: null,
+                poll_interval_sec: 1
+            };
 
-                return collector.pawsGetLogs(curState).then(([logs, newState, newPollInterval]) => { 
-                    assert.equal(logs.length, 2);
-                    assert.equal(newState.poll_interval_sec, 1);
-                    assert.ok(logs[0].eventId);
-                });
-            });
+            const [logs, newState] = await collector.pawsGetLogs(curState);
+            assert.equal(logs.length, 2);
+            assert.equal(newState.poll_interval_sec, 1);
+            assert.ok(logs[0].eventId);
         });
     });
 
     describe('Next state test', function () {
-        it('Next state test success', function() {
+        it('Next state test success', async function () {
             setAlServiceStub();
             let ctx = {
-                invokedFunctionArn : carbonblackMock.FUNCTION_ARN,
-                fail : function(error) {
-                    assert.fail(error); 
+                invokedFunctionArn: carbonblackMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
                 },
-                succeed : function() {
+                succeed: function () {
                 }
             };
-            
-            return CarbonblackCollector.load().then(function(creds) {
-                var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
-                const startDate = moment();
-                const curState = {
-                    since: startDate.toISOString(),
-                    until: startDate.add(collector.pollInterval, 'seconds').toISOString(),
-                    poll_interval_sec: 1
-                };
-                let nextState = collector._getNextCollectionState(curState);
-                assert.equal(moment(nextState.until).diff(nextState.since, 'seconds'), collector.pollInterval);
-                assert.equal(nextState.poll_interval_sec, 300);
-            });
+
+            const creds = await CarbonblackCollector.load();
+            var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
+            const startDate = moment();
+            const curState = {
+                since: startDate.toISOString(),
+                until: startDate.add(collector.pollInterval, 'seconds').toISOString(),
+                poll_interval_sec: 1
+            };
+            let nextState = collector._getNextCollectionState(curState);
+            assert.equal(moment(nextState.until).diff(nextState.since, 'seconds'), collector.pollInterval);
+            assert.equal(nextState.poll_interval_sec, 300);
         });
 
     });
 
     describe('Format Tests', function () {
-        it('log format success', function () {
+        it('log format success', async function () {
             setAlServiceStub();
             let ctx = {
                 invokedFunctionArn: carbonblackMock.FUNCTION_ARN,
@@ -184,28 +178,21 @@ describe('Unit Tests', function () {
                 }
             };
 
-            return CarbonblackCollector.load().then(function (creds) {
-                var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
-                let fmt = collector.pawsFormatLog(carbonblackMock.LOG_EVENT);
-                assert.equal(fmt.progName, 'CarbonblackCollector');
-                assert.ok(fmt.messageType);
-               
-            });
+            const creds = await CarbonblackCollector.load();
+            var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
+            let fmt = collector.pawsFormatLog(carbonblackMock.LOG_EVENT);
+            assert.equal(fmt.progName, 'CarbonblackCollector');
+            assert.ok(fmt.messageType);
         });
     });
 
     describe('NextCollectionStateWithNextPage', function () {
-        it('Get Next Collection State With NextPage Success', function () {
+        it('Get Next Collection State With NextPage Success', async function () {
             setAlServiceStub();
             let ctx = {
                 invokedFunctionArn: carbonblackMock.FUNCTION_ARN,
-                fail: function (error) {
-                    assert.fail(error);
-                   
-                },
-                succeed: function () {
-                   
-                }
+                fail: function (error) {},
+                succeed: function () { }
             };
 
             const startDate = moment().subtract(5, 'minutes');
@@ -216,13 +203,11 @@ describe('Unit Tests', function () {
                 poll_interval_sec: 1
             };
             const nextPage = "offset";
-            return CarbonblackCollector.load().then(function (creds) {
-                var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
-                let nextState = collector._getNextCollectionStateWithNextPage(curState, nextPage);
-                assert.ok(nextState.nextPage);
-                assert.equal(nextState.nextPage, nextPage);
-               
-            });
+            const creds = await CarbonblackCollector.load();
+            var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
+            let nextState = collector._getNextCollectionStateWithNextPage(curState, nextPage);
+            assert.ok(nextState.nextPage);
+            assert.equal(nextState.nextPage, nextPage);
         });
     });
 
@@ -260,24 +245,25 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
-        it('Paws Get Logs Fail', function () {
+        it('Paws Get Logs Fail', async function () {
+            const creds = await CarbonblackCollector.load();
+            var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
+            const startDate = moment().subtract(3, 'days');
+            const curState = {
+                stream: "AuditLogEvents",
+                since: startDate.toISOString(),
+                until: startDate.add(2, 'days').toISOString(),
+                nextPage: null,
+                poll_interval_sec: 1
+            };
 
-            return CarbonblackCollector.load().then(function (creds) {
-                var collector = new CarbonblackCollector(ctx, creds, 'carbonblack');
-                const startDate = moment().subtract(3, 'days');
-                const curState = {
-                    stream: "AuditLogEvents",
-                    since: startDate.toISOString(),
-                    until: startDate.add(2, 'days').toISOString(),
-                    nextPage: null,
-                    poll_interval_sec: 1
-                };
-                
-                return collector.pawsGetLogs(curState).catch((err) => {
-                    assert.equal(err.errorCode, errorObj.response.data.error_code);
-                    assert.equal(err.message, errorObj.response.data.message);
-                });
-            });
+            try {
+                await collector.pawsGetLogs(curState);
+                assert.fail('Expected pawsGetLogs to throw');
+            } catch (err) {
+                assert.equal(err.errorCode, errorObj.response.data.error_code);
+                assert.equal(err.message, errorObj.response.data.message);
+            }
         });
     });
 });
