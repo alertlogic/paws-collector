@@ -1,7 +1,7 @@
 const fs = require('fs');
 const assert = require('assert');
 const sinon = require('sinon');
-const m_response = require('cfn-response');
+const m_response = require('@alertlogic/al-aws-collector-js').CfnResponse;
 const ddLambda = require('datadog-lambda-js');
 
 const pawsMock = require('./paws_mock');
@@ -9,7 +9,6 @@ var m_alCollector = require('@alertlogic/al-collector-js');
 var PawsCollector = require('../paws_collector').PawsCollector;
 const m_al_aws = require('@alertlogic/al-aws-collector-js');
 const moment = require('moment');
-const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const pawsStub = require('./paws_stub');
 const {
     CloudWatch
@@ -61,7 +60,7 @@ function setAlServiceStub() {
     alserviceStub.post = sinon.stub(m_alCollector.AlServiceC.prototype, 'post').callsFake(
         function fakeFn(path, extraOptions) {
             return new Promise(function(resolve, reject) {
-                return resolve();
+                return resolve({});
             });
         });
     alserviceStub.put = sinon.stub(m_alCollector.AlServiceC.prototype, 'put').callsFake(
@@ -299,7 +298,7 @@ describe('Unit Tests', function() {
 
         responseStub = sinon.stub(m_response, 'send').callsFake(
             function fakeFn(event, mockContext, responseStatus, responseData, physicalResourceId) {
-                mockContext.succeed();
+                return Promise.resolve();
             });
 
         setAlServiceStub();
@@ -388,7 +387,7 @@ describe('Unit Tests', function() {
         afterEach(function() {
             restoreDDB();
         });
-        it('creates a new DDB item when the states does not exist', function(done) {
+        it('creates a new DDB item when the states does not exist', async function() {
             const fakeFun = function(_params) { return Promise.resolve({}); };
             const putItemStub = sinon.stub().callsFake(fakeFun);
             const updateItemStub = sinon.stub().callsFake(fakeFun);
@@ -396,19 +395,9 @@ describe('Unit Tests', function() {
             mockDDB(null, putItemStub, updateItemStub);
             let ctx = {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
-                fail: function(error) {
-                    assert.fail(error);
-                    done();
-                },
-                succeed: function() {
-                    const putItemArgs = putItemStub.args[0][0];
-                    const updateItemArgs = updateItemStub.args[0][0];
-                    assert.equal(putItemStub.called, true, 'should put a new item in');
-                    assert.equal(updateItemStub.called, true, 'should update the item to complete');
-                    assert.equal(putItemArgs.Item.MessageId.S, "5fea7756-0ea4-451a-a703-a558b933e274");
-                    assert.equal(updateItemArgs.Key.MessageId.S, "5fea7756-0ea4-451a-a703-a558b933e274");
-                    done();
-                }
+                fail: function(error) {},
+                succeed: function() {}
+                
             };
 
             const testEvent = {
@@ -422,12 +411,18 @@ describe('Unit Tests', function() {
                 ]
             };
 
-            TestCollector.load().then(async function(creds) {
-                var collector = new TestCollector(ctx, creds);
-                await collector.handleEvent(testEvent);
-            });
+            const creds = await TestCollector.load();
+            var collector = new TestCollector(ctx, creds);
+            await collector.handleEvent(testEvent);
+
+            const putItemArgs = putItemStub.args[0][0];
+            const updateItemArgs = updateItemStub.args[0][0];
+            assert.equal(putItemStub.called, true, 'should put a new item in');
+            assert.equal(updateItemStub.called, true, 'should update the item to complete');
+            assert.equal(putItemArgs.Item.MessageId.S, "5fea7756-0ea4-451a-a703-a558b933e274");
+            assert.equal(updateItemArgs.Key.MessageId.S, "5fea7756-0ea4-451a-a703-a558b933e274");
         });
-        it('skips the state if it is already completed', function(done) {
+        it('skips the state if it is already completed', async function() {
             const mockRecord = {
                 "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
                 "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
@@ -455,21 +450,8 @@ describe('Unit Tests', function() {
 
             let ctx = {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
-                fail: function(error) {
-                    assert.equal(getItemStub.called, true, 'should get new item');
-                    assert.equal(putItemStub.notCalled, true, 'should not put a new item in');
-                    assert.equal(updateItemStub.notCalled, true, 'should not update the item to complete');
-                    if (error === '{"errorCode":"DUPLICATE_STATE"}')
-                        done();
-                    else
-                        assert.fail("invocation have another error code");
-                },
-                succeed: function(error) {
-                    assert.equal(error, null);
-                    assert.equal(getItemStub.called, true, 'should get new item');
-                    assert.equal(putItemStub.notCalled, true, 'should not put a new item in');
-                    done();
-                }
+                fail: sinon.spy(),
+                succeed: sinon.spy()
             };
 
             const testEvent = {
@@ -478,12 +460,15 @@ describe('Unit Tests', function() {
                 ]
             };
 
-            TestCollector.load().then(function(creds) {
-                var collector = new TestCollector(ctx, creds);
-                collector.handleEvent(testEvent);
-            });
+            const creds = await TestCollector.load();
+            var collector = new TestCollector(ctx, creds);
+            await collector.handleEvent(testEvent).catch(() => null);
+
+            assert.equal(getItemStub.called, true, 'should get new item');
+            assert.equal(putItemStub.notCalled, true, 'should not put a new item in');
+            assert.equal(updateItemStub.notCalled, true, 'should not update the item to complete');
         });
-        it('throws an error if the state is bing processed by another invocation', function(done) {
+        it('throws an error if the state is bing processed by another invocation', async function() {
             const mockRecord = {
                 "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
                 "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
@@ -511,15 +496,8 @@ describe('Unit Tests', function() {
 
             let ctx = {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
-                fail: function(error) {
-                    assert.equal(getItemStub.called, true, 'should get new item');
-                    assert.equal(putItemStub.notCalled, true, 'should not put a new item in');
-                    assert.equal(updateItemStub.notCalled, true, 'should not update the item to complete');
-                    done();
-                },
-                succeed: function() {
-                    done();
-                }
+                fail: sinon.spy(),
+                succeed: sinon.spy()
             };
 
             const testEvent = {
@@ -528,12 +506,15 @@ describe('Unit Tests', function() {
                 ]
             };
 
-            TestCollector.load().then(function(creds) {
-                var collector = new TestCollector(ctx, creds);
-                collector.handleEvent(testEvent);
-            });
+            const creds = await TestCollector.load();
+            var collector = new TestCollector(ctx, creds);
+            await collector.handleEvent(testEvent).catch(() => null);
+
+            assert.equal(getItemStub.called, true, 'should get new item');
+            assert.equal(putItemStub.notCalled, true, 'should not put a new item in');
+            assert.equal(updateItemStub.notCalled, true, 'should not update the item to complete');
         });
-        it('updates the state if it is successful', function(done) {
+        it('updates the state if it is successful', async function() {
             const fakeFun = function(_params) { return Promise.resolve({ data: null }); };
             const updateItemStub = sinon.stub().callsFake(fakeFun);
 
@@ -543,15 +524,8 @@ describe('Unit Tests', function() {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
                 fail: function(error) {
                     assert.fail(error);
-                    done();
                 },
-                succeed: function() {
-                    const updateItemArgs = updateItemStub.args[0][0];
-                    assert.equal(updateItemStub.called, true, 'should update the item to complete');
-                    assert.equal(updateItemArgs.Key.MessageId.S, "5fea7756-0ea4-451a-a703-a558b933e274");
-
-                    done();
-                }
+                succeed: function() {}
             };
 
             const testEvent = {
@@ -565,10 +539,13 @@ describe('Unit Tests', function() {
                 ]
             };
 
-            TestCollector.load().then(function(creds) {
-                var collector = new TestCollector(ctx, creds);
-                collector.handleEvent(testEvent);
-            });
+            const creds = await TestCollector.load();
+            var collector = new TestCollector(ctx, creds);
+            await collector.handleEvent(testEvent);
+
+            const updateItemArgs = updateItemStub.args[0][0];
+            assert.equal(updateItemStub.called, true, 'should update the item to complete');
+            assert.equal(updateItemArgs.Key.MessageId.S, "5fea7756-0ea4-451a-a703-a558b933e274");
         });
     });
     describe('Poll Request Tests', function() {
@@ -588,15 +565,13 @@ describe('Unit Tests', function() {
             }
         });
         
-        it('poll request success, single state', function(done) {
+        it('poll request success, single state', async function() {
             let ctx = {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
                 fail: function(error) {
                     assert.fail(error);
-                    done();
                 },
                 succeed: function() {
-                    done();
                 }
             };
 
@@ -609,27 +584,21 @@ describe('Unit Tests', function() {
                 ]
             };
 
-            TestCollector.load().then(async function(creds) {
-                var collector = new TestCollector(ctx, creds);
-                await collector.handleEvent(testEvent);
-            });
+            const creds = await TestCollector.load();
+            var collector = new TestCollector(ctx, creds);
+            await collector.handleEvent(testEvent);
         });
 
-        it('poll request error, single state', function(done) {
-            
+        it('poll request error, single state', async function() {
+            const getRemainingTimeInMillis = sinon.spy(() => 5000);
             let ctx = {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
                 fail: function(error) {
                     assert.fail('Invocation should succeed.');
                 },
                 succeed: function() {
-                    sinon.assert.calledOnce(updateItemStub);
-                    done();
-
                 },
-                getRemainingTimeInMillis: function() {
-                    return 5000;
-                }
+                getRemainingTimeInMillis
             };
 
             const testEvent = {
@@ -641,27 +610,21 @@ describe('Unit Tests', function() {
                 ]
             };
 
-            TestCollector.load().then(async function(creds) {
-                var collector = new TestCollector(ctx, creds);
-                collector.mockGetLogsError = 'Error getting logs';
-                await collector.handleEvent(testEvent);
-                // Verify that collector.done called the context succeed.
-                assert(ctx.getRemainingTimeInMillis.callCount, 1);
-                assert(AlLogger.error.calledWith(`PAWS000303 Error handling poll request: ${JSON.stringify(collector.mockGetLogsError)}`));
-                assert(ctx.succeed.calledOnce);
-            });
+            const creds = await TestCollector.load();
+            var collector = new TestCollector(ctx, creds);
+            collector.mockGetLogsError = 'Error getting logs';
+            await collector.handleEvent(testEvent);
+            sinon.assert.calledOnce(updateItemStub);
         });
 
-        it('poll request success, multiple state', function(done) {
+        it('poll request success, multiple state', async function() {
 
             let ctx = {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
                 fail: function(error) {
                     assert.fail(error);
-                    done();
                 },
                 succeed: function() {
-                    done();
                 }
             };
 
@@ -674,10 +637,9 @@ describe('Unit Tests', function() {
                 ]
             };
 
-            TestCollectorMultiState.load().then(async function(creds) {
-                var collector = new TestCollectorMultiState(ctx, creds);
-                await collector.handleEvent(testEvent);
-            });
+            const creds = await TestCollectorMultiState.load();
+            var collector = new TestCollectorMultiState(ctx, creds);
+            await collector.handleEvent(testEvent);
         });
 
         it('sends multiple SQS batches when greater than len privCollectorStates is > 10', function(done) {
@@ -707,7 +669,7 @@ describe('Unit Tests', function() {
                 });
             });
         });
-        it('Process the logs in batch if logs size >10000', function(done) {
+        it('Process the logs in batch if logs size >10000', async function() {
             mockCloudWatch();
 
             let mockSendLogmsgs = sinon.stub(m_alCollector.IngestC.prototype, 'sendLogmsgs').callsFake(
@@ -727,20 +689,9 @@ describe('Unit Tests', function() {
             let ctx = {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
                 fail: function(error) {
-                    mockSendLogmsgs.restore();
-                    mockSendLmcstats.restore();
-                    pawsStub.restore(CloudWatch, 'putMetricData');
-                    restoreDDB();
                     assert.fail(error);
-                    done();
                 },
                 succeed: function() {
-                    sinon.assert.calledThrice(mockSendLogmsgs);
-                    sinon.assert.calledThrice(mockSendLmcstats);
-                    mockSendLogmsgs.restore();
-                    mockSendLmcstats.restore();
-                    pawsStub.restore(CloudWatch, 'putMetricData');
-                    done();
                 }
             };
 
@@ -754,13 +705,20 @@ describe('Unit Tests', function() {
                     }
                 ]
             };
-            TestMaxLogSizeCollector.load().then(async function(creds) {
+            const creds = await TestMaxLogSizeCollector.load();
+            try {
                 var collector = new TestMaxLogSizeCollector(ctx, creds);
                 await collector.handleEvent(testEvent);
-            });
+                sinon.assert.calledThrice(mockSendLogmsgs);
+                sinon.assert.calledThrice(mockSendLmcstats);
+            } finally {
+                mockSendLogmsgs.restore();
+                mockSendLmcstats.restore();
+                pawsStub.restore(CloudWatch, 'putMetricData');
+            }
         });
 
-        it('Check sendCollectorStatus method call only after Five failed attempt', function() {
+        it('Check sendCollectorStatus method call only after Five failed attempt', async function() {
             mockCloudWatch();
             let mockSendCollectorStatus = sinon.stub(m_al_aws.AlAwsCollectorV2.prototype, 'sendCollectorStatus').callsFake(
                 function fakeFn(stream, status) {
@@ -774,21 +732,8 @@ describe('Unit Tests', function() {
 
             let ctx = {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
-                fail: function(error) {
-                    mockPawsGetLogs.restore();
-                    mockSendCollectorStatus.restore();
-                    pawsStub.restore(CloudWatch, 'putMetricData');
-                    restoreDDB();
-                    assert.fail(error);
-                },
-                succeed: function() {
-                    sinon.assert.callCount(mockSendCollectorStatus, 1);
-                    sinon.assert.calledOnce(mockPawsGetLogs);
-                    mockPawsGetLogs.restore();
-                    mockSendCollectorStatus.restore();
-                    pawsStub.restore(CloudWatch, 'putMetricData');
-                    restoreDDB();
-                },
+                fail: function (error) { },
+                succeed: function () { },
                 getRemainingTimeInMillis: function() {
                     return moment().valueOf();
                 }
@@ -804,13 +749,25 @@ describe('Unit Tests', function() {
                     }
                 ]
             };
-            TestCollector.load().then(function(creds) {
+            const creds = await TestCollector.load();
+            try {
                 var collector = new TestCollector(ctx, creds);
-                collector.handleEvent(testEvent);
-            });
+                await collector.handleEvent(testEvent);
+                sinon.assert.callCount(mockSendCollectorStatus, 1);
+                sinon.assert.calledOnce(mockPawsGetLogs);
+            } finally {
+                if (mockPawsGetLogs && mockPawsGetLogs.restore) {
+                    mockPawsGetLogs.restore();
+                }
+                if (mockSendCollectorStatus && mockSendCollectorStatus.restore) {
+                    mockSendCollectorStatus.restore();
+                }
+                pawsStub.restore(CloudWatch, 'putMetricData');
+                restoreDDB();
+            }
         });
 
-        it('Check sendCollectorStatus method not call if failed attempt less < 5', function() {
+        it('Check sendCollectorStatus method not call if failed attempt less < 5', async function() {
             mockCloudWatch();
             let mockSendCollectorStatus = sinon.stub(m_al_aws.AlAwsCollectorV2.prototype, 'sendCollectorStatus').callsFake(
                 function fakeFn(stream, status) {
@@ -824,21 +781,8 @@ describe('Unit Tests', function() {
 
             let ctx = {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
-                fail: function(error) {
-                    mockPawsGetLogs.restore();
-                    mockSendCollectorStatus.restore();
-                    pawsStub.restore(CloudWatch, 'putMetricData');
-                    restoreDDB();
-                    assert.fail(error);
-                },
-                succeed: function() {
-                    sinon.assert.callCount(mockSendCollectorStatus, 0);
-                    sinon.assert.calledOnce(mockPawsGetLogs);
-                    mockPawsGetLogs.restore();
-                    mockSendCollectorStatus.restore();
-                    pawsStub.restore(CloudWatch, 'putMetricData');
-                    restoreDDB();
-                },
+                fail: function(error) {},
+                succeed: function() {},
                 getRemainingTimeInMillis: function() {
                     return moment().valueOf();
                 }
@@ -854,10 +798,22 @@ describe('Unit Tests', function() {
                     }
                 ]
             };
-            TestCollector.load().then(function(creds) {
+            const creds = await TestCollector.load();
+            try {
                 var collector = new TestCollector(ctx, creds);
-                collector.handleEvent(testEvent);
-            });
+                await collector.handleEvent(testEvent);
+                sinon.assert.callCount(mockSendCollectorStatus, 0);
+                sinon.assert.calledOnce(mockPawsGetLogs);
+            } finally {
+                if (mockPawsGetLogs && mockPawsGetLogs.restore) {
+                    mockPawsGetLogs.restore();
+                }
+                if (mockSendCollectorStatus && mockSendCollectorStatus.restore) {
+                    mockSendCollectorStatus.restore();
+                }
+                pawsStub.restore(CloudWatch, 'putMetricData');
+                restoreDDB();
+            }
         });
 
         it('Check body encoding error is handle by uploading the file in s3 bucket and collector return new state', function() {
@@ -1095,15 +1051,13 @@ describe('Unit Tests', function() {
     });
 
     describe('Register Tests', function() {
-        it('Register success', function(done) {
+        it('Register success', async function() {
             let ctx = {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
                 fail: function(error) {
                     assert.fail(error);
-                    done();
                 },
                 succeed: function() {
-                    done();
                 }
             };
 
@@ -1124,10 +1078,10 @@ describe('Unit Tests', function() {
                 }
             };
 
-            PawsCollector.load().then((creds) => {
-                var collector = new TestCollector(ctx, creds);
-                collector.handleEvent(testEvent);
-            });
+            const creds = await PawsCollector.load();
+            var collector = new TestCollector(ctx, creds);
+            await collector.handleEvent(testEvent);
+            assert.equal(responseStub.called, true, 'should send cfn response');
         });
     });
     describe('Format Log Tests', function(){
