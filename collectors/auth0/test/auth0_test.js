@@ -1,7 +1,7 @@
 const assert = require('assert');
 const sinon = require('sinon');
 const moment = require('moment');
-const m_response = require('cfn-response');
+const m_response = require('@alertlogic/al-aws-collector-js').CfnResponse;
 
 const auth0Mock = require('./auth0_mock');
 var m_alCollector = require('@alertlogic/al-collector-js');
@@ -109,7 +109,7 @@ describe('Unit Tests', function () {
 
         responseStub = sinon.stub(m_response, 'send').callsFake(
             function fakeFn(event, mockContext, responseStatus, responseData, physicalResourceId) {
-                mockContext.succeed();
+               return Promise.resolve();
             });
 
         setAlServiceStub();
