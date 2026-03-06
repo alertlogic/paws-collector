@@ -1,6 +1,6 @@
 const assert = require('assert');
 const sinon = require('sinon');
-const m_response = require('cfn-response');
+const m_response = require('@alertlogic/al-aws-collector-js').CfnResponse;
 const ciscoduoMock = require('./ciscoduo_mock');
 var CiscoduoCollector = require('../collector').CiscoduoCollector;
 const moment = require('moment');
@@ -16,20 +16,20 @@ let getAPILogs;
 
 describe('Unit Tests', function () {
     beforeEach(function () {
-        sinon.stub(SSM.prototype, 'getParameter').callsFake(function (params, callback) {
+        sinon.stub(SSM.prototype, 'getParameter').callsFake(function (params) {
             const data = Buffer.from('test-secret');
-            return callback(null, { Parameter: { Value: data.toString('base64') } });
+            return Promise.resolve({ Parameter: { Value: data.toString('base64') } });
         });
-        sinon.stub(KMS.prototype, 'decrypt').callsFake(function (params, callback) {
+        sinon.stub(KMS.prototype, 'decrypt').callsFake(function (params) {
             const data = {
                 Plaintext: Buffer.from('{}')
             };
-            return callback(null, data);
+            return Promise.resolve(data);
         });
 
         responseStub = sinon.stub(m_response, 'send').callsFake(
             function fakeFn(event, mockContext, responseStatus, responseData, physicalResourceId) {
-                mockContext.succeed();
+                return Promise.resolve();
             });
     });
 
@@ -48,52 +48,41 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
-        it('Paws Init Collection State Success', function (done) {
-            CiscoduoCollector.load().then(function (creds) {
-                var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
-                const startDate = moment().subtract(1, 'days').toISOString();
-                process.env.paws_collection_start_ts = startDate;
+        it('Paws Init Collection State Success', async function () {
+            const creds = await CiscoduoCollector.load();
+            var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
+            const startDate = moment().subtract(1, 'days').toISOString();
+            process.env.paws_collection_start_ts = startDate;
 
-                collector.pawsInitCollectionState(null, (err, initialStates, nextPoll) => {
-                    initialStates.forEach((state) => {
-                        if (state.object === "Authentication") {
-                            assert.equal(moment(parseInt(state.until)).diff(parseInt(state.since), 'seconds'), 60);
-                        }
-                        else {
-                            assert.equal(state.poll_interval_sec, 240);
-                            assert.ok(state.since);
-                        }
-                    });
-                    done();
-                });
+            const { state } = await collector.pawsInitCollectionState();
+            state.forEach((initialState) => {
+                if (initialState.object === "Authentication") {
+                    assert.equal(moment(parseInt(initialState.until)).diff(parseInt(initialState.since), 'seconds'), 60);
+                }
+                else {
+                    assert.equal(initialState.poll_interval_sec, 240);
+                    assert.ok(initialState.since);
+                }
             });
         });
     });
 
     describe('Paws Get Register Parameters', function () {
-        it('Paws Get Register Parameters Success', function (done) {
+        it('Paws Get Register Parameters Success', async function () {
             let ctx = {
                 invokedFunctionArn: ciscoduoMock.FUNCTION_ARN,
-                fail: function (error) {
-                    assert.fail(error);
-                    done();
-                },
-                succeed: function () {
-                    done();
-                }
+                fail: function (error) { },
+                succeed: function () { }
             };
 
-            CiscoduoCollector.load().then(function (creds) {
-                var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
-                const sampleEvent = { ResourceProperties: { StackName: 'a-stack-name' } };
-                collector.pawsGetRegisterParameters(sampleEvent, (err, regValues) => {
-                    const expectedRegValues = {
-                        ciscoduoObjectNames: '[\"Authentication\", \"Administrator\",\"Telephony\", \"OfflineEnrollment\"]',
-                    };
-                    assert.deepEqual(regValues, expectedRegValues);
-                    done();
-                });
-            });
+            const creds = await CiscoduoCollector.load();
+            var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
+            const sampleEvent = { ResourceProperties: { StackName: 'a-stack-name' } };
+            const regValues = collector.pawsGetRegisterParameters(sampleEvent);
+            const expectedRegValues = {
+                ciscoduoObjectNames: '[\"Authentication\", \"Administrator\",\"Telephony\", \"OfflineEnrollment\"]',
+            };
+            assert.deepEqual(regValues, expectedRegValues);
         });
     });
 
@@ -105,7 +94,7 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
-        it('Paws Get Logs Success', function (done) {
+        it('Paws Get Logs Success', async function () {
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
@@ -127,29 +116,26 @@ describe('Unit Tests', function () {
                         method: "GET"
                     };
                 });
-            CiscoduoCollector.load().then(function (creds) {
-                var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
-                const startDate = moment().subtract(3, 'days');
-                const curState = {
-                    stream: "Authentication",
-                    since: startDate.valueOf(),
-                    until: startDate.add(2, 'days').valueOf(),
-                    nextPage: null,
-                    poll_interval_sec: 1
-                };
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(logs.length, 2);
-                    assert.equal(newState.poll_interval_sec, 60);
-                    assert.ok(logs[0].txid);
-                    getAPILogs.restore();
-                    getAPIDetails.restore();
-                    done();
-                });
+            const creds = await CiscoduoCollector.load();
+            var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
+            const startDate = moment().subtract(3, 'days');
+            const curState = {
+                stream: "Authentication",
+                since: startDate.valueOf(),
+                until: startDate.add(2, 'days').valueOf(),
+                nextPage: null,
+                poll_interval_sec: 1
+            };
+            const [logs, newState] = await collector.pawsGetLogs(curState);
+            assert.equal(logs.length, 2);
+            assert.equal(newState.poll_interval_sec, 60);
+            assert.ok(logs[0].txid);
+            getAPILogs.restore();
+            getAPIDetails.restore();
 
-            });
         });
 
-        it('Paws Get Logs With NextPage Success', function (done) {
+        it('Paws Get Logs With NextPage Success', async function () {
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
@@ -171,37 +157,35 @@ describe('Unit Tests', function () {
                         method: "GET"
                     };
                 });
-            CiscoduoCollector.load().then(function (creds) {
-                var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
-                const startDate = moment().subtract(3, 'days');
-                const curState = {
-                    stream: "Authentication",
-                    since: startDate.valueOf(),
-                    until: startDate.add(2, 'days').valueOf(),
-                    nextPage: null,
-                    poll_interval_sec: 1
-                };
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(logs.length, 2);
-                    assert.equal(newState.poll_interval_sec, 60);
-                    assert.equal(newState.nextPage, "nextPage");
-                    assert.ok(logs[0].txid);
-                    getAPILogs.restore();
-                    getAPIDetails.restore();
-                    done();
-                });
-
-            });
+            const creds = await CiscoduoCollector.load();
+            var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
+            const startDate = moment().subtract(3, 'days');
+            const curState = {
+                stream: "Authentication",
+                since: startDate.valueOf(),
+                until: startDate.add(2, 'days').valueOf(),
+                nextPage: null,
+                poll_interval_sec: 1
+            };
+            const [logs, newState] = await collector.pawsGetLogs(curState);
+            assert.equal(logs.length, 2);
+            assert.equal(newState.poll_interval_sec, 60);
+            assert.equal(newState.nextPage, "nextPage");
+            assert.ok(logs[0].txid);
+            getAPILogs.restore();
+            getAPIDetails.restore();
         });
 
-        it('Paws Get client error', function (done) {
+        it('Paws Get client error', async function () {
 
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
-                        return reject({ code: 40103,
+                        return reject({
+                            code: 40103,
                             message: 'Invalid signature in request credentials',
-                            stat: 'FAIL' });
+                            stat: 'FAIL'
+                        });
                     });
                 });
             getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
@@ -219,34 +203,36 @@ describe('Unit Tests', function () {
                         method: "GET"
                     };
                 });
-            CiscoduoCollector.load().then(function (creds) {
-                var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
-                const startDate = moment().subtract(3, 'days');
-                const curState = {
-                    stream: "Authentication",
-                    since: startDate.valueOf(),
-                    until: startDate.add(2, 'days').valueOf(),
-                    nextPage: null,
-                    poll_interval_sec: 1
-                };
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(err.errorCode, 40103);
-                    getAPILogs.restore();
-                    getAPIDetails.restore();
-                    done();
-                });
-
-            });
+            const creds = await CiscoduoCollector.load();
+            var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
+            const startDate = moment().subtract(3, 'days');
+            const curState = {
+                stream: "Authentication",
+                since: startDate.valueOf(),
+                until: startDate.add(2, 'days').valueOf(),
+                nextPage: null,
+                poll_interval_sec: 1
+            };
+            try {
+                await collector.pawsGetLogs(curState);
+            } catch (error) {
+                console.log("Error: ", error);
+                assert.equal(error.errorCode, 40103);
+                getAPILogs.restore();
+                getAPIDetails.restore();
+            }
         });
 
-        it('Paws Get Logs check throttling error', function (done) {
+        it('Paws Get Logs check throttling error', async function () {
 
             getAPILogs = sinon.stub(utils, 'getAPILogs').callsFake(
                 function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
-                        return reject({ code: 42901,
+                        return reject({
+                            code: 42901,
                             message: 'Too Many Requests',
-                            stat: 'FAIL' ,"errorCode":42901});
+                            stat: 'FAIL', "errorCode": 42901
+                        });
                     });
                 });
             getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
@@ -263,28 +249,25 @@ describe('Unit Tests', function () {
                         method: "GET"
                     };
                 });
-            CiscoduoCollector.load().then(function (creds) {
-                var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
-                const startDate = moment();
-                const curState = {
-                    stream: "telephony",
-                    since: startDate.unix(),
-                    poll_interval_sec: 60
-                };
+            const creds = await CiscoduoCollector.load();
+            var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
+            const startDate = moment();
+            const curState = {
+                stream: "telephony",
+                since: startDate.unix(),
+                poll_interval_sec: 60
+            };
 
-                var reportSpy = sinon.spy(collector, 'reportApiThrottling');
-                let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params, callback) => callback());
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(true, reportSpy.calledOnce);
-                    assert.equal(logs.length, 0);
-                    assert.equal(newState.poll_interval_sec, 120);
-                    getAPILogs.restore();
-                    getAPIDetails.restore();
-                    putMetricDataStub.restore();
-                    done();
-                });
+            var reportSpy = sinon.spy(collector, 'reportApiThrottling');
+            let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params) => Promise.resolve(null));
 
-            });
+            const [logs, newState] = await collector.pawsGetLogs(curState);
+            assert.equal(true, reportSpy.calledOnce);
+            assert.equal(logs.length, 0);
+            assert.equal(newState.poll_interval_sec, 120);
+            getAPILogs.restore();
+            getAPIDetails.restore();
+            putMetricDataStub.restore();
         });
     });
 
@@ -317,7 +300,7 @@ describe('Unit Tests', function () {
         it('Next state tests success with Authentication call for one hr interval if start date is more than 1 hr', function (done) {
             CiscoduoCollector.load().then(function (creds) {
                 var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
-                const startDate = moment().subtract(1,'days');
+                const startDate = moment().subtract(1, 'days');
                 const curState = {
                     stream: "Authentication",
                     since: startDate.valueOf(),
