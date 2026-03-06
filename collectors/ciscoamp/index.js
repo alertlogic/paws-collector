@@ -8,15 +8,18 @@
  * -----------------------------------------------------------------------------
  */
 
-const debug = require('debug') ('index');
+const debug = require('debug')('index');
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const CiscoampCollector = require('./collector').CiscoampCollector;
 
-exports.handler = CiscoampCollector.makeHandler(function(event, context) {
+exports.handler = CiscoampCollector.makeHandler(async function (event, context) {
     debug('input event: ', event);
     AlLogger.defaultMeta = { requestId: context.awsRequestId };
-    CiscoampCollector.load().then(function(creds) {
-        var ciscoampc = new CiscoampCollector(context, creds);
-        ciscoampc.handleEvent(event);
-    });
+    try {
+        const creds = await CiscoampCollector.load();
+        let ciscoampc = new CiscoampCollector(context, creds);
+        await ciscoampc.handleEvent(event);
+    } catch (error) {
+        AlLogger.error('Error in handler: ', error);
+    }
 });
