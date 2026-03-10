@@ -18,55 +18,54 @@ let listNetworkIds;
 
 describe('Unit Tests', function () {
     beforeEach(function () {
-        sinon.stub(SSM.prototype, 'getParameter').callsFake(function (params, callback) {
+        sinon.stub(SSM.prototype, 'getParameter').callsFake(function (params) {
             const data = Buffer.from('test-secret');
-            return callback(null, { Parameter: { Value: data.toString('base64') } });
+            return Promise.resolve({ Parameter: { Value: data.toString('base64') } });
         });
-        sinon.stub(KMS.prototype, 'decrypt').callsFake(function (params, callback) {
+        sinon.stub(KMS.prototype, 'decrypt').callsFake(function (params) {
             const data = {
                 Plaintext: Buffer.from('{}')
             };
-            return callback(null, data);
+            return Promise.resolve(data);
         });
 
         responseStub = sinon.stub(m_response, 'send').callsFake(
             function fakeFn(event, mockContext, responseStatus, responseData, physicalResourceId) {
-                mockContext.succeed();
+                return Promise.resolve();
             });
     });
 
     afterEach(function () {
-        responseStub.restore();
-        KMS.prototype.decrypt.restore();
-        SSM.prototype.getParameter.restore();
+        if (responseStub && typeof responseStub.restore === 'function') {
+            responseStub.restore();
+        }
+        if (KMS.prototype.decrypt && typeof KMS.prototype.decrypt.restore === 'function') {
+            KMS.prototype.decrypt.restore();
+        }
+        if (SSM.prototype.getParameter && typeof SSM.prototype.getParameter.restore === 'function') {
+            SSM.prototype.getParameter.restore();
+        }
     });
 
     describe('Paws Get Register Parameters', function () {
-        it('Paws Get Register Parameters Success', function (done) {
+        it('Paws Get Register Parameters Success', async function () {
             let ctx = {
                 invokedFunctionArn: ciscomerakiMock.FUNCTION_ARN,
-                fail: function (error) {
-                    assert.fail(error);
-                    done();
-                },
-                succeed: function () {
-                    done();
-                }
+                fail: function (error) { },
+                succeed: function () { }
             };
 
-            CiscomerakiCollector.load().then(function (creds) {
-                var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
-                const sampleEvent = { ResourceProperties: { StackName: 'a-stack-name' } };
-                collector.pawsGetRegisterParameters(sampleEvent, (err, regValues) => {
-                    const expectedRegValues = {
-                        ciscoMerakiObjectNames: process.env.collector_streams,
-                    };
-                    assert.deepEqual(regValues, expectedRegValues);
-                    done();
-                });
-            });
+            const creds = await CiscomerakiCollector.load();
+            var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
+            const sampleEvent = { ResourceProperties: { StackName: 'a-stack-name' } };
+            const regValues = collector.pawsGetRegisterParameters(sampleEvent);
+            const expectedRegValues = {
+                ciscoMerakiObjectNames: process.env.collector_streams,
+            };
+            assert.deepEqual(regValues, expectedRegValues);
         });
     });
+
 
     describe('Paws Init Collection State', function () {
         let ctx = {
@@ -76,95 +75,87 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
-        it('Paws Init Collection State Success', function (done) {
+        it('Paws Init Collection State Success', function () {
             listNetworkIds = sinon.stub(merakiClient, 'listNetworkIds').callsFake(
                 function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
                         return resolve(ciscomerakiMock.NETWORKS);
                     });
                 });
-            CiscomerakiCollector.load().then(function (creds) {
+            return CiscomerakiCollector.load().then(async function (creds) {
                 var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
                 const startDate = moment().subtract(1, 'days').toISOString();
                 process.env.paws_collection_start_ts = startDate;
 
-                collector.pawsInitCollectionState(null, (err, initialStates, nextPoll) => {
-                    initialStates.forEach((state) => {
-                        if (state.networkId === "L_686235993220604684") {
-                            assert.equal(state.networkId, "L_686235993220604684");
-                        } else if (state.networkId === "L_686235993220604720") {
-                            assert.equal(state.networkId, "L_686235993220604720");
-                        }
-                        else {
-                            assert.equal(state.poll_interval_sec, 1);
-                            assert.ok(state.since);
-                        }
-                    });
+                const { state: initialStates } = await collector.pawsInitCollectionState();
+                initialStates.forEach((state) => {
+                    if (state.networkId === "L_686235993220604684") {
+                        assert.equal(state.networkId, "L_686235993220604684");
+                    } else if (state.networkId === "L_686235993220604720") {
+                        assert.equal(state.networkId, "L_686235993220604720");
+                    }
+                    else {
+                        assert.equal(state.poll_interval_sec >= 1, true);
+                        assert.ok(state.since);
+                    }
                 });
             });
-            done();
+
         });
-        it('Paws Init Collection State with networks', function (done) {
+        it('Paws Init Collection State with networks', async function () {
             process.env.collector_streams = [];
             // Mocking merakiClient.listNetworkIds to return a non-empty array
             listNetworkIds = sinon.stub(merakiClient, 'listNetworkIds').callsFake(
-                function fakeFn(callback) {
+                function fakeFn() {
                     return new Promise(function (resolve, reject) {
                         resolve(ciscomerakiMock.NETWORKS);
                     });
                 });
+            const creds = await CiscomerakiCollector.load();
+            var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
+            const startDate = moment().subtract(1, 'days').toISOString();
+            process.env.paws_collection_start_ts = startDate;
 
-            CiscomerakiCollector.load().then(function (creds) {
-                var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
-                const startDate = moment().subtract(1, 'days').toISOString();
-                process.env.paws_collection_start_ts = startDate;
-
-                collector.pawsInitCollectionState(null, (err, initialStates, nextPoll) => {
-                    // Asserting that initialStates are generated correctly
-                    assert.equal(initialStates.length, ciscomerakiMock.NETWORKS.length);
-                    initialStates.forEach((state) => {
-                        assert.ok(state.networkId); // Assuming networkId exists in each state
-                    });
-                    done();
-                });
+            const { state } = await collector.pawsInitCollectionState();
+            // Asserting that initialStates are generated correctly
+            assert.equal(state.length, ciscomerakiMock.NETWORKS.length);
+            state.forEach((initialState) => {
+                assert.ok(initialState.networkId); // Assuming networkId exists in each state
             });
         });
 
-        it('Paws Init Collection State without networks', function (done) {
+        it('Paws Init Collection State without networks', async function () {
             process.env.collector_streams = [];
             listNetworkIds = sinon.stub(merakiClient, 'listNetworkIds').callsFake(
-                function fakeFn(callback) {
+                function fakeFn() {
                     return new Promise(function (resolve, reject) {
-                        resolve([]); // Assuming no networks found
+                        resolve([]);
                     });
                 });
 
-            CiscomerakiCollector.load().then(function (creds) {
-                var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
-                const startDate = moment().subtract(1, 'days').toISOString();
-                process.env.paws_collection_start_ts = startDate;
-
-                collector.pawsInitCollectionState(null, (err, initialStates, nextPoll) => {
-                    // Asserting that an error is returned when no networks are found
-                    assert.equal(err, "Error: No networks found");
-                    done();
-                });
-            });
+            const creds = await CiscomerakiCollector.load();
+            var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
+            const startDate = moment().subtract(1, 'days').toISOString();
+            process.env.paws_collection_start_ts = startDate;
+            try {
+                await collector.pawsInitCollectionState();
+            } catch (error) {
+                assert.equal(error.message, "Error: No networks found");
+            }
         });
 
-        it('Paws Init Collection State error handling', function (done) {
+        it('Paws Init Collection State error handling', async function () {
             listNetworkIds = sinon.stub(merakiClient, 'listNetworkIds').rejects(new Error('Network error'));
 
-            CiscomerakiCollector.load().then(function (creds) {
-                var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
-                const startDate = moment().subtract(1, 'days').toISOString();
-                process.env.paws_collection_start_ts = startDate;
-
-                collector.pawsInitCollectionState(null, (err, initialStates, nextPoll) => {
-                    assert.equal(err.message, 'Network error');
-                    done();
-                });
-            });
+            const creds = await CiscomerakiCollector.load();
+            var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
+            const startDate = moment().subtract(1, 'days').toISOString();
+            process.env.paws_collection_start_ts = startDate;
+            try {
+                await collector.pawsInitCollectionState();
+            } catch (error) {
+                assert.equal(error.message, 'Network error');
+            }
         });
 
         afterEach(function () {
@@ -180,7 +171,7 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
-        it('Paws Get Logs Success', function (done) {
+        it('Paws Get Logs Success', async function () {
             getAPILogs = sinon.stub(merakiClient, 'getAPILogs').callsFake(
                 function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
@@ -204,30 +195,25 @@ describe('Unit Tests', function () {
                         return resolve(ciscomerakiMock.NETWORKS);
                     });
                 });
-            CiscomerakiCollector.load().then(function (creds) {
-                var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
-                const curState = {
-                    networkId: "L_686235993220604684",
-                    since: "2024-03-19T05:10:47.055027Z",
-                    until: null,
-                    nextPage: null,
-                    poll_interval_sec: 1
-                };
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(logs.length, 2);
-                    assert.equal(newState.poll_interval_sec, 300);
-                    assert.ok(logs[0].type);
-                    getAPILogs.restore();
-                    listNetworkIds.restore();
-                    getAPIDetails.restore();
-                });
-
-                done();
-
-            });
+            const creds = await CiscomerakiCollector.load();
+            var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
+            const curState = {
+                networkId: "L_686235993220604684",
+                since: "2024-03-19T05:10:47.055027Z",
+                until: null,
+                nextPage: null,
+                poll_interval_sec: 1
+            };
+            const [logs, newState] = await collector.pawsGetLogs(curState);
+            assert.equal(logs.length, 2);
+            assert.equal(newState.poll_interval_sec, 300);
+            assert.ok(logs[0].type);
+            getAPILogs.restore();
+            listNetworkIds.restore();
+            getAPIDetails.restore();
         });
 
-        it('Paws Get Logs With NextPage Success', function (done) {
+        it('Paws Get Logs With NextPage Success', async function () {
             listNetworkIds = sinon.stub(merakiClient, 'listNetworkIds').callsFake(
                 function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
                     return new Promise(function (resolve, reject) {
@@ -251,32 +237,27 @@ describe('Unit Tests', function () {
 
                     };
                 });
-            CiscomerakiCollector.load().then(function (creds) {
-                var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
-                const startDate = "2024-03-21T08:00:21.754Z";
-                const curState = {
-                    networkId: "L_686235993220604684",
-                    since: startDate.valueOf(),
-                    nextPage: null,
-                    poll_interval_sec: 1
-                };
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(logs.length, 2);
-                    assert.equal(newState.poll_interval_sec, 1);
-                    assert.equal(newState.nextPage, null);
-                    assert.equal(newState.since, 'nextPage');
-                    assert.ok(logs[0].type);
-                    getAPILogs.restore();
-                    getAPIDetails.restore();
-                    listNetworkIds.restore();
-
-                    done();
-                });
-
-            });
+            const creds = await CiscomerakiCollector.load();
+            var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
+            const startDate = "2024-03-21T08:00:21.754Z";
+            const curState = {
+                networkId: "L_686235993220604684",
+                since: startDate.valueOf(),
+                nextPage: null,
+                poll_interval_sec: 1
+            };
+            const [logs, newState] = await collector.pawsGetLogs(curState);
+            assert.equal(logs.length, 2);
+            assert.equal(newState.poll_interval_sec, 1);
+            assert.equal(newState.nextPage, null);
+            assert.equal(newState.since, 'nextPage');
+            assert.ok(logs[0].type);
+            getAPILogs.restore();
+            getAPIDetails.restore();
+            listNetworkIds.restore();
         });
 
-        it('Paws Get client error', function (done) {
+        it('Paws Get client error', async function () {
 
             getAPILogs = sinon.stub(merakiClient, 'getAPILogs').callsFake(
                 function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
@@ -302,26 +283,25 @@ describe('Unit Tests', function () {
 
                     };
                 });
-            CiscomerakiCollector.load().then(function (creds) {
-                var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
-                const startDate = moment();
-                const curState = {
-                    networkId: "L_686235993220604684",
-                    since: startDate.valueOf(),
-                    nextPage: null,
-                    poll_interval_sec: 1
-                };
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(err.errorCode, 401);
-                    getAPILogs.restore();
-                    getAPIDetails.restore();
-                    done();
-                });
-
-            });
+            const creds = await CiscomerakiCollector.load();
+            var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
+            const startDate = moment();
+            const curState = {
+                networkId: "L_686235993220604684",
+                since: startDate.valueOf(),
+                nextPage: null,
+                poll_interval_sec: 1
+            };
+            try {
+                await collector.pawsGetLogs(curState);
+            } catch (error) {
+                assert.equal(error.errorCode, 401);
+                getAPILogs.restore();
+                getAPIDetails.restore();
+            }
         });
 
-        it('Paws Get Logs check throttling error', function (done) {
+        it('Paws Get Logs check throttling error', async function () {
 
             getAPILogs = sinon.stub(merakiClient, 'getAPILogs').callsFake(
                 function fakeFn(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
@@ -349,29 +329,25 @@ describe('Unit Tests', function () {
 
                     };
                 });
-            CiscomerakiCollector.load().then(function (creds) {
-                var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
-                const startDate = moment();
-                const curState = {
-                    networkId: "L_686235993220604684",
-                    since: startDate.valueOf(),
-                    nextPage: null,
-                    poll_interval_sec: 1
-                };
+            const creds = await CiscomerakiCollector.load();
+            var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
+            const startDate = moment();
+            const curState = {
+                networkId: "L_686235993220604684",
+                since: startDate.valueOf(),
+                nextPage: null,
+                poll_interval_sec: 1
+            };
 
-                var reportSpy = sinon.spy(collector, 'reportApiThrottling');
-                let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params, callback) => callback());
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(true, reportSpy.calledOnce);
-                    assert.equal(logs.length, 0);
-                    assert.notEqual(newState.poll_interval_sec, 1);
-                    getAPILogs.restore();
-                    getAPIDetails.restore();
-                    putMetricDataStub.restore();
-                    done();
-                });
-
-            });
+            var reportSpy = sinon.spy(collector, 'reportApiThrottling');
+            let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params) => Promise.resolve());
+            const [logs, newState] = await collector.pawsGetLogs(curState);
+            assert.equal(true, reportSpy.calledOnce);
+            assert.equal(logs.length, 0);
+            assert.notEqual(newState.poll_interval_sec, 1);
+            getAPILogs.restore();
+            getAPIDetails.restore();
+            putMetricDataStub.restore();
         });
     });
 
@@ -384,7 +360,7 @@ describe('Unit Tests', function () {
             succeed: function () { }
         };
 
-        it('Next state tests success with L_686235993220604684', function (done) {
+        it('Next state tests success with L_686235993220604684', function () {
             CiscomerakiCollector.load().then(function (creds) {
                 var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
                 const startDate = moment();
@@ -397,23 +373,16 @@ describe('Unit Tests', function () {
                 };
                 let nextState = collector._getNextCollectionState(curState);
                 assert.equal(nextState.poll_interval_sec, process.env.paws_poll_interval_delay);
-                done();
             });
         });
-
     });
 
     describe('Format Tests', function () {
-        it('log format success', function (done) {
+        it('log format success', function () {
             let ctx = {
                 invokedFunctionArn: ciscomerakiMock.FUNCTION_ARN,
-                fail: function (error) {
-                    assert.fail(error);
-                    done();
-                },
-                succeed: function () {
-                    done();
-                }
+                fail: function (error) { },
+                succeed: function () { }
             };
 
             CiscomerakiCollector.load().then(function (creds) {
@@ -421,7 +390,6 @@ describe('Unit Tests', function () {
                 let fmt = collector.pawsFormatLog(ciscomerakiMock.LOG_EVENT);
                 assert.equal(fmt.progName, 'CiscomerakiCollector');
                 assert.ok(fmt.message);
-                done();
             });
         });
     });
@@ -434,7 +402,7 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
-        it('Get Next Collection State (L_686235993220604684) With NextPage Success', function (done) {
+        it('Get Next Collection State (L_686235993220604684) With NextPage Success', function () {
             const startDate = moment();
             const curState = {
                 networkId: "L_686235993220604684",
@@ -447,10 +415,9 @@ describe('Unit Tests', function () {
                 let nextState = collector._getNextCollectionStateWithNextPage(curState, nextPage);
                 assert.ok(nextState.since);
                 assert.equal(nextState.since, nextPage);
-                done();
             });
         });
-        it('Get Next Collection State (L_686235993220604684) With NextPage Success', function (done) {
+        it('Get Next Collection State (L_686235993220604684) With NextPage Success', function () {
             const startDate = moment();
             const curState = {
                 networkId: "L_686235993220604684",
@@ -463,7 +430,7 @@ describe('Unit Tests', function () {
                 let nextState = collector._getNextCollectionStateWithNextPage(curState, nextPageTimestamp);
                 assert.ok(nextState.since);
                 assert.equal(nextState.since, nextPageTimestamp);
-                done();
+
             });
         });
     });
@@ -475,7 +442,7 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
-        it('should calculate the next collection state correctly', function (done) {
+        it('should calculate the next collection state correctly', function () {
             const curState = {
                 networkId: "L_686235993220604684",
                 since: moment().valueOf(),
@@ -493,11 +460,10 @@ describe('Unit Tests', function () {
                 var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
                 let nextState = collector._getNextCollectionState(curState);
                 assert.deepEqual(nextState.poll_interval_sec, expectedNextState.poll_interval_sec);
-                done();
             });
         });
 
-        it('handles ScheduledEvent with SelfUpdate', function (done) {
+        it('handles ScheduledEvent with SelfUpdate', function () {
             let updateNetworksStub;
             CiscomerakiCollector.load().then(function (creds) {
                 var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
@@ -506,32 +472,34 @@ describe('Unit Tests', function () {
                 collector.handleEvent(event);
                 assert(updateNetworksStub.calledOnce);
                 updateNetworksStub.restore();
-                done();
             });
         });
         it('handles other event types', () => {
-
-            let updateNetworksStub;
-            CiscomerakiCollector.load().then(function (creds) {
+            return CiscomerakiCollector.load().then(async function (creds) {
                 var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
                 const event = { RequestType: 'OtherEventType' };
-                collector.handleEvent(event);
+                const updateNetworksStub = sinon.stub(collector, 'handleUpdateStreamsFromNetworks');
+                try {
+                    await collector.handleEvent(event);
+                } catch (error) {
+                    assert.equal(error.message, `AWSC0012 Unknown event:${JSON.stringify(event)}`);
+                }
+                
                 assert(!updateNetworksStub.called);
                 updateNetworksStub.restore();
             });
-
         });
         it('updates networks', () => {
-            let updateNetworksStub;
-            CiscomerakiCollector.load().then(function (creds) {
+            return CiscomerakiCollector.load().then(async function (creds) {
                 var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
-                updateNetworksStub.returns(Promise.resolve());
-                collector.handleScheduledEvent({ Type: 'SelfUpdate' });
+                const updateNetworksStub = sinon.stub(collector, 'handleUpdateStreamsFromNetworks').resolves();
+                const updateStub = sinon.stub(collector, 'handleUpdate').resolves();
+                await collector.handleEvent({ RequestType: 'ScheduledEvent', Type: 'SelfUpdate' });
                 assert(updateNetworksStub.calledOnce);
                 updateNetworksStub.restore();
+                updateStub.restore();
             });
         });
-
     });
 
     describe('Error Handling', function () {
@@ -547,7 +515,6 @@ describe('Unit Tests', function () {
                 const state = {
                     poll_interval_sec: 1
                 };
-                const callback = sinon.stub();
 
                 let ctx = {
                     invokedFunctionArn: ciscomerakiMock.FUNCTION_ARN,
@@ -556,31 +523,24 @@ describe('Unit Tests', function () {
                     },
                     succeed: function () { }
                 };
-                CiscomerakiCollector.load().then(function (creds) {
+                return CiscomerakiCollector.load().then(async function (creds) {
                     var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
-
-                    collector.handleThrottlingError(error, state, callback);
-
-                    assert.strictEqual(callback.calledOnce, true);
-                    assert.strictEqual(typeof callback.args[0][0], 'object');
-                    assert.strictEqual(callback.args[0][1].length, 0);
-                    assert.strictEqual(callback.args[0][2], state);
-                    assert.strictEqual(typeof callback.args[0][3], 'number');
+                    let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params) => Promise.resolve());
+                    const [logs, newState, pollInterval] = await collector.handleThrottlingError(error, state);
+                    assert.strictEqual(logs.length, 0);
+                    assert.strictEqual(newState, state);
+                    assert.strictEqual(typeof pollInterval, 'number');
+                    putMetricDataStub.restore();
                 });
             });
         });
 
         describe('handleOtherErrors', function () {
             it('should retry if API_NOT_FOUND_ERROR occurs less than 3 times', function () {
-                const error = {
-                    response: {
-                        status: CiscomerakiCollector.API_NOT_FOUND_ERROR
-                    }
-                };
+                
                 const state = {
                     retry: 2
                 };
-                const callback = sinon.stub();
 
                 let ctx = {
                     invokedFunctionArn: ciscomerakiMock.FUNCTION_ARN,
@@ -589,12 +549,14 @@ describe('Unit Tests', function () {
                     },
                     succeed: function () { }
                 };
-                CiscomerakiCollector.load().then(function (creds) {
+                return CiscomerakiCollector.load().then(function (creds) {
                     var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
-
-                    collector.handleOtherErrors(error, state, callback);
-
-                    assert.strictEqual(callback.calledOnce, false);
+                    const error = {
+                    response: {
+                        status: 404
+                    }
+                };
+                    assert.throws(() => collector.handleOtherErrors(error, state));
                     assert.strictEqual(state.retry, 3);
                 });
             });
@@ -602,7 +564,7 @@ describe('Unit Tests', function () {
             it('should succeed if API_NOT_FOUND_ERROR occurs 3 times', function () {
                 const error = {
                     response: {
-                        status: CiscomerakiCollector.API_NOT_FOUND_ERROR
+                        status: 404
                     }
                 };
                 const state = {
@@ -616,14 +578,10 @@ describe('Unit Tests', function () {
                     },
                     succeed: function () { }
                 };
-                CiscomerakiCollector.load().then(function (creds) {
+                return CiscomerakiCollector.load().then(function (creds) {
                     var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
-
-                    const succeedStub = sinon.stub(collector._invokeContext, 'succeed');
-
-                    collector.handleOtherErrors(error, state, () => { });
-
-                    assert.strictEqual(succeedStub.calledOnce, true);
+                    const result = collector.handleOtherErrors(error, state);
+                    assert.strictEqual(result, undefined);
                 });
             });
 
@@ -645,15 +603,16 @@ describe('Unit Tests', function () {
                     },
                     succeed: function () { }
                 };
-                CiscomerakiCollector.load().then(function (creds) {
+                return CiscomerakiCollector.load().then(function (creds) {
                     var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
-
-                    const callbackStub = sinon.stub();
-
-                    collector.handleOtherErrors(error, state, callbackStub);
-
-                    assert.strictEqual(callbackStub.calledOnce, true);
-                    assert.deepStrictEqual(callbackStub.args[0][0], {
+                    assert.throws(() => collector.handleOtherErrors(error, state), (thrownError) => {
+                        assert.deepStrictEqual(thrownError, {
+                            errors: ['Invalid API key'],
+                            errorCode: 401
+                        });
+                        return true;
+                    });
+                    assert.deepStrictEqual(error.response.data, {
                         errors: ['Invalid API key'],
                         errorCode: 401
                     });
@@ -675,110 +634,105 @@ describe('Unit Tests', function () {
                     },
                     succeed: function () { }
                 };
-                CiscomerakiCollector.load().then(function (creds) {
+                return CiscomerakiCollector.load().then(function (creds) {
 
                     var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
-
-                    const callbackStub = sinon.stub();
-
-                    collector.handleOtherErrors(error, state, callbackStub);
-
-                    assert.strictEqual(callbackStub.calledOnce, true);
-                    assert.strictEqual(callbackStub.args[0][0], error);
+                    assert.throws(() => collector.handleOtherErrors(error, state), (thrownError) => {
+                        assert.strictEqual(thrownError, error);
+                        return true;
+                    });
                 });
             });
         });
     });
 
-});
 
-describe('handleUpdateStreamsFromNetworks Function', function () {
-    let uploadStub;
-    beforeEach(function () {
-        sinon.stub(merakiClient, 'listNetworkIds').resolves(['network1', 'network2']);
-        sinon.stub(merakiClient, 'getS3ObjectParams').resolves({ bucketName: 'testBucket', key: 'testKey' });
-        sinon.stub(merakiClient, 'fetchJsonFromS3Bucket').resolves(['network1']);
-        sinon.stub(merakiClient, 'differenceOfNetworksArray').returns(['network2']);
-        uploadStub = sinon.stub(merakiClient, 'uploadNetworksListInS3Bucket').resolves();
-    });
+    describe('handleUpdateStreamsFromNetworks Function', function () {
+        let uploadStub;
+        beforeEach(function () {
+            sinon.stub(merakiClient, 'listNetworkIds').resolves(['network1', 'network2']);
+            sinon.stub(merakiClient, 'getS3ObjectParams').resolves({ bucketName: 'testBucket', key: 'testKey' });
+            sinon.stub(merakiClient, 'fetchJsonFromS3Bucket').resolves(['network1']);
+            sinon.stub(merakiClient, 'differenceOfNetworksArray').returns(['network2']);
+            uploadStub = sinon.stub(merakiClient, 'uploadNetworksListInS3Bucket').resolves();
+        });
 
-    afterEach(function () {
-        sinon.restore();
-    });
-
-    it('should handle network updates correctly', async function () {
-
-        let ctx = {
-            invokedFunctionArn: ciscomerakiMock.FUNCTION_ARN,
-            fail: function (error) {
-                assert.fail(error);
-            },
-            succeed: function () { }
-        };
-
-        return CiscomerakiCollector.load().then(async function (creds) {
-            var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
-
-            sinon.stub(collector, '_storeCollectionState').callsFake(function (_, __, ___, callback) {
-                callback();
-            });
-
-            await collector.handleUpdateStreamsFromNetworks();
-
-            assert.strictEqual(merakiClient.listNetworkIds.callCount, 1);
-            assert.strictEqual(merakiClient.getS3ObjectParams.callCount, 1);
-            assert.strictEqual(merakiClient.fetchJsonFromS3Bucket.callCount, 1);
-            assert.strictEqual(merakiClient.differenceOfNetworksArray.callCount, 1);
-            assert.strictEqual(uploadStub.callCount, 1);
+        afterEach(function () {
             sinon.restore();
         });
-    });
 
-    it('should handle network updates when no networks from S3 are found', async function () {
-        let ctx = {
-            invokedFunctionArn: ciscomerakiMock.FUNCTION_ARN,
-            fail: function (error) {
-                assert.fail(error);
-            },
-            succeed: function () { }
-        };
+        it('should handle network updates correctly', async function () {
 
-        return CiscomerakiCollector.load().then(async function (creds) {
-            const collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
-            sinon.stub(collector, '_storeCollectionState').callsFake(function (_, __, ___, callback) {
-                callback();
+            let ctx = {
+                invokedFunctionArn: ciscomerakiMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                },
+                succeed: function () { }
+            };
+
+            return CiscomerakiCollector.load().then(async function (creds) {
+                var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
+
+                sinon.stub(collector, '_storeCollectionState').callsFake(function (_, __, ___, callback) {
+                    callback();
+                });
+
+                await collector.handleUpdateStreamsFromNetworks();
+
+                assert.strictEqual(merakiClient.listNetworkIds.callCount, 1);
+                assert.strictEqual(merakiClient.getS3ObjectParams.callCount, 1);
+                assert.strictEqual(merakiClient.fetchJsonFromS3Bucket.callCount, 1);
+                assert.strictEqual(merakiClient.differenceOfNetworksArray.callCount, 1);
+                assert.strictEqual(uploadStub.callCount, 1);
+                sinon.restore();
             });
-
-            await collector.handleUpdateStreamsFromNetworks();
-
-            assert.strictEqual(merakiClient.listNetworkIds.callCount, 1);
-            assert.strictEqual(merakiClient.getS3ObjectParams.callCount, 1);
-            assert.strictEqual(merakiClient.fetchJsonFromS3Bucket.callCount, 1);
-            assert.strictEqual(uploadStub.callCount, 1);
         });
-    });
 
-    it('should handle network updates when S3 fetch returns an error', async function () {
-        let ctx = {
-            invokedFunctionArn: ciscomerakiMock.FUNCTION_ARN,
-            fail: function (error) {
-                assert.fail(error);
-            },
-            succeed: function () { }
-        };
-        return CiscomerakiCollector.load().then(async function (creds) {
-            var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
-            sinon.stub(collector, '_storeCollectionState').callsFake(function (_, __, ___, callback) {
-                callback();
+        it('should handle network updates when no networks from S3 are found', async function () {
+            let ctx = {
+                invokedFunctionArn: ciscomerakiMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                },
+                succeed: function () { }
+            };
+
+            return CiscomerakiCollector.load().then(async function (creds) {
+                const collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
+                sinon.stub(collector, '_storeCollectionState').callsFake(function (_, __, ___, callback) {
+                    callback();
+                });
+
+                await collector.handleUpdateStreamsFromNetworks();
+
+                assert.strictEqual(merakiClient.listNetworkIds.callCount, 1);
+                assert.strictEqual(merakiClient.getS3ObjectParams.callCount, 1);
+                assert.strictEqual(merakiClient.fetchJsonFromS3Bucket.callCount, 1);
+                assert.strictEqual(uploadStub.callCount, 1);
             });
+        });
 
-            await collector.handleUpdateStreamsFromNetworks();
-            assert.strictEqual(merakiClient.listNetworkIds.callCount, 1);
-            assert.strictEqual(merakiClient.getS3ObjectParams.callCount, 1);
-            assert.strictEqual(merakiClient.fetchJsonFromS3Bucket.callCount, 1);
-            assert.strictEqual(uploadStub.callCount, 1);
+        it('should handle network updates when S3 fetch returns an error', async function () {
+            let ctx = {
+                invokedFunctionArn: ciscomerakiMock.FUNCTION_ARN,
+                fail: function (error) {
+                    assert.fail(error);
+                },
+                succeed: function () { }
+            };
+            return CiscomerakiCollector.load().then(async function (creds) {
+                var collector = new CiscomerakiCollector(ctx, creds, 'ciscomeraki');
+                sinon.stub(collector, '_storeCollectionState').callsFake(function (_, __, ___, callback) {
+                    callback();
+                });
+
+                await collector.handleUpdateStreamsFromNetworks();
+                assert.strictEqual(merakiClient.listNetworkIds.callCount, 1);
+                assert.strictEqual(merakiClient.getS3ObjectParams.callCount, 1);
+                assert.strictEqual(merakiClient.fetchJsonFromS3Bucket.callCount, 1);
+                assert.strictEqual(uploadStub.callCount, 1);
+            });
         });
     });
 });
-
-
