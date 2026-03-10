@@ -1,6 +1,6 @@
 const assert = require('assert');
 const sinon = require('sinon');
-const m_response = require('cfn-response');
+const m_response = require('@alertlogic/al-aws-collector-js').CfnResponse;
 const crowdstrikeMock = require('./crowd-strike-mock');
 var CrowdstrikeCollector = require('../collector').CrowdstrikeCollector;
 const moment = require('moment');
@@ -62,30 +62,30 @@ function setAlServiceStub() {
 }
 
 function restoreAlServiceStub() {
-    authenticate.restore();
-    getList.restore();
-    getDetections.restore();
-    getIncidents.restore();
-    getAPIDetails.restore();
-    getAlerts.restore();
+    if (authenticate && typeof authenticate.restore === 'function') authenticate.restore();
+    if (getList && typeof getList.restore === 'function') getList.restore();
+    if (getDetections && typeof getDetections.restore === 'function') getDetections.restore();
+    if (getIncidents && typeof getIncidents.restore === 'function') getIncidents.restore();
+    if (getAPIDetails && typeof getAPIDetails.restore === 'function') getAPIDetails.restore();
+    if (getAlerts && typeof getAlerts.restore === 'function') getAlerts.restore();
 }
 
 describe('Unit Tests', function () {
 
     beforeEach(function () {
-        sinon.stub(SSM.prototype, 'getParameter').callsFake(function (params, callback) {
+        sinon.stub(SSM.prototype, 'getParameter').callsFake(function (params) {
             const data = Buffer.from('test-secret');
-            return callback(null, { Parameter: { Value: data.toString('base64') } });
+            return Promise.resolve({ Parameter: { Value: data.toString('base64') } });
         });
-        sinon.stub(KMS.prototype, 'decrypt').callsFake(function (params, callback) {
+        sinon.stub(KMS.prototype, 'decrypt').callsFake(function (params) {
             const data = {
                 Plaintext: Buffer.from('{}')
             };
-            return callback(null, data);
+            return Promise.resolve(data);
         });
         responseStub = sinon.stub(m_response, 'send').callsFake(
             function fakeFn(event, mockContext, responseStatus, responseData, physicalResourceId) {
-                mockContext.succeed();
+                return Promise.resolve();
             });
     });
 
@@ -104,48 +104,41 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
-        it('Paws Init Collection State Success', function (done) {
+        it('Paws Init Collection State Success', async function () {
             setAlServiceStub();
-            CrowdstrikeCollector.load().then(function (creds) {
-                var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
-                const startDate = moment().subtract(1, 'days').toISOString();
-                process.env.paws_collection_start_ts = startDate;
+            const creds = await CrowdstrikeCollector.load();
 
-                collector.pawsInitCollectionState(null, (err, initialStates, nextPoll) => {
-                    initialStates.forEach((state) => {
-                        assert.equal(moment(state.until).diff(state.since, 'seconds'), 60);
-                    });
-                    done();
-                });
+            var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
+            const startDate = moment().subtract(1, 'days').toISOString();
+            process.env.paws_collection_start_ts = startDate;
+
+            const { state: initialStates} = await collector.pawsInitCollectionState(null);
+            initialStates.forEach((state) => {
+                assert.equal(moment(state.until).diff(state.since, 'seconds'), 60);
             });
+
         });
     });
 
     describe('Paws Get Register Parameters', function () {
-        it('Paws Get Register Parameters Success', function (done) {
+        it('Paws Get Register Parameters Success', async function () {
             setAlServiceStub();
             let ctx = {
                 invokedFunctionArn: crowdstrikeMock.FUNCTION_ARN,
                 fail: function (error) {
                     assert.fail(error);
-                    done();
                 },
-                succeed: function () {
-                    done();
-                }
+                succeed: function () {}
             };
 
-            CrowdstrikeCollector.load().then(function (creds) {
-                var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
-                const sampleEvent = { ResourceProperties: { StackName: 'a-stack-name' } };
-                collector.pawsGetRegisterParameters(sampleEvent, (err, regValues) => {
-                    const expectedRegValues = {
-                        crowdstrikeAPINames: '["Incident", "Detection", "Alerts"]'
-                    };
-                    assert.deepEqual(regValues, expectedRegValues);
-                    done();
-                });
-            });
+            const creds = await CrowdstrikeCollector.load();
+            var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
+            const sampleEvent = { ResourceProperties: { StackName: 'a-stack-name' } };
+            const regValues = collector.pawsGetRegisterParameters(sampleEvent);
+            const expectedRegValues = {
+                crowdstrikeAPINames: '["Incident", "Detection", "Alerts"]'
+            };
+            assert.deepEqual(regValues, expectedRegValues);
         });
     });
 
@@ -157,88 +150,73 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
-        it('Paws Get Logs Success', function (done) {
+        it('Paws Get Logs Success', async function () {
             setAlServiceStub();
-            CrowdstrikeCollector.load().then(function (creds) {
-                var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
-                const startDate = moment().subtract(3, 'days');
-                const curState = {
-                    stream: "Detection",
-                    since: startDate.toISOString(),
-                    until: startDate.add(2, 'days').toISOString(),
-                    offset: 0,
-                    poll_interval_sec: 1
-                };
+            const creds = await CrowdstrikeCollector.load();
+            var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
+            const startDate = moment().subtract(3, 'days');
+            const curState = {
+                stream: "Detection",
+                since: startDate.toISOString(),
+                until: startDate.add(2, 'days').toISOString(),
+                offset: 0,
+                poll_interval_sec: 1
+            };
 
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(logs.length, 1);
-                    assert.equal(newState.poll_interval_sec, 1);
-                    assert.ok(logs[0].detection_id);
-                    done();
-                });
-
-            });
+            const [logs, newState] = await collector.pawsGetLogs(curState);
+            assert.equal(logs.length, 1);
+            assert.equal(newState.poll_interval_sec, 1);
+            assert.ok(logs[0].detection_id);
         });
 
-        it('Get Alerts Logs Success', function (done) {
+        it('Get Alerts Logs Success', async function () {
             setAlServiceStub();
-            CrowdstrikeCollector.load().then(function (creds) {
-                var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
-                const startDate = moment().subtract(3, 'days');
-                const curState = {
-                    stream: "Alerts",
-                    since: startDate.toISOString(),
-                    until: startDate.add(2, 'days').toISOString(),
-                    offset: 0,
-                    poll_interval_sec: 1
-                };
+            const creds = await CrowdstrikeCollector.load();
+            var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
+            const startDate = moment().subtract(3, 'days');
+            const curState = {
+                stream: "Alerts",
+                since: startDate.toISOString(),
+                until: startDate.add(2, 'days').toISOString(),
+                offset: 0,
+                poll_interval_sec: 1
+            };
 
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(logs.length, 1);
-                    assert.equal(newState.poll_interval_sec, 1);
-                    assert.ok(logs[0].composite_id);
-                    done();
-                });
-            });
+            const [logs, newState] = await collector.pawsGetLogs(curState);
+            assert.equal(logs.length, 1);
+            assert.equal(newState.poll_interval_sec, 1);
+            assert.ok(logs[0].composite_id);
         });
     });
 
     describe('Format Tests', function () {
-        it('log format success', function (done) {
+        it('log format success', async function () {
             setAlServiceStub();
             let ctx = {
                 invokedFunctionArn: crowdstrikeMock.FUNCTION_ARN,
                 fail: function (error) {
                     assert.fail(error);
-                    done();
                 },
-                succeed: function () {
-                    done();
-                }
+                succeed: function () {}
             };
 
-            CrowdstrikeCollector.load().then(function (creds) {
-                var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
-                let fmt = collector.pawsFormatLog(crowdstrikeMock.DETECTION_LOG_EVENT.resources[0]);
-                assert.equal(fmt.progName, 'CrowdstrikeCollector');
-                assert.ok(fmt.messageType);
-                done();
-            });
+            const creds = await CrowdstrikeCollector.load();
+            var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
+            let fmt = collector.pawsFormatLog(crowdstrikeMock.DETECTION_LOG_EVENT.resources[0]);
+            assert.equal(fmt.progName, 'CrowdstrikeCollector');
+            assert.ok(fmt.messageType);
         });
     });
 
     describe('NextCollectionStateWithOffset', function () {
-        it('Get Next Collection State With Offset Success', function (done) {
+        it('Get Next Collection State With Offset Success', async function () {
             setAlServiceStub();
             let ctx = {
                 invokedFunctionArn: crowdstrikeMock.FUNCTION_ARN,
                 fail: function (error) {
                     assert.fail(error);
-                    done();
                 },
-                succeed: function () {
-                    done();
-                }
+                succeed: function () {}
             };
 
             const startDate = moment().subtract(5, 'minutes');
@@ -251,13 +229,11 @@ describe('Unit Tests', function () {
             };
             const offset = 'offset';
             const receivedAll = false;
-            CrowdstrikeCollector.load().then(function (creds) {
-                var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
-                let nextState = collector._getNextCollectionStateWithOffset(curState, offset, receivedAll);
-                assert.ok(nextState.offset);
-                assert.equal(nextState.offset, offset);
-                done();
-            });
+            const creds = await CrowdstrikeCollector.load();
+            var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
+            let nextState = collector._getNextCollectionStateWithOffset(curState, offset, receivedAll);
+            assert.ok(nextState.offset);
+            assert.equal(nextState.offset, offset);
         });
     });
 
@@ -306,24 +282,25 @@ describe('Unit Tests', function () {
                     });
                 });
         });
-        it('Paws Get List Fail', function (done) {
-            CrowdstrikeCollector.load().then(function (creds) {
-                var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
-                const startDate = moment().subtract(3, 'days');
-                const curState = {
-                    stream: "Detection",
-                    since: startDate.toISOString(),
-                    until: startDate.add(2, 'days').toISOString(),
-                    offset: 0,
-                    poll_interval_sec: 1
-                };
-                
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(err.errorCode, errorObj.response.data.errors[0].code);
-                    assert.equal(err.errors[0].message, errorObj.response.data.errors[0].message);
-                    done();
-                });
-            });
+        it('Paws Get List Fail', async function () {
+            const creds = await CrowdstrikeCollector.load();
+            var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
+            const startDate = moment().subtract(3, 'days');
+            const curState = {
+                stream: "Detection",
+                since: startDate.toISOString(),
+                until: startDate.add(2, 'days').toISOString(),
+                offset: 0,
+                poll_interval_sec: 1
+            };
+
+            try {
+                await collector.pawsGetLogs(curState);
+                assert.fail('Expected pawsGetLogs to throw');
+            } catch (err) {
+                assert.equal(err.errorCode, errorObj.response.data.errors[0].code);
+                assert.equal(err.errors[0].message, errorObj.response.data.errors[0].message);
+            }
         });
     });
 
@@ -352,23 +329,25 @@ describe('Unit Tests', function () {
                 }
             );
         });
-        it('Authentication Fail', function (done) {
-            CrowdstrikeCollector.load().then(function (creds) {
-                var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
-                const startDate = moment().subtract(3, 'days');
-                const curState = {
-                    stream: "Detection",
-                    since: startDate.toISOString(),
-                    until: startDate.add(2, 'days').toISOString(),
-                    offset: 0,
-                    poll_interval_sec: 1
-                };
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(err.errorCode, errorObj.response.data.errors[0].code);
-                    assert.equal(err.errors[0].message, errorObj.response.data.errors[0].message);
-                    done();
-                });
-            });
+        it('Authentication Fail', async function () {
+            const creds = await CrowdstrikeCollector.load();
+            var collector = new CrowdstrikeCollector(ctx, creds, 'crowdstrike');
+            const startDate = moment().subtract(3, 'days');
+            const curState = {
+                stream: "Detection",
+                since: startDate.toISOString(),
+                until: startDate.add(2, 'days').toISOString(),
+                offset: 0,
+                poll_interval_sec: 1
+            };
+
+            try {
+                await collector.pawsGetLogs(curState);
+                assert.fail('Expected pawsGetLogs to throw');
+            } catch (err) {
+                assert.equal(err.errorCode, errorObj.response.data.errors[0].code);
+                assert.equal(err.errors[0].message, errorObj.response.data.errors[0].message);
+            }
         });
     });
 });

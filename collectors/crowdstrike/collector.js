@@ -27,11 +27,11 @@ class CrowdstrikeCollector extends PawsCollector {
     constructor(context, creds) {
         super(context, creds, packageJson.version);
     }
-    
-    pawsInitCollectionState(event, callback) {
-        const startTs = process.env.paws_collection_start_ts ? 
-                process.env.paws_collection_start_ts :
-                    moment().toISOString();
+
+    async pawsInitCollectionState(event) {
+        const startTs = process.env.paws_collection_start_ts ?
+            process.env.paws_collection_start_ts :
+            moment().toISOString();
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
         const apiNames = JSON.parse(process.env.collector_streams);
         const initialStates = apiNames.map(stream => {
@@ -43,27 +43,27 @@ class CrowdstrikeCollector extends PawsCollector {
                 poll_interval_sec: 1
             }
         });
-        return callback(null, initialStates, 1);
+        return { state: initialStates, nextInvocationTimeout: 1 };
     }
 
-    pawsGetRegisterParameters(event, callback) {
+    pawsGetRegisterParameters(event) {
         const regValues = {
             crowdstrikeAPINames: process.env.collector_streams
         };
 
-        callback(null, regValues);
+        return regValues;
     }
-    
-    pawsGetLogs(state, callback) {
+
+    async pawsGetLogs(state) {
         let collector = this;
 
         const clientSecret = collector.secret;
         if (!clientSecret) {
-            return callback("The Client Secret was not found!");
+            throw new Error("The Client Secret was not found!");
         }
         const clientId = collector.clientId;
         if (!clientId) {
-            return callback("The Client ID was not found!");
+            throw new Error("The Client ID was not found!");
         }
 
         const APIHostName = collector.pawsDomainEndpoint.replace(/^https:\/\/|\/$/g, '');
@@ -73,57 +73,58 @@ class CrowdstrikeCollector extends PawsCollector {
 
         AlLogger.info(`CROW000001 Collecting data from ${state.since} till ${state.until} from ${state.stream}`);
 
-        utils.authenticate(APIHostName, clientId, clientSecret).then((token) => {
-            utils.getList(apiDetails, [], APIHostName, token).then(({accumulator, total}) => {             
-                const receivedAll = (state.offset + accumulator.length) >= total ? true : false;
-                const offset = receivedAll ? 0 : (state.offset + accumulator.length);
-                if (state.stream === 'Incident') {
-                    return utils.getIncidents(accumulator, APIHostName, token).then((data) => {
-                        const newState = collector._getNextCollectionStateWithOffset(state, offset, receivedAll);
-                        AlLogger.info(`CROW000004 Next collection in ${newState.poll_interval_sec} seconds for ${state.stream}`);
-                        return callback(null, data.resources, newState, newState.poll_interval_sec);
-                    }).catch((error) => {
-                        AlLogger.error(`CROW000005 Error while getting incident details`);
-                        return collector.setErrorCode(error, callback);
-                    });
-                } // @deprecated: This implementation will be removed in a future release. Use the Alert API to retrieve detect events instead of Detection 
-                else if (state.stream === 'Detection') {
-                    return utils.getDetections(accumulator, APIHostName, token).then((data) => {
-                        const newState = collector._getNextCollectionStateWithOffset(state, offset, receivedAll);
-                        AlLogger.info(`CROW000004 Next collection in ${newState.poll_interval_sec} seconds for ${state.stream}`);
-                        return callback(null, data.resources, newState, newState.poll_interval_sec);
-                    }).catch((error) => {
-                        AlLogger.error(`CROW000005 Error while getting detection details`);
-                        return collector.setErrorCode(error, callback);
-                    });
-                } else if (state.stream === 'Alerts') {
-                    return utils.getAlerts(accumulator, APIHostName, token).then((data) => {
-                        const newState = collector._getNextCollectionStateWithOffset(state, offset, receivedAll);
-                        AlLogger.info(`CROW000004 Next collection in ${newState.poll_interval_sec} seconds for ${state.stream}`);
-                        return callback(null, data.resources, newState, newState.poll_interval_sec);
-                    }).catch((error) => {
-                        AlLogger.error(`CROW000005 Error while getting Alerts details`);
-                        return collector.setErrorCode(error, callback);
-                    });
-                }
-            }).catch((error) => {
-                AlLogger.error(`CROW000003 Error while getting API details`);
-                return collector.setErrorCode(error, callback);
-            });
-        }).catch((error) => {
+        let token;
+        try {
+            token = await utils.authenticate(APIHostName, clientId, clientSecret);
+        } catch (error) {
             AlLogger.error(`CROW000002 Error while getting Authentication`);
-            return collector.setErrorCode(error, callback);
-        });        
+            collector.setErrorCode(error);
+        }
+
+        let accumulator;
+        let total;
+        try {
+            ({ accumulator, total } = await utils.getList(apiDetails, [], APIHostName, token));
+        } catch (error) {
+            AlLogger.error(`CROW000003 Error while getting API details`);
+            collector.setErrorCode(error);
+        }
+
+        const receivedAll = (state.offset + accumulator.length) >= total;
+        const offset = receivedAll ? 0 : (state.offset + accumulator.length);
+        const newState = collector._getNextCollectionStateWithOffset(state, offset, receivedAll);
+
+        try {
+            if (state.stream === 'Incident') {
+                const data = await utils.getIncidents(accumulator, APIHostName, token);
+                AlLogger.info(`CROW000004 Next collection in ${newState.poll_interval_sec} seconds for ${state.stream}`);
+                return [data.resources, newState, newState.poll_interval_sec];
+            } else if (state.stream === 'Detection') {
+                const data = await utils.getDetections(accumulator, APIHostName, token);
+                AlLogger.info(`CROW000004 Next collection in ${newState.poll_interval_sec} seconds for ${state.stream}`);
+                return [data.resources, newState, newState.poll_interval_sec];
+            } else if (state.stream === 'Alerts') {
+                const data = await utils.getAlerts(accumulator, APIHostName, token);
+                AlLogger.info(`CROW000004 Next collection in ${newState.poll_interval_sec} seconds for ${state.stream}`);
+                return [data.resources, newState, newState.poll_interval_sec];
+            }
+            throw new Error(`CROW000006 Unsupported stream: ${state.stream}`);
+        } catch (error) {
+            AlLogger.error(`CROW000005 Error while getting ${state.stream} details`);
+            collector.setErrorCode(error);
+        }
     }
 
-    setErrorCode(error, callback) {
+    setErrorCode(error) {
         if (error.response && error.response.data) {
             error.response.data.errorCode = error.response.data.errors[0] ? error.response.data.errors[0].code : error.response.status;
-            return callback(error.response.data);
+            throw error.response.data;
         }
-        else {
+        else if (error.response && error.response.status) {
             error.errorCode = error.response.status;
-            return callback(error);
+            throw error;
+        } else {
+            throw error;
         }
     }
 
@@ -138,13 +139,13 @@ class CrowdstrikeCollector extends PawsCollector {
             poll_interval_sec: nextPollInterval
         };
     }
-    
+
     pawsFormatLog(msg) {
         let collector = this;
 
         const ts = parse.getMsgTs(msg, tsPaths);
         const typeId = parse.getMsgTypeId(msg, typeIdPaths);
-        
+
         let formattedMsg = {
             hostname: collector.collector_id,
             messageTs: ts.sec,
@@ -154,7 +155,7 @@ class CrowdstrikeCollector extends PawsCollector {
             messageType: 'json/crowdstrike',
             applicationId: collector.application_id
         };
-        
+
         if (typeId !== null && typeId !== undefined) {
             formattedMsg.messageTypeId = `${typeId}`;
         }
