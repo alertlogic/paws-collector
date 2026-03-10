@@ -9,14 +9,14 @@
     "test": "JUNIT_REPORT_PATH=./test/report.xml nyc --reporter=text mocha --colors"
   },
   "devDependencies": {
-    "@aws-sdk/client-cloudformation": "^3.991.0",
-    "@aws-sdk/client-cloudwatch": "^3.991.0",
-    "@aws-sdk/client-dynamodb": "^3.991.0",
-    "@aws-sdk/client-kms": "^3.991.0",
-    "@aws-sdk/client-lambda": "^3.991.0",
-    "@aws-sdk/client-s3": "^3.991.0",
-    "@aws-sdk/client-sqs": "^3.991.0",
-    "@aws-sdk/client-ssm": "^3.991.0",
+    "@aws-sdk/client-cloudformation": "^3.1000.0",
+    "@aws-sdk/client-cloudwatch": "^3.1000.0",
+    "@aws-sdk/client-dynamodb": "^3.1000.0",
+    "@aws-sdk/client-kms": "^3.1000.0",
+    "@aws-sdk/client-lambda": "^3.1000.0",
+    "@aws-sdk/client-s3": "^3.1000.0",
+    "@aws-sdk/client-sqs": "^3.1000.0",
+    "@aws-sdk/client-ssm": "^3.1000.0",
     "jshint": "^2.13.6",
     "mocha": "^10.7.3",
     "nyc": "^17.1.0",
@@ -24,21 +24,22 @@
     "sinon": "^21.0.1"
   },
   "dependencies": {
-    "@alertlogic/al-aws-collector-js": "4.2.1",
+    "@alertlogic/al-aws-collector-js": "4.2.4",
     "@alertlogic/al-collector-js": "3.0.20",
-    "@alertlogic/paws-collector": "2.3.0",
+    "@alertlogic/paws-collector": "2.3.2",
     "@azure/ms-rest-azure-js": "2.1.0",
     "@azure/ms-rest-js": "2.7.0",
     "@azure/ms-rest-nodeauth": "3.1.1",
     "@smithy/node-http-handler": "^4.0.4",
-    "async": "^3.2.6",
     "debug": "^4.4.3",
     "moment": "2.30.1",
     "tiny-async-pool": "^2.1.0"
   },
   "overrides": {
     "axios": "^1.13.5",
-    "diff": "^8.0.3"
+    "diff": "^8.0.3",
+    "minimatch": "^3.1.4",
+    "serialize-javascript": "^7.0.3"
   },
   "author": "Alert Logic Inc."
 }
