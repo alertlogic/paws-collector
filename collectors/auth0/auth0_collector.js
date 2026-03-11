@@ -34,15 +34,15 @@ class Auth0Collector extends PawsCollector {
         super(context, creds, packageJson.version);
     }
     
-    pawsInitCollectionState(event, callback) {
+    async pawsInitCollectionState(event) {
         const initialState = {
             since: process.env.paws_collection_start_ts ? process.env.paws_collection_start_ts : moment().subtract(5, 'minutes').toISOString(),
             poll_interval_sec: 1
         };
-        return callback(null, initialState, 1);
+        return { state: initialState, nextInvocationTimeout: 1 };
     }
 
-    pawsGetLogs(state, callback) {
+    async pawsGetLogs(state) {
         let collector = this;
         const hostname = collector.pawsDomainEndpoint;
         const auth0Client = new ManagementClient({
@@ -51,12 +51,12 @@ class Auth0Collector extends PawsCollector {
             clientSecret: collector.secret,
             scope: 'read:logs'
         });
-        utils.getAPILogs(auth0Client, state, [], process.env.paws_max_pages_per_invocation)
+        return utils.getAPILogs(auth0Client, state, [], process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextLogId, lastLogTs }) => {
                 const newState = collector._getNextCollectionState(state, nextLogId, lastLogTs);
                 AlLogger.info(`AUTZ000002 Next collection in ${newState.poll_interval_sec} seconds`);
-                return callback(null, accumulator, newState, newState.poll_interval_sec);
-            }).catch((error) => {
+                return [accumulator, newState, newState.poll_interval_sec];
+            }).catch(async (error) => {
                 // Auth0 Logging api has some rate limits that we might run into.
                 // If we run into a rate limit error, instead of returning the error,
                 // we return the state back to the queue with an additional 10 second added.
@@ -66,12 +66,11 @@ class Auth0Collector extends PawsCollector {
                     state.poll_interval_sec = state.poll_interval_sec < 10 ?
                         10 : state.poll_interval_sec + 1;
                     AlLogger.warn(`AUTZ000003 API Request Limit Exceeded`, error);
-                    collector.reportApiThrottling(function () {
-                        return callback(null, [], state, state.poll_interval_sec);
-                    });
+                    await collector.reportApiThrottling();
+                    return [[], state, state.poll_interval_sec];
                 }
                 else {
-                    return callback(collector.createErrorObject(error));
+                    throw collector.createErrorObject(error);
                 }
             });
     }
