@@ -1,12 +1,12 @@
 const assert = require('assert');
 const sinon = require('sinon');
-const m_response = require('cfn-response');
+const m_response = require('@alertlogic/al-aws-collector-js').CfnResponse;
 const moment = require('moment');
 
 const gsuiteMock = require('./gsuite_mock');
 var GsuiteCollector = require('../collector').GsuiteCollector;
 const utils = require("../utils");
-const { auth } = require("google-auth-library");
+const { GoogleAuth } = require("google-auth-library");
 
 const { CloudWatch } = require("@aws-sdk/client-cloudwatch"),
     { KMS } = require("@aws-sdk/client-kms"),
@@ -18,9 +18,9 @@ let listAlert;
 let mockAuthenticationObject;
 
 function setAlServiceStub() {
-    mockAuthenticationObject = sinon.stub(auth, 'fromJSON').callsFake(
+    mockAuthenticationObject = sinon.stub(GoogleAuth.prototype, 'getClient').callsFake(
         function fakeFn(path) {
-            return {};
+            return Promise.resolve({});
         });
 }
 
@@ -30,20 +30,20 @@ function restoreAlServiceStub() {
 describe('Unit Tests', function () {
 
     beforeEach(function () {
-        sinon.stub(SSM.prototype, 'getParameter').callsFake(function (params, callback) {
+        sinon.stub(SSM.prototype, 'getParameter').callsFake(function (params) {
             const data = Buffer.from('test-secret');
-            return callback(null, { Parameter: { Value: data.toString('base64') } });
+            return Promise.resolve({ Parameter: { Value: data.toString('base64') } });
         });
-        sinon.stub(KMS.prototype, 'decrypt').callsFake(function (params, callback) {
+        sinon.stub(KMS.prototype, 'decrypt').callsFake(function (params) {
             const data = {
                 Plaintext: Buffer.from('{}')
             };
-            return callback(null, data);
+            return Promise.resolve(data);
         });
 
         responseStub = sinon.stub(m_response, 'send').callsFake(
             function fakeFn(event, mockContext, responseStatus, responseData, physicalResourceId) {
-                mockContext.succeed();
+                return Promise.resolve();
             });
 
         setAlServiceStub();
@@ -64,63 +64,51 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
-        it('get inital state less than 7 days in the past', function (done) {
-            GsuiteCollector.load().then(function (creds) {
-                var collector = new GsuiteCollector(ctx, creds, 'gsuite');
-                const startDate = moment().subtract(1, 'days').toISOString();
-                process.env.paws_collection_start_ts = startDate;
+        it('get inital state less than 7 days in the past', async function () {
+            const creds = await GsuiteCollector.load();
+            var collector = new GsuiteCollector(ctx, creds, 'gsuite');
+            const startDate = moment().subtract(1, 'days').toISOString();
+            process.env.paws_collection_start_ts = startDate;
 
-                collector.pawsInitCollectionState(null, (err, initialStates, nextPoll) => {
-                    initialStates.forEach((state) => {
-                        assert.equal(state.since, startDate, "Dates are not equal");
-                        assert.notEqual(moment(state.until).diff(state.since, 'hours'), 24);
-                    });
-                    done();
-                });
+            const { state: initialStates } = await collector.pawsInitCollectionState(null);
+            initialStates.forEach((state) => {
+                assert.equal(state.since, startDate, "Dates are not equal");
+                assert.notEqual(moment(state.until).diff(state.since, 'hours'), 24);
             });
         });
-        it('get inital state less than 24 hours in the past', function (done) {
-            GsuiteCollector.load().then(function (creds) {
-                var collector = new GsuiteCollector(ctx, creds, 'gsuite');
-                const startDate = moment().subtract(12, 'hours').toISOString();
-                process.env.paws_collection_start_ts = startDate;
+        it('get inital state less than 24 hours in the past', async function () {
+            const creds = await GsuiteCollector.load();
+            var collector = new GsuiteCollector(ctx, creds, 'gsuite');
+            const startDate = moment().subtract(12, 'hours').toISOString();
+            process.env.paws_collection_start_ts = startDate;
 
-                collector.pawsInitCollectionState(null, (err, initialStates, nextPoll) => {
-                    initialStates.forEach((state) => {
-                        assert.notEqual(moment(state.until).diff(state.since, 'hours'), 24);
-                    });
-                    done();
-                });
+            const { state: initialStates } = await collector.pawsInitCollectionState(null);
+            initialStates.forEach((state) => {
+                assert.notEqual(moment(state.until).diff(state.since, 'hours'), 24);
             });
         });
 
     });
 
     describe('Paws Get Register Parameters', function () {
-        it('Paws Get Register Parameters Success', function (done) {
+        it('Paws Get Register Parameters Success', async function () {
             let ctx = {
                 invokedFunctionArn: gsuiteMock.FUNCTION_ARN,
                 fail: function (error) {
                     assert.fail(error);
-                    done();
                 },
-                succeed: function () {
-                    done();
-                }
+                succeed: function () { }
             };
 
-            GsuiteCollector.load().then(function (creds) {
-                var collector = new GsuiteCollector(ctx, creds, 'gsuite');
-                const sampleEvent = { ResourceProperties: { StackName: 'a-stack-name' } };
-                collector.pawsGetRegisterParameters(sampleEvent, (err, regValues) => {
-                    const expectedRegValues = {
-                        gsuiteScope: '["gsuiteScope"]',
-                        gsuiteApplicationNames: '["login","admin","token"]'
-                    };
-                    assert.deepEqual(regValues, expectedRegValues);
-                    done();
-                });
-            });
+            const creds = await GsuiteCollector.load();
+            var collector = new GsuiteCollector(ctx, creds, 'gsuite');
+            const sampleEvent = { ResourceProperties: { StackName: 'a-stack-name' } };
+            const regValues = await collector.pawsGetRegisterParameters(sampleEvent);
+            const expectedRegValues = {
+                gsuiteScope: '["gsuiteScope"]',
+                gsuiteApplicationNames: '["login","admin","token"]'
+            };
+            assert.deepEqual(regValues, expectedRegValues);
         });
     });
 
@@ -132,7 +120,7 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
-        it('Paws Get Logs Success', function (done) {
+        it('Paws Get Logs Success', async function () {
             listEvent = sinon.stub(utils, 'listEvents').callsFake(
                 function fakeFn(path) {
                     return new Promise(function (resolve, reject) {
@@ -140,7 +128,8 @@ describe('Unit Tests', function () {
                     });
                 });
 
-            GsuiteCollector.load().then(function (creds) {
+            try {
+                const creds = await GsuiteCollector.load();
                 var collector = new GsuiteCollector(ctx, creds, 'gsuite');
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
@@ -150,18 +139,16 @@ describe('Unit Tests', function () {
                     poll_interval_sec: 1
                 };
 
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(logs.length, 2);
-                    assert.equal(newState.poll_interval_sec, 1);
-                    assert.ok(logs[0].kind);
-                    listEvent.restore();
-                    done();
-                });
-
-            });
+                const [logs, newState] = await collector.pawsGetLogs(curState);
+                assert.equal(logs.length, 2);
+                assert.equal(newState.poll_interval_sec, 1);
+                assert.ok(logs[0].kind);
+            } finally {
+                listEvent.restore();
+            }
         });
 
-        it('Paws Get Logs Success Alerts', function (done) {
+        it('Paws Get Logs Success Alerts', async function () {
             listAlert = sinon.stub(utils, 'listAlerts').callsFake(
                 function fakeFn(path) {
                     return new Promise(function (resolve, reject) {
@@ -169,7 +156,8 @@ describe('Unit Tests', function () {
                     });
                 });
 
-            GsuiteCollector.load().then(function (creds) {
+            try {
+                const creds = await GsuiteCollector.load();
                 var collector = new GsuiteCollector(ctx, creds, 'gsuite');
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
@@ -179,18 +167,16 @@ describe('Unit Tests', function () {
                     poll_interval_sec: 1
                 };
 
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(logs.length, 2);
-                    assert.equal(newState.poll_interval_sec, 1);
-                    assert.ok(logs[0].data['@type']);
-                    listAlert.restore();
-                    done();
-                });
-
-            });
+                const [logs, newState] = await collector.pawsGetLogs(curState);
+                assert.equal(logs.length, 2);
+                assert.equal(newState.poll_interval_sec, 1);
+                assert.ok(logs[0].data['@type']);
+            } finally {
+                listAlert.restore();
+            }
         });
 
-        it('Paws Get Logs with API Quota Reset Date', function (done) {
+        it('Paws Get Logs with API Quota Reset Date', async function () {
             listEvent = sinon.stub(utils, 'listEvents').callsFake(
                 function fakeFn(path) {
                     return new Promise(function (resolve, reject) {
@@ -198,7 +184,9 @@ describe('Unit Tests', function () {
                     });
                 });
 
-            GsuiteCollector.load().then(function (creds) {
+            let putMetricDataStub;
+            try {
+                const creds = await GsuiteCollector.load();
                 var collector = new GsuiteCollector(ctx, creds, 'gsuite');
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
@@ -210,20 +198,20 @@ describe('Unit Tests', function () {
                 };
 
                 var reportSpy = sinon.spy(collector, 'reportApiThrottling');
-                let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params, callback) => callback(null));
+                putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake(() => Promise.resolve());
 
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(true, reportSpy.calledOnce);
-                    assert.equal(logs.length, 0);
-                    assert.equal(newState.poll_interval_sec, 900);
-                    listEvent.restore();
+                const [logs, newState] = await collector.pawsGetLogs(curState);
+                assert.equal(true, reportSpy.calledOnce);
+                assert.equal(logs.length, 0);
+                assert.equal(newState.poll_interval_sec, 900);
+            } finally {
+                listEvent.restore();
+                if (putMetricDataStub) {
                     putMetricDataStub.restore();
-                    done();
-                });
-
-            });
+                }
+            }
         });
-        it('Paws Get Logs check throttling error', function (done) {
+        it('Paws Get Logs check throttling error', async function () {
             listEvent = sinon.stub(utils, 'listEvents').callsFake(
                 function fakeFn(path) {
                     return new Promise(function (resolve, reject) {
@@ -231,7 +219,9 @@ describe('Unit Tests', function () {
                     });
                 });
 
-            GsuiteCollector.load().then(function (creds) {
+            let putMetricDataStub;
+            try {
+                const creds = await GsuiteCollector.load();
                 var collector = new GsuiteCollector(ctx, creds, 'gsuite');
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
@@ -242,20 +232,20 @@ describe('Unit Tests', function () {
                 };
 
                 var reportSpy = sinon.spy(collector, 'reportApiThrottling');
-                let putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake((params, callback) => callback(null));
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(true, reportSpy.calledOnce);
-                    assert.equal(logs.length, 0);
-                    assert.equal(newState.poll_interval_sec, 900);
-                    listEvent.restore();
+                putMetricDataStub = sinon.stub(CloudWatch.prototype, 'putMetricData').callsFake(() => Promise.resolve());
+                const [logs, newState] = await collector.pawsGetLogs(curState);
+                assert.equal(true, reportSpy.calledOnce);
+                assert.equal(logs.length, 0);
+                assert.equal(newState.poll_interval_sec, 900);
+            } finally {
+                listEvent.restore();
+                if (putMetricDataStub) {
                     putMetricDataStub.restore();
-                    done();
-                });
-
-            });
+                }
+            }
         });
 
-        it('Paws Get Logs check client error', function (done) {
+        it('Paws Get Logs check client error', async function () {
             listEvent = sinon.stub(utils, 'listEvents').callsFake(
                 function fakeFn(path) {
                     return new Promise(function (resolve, reject) {
@@ -267,7 +257,8 @@ describe('Unit Tests', function () {
                     });
                 });
 
-            GsuiteCollector.load().then(function (creds) {
+            try {
+                const creds = await GsuiteCollector.load();
                 var collector = new GsuiteCollector(ctx, creds, 'gsuite');
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
@@ -277,16 +268,18 @@ describe('Unit Tests', function () {
                     poll_interval_sec: 1
                 };
 
-                collector.pawsGetLogs(curState, (err) => {
+                try {
+                    await collector.pawsGetLogs(curState);
+                    assert.fail('Expected pawsGetLogs to reject');
+                } catch (err) {
                     assert.equal(err.errorCode, 'insufficientPermissions');
-                    listEvent.restore();
-                    done();
-                });
-
-            });
+                }
+            } finally {
+                listEvent.restore();
+            }
         });
 
-        it('Paws Get Logs Success Context Aware Access', function (done) {
+        it('Paws Get Logs Success Context Aware Access', async function () {
             listEvent = sinon.stub(utils, 'listEvents').callsFake(
                 function fakeFn(path) {
                     return new Promise(function (resolve, reject) {
@@ -295,7 +288,8 @@ describe('Unit Tests', function () {
                     });
                 });
 
-            GsuiteCollector.load().then(function (creds) {
+            try {
+                const creds = await GsuiteCollector.load();
                 var collector = new GsuiteCollector(ctx, creds, 'gsuite');
                 const startDate = moment().subtract(3, 'days');
                 const curState = {
@@ -305,15 +299,13 @@ describe('Unit Tests', function () {
                     poll_interval_sec: 1
                 };
 
-                collector.pawsGetLogs(curState, (err, logs, newState, newPollInterval) => {
-                    assert.equal(logs.length, 2);
-                    assert.equal(newState.poll_interval_sec, 1);
-                    assert.ok(logs[0].kind);
-                    listEvent.restore();
-                    done();
-                });
-
-            });
+                const [logs, newState] = await collector.pawsGetLogs(curState);
+                assert.equal(logs.length, 2);
+                assert.equal(newState.poll_interval_sec, 1);
+                assert.ok(logs[0].kind);
+            } finally {
+                listEvent.restore();
+            }
         });
 
     
@@ -322,30 +314,25 @@ describe('Unit Tests', function () {
 
 
     describe('Format Tests', function () {
-        it('Log Format Tests Success', function (done) {
+        it('Log Format Tests Success', async function () {
             let ctx = {
                 invokedFunctionArn: gsuiteMock.FUNCTION_ARN,
                 fail: function (error) {
                     assert.fail(error);
-                    done();
                 },
-                succeed: function () {
-                    done();
-                }
+                succeed: function () { }
             };
 
-            GsuiteCollector.load().then(function (creds) {
-                var collector = new GsuiteCollector(ctx, creds, 'gsuite');
-                let fmt;
-                if (collector.streams === 'alerts') {
-                    fmt = collector.pawsFormatLog(gsuiteMock.LOG_ALERT);
-                } else {
-                    fmt = collector.pawsFormatLog(gsuiteMock.LOG_EVENT);
-                }
-                assert.equal(fmt.progName, 'GsuiteCollector');
-                assert.ok(fmt.messageTypeId);
-                done();
-            });
+            const creds = await GsuiteCollector.load();
+            var collector = new GsuiteCollector(ctx, creds, 'gsuite');
+            let fmt;
+            if (collector.streams === 'alerts') {
+                fmt = collector.pawsFormatLog(gsuiteMock.LOG_ALERT);
+            } else {
+                fmt = collector.pawsFormatLog(gsuiteMock.LOG_EVENT);
+            }
+            assert.equal(fmt.progName, 'GsuiteCollector');
+            assert.ok(fmt.messageTypeId);
         });
     });
 
@@ -357,66 +344,57 @@ describe('Unit Tests', function () {
             },
             succeed: function () { }
         };
-        it('get next state if more than 24 hours in the past', function (done) {
+        it('get next state if more than 24 hours in the past', async function () {
             const startDate = moment().subtract(10, 'days');
             const curState = {
                 since: startDate.toISOString(),
                 until: startDate.add(5, 'days').toISOString(),
                 poll_interval_sec: 1
             };
-            GsuiteCollector.load().then(function (creds) {
-                var collector = new GsuiteCollector(ctx, creds, 'gsuite');
-                const newState = collector._getNextCollectionState(curState);
-                assert.equal(moment(newState.until).diff(newState.since, 'hours'), 24);
-                assert.equal(newState.poll_interval_sec, 1);
-                done();
-            });
+            const creds = await GsuiteCollector.load();
+            var collector = new GsuiteCollector(ctx, creds, 'gsuite');
+            const newState = collector._getNextCollectionState(curState);
+            assert.equal(moment(newState.until).diff(newState.since, 'hours'), 24);
+            assert.equal(newState.poll_interval_sec, 1);
         });
 
-        it('get next state if less than 1 hour in the past but more than the polling interval', function (done) {
+        it('get next state if less than 1 hour in the past but more than the polling interval', async function () {
             const startDate = moment().subtract(20, 'minutes');
-            GsuiteCollector.load().then(function (creds) {
-                var collector = new GsuiteCollector(ctx, creds, 'gsuite');
-                const curState = {
-                    since: startDate.toISOString(),
-                    until: startDate.add(collector.pollInterval, 'seconds').toISOString(),
-                    poll_interval_sec: 1
-                };
-                const newState = collector._getNextCollectionState(curState);
-                assert.equal(moment(newState.until).diff(newState.since, 'seconds'), collector.pollInterval);
-                assert.equal(newState.poll_interval_sec, 1);
-                done();
-            });
+            const creds = await GsuiteCollector.load();
+            var collector = new GsuiteCollector(ctx, creds, 'gsuite');
+            const curState = {
+                since: startDate.toISOString(),
+                until: startDate.add(collector.pollInterval, 'seconds').toISOString(),
+                poll_interval_sec: 1
+            };
+            const newState = collector._getNextCollectionState(curState);
+            assert.equal(moment(newState.until).diff(newState.since, 'seconds'), collector.pollInterval);
+            assert.equal(newState.poll_interval_sec, 1);
         });
 
-        it('get next state if within polling interval', function (done) {
-            GsuiteCollector.load().then(function (creds) {
-                var collector = new GsuiteCollector(ctx, creds, 'gsuite');
-                const startDate = moment().subtract(collector.pollInterval * 2, 'seconds');
-                const curState = {
-                    since: startDate.toISOString(),
-                    until: startDate.add(collector.pollInterval, 'seconds').toISOString(),
-                    poll_interval_sec: 1
-                };
-                const newState = collector._getNextCollectionState(curState);
-                assert.equal(moment(newState.until).diff(newState.since, 'seconds'), collector.pollInterval);
-                assert.equal(newState.poll_interval_sec, 300);
-                done();
-            });
+        it('get next state if within polling interval', async function () {
+            const creds = await GsuiteCollector.load();
+            var collector = new GsuiteCollector(ctx, creds, 'gsuite');
+            const startDate = moment().subtract(collector.pollInterval * 2, 'seconds');
+            const curState = {
+                since: startDate.toISOString(),
+                until: startDate.add(collector.pollInterval, 'seconds').toISOString(),
+                poll_interval_sec: 1
+            };
+            const newState = collector._getNextCollectionState(curState);
+            assert.equal(moment(newState.until).diff(newState.since, 'seconds'), collector.pollInterval);
+            assert.equal(newState.poll_interval_sec, 300);
         });
     });
 
     describe('NextCollectionStateWithNextPage', function () {
-        it('Get Next Collection State With NextPage Success', function (done) {
+        it('Get Next Collection State With NextPage Success', async function () {
             let ctx = {
                 invokedFunctionArn: gsuiteMock.FUNCTION_ARN,
                 fail: function (error) {
                     assert.fail(error);
-                    done();
                 },
-                succeed: function () {
-                    done();
-                }
+                succeed: function () { }
             };
 
             const startDate = moment().subtract(5, 'minutes');
@@ -427,12 +405,10 @@ describe('Unit Tests', function () {
                 poll_interval_sec: 1
             };
             const nextPage = "nextPageToken";
-            GsuiteCollector.load().then(function (creds) {
-                var collector = new GsuiteCollector(ctx, creds, 'gsuite');
-                let nextState = collector._getNextCollectionStateWithNextPage(curState, nextPage);
-                assert.ok(nextState.since);
-                done();
-            });
+            const creds = await GsuiteCollector.load();
+            var collector = new GsuiteCollector(ctx, creds, 'gsuite');
+            let nextState = collector._getNextCollectionStateWithNextPage(curState, nextPage);
+            assert.ok(nextState.since);
         });
     });
 });

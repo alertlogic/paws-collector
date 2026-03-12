@@ -15,7 +15,7 @@ const calcNextCollectionInterval = require('@alertlogic/paws-collector').calcNex
 const parse = require('@alertlogic/al-collector-js').Parse;
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const packageJson = require('./package.json');
-const { auth } = require("google-auth-library");
+const { GoogleAuth } = require("google-auth-library");
 const { google } = require("googleapis");
 
 const API_THROTTLING_ERROR = 8;
@@ -45,7 +45,7 @@ class GooglestackdriverCollector extends PawsCollector {
     }
 
     
-    pawsInitCollectionState(event, callback) {
+    async pawsInitCollectionState(event) {
         const startTs = process.env.paws_collection_start_ts ?
                 process.env.paws_collection_start_ts :
                     moment().toISOString();
@@ -70,10 +70,10 @@ class GooglestackdriverCollector extends PawsCollector {
                 until: endTs,
                 poll_interval_sec: 1
             }));
-        return callback(null, initialStates, 1);
+        return {state : initialStates, nextInvocationTimeout: 1};
     }
 
-    pawsGetLogs(state, callback) {
+    async pawsGetLogs(state) {
         let collector = this;
         // This code can remove once exsisting code set stream and collector_streams env variable
         if (!process.env.collector_streams) {
@@ -88,9 +88,14 @@ class GooglestackdriverCollector extends PawsCollector {
         }
         // Start API client
         const keys = JSON.parse(keysEnvVar);
-        const client = auth.fromJSON(keys);
-        client.subject = collector.clientId;
-        client.scopes = SCOPES;
+        const authClient = new GoogleAuth({
+            credentials: keys,
+            scopes: SCOPES
+        });
+        const client = await authClient.getClient();
+        if (collector.clientId) {
+            client.subject = collector.clientId;
+        }
         const logging = google.logging({
             version: 'v2',
             auth: client,
@@ -133,53 +138,50 @@ class GooglestackdriverCollector extends PawsCollector {
                 resourceNames: [state.stream]
             };
 
-        logging.entries.list(params)
-            .then(paginationCallback)
-            .then(({ logs, nextPage }) => {
-                const newState = collector._getNextCollectionState(state, nextPage);
-                AlLogger.debug(`GSTA000012 NextCollectionState ${JSON.stringify(newState)}`);
-                AlLogger.info(`GSTA000002 Next collection in ${newState.poll_interval_sec} seconds`);
-                return callback(null, logs, newState, newState.poll_interval_sec);
-            })
-            .catch(err => {
-                AlLogger.debug(`GSTA000003 err in collection ${JSON.stringify(err)}`);
-                // Stackdriver Logging api has some rate limits that we might run into.
-                // If we run inot a rate limit error, instead of returning the error,
-                // we return the state back to the queue with an additional second added, up to 15 min
-                // https://cloud.google.com/logging/quotas
-                // Error: 8 RESOURCE_EXHAUSTED: Received message larger than max (4518352 vs. 4194304),
-                // so half the given interval and if interval is less than 15 sec then reduce the page size to half.
+        try {
+            const { logs, nextPage } = await logging.entries.list(params).then(paginationCallback);
+            const newState = collector._getNextCollectionState(state, nextPage);
+            AlLogger.debug(`GSTA000012 NextCollectionState ${JSON.stringify(newState)}`);
+            AlLogger.info(`GSTA000002 Next collection in ${newState.poll_interval_sec} seconds`);
+            return [logs, newState, newState.poll_interval_sec];
+        } catch (err) {
+            AlLogger.debug(`GSTA000003 err in collection ${JSON.stringify(err)}`);
+            // Stackdriver Logging api has some rate limits that we might run into.
+            // If we run inot a rate limit error, instead of returning the error,
+            // we return the state back to the queue with an additional second added, up to 15 min
+            // https://cloud.google.com/logging/quotas
+            // Error: 8 RESOURCE_EXHAUSTED: Received message larger than max (4518352 vs. 4194304),
+            // so half the given interval and if interval is less than 15 sec then reduce the page size to half.
 
-                if (err.code === API_THROTTLING_ERROR || (err.response && err.response.status === API_THROTTLING_STATUS_CODE)) {
-                    const currentInterval = moment(state.until).diff(state.since, 'seconds');
-                    const interval = state.poll_interval_sec < 60 ? 60 : state.poll_interval_sec;
-                    const nextPollInterval = state.poll_interval_sec < MAX_POLL_INTERVAL ?
-                        interval + 60 : MAX_POLL_INTERVAL;
-                    if (state.nextPage && state.nextPage.pageToken && state.nextPage.pageSize) {
-                        state.nextPage.pageSize = Math.ceil(state.nextPage.pageSize / 2);
-                        AlLogger.debug(`Throttling error with nextPage: ${err.message}. Retrying with smaller pageSize.`);
-                    } else {
-                        if (currentInterval <= 15 && err.message && err.message.indexOf('Received message larger than max') >= 0) {
-                            state.pageSize = state.pageSize ? Math.ceil(state.pageSize / 2) : Math.ceil(params.pageSize / 2);
-                            AlLogger.debug(`Throttling error with no nextPage and large message: ${err.message}. Reducing pageSize.`);
-                        } else {
-                            state.until = moment(state.since).add(Math.ceil(currentInterval / 2), 'seconds').toISOString();
-                            AlLogger.debug(`Throttling error with no nextPage: ${err.message}. Reducing time range.`);
-                        }
-                    }
-                    const backOffState = Object.assign({}, state, { poll_interval_sec: nextPollInterval });
-                    collector.reportApiThrottling(function () {
-                        return callback(null, [], backOffState, nextPollInterval);
-                    });
+            if (err.code === API_THROTTLING_ERROR || (err.response && err.response.status === API_THROTTLING_STATUS_CODE)) {
+                const currentInterval = moment(state.until).diff(state.since, 'seconds');
+                const interval = state.poll_interval_sec < 60 ? 60 : state.poll_interval_sec;
+                const nextPollInterval = state.poll_interval_sec < MAX_POLL_INTERVAL ?
+                    interval + 60 : MAX_POLL_INTERVAL;
+                if (state.nextPage && state.nextPage.pageToken && state.nextPage.pageSize) {
+                    state.nextPage.pageSize = Math.ceil(state.nextPage.pageSize / 2);
+                    AlLogger.debug(`Throttling error with nextPage: ${err.message}. Retrying with smaller pageSize.`);
                 } else {
-                    let error = err.response && err.response.data ? err.response.data : err;
-                    // set errorCode if not available in error object to showcase client error on DDMetrics
-                    if (err.errors && err.errors.length > 0 && err.errors[0].reason) {
-                        error.errorCode = err.errors[0].reason;
+                    if (currentInterval <= 15 && err.message && err.message.indexOf('Received message larger than max') >= 0) {
+                        state.pageSize = state.pageSize ? Math.ceil(state.pageSize / 2) : Math.ceil(params.pageSize / 2);
+                        AlLogger.debug(`Throttling error with no nextPage and large message: ${err.message}. Reducing pageSize.`);
+                    } else {
+                        state.until = moment(state.since).add(Math.ceil(currentInterval / 2), 'seconds').toISOString();
+                        AlLogger.debug(`Throttling error with no nextPage: ${err.message}. Reducing time range.`);
                     }
-                    return callback(error);
                 }
-            });
+                const backOffState = Object.assign({}, state, { poll_interval_sec: nextPollInterval });
+                await collector.reportApiThrottling();
+                return [[], backOffState, nextPollInterval];
+            }
+
+            let error = err.response && err.response.data ? err.response.data : err;
+            // set errorCode if not available in error object to showcase client error on DDMetrics
+            if (err.errors && err.errors.length > 0 && err.errors[0].reason) {
+                error.errorCode = err.errors[0].reason;
+            }
+            throw error;
+        }
     }
 
     generateFilter(state) {
