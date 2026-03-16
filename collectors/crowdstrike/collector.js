@@ -116,9 +116,13 @@ class CrowdstrikeCollector extends PawsCollector {
     }
 
     setErrorCode(error) {
-        if (error.response && error.response.data) {
-            error.response.data.errorCode = error.response.data.errors[0] ? error.response.data.errors[0].code : error.response.status;
-            throw error.response.data;
+        const responseData = error && error.response ? error.response.data : undefined;
+        const isObjectResponseData = responseData && typeof responseData === 'object' && !Array.isArray(responseData);
+
+        if (error.response && isObjectResponseData) {
+            const responseErrors = Array.isArray(responseData.errors) ? responseData.errors : [];
+            responseData.errorCode = responseErrors[0] && responseErrors[0].code ? responseErrors[0].code : error.response.status;
+            throw responseData;
         }
         else if (error.response && error.response.status) {
             error.errorCode = error.response.status;
