@@ -12,11 +12,15 @@ const debug = require('debug') ('index');
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const OktaCollector = require('./okta_collector').OktaCollector;
 
-exports.handler = OktaCollector.makeHandler(function(event, context) {
+exports.handler = OktaCollector.makeHandler(async function (event, context) {
     debug('input event: ', event);
     AlLogger.defaultMeta = { requestId: context.awsRequestId };
-    OktaCollector.load().then(function(creds) {
-        var oktac = new OktaCollector(context, creds);
-        oktac.handleEvent(event);
-    });
+    try {
+        const creds = await OktaCollector.load();
+        let oktac = new OktaCollector(context, creds);
+        await oktac.handleEvent(event);
+    } catch (error) {
+        AlLogger.error('Un in Okta Collector handler: ', error);
+        throw error;
+    }
 });
