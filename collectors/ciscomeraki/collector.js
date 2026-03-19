@@ -238,7 +238,7 @@ class CiscomerakiCollector extends PawsCollector {
             progName: 'CiscomerakiCollector',
             message: JSON.stringify(msg),
             messageType: 'json/ciscomeraki',
-            application_id: collector.application_id
+            applicationId: collector.application_id
         };
 
         if (typeId !== null && typeId !== undefined) {

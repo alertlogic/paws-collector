@@ -390,6 +390,7 @@ describe('Unit Tests', function () {
                 let fmt = collector.pawsFormatLog(ciscomerakiMock.LOG_EVENT);
                 assert.equal(fmt.progName, 'CiscomerakiCollector');
                 assert.ok(fmt.message);
+                assert.ok(fmt.applicationId);
             });
         });
     });

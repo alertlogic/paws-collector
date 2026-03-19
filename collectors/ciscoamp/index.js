@@ -21,5 +21,6 @@ exports.handler = CiscoampCollector.makeHandler(async function (event, context) 
         await ciscoampc.handleEvent(event);
     } catch (error) {
         AlLogger.error('Error in handler: ', error);
+        throw error;
     }
 });
