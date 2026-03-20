@@ -30,7 +30,7 @@ class CiscoampCollector extends PawsCollector {
         super(context, creds, packageJson.version);
     }
 
-    pawsInitCollectionState(event, callback) {
+    async pawsInitCollectionState(event) {
         const startTs = process.env.paws_collection_start_ts ?
             process.env.paws_collection_start_ts :
             moment().toISOString();
@@ -46,17 +46,17 @@ class CiscoampCollector extends PawsCollector {
             totalLogsCount: 0,
             poll_interval_sec: 1
         }));
-        return callback(null, initialStates, 1);
+        return {state: initialStates, nextInvocationTimeout: 1};
     }
 
-    pawsGetRegisterParameters(event, callback) {
+    pawsGetRegisterParameters(event) {
         const regValues = {
             ciscoampResourceNames: process.env.collector_streams
         };
-        callback(null, regValues);
+        return regValues;
     }
 
-    pawsGetLogs(state, callback) {
+    async pawsGetLogs(state) {
         let collector = this;
         // This code can remove once exsisting code set stream and collector_streams env variable
         if (!process.env.collector_streams) {
@@ -67,11 +67,11 @@ class CiscoampCollector extends PawsCollector {
         }
         const clientSecret = collector.secret;
         if (!clientSecret) {
-            return callback("The Client Secret was not found!");
+            throw new Error("The Client Secret was not found!");
         }
         const clientId = collector.clientId;
         if (!clientId) {
-            return callback("The Client ID was not found!");
+            throw new Error("The Client ID was not found!");
         }
 
         const baseUrl = process.env.paws_endpoint.replace(/^https:\/\/|\/$/g, '');
@@ -84,7 +84,7 @@ class CiscoampCollector extends PawsCollector {
 
         var resourceDetails = utils.getAPIDetails(state);
         if (!resourceDetails.url) {
-            return callback("The resource name was not found!");
+            throw new Error("The resource name was not found!");
         }
 
         typeIdPaths = resourceDetails.typeIdPaths;
@@ -93,52 +93,54 @@ class CiscoampCollector extends PawsCollector {
         let apiUrl = state.nextPage ? state.nextPage : resourceDetails.url;
 
         AlLogger.info(`CAMP000001 Collecting data for ${state.stream} from ${state.since} till ${state.until}`);
-        utils.getAPILogs(baseUrl, base64EncodedString, apiUrl, state, [], process.env.paws_max_pages_per_invocation)
-            .then(({ accumulator, nextPage, newSince }) => {
-                state.apiQuotaResetDate = null;
-                if (state.stream === Events && apiUrl === resourceDetails.url && newSince) {
-                    // Added 1 more secs in received date to avoid duplication of message
-                    state.until = moment(newSince).add(1, 'seconds').toISOString();
-                }
+        try {
+            const { accumulator, nextPage, newSince } = await utils.getAPILogs(baseUrl, base64EncodedString, apiUrl, state, [], process.env.paws_max_pages_per_invocation);
+            state.apiQuotaResetDate = null;
+            if (state.stream === Events && apiUrl === resourceDetails.url && newSince) {
+                // Added 1 more secs in received date to avoid duplication of message
+                state.until = moment(newSince).add(1, 'seconds').toISOString();
+            }
 
-                let newState;
-                if (nextPage === undefined) {
-                    newState = this._getNextCollectionState(state);
-                } else {
-                    newState = this._getNextCollectionStateWithNextPage(state, nextPage, accumulator.length);
+            let newState;
+            if (nextPage === undefined) {
+                newState = this._getNextCollectionState(state);
+            } else {
+                newState = this._getNextCollectionStateWithNextPage(state, nextPage, accumulator.length);
+            }
+            AlLogger.info(`CAMP000004 Next collection in ${newState.poll_interval_sec} seconds`);
+            return [accumulator, newState, newState.poll_interval_sec];
+        } catch (error) {
+
+            const errResponse = typeof error !== 'string' ? error.response : null;
+            const hasApiErrors = errResponse && errResponse.data && Array.isArray(errResponse.data.errors) && errResponse.data.errors.length > 0;
+            const apiErrorCode = hasApiErrors ? errResponse.data.errors[0].error_code : null;
+            if (apiErrorCode === API_THROTTLING_ERROR) {
+                const rateLimitResetSecs = parseInt(errResponse.headers['x-ratelimit-reset'], 10);
+                const extraBufferSeconds = 60;
+                const resetSeconds = Number.isNaN(rateLimitResetSecs) ? extraBufferSeconds : rateLimitResetSecs + extraBufferSeconds;
+                state.apiQuotaResetDate = moment().add(resetSeconds, "seconds").toISOString();
+                AlLogger.info(`CAMP000003 API hourly Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
+                state.poll_interval_sec = resetSeconds;
+                // Reduce time interval to half till 60 sec and try to fetch data again.
+                const currentInterval = moment(state.until).diff(state.since, 'seconds');
+                if (currentInterval > 120) {
+                    state.until = moment(state.since).add(Math.ceil(currentInterval / 2), 'seconds').toISOString();
                 }
-                AlLogger.info(`CAMP000004 Next collection in ${newState.poll_interval_sec} seconds`);
-                return callback(null, accumulator, newState, newState.poll_interval_sec);
-            }).catch((error) => {
-                const errResponse = typeof error !== 'string' ? error.response : null;
-                if (errResponse && errResponse.data.errors[0].error_code === API_THROTTLING_ERROR) {
-                    const rateLimitResetSecs = parseInt(errResponse['headers']['x-ratelimit-reset']);
-                    const extraBufferSeconds = 60;
-                    const resetSeconds = rateLimitResetSecs + extraBufferSeconds;
-                    state.apiQuotaResetDate = moment().add(resetSeconds, "seconds").toISOString();
-                    AlLogger.info(`CAMP000003 API hourly Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
-                    state.poll_interval_sec = resetSeconds;
-                    // Reduce time interval to half till 60 sec and try to fetch data again.
-                    const currentInterval = moment(state.until).diff(state.since, 'seconds');
-                    if (currentInterval > 120) {
-                        state.until = moment(state.since).add(Math.ceil(currentInterval / 2), 'seconds').toISOString();
-                    }
-                    collector.reportApiThrottling(function () {
-                        return callback(null, [], state, state.poll_interval_sec);
-                    });
+                await collector.reportApiThrottling();
+                return [[], state, state.poll_interval_sec];
+            }
+            else {
+                // set errorCode if not available in error object to showcase client error on DDMetric 
+                if (hasApiErrors) {
+                    errResponse.data.errorCode = apiErrorCode;
+                    throw errResponse.data;
                 }
                 else {
-                    // set errorCode if not available in error object to showcase client error on DDMetric 
-                    if (errResponse && errResponse.data && errResponse.data.errors) {
-                        errResponse.data.errorCode = errResponse.data.errors[0].error_code;
-                        return callback(errResponse.data);
-                    }
-                    else {
-                        error.errorCode = error.response.status;
-                        return callback(error);
-                    }   
+                    error.errorCode = (errResponse && errResponse.status) ? errResponse.status : error.status;
+                    throw error;
                 }
-            });
+            }
+        }
     }
 
     _getNextCollectionState(curState) {

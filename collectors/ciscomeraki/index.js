@@ -8,16 +8,20 @@
  * -----------------------------------------------------------------------------
  */
 
-const debug = require('debug') ('index');
+const debug = require('debug')('index');
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const CiscomerakiCollector = require('./collector').CiscomerakiCollector;
 
-exports.handler = CiscomerakiCollector.makeHandler(function(event, context) {
+exports.handler = CiscomerakiCollector.makeHandler(async function (event, context) {
     debug('input event: ', event);
     AlLogger.defaultMeta = { requestId: context.awsRequestId };
     var ciscomerakic;
-    CiscomerakiCollector.load().then(function(creds) {
+    try {
+        const creds = await CiscomerakiCollector.load();
         ciscomerakic = new CiscomerakiCollector(context, creds);
-        ciscomerakic.handleEvent(event);
-    });
+        await ciscomerakic.handleEvent(event);
+    } catch (error) {
+        AlLogger.error(`Error in handler: ${error.message}`);
+        throw error;
+    }
 });

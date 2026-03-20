@@ -33,7 +33,7 @@ class CiscoduoCollector extends PawsCollector {
         super(context, creds, packageJson.version);
     }
 
-    pawsInitCollectionState(event, callback) {
+    async pawsInitCollectionState(event) {
         const startTs = process.env.paws_collection_start_ts ?
             process.env.paws_collection_start_ts :
             moment().toISOString();
@@ -58,17 +58,17 @@ class CiscoduoCollector extends PawsCollector {
                 }
             }
         });
-        return callback(null, initialStates, pollInterval);
+        return { state: initialStates, nextInvocationTimeout: pollInterval };
     }
 
-    pawsGetRegisterParameters(event, callback) {
+    pawsGetRegisterParameters(event) {
         const regValues = {
             ciscoduoObjectNames: process.env.collector_streams
         };
-        callback(null, regValues);
+        return regValues;
     }
 
-    pawsGetLogs(state, callback) {
+    async pawsGetLogs(state) {
         let collector = this;
         // This code can remove once exsisting code set stream and collector_streams env variable
         if (!process.env.collector_streams) {
@@ -79,23 +79,23 @@ class CiscoduoCollector extends PawsCollector {
         }
         const clientSecret = collector.secret;
         if (!clientSecret) {
-            return callback("The Client Secret was not found!");
+            throw new Error("The Client Secret was not found!");
         }
         const clientId = collector.clientId;
         if (!clientId) {
-            return callback("The Client ID was not found!");
+            throw new Error("The Client ID was not found!");
         }
 
         const hostName = collector.pawsDomainEndpoint;
-        if (!clientId) {
-            return callback("The Host Name was not found!");
+        if (!hostName) {
+            throw new Error("The Host Name was not found!");
         }
 
         const client = new duo.Client(clientId, clientSecret, hostName);
 
         var objectDetails = utils.getAPIDetails(state);
         if (!objectDetails.url) {
-            return callback("The object name was not found!");
+            throw new Error("The object name was not found!");
         }
 
         typeIdPaths = objectDetails.typeIdPaths;
@@ -104,35 +104,33 @@ class CiscoduoCollector extends PawsCollector {
         const stateSince = state.stream === Authentication ? moment(parseInt(state.since)).toISOString() : moment(parseInt(state.since * 1000)).toISOString(); // Convert Epoch timestamp to milliseconds to get date in correct format
 
         AlLogger.info(`CDUO000001 Collecting data for ${state.stream} from ${stateSince} ${stateUntil}`);
-
-        utils.getAPILogs(client, objectDetails, state, [], process.env.paws_max_pages_per_invocation)
-            .then(({ accumulator, nextPage }) => {
-                let newState;
-                if (nextPage === undefined) {
-                    newState = this._getNextCollectionState(state);
-                } else {
-                    newState = this._getNextCollectionStateWithNextPage(state, nextPage);
-                }
-                AlLogger.info(`CDUO000002 Next collection in ${newState.poll_interval_sec} seconds`);
-                return callback(null, accumulator, newState, newState.poll_interval_sec);
-            }).catch((error) => {
-                // Cisco duo api has some rate limits that we might run into.
-                // If we run into a rate limit error, instead of returning the error,
-                // We return the state back to the queue with an additional 60 secs.
-                if (error.code && error.code === API_THROTTLING_ERROR) {
-                    state.poll_interval_sec = state.poll_interval_sec < MAX_POLL_INTERVAL ?
+        try {
+            const { accumulator, nextPage } = await utils.getAPILogs(client, objectDetails, state, [], process.env.paws_max_pages_per_invocation);
+            let newState;
+            if (nextPage === undefined) {
+                newState = this._getNextCollectionState(state);
+            } else {
+                newState = this._getNextCollectionStateWithNextPage(state, nextPage);
+            }
+            AlLogger.info(`CDUO000002 Next collection in ${newState.poll_interval_sec} seconds`);
+            return [accumulator, newState, newState.poll_interval_sec];
+        } catch (error) {
+            // Cisco duo api has some rate limits that we might run into.
+            // If we run into a rate limit error, instead of returning the error,
+            // We return the state back to the queue with an additional 60 secs.
+            if (error.code && error.code === API_THROTTLING_ERROR) {
+                state.poll_interval_sec = state.poll_interval_sec < MAX_POLL_INTERVAL ?
                     state.poll_interval_sec + POLL_INTERVAL_SECS : MAX_POLL_INTERVAL;
-                    AlLogger.warn(`CDUO000003 API Request Limit Exceeded ${JSON.stringify(error)}`);
-                    collector.reportApiThrottling(function () {
-                        return callback(null, [], state, state.poll_interval_sec);
-                    });
-                }
-                else {
-                    // set errorCode if not available in error object to showcase client error on DDMetrics
-                    error.errorCode = error.code;
-                    return callback(error);
-                }
-            });
+                AlLogger.warn(`CDUO000003 API Request Limit Exceeded ${JSON.stringify(error)}`);
+                await collector.reportApiThrottling();
+                return [[], state, state.poll_interval_sec];
+            }
+            else {
+                // set errorCode if not available in error object to showcase client error on DDMetrics
+                error.errorCode = error.code;
+                throw error;
+            }
+        }
     }
 
     _getNextCollectionState(curState) {

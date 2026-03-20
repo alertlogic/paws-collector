@@ -33,13 +33,13 @@ class CiscomerakiCollector extends PawsCollector {
         this.orgKey = process.env.paws_collector_param_string_2;
     }
 
-    async pawsInitCollectionState(event, callback) {
+    async pawsInitCollectionState(event) {
         let collector = this;
         try {
             const resourceNames = process.env.collector_streams ? JSON.parse(process.env.collector_streams) : [];
             if (resourceNames.length > 0) {
                 const initialStates = this.generateInitialStates(resourceNames);
-                return callback(null, initialStates, 1);
+                return { state: initialStates, nextInvocationTimeout: 1 };
             }
             else {
                 try {
@@ -47,17 +47,17 @@ class CiscomerakiCollector extends PawsCollector {
                     let networks = await merakiClient.listNetworkIds(payloadObj);
                     if (networks.length > 0) {
                         const initialStates = this.generateInitialStates(networks);
-                        return callback(null, initialStates, 1);
+                        return { state: initialStates, nextInvocationTimeout: 1 };
                     } else {
-                        return callback("Error: No networks found");
+                        throw new Error("Error: No networks found");
                     }
                 } catch (error) {
-                    return callback(error);
+                    throw error;
                 }
             }
 
         } catch (error) {
-            return callback(error);
+            throw error;
         }
     }
 
@@ -78,7 +78,6 @@ class CiscomerakiCollector extends PawsCollector {
 
     async handleEvent(event) {
         let collector = this;
-        let context = this._invokeContext;
         let parsedEvent = collector._parseEvent(event);
 
         switch (parsedEvent.RequestType) {
@@ -86,13 +85,13 @@ class CiscomerakiCollector extends PawsCollector {
                 switch (parsedEvent.Type) {
                     case 'SelfUpdate':
                         await collector.handleUpdateStreamsFromNetworks();
-                        return collector.handleUpdate();
+                        await collector.handleUpdate();
                         break;
                     default:
-                        super.handleEvent(event);
+                        await super.handleEvent(event);
                 }
             default:
-                super.handleEvent(event);
+                await super.handleEvent(event);
         }
     }
 
@@ -104,7 +103,7 @@ class CiscomerakiCollector extends PawsCollector {
             let networks = await merakiClient.listNetworkIds(payloadObj);
             const keyValue = `${process.env.customer_id}/${collector._pawsCollectorType}/${collector.collector_id}/networks_${collector.collector_id}.json`;
             let params = await merakiClient.getS3ObjectParams(keyValue, undefined);
-            
+
             //get networks json from s3 bucket
             let networksFromS3 = await merakiClient.fetchJsonFromS3Bucket(params.bucketName, params.key);
             AlLogger.debug(`CMRI0000025 networks: ${JSON.stringify(networks)} networksFromS3 ${JSON.stringify(params)} ${JSON.stringify(networksFromS3)}`);
@@ -118,7 +117,7 @@ class CiscomerakiCollector extends PawsCollector {
                     collector._storeCollectionState({}, initialStates, this.pollInterval, async () => {
                         await merakiClient.uploadNetworksListInS3Bucket(keyValue, networks);
                     });
-                } 
+                }
             } else if (networksFromS3 && collector._isFileMissingError(networksFromS3.Code)) {
                 AlLogger.debug(`CMRI0000026 networks ${JSON.stringify(params)} ${JSON.stringify(networks)}`);
                 await merakiClient.uploadNetworksListInS3Bucket(keyValue, networks);
@@ -128,71 +127,71 @@ class CiscomerakiCollector extends PawsCollector {
         }
     }
 
-    _isFileMissingError(code) { 
+    _isFileMissingError(code) {
         return code === 'NoSuchKey' || code === 'AccessDenied';
     }
 
-    pawsGetLogs(state, callback) {
+    async pawsGetLogs(state) {
         const collector = this;
 
         if (!collector.productTypes) {
-            return callback("The Product Types was not found!");
+            throw new Error("The Product Types was not found!");
         }
 
         const { clientSecret, apiEndpoint, orgKey } = merakiClient.getOrgKeySecretEndPoint(collector);
 
         const apiDetails = merakiClient.getAPIDetails(orgKey, collector.productTypes);
         if (!apiDetails.url) {
-            return callback("The API name was not found!");
+            throw new Error("The API name was not found!");
         }
         AlLogger.info(`CMRI000001 Collecting data for NetworkId-${state.networkId} from ${state.since}`);
-        merakiClient.getAPILogs(apiDetails, [], apiEndpoint, state, clientSecret, process.env.paws_max_pages_per_invocation)
-            .then(({ accumulator, nextPage }) => {
-                let newState;
-                if (nextPage === undefined) {
-                    newState = this._getNextCollectionState(state);
-                } else {
-                    newState = this._getNextCollectionStateWithNextPage(state, nextPage);
-                }
-                AlLogger.info(`CMRI000002 Next collection in ${newState.poll_interval_sec} seconds`);
-                return callback(null, accumulator, newState, newState.poll_interval_sec);
-            })
-            .catch((error) => {
-                if (error && error.response && error.response.status == API_THROTTLING_ERROR) {
-                    collector.handleThrottlingError(error, state, callback);
-                } else {
-                    collector.handleOtherErrors(error, state, callback);
-                }
-            });
+
+        try {
+            const { accumulator, nextPage } = await merakiClient.getAPILogs(apiDetails, [], apiEndpoint, state, clientSecret, process.env.paws_max_pages_per_invocation);
+            let newState;
+            if (nextPage === undefined) {
+                newState = this._getNextCollectionState(state);
+            } else {
+                newState = this._getNextCollectionStateWithNextPage(state, nextPage);
+            }
+            AlLogger.info(`CMRI000002 Next collection in ${newState.poll_interval_sec} seconds`);
+            return [accumulator, newState, newState.poll_interval_sec];
+        }
+        catch (error) {
+            if (error && error.response && error.response.status == API_THROTTLING_ERROR) {
+                return await this.handleThrottlingError(error, state);
+            } else {
+                return this.handleOtherErrors(error, state);
+            }
+        }
     }
 
-    handleThrottlingError(error, state, callback) {
+    async handleThrottlingError(error, state) {
         const maxRandom = parseInt(process.env.ciscomeraki_throttlingmaxrandom, 10) || 5;
         let retry = parseInt(error.response.headers['retry-after']) || 1;
         retry += Math.floor(Math.random() * (maxRandom + 1));
         state.poll_interval_sec = state.poll_interval_sec < MAX_POLL_INTERVAL ?
             parseInt(state.poll_interval_sec) + retry : MAX_POLL_INTERVAL;
         AlLogger.info(`CMRI000007 Throttling error, retrying after ${state.poll_interval_sec} sec`);
-        this.reportApiThrottling(function () {
-            return callback(null, [], state, state.poll_interval_sec);
-        });
+        await this.reportApiThrottling();
+        return [[], state, state.poll_interval_sec];
     }
 
-    handleOtherErrors(error, state, callback) {
+    handleOtherErrors(error, state) {
         if (error && error.response && error.response.status == API_NOT_FOUND_ERROR) {
             state.retry = state.retry ? state.retry + 1 : 1;
             if (state.retry > NOT_FOUND_ERROR_MAX_RETRIES) {
                 AlLogger.debug(`CMRI0000021 Deleted SQS message from Queue${JSON.stringify(state)}`);
-                this._invokeContext.succeed();
+                return;
             } else {
-                return callback(error);
+                throw error;
             }
         } else if (error && error.response && error.response.data) {
             AlLogger.debug(`CMRI0000022 error ${error.response.data.errors} - status: ${error.response.status}`);
             error.response.data.errorCode = error.response.status;
-            return callback(error.response.data);
+            throw error.response.data;
         } else {
-            return callback(error);
+            throw error;
         }
     }
 
@@ -219,11 +218,11 @@ class CiscomerakiCollector extends PawsCollector {
         return obj;
     }
 
-    pawsGetRegisterParameters(event, callback) {
+    pawsGetRegisterParameters(event) {
         const regValues = {
             ciscoMerakiObjectNames: process.env.collector_streams
         };
-        callback(null, regValues);
+        return regValues;
     }
 
     pawsFormatLog(msg) {
@@ -239,7 +238,7 @@ class CiscomerakiCollector extends PawsCollector {
             progName: 'CiscomerakiCollector',
             message: JSON.stringify(msg),
             messageType: 'json/ciscomeraki',
-            application_id: collector.application_id
+            applicationId: collector.application_id
         };
 
         if (typeId !== null && typeId !== undefined) {
