@@ -30,7 +30,7 @@ class SophosCollector extends PawsCollector {
         super(context, creds, packageJson.version);
     }
 
-    pawsInitCollectionState(event, callback) {
+    async pawsInitCollectionState(event) {
         const startTs = process.env.paws_collection_start_ts ?
             process.env.paws_collection_start_ts :
             moment().toISOString();
@@ -42,92 +42,101 @@ class SophosCollector extends PawsCollector {
             apiQuotaResetDate: null,
             poll_interval_sec: 1
         };
-        return callback(null, initialState, 1);
+        return { state: initialState, nextInvocationTimeout: 1 };
     }
 
-    pawsGetLogs(state, callback) {
+    async pawsGetLogs(state) {
         let collector = this;
 
         const clientSecret = collector.secret;
         if (!clientSecret) {
-            return callback("The Client Secret was not found!");
+            throw new Error("The Client Secret was not found!");
         }
         const clientId = collector.clientId;
         if (!clientId) {
-            return callback("The Client ID was not found!");
+            throw new Error("The Client ID was not found!");
         }
-        
+
         AlLogger.info(`SOPH000001 Collecting data from ${state.since} till ${state.until}`);
 
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
             AlLogger.info(`API Request Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
-            collector.reportApiThrottling(function () {
-                return callback(null, [], state, state.poll_interval_sec);
-            });
+            await collector.reportApiThrottling();
+            return [[], state, state.poll_interval_sec];
         }
-        else {
+        let token;
+        try {
+            token = await utils.authenticate(SOPHOS_AUTH_BASE_URL, clientId, clientSecret);
+        } catch (error) {
+            const errorObject = collector.createErrorObject(error);
 
-            utils.authenticate(SOPHOS_AUTH_BASE_URL, clientId, clientSecret).then((token) => {
-                // while runing on live api server pass getTenantIdAndDataRegion hostname value "api.central.sophos.com"
-                utils.getTenantIdAndDataRegion(SOPHOS_API_BASE_URL, token).then((response) => {
-                    if (!response.apiHosts.dataRegion) {
-                        return callback("Please generate credentials for the tenant. Currently we do not support credentials for Organization and Partner.");
-                    }
-                    const apiHostsURL = response.apiHosts.dataRegion.replace(/^https:\/\/|\/$/g, '');
-                    utils.getAPILogs(apiHostsURL, token, response.id, state, [], process.env.paws_max_pages_per_invocation)
-                        .then(({ accumulator, nextPage }) => {
-                            let newState;
-                            if (nextPage === undefined) {
-                                newState = this._getNextCollectionState(state);
-                            } else {
-                                newState = this._getNextCollectionStateWithNextPage(state, nextPage);
-                            }
-                            AlLogger.info(`SOPH000002 Next collection in ${newState.poll_interval_sec} seconds`);
-                            return callback(null, accumulator, newState, newState.poll_interval_sec);
-                        }).catch((error) => {
-                            if ((error.response && error.response.data && error.response.data.errorCode === "TooManyRequests") || error.response.status === 429) {
-                                state.apiQuotaResetDate = moment().add(1, "hours").toISOString();
-                                state.poll_interval_sec = 900;
-                                AlLogger.info(`API Request Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
-                                collector.reportApiThrottling(function () {
-                                    return callback(null, [], state, state.poll_interval_sec);
-                                });
-                            }
-                            else {
-                                return callback(collector.createErrorObject(error));
-                            }
-                        });
-                }).catch((error) => {
-                    return callback(collector.createErrorObject(error));
-                });
-            }).catch((error) => {         
-                const errorObject = collector.createErrorObject(error);
-                
-                if (error.response && error.response.data) {
-                    const errorCode = error.response.data.errorCode;
-                    if (errorCode === "oauth.invalid_client_secret" || errorCode === "customer.validation") {
-                        errorObject.message = `Error code [${error.response.status}]. Invalid client secret is provided.`;
-                    }
-                    if (errorCode === "oauth.client_app_does_not_exist") {
-                        errorObject.message = `Error code [${error.response.status}]. Invalid client ID is provided.`;
-                    }
-                } else if (!errorObject.message || errorObject.message === "Unknown error") {
-                    errorObject.message = "Unknown authentication error";
+            if (error && error.response && error.response.data) {
+                const errorCode = error.response.data.errorCode;
+                if (errorCode === "oauth.invalid_client_secret" || errorCode === "customer.validation") {
+                    errorObject.message = `Error code [${error.response.status}]. Invalid client secret is provided.`;
                 }
-                
-                return callback(errorObject);
-            });
+                if (errorCode === "oauth.client_app_does_not_exist") {
+                    errorObject.message = `Error code [${error.response.status}]. Invalid client ID is provided.`;
+                }
+            } else if (!errorObject.message || errorObject.message === "Unknown error") {
+                errorObject.message = "Unknown authentication error";
+            }
+
+            throw errorObject;
+        }
+
+        let tenantResponse;
+        try {
+            // while runing on live api server pass getTenantIdAndDataRegion hostname value "api.central.sophos.com"
+            tenantResponse = await utils.getTenantIdAndDataRegion(SOPHOS_API_BASE_URL, token);
+        } catch (error) {
+            throw collector.createErrorObject(error);
+        }
+
+        if (!(tenantResponse && tenantResponse.apiHosts && tenantResponse.apiHosts.dataRegion)) {
+            throw new Error("Please generate credentials for the tenant. Currently we do not support credentials for Organization and Partner.");
+        }
+
+        const apiHostsURL = tenantResponse.apiHosts.dataRegion.replace(/^https:\/\/|\/$/g, '');
+
+        try {
+            const { accumulator, nextPage } = await utils.getAPILogs(
+                apiHostsURL,
+                token,
+                tenantResponse.id,
+                state,
+                [],
+                process.env.paws_max_pages_per_invocation
+            );
+
+            let newState;
+            if (nextPage === undefined) {
+                newState = this._getNextCollectionState(state);
+            } else {
+                newState = this._getNextCollectionStateWithNextPage(state, nextPage);
+            }
+            AlLogger.info(`SOPH000002 Next collection in ${newState.poll_interval_sec} seconds`);
+            return [accumulator, newState, newState.poll_interval_sec];
+        } catch (error) {
+            if ((error.response && error.response.data && error.response.data.errorCode === "TooManyRequests") || (error.response && error.response.status === 429)) {
+                state.apiQuotaResetDate = moment().add(1, "hours").toISOString();
+                state.poll_interval_sec = 900;
+                AlLogger.info(`API Request Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
+                await collector.reportApiThrottling();
+                return [[], state, state.poll_interval_sec];
+            }
+            throw collector.createErrorObject(error);
         }
     }
 
     createErrorObject(error) {
         const errorObject = {
-            message: error.message || (error.response && error.response.data && error.response.data.message) || (error.response && error.response.message) || "Unknown error",
-            errorCode: error.errorCode || (error.response && error.response.data && error.response.data.errorCode) || (error.response && error.response.status) || error.code,
-            status: error.status || (error.response && error.response.status),
-            statusText: error.statusText || (error.response && error.response.statusText),
-            code: error.code,
-            errno: error.errno
+            message: (error && error.message) || (error && error.response && error.response.data && error.response.data.message) || (error && error.response && error.response.message) || "Unknown error",
+            errorCode: (error && error.errorCode) || (error && error.response && error.response.data && error.response.data.errorCode) || (error && error.response && error.response.status) || (error && error.code),
+            status: (error && error.status) || (error && error.response && error.response.status),
+            statusText: (error && error.statusText) || (error && error.response && error.response.statusText),
+            code: error && error.code,
+            errno: error && error.errno
         };
         return errorObject;
     }

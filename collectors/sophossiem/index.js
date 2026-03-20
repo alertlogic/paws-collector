@@ -8,15 +8,19 @@
  * -----------------------------------------------------------------------------
  */
 
-const debug = require('debug') ('index');
+const debug = require('debug')('index');
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const SophossiemCollector = require('./collector').SophossiemCollector;
 
-exports.handler = SophossiemCollector.makeHandler(function(event, context) {
+exports.handler = SophossiemCollector.makeHandler(async function (event, context) {
     debug('input event: ', event);
     AlLogger.defaultMeta = { requestId: context.awsRequestId };
-    SophossiemCollector.load().then(function(creds) {
-        var sophossiemc = new SophossiemCollector(context, creds);
-        sophossiemc.handleEvent(event);
-    });
+    try {
+        const creds = await SophossiemCollector.load();
+        let sophossiemc = new SophossiemCollector(context, creds);
+        await sophossiemc.handleEvent(event);
+    } catch (error) {
+        AlLogger.error("Unhandled error in handler execution", error);
+        throw error;
+    }
 });

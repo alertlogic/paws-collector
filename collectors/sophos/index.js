@@ -12,11 +12,15 @@ const debug = require('debug') ('index');
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const SophosCollector = require('./collector').SophosCollector;
 
-exports.handler = SophosCollector.makeHandler(function(event, context) {
+exports.handler = SophosCollector.makeHandler(async function(event, context) {
     debug('input event: ', event);
     AlLogger.defaultMeta = { requestId: context.awsRequestId };
-    SophosCollector.load().then(function(creds) {
-        var sophosc = new SophosCollector(context, creds);
-        sophosc.handleEvent(event);
-    });
+    try {
+        const creds = await SophosCollector.load();
+        let sophosc = new SophosCollector(context, creds);
+        await sophosc.handleEvent(event);
+    } catch (error) {
+        AlLogger.error("Unhandled error in handler execution", error);
+        throw error;
+    };
 });
