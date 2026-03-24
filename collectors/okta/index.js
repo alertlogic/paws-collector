@@ -20,7 +20,7 @@ exports.handler = OktaCollector.makeHandler(async function (event, context) {
         let oktac = new OktaCollector(context, creds);
         await oktac.handleEvent(event);
     } catch (error) {
-        AlLogger.error('Un in Okta Collector handler: ', error);
+        AlLogger.error('Unhandled error in Okta Collector handler: ', error);
         throw error;
     }
 });
