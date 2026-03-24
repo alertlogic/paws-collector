@@ -37,67 +37,65 @@ const sensitiveFields = [
 
 class OktaCollector extends PawsCollector {
 
-    constructor(context, creds){
+    constructor(context, creds) {
         super(context,
             creds, packageJson.version);
     }
-    
-    pawsInitCollectionState(event, callback) {
+
+    async pawsInitCollectionState(event) {
         const startTs = process.env.paws_collection_start_ts ?
-                process.env.paws_collection_start_ts :
-                    moment().toISOString();
+            process.env.paws_collection_start_ts :
+            moment().toISOString();
         const initialState = this._getNextCollectionState({
             since: startTs,
             until: startTs,
             poll_interval_sec: 1
         });
-        return callback(null, initialState, initialState.poll_interval_sec);
+        return { state: initialState, nextInvocationTimeout: initialState.poll_interval_sec };
     }
 
-    async pawsGetLogs(state, callback) {
+    async pawsGetLogs(state) {
         let collector = this;
         const oktaClient = new okta.Client({
             orgUrl: collector.pawsHttpsEndpoint,
             token: collector.secret
         });
         AlLogger.info(`OKTA000001 Collecting data from ${state.since} till ${state.until}`);
-        const collection = await oktaClient.systemLogApi.listLogEvents({
-            since: state.since,
-            until: state.until
-        });
-        let logAcc = [];
-        collection.each(log => {
-            logAcc.push(log);
-        })
-        .then(() => {
+        try {
+            const collection = await oktaClient.systemLogApi.listLogEvents({
+                since: state.since,
+                until: state.until
+            });
+            let logAcc = [];
+            await collection.each(log => {
+                logAcc.push(log);
+            });
             const newState = collector._getNextCollectionState(state);
             AlLogger.info(`OKTA000002 Next collection in ${newState.poll_interval_sec} seconds`);
-            return callback(null, logAcc, newState, newState.poll_interval_sec);
-        })
-        .catch((error) => {
+            return [logAcc, newState, newState.poll_interval_sec];
+        } catch (error) {
             error.errorCode = this._isNoErrorCode(error);
             let maybeThrottleError = this.handleThrottleErrorWithDelay(error, state);
             if (maybeThrottleError.throttle) {
                 state.poll_interval_sec = maybeThrottleError.delaySeconds;
                 AlLogger.info(`OKTA000003 API limit Exceeded. The quota will be reset at ${moment().add(maybeThrottleError.delaySeconds, 'seconds').toISOString()}`);
-                collector.reportApiThrottling(function () {
-                    return callback(null, [], state, state.poll_interval_sec);
-                });
+                await collector.reportApiThrottling();
+                return [[], state, state.poll_interval_sec];
             } else {
-                return callback(error);
+                throw error;
             }
-        });
+        }
     }
 
     _isNoErrorCode(error) {
-        return error.errorCode ? error.errorCode : error.status;
+        return error && (error.errorCode || error.status || error.statusCode);
     }
 
     handleThrottleErrorWithDelay(error, state) {
         let mayThrottleError = {}
         mayThrottleError.throttle = (error.status === 429) ||
             (error.message && error.message.match(THROTTLING_ERROR_REGEXP));
-            
+
         if (mayThrottleError.throttle) {
             // if x-rate-limit-reset value return by api then accordingly delay the api call to avoid throttle error again other wise increase the delay by 1min till max 15min.
             let resetSeconds = state.poll_interval_sec;
@@ -108,7 +106,7 @@ class OktaCollector extends PawsCollector {
                 resetSeconds = retryEpochSeconds - currentEpochSeconds;
             }
             const delaySeconds = resetSeconds && resetSeconds < MAX_POLL_INTERVAL ? resetSeconds + 60 : MAX_POLL_INTERVAL;
-            mayThrottleError.delaySeconds = delaySeconds; 
+            mayThrottleError.delaySeconds = delaySeconds;
         }
         return mayThrottleError;
     }
@@ -118,10 +116,10 @@ class OktaCollector extends PawsCollector {
 
         const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
 
-        return  {
-             since: nextSinceMoment.toISOString(),
-             until: nextUntilMoment.toISOString(),
-             poll_interval_sec: nextPollInterval
+        return {
+            since: nextSinceMoment.toISOString(),
+            until: nextUntilMoment.toISOString(),
+            poll_interval_sec: nextPollInterval
         };
     }
 
