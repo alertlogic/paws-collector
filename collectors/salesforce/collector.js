@@ -29,7 +29,7 @@ class SalesforceCollector extends PawsCollector {
         super(context, creds, packageJson.version);
     }
 
-    pawsInitCollectionState(event, callback) {
+    async pawsInitCollectionState(event) {
 
         const startTs = process.env.paws_collection_start_ts ?
             process.env.paws_collection_start_ts :
@@ -48,19 +48,19 @@ class SalesforceCollector extends PawsCollector {
                 poll_interval_sec: 1
             }
         });
-        return callback(null, initialStates, 1);
+        return { state: initialStates, nextInvocationTimeout: 1 };
     }
 
-    pawsGetRegisterParameters(event, callback) {
+    async pawsGetRegisterParameters(event) {
         const regValues = {
             salesforceUserID: process.env.paws_collector_param_string_1,
             salesforceObjectNames: process.env.collector_streams
         };
 
-        callback(null, regValues);
+        return regValues;
     }
 
-    pawsGetLogs(state, callback) {
+    async pawsGetLogs(state) {
         let collector = this;
         // This code can remove once exsisting code set stream and collector_streams env variable
         if (!process.env.collector_streams) {
@@ -69,7 +69,7 @@ class SalesforceCollector extends PawsCollector {
         if (!state.stream) {
             state = collector.setStreamToCollectionState(state);
         }
-          
+
         const privateKey = collector.secret;
         if (!privateKey) {
             throw new Error("The private key was not found!");
@@ -92,76 +92,83 @@ class SalesforceCollector extends PawsCollector {
 
         if (state.apiQuotaResetDate && moment().isBefore(state.apiQuotaResetDate)) {
             AlLogger.info(`API Request Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
-            collector.reportApiThrottling(function () {
-                return callback(null, [], state, state.poll_interval_sec);
-            });
+            await collector.reportApiThrottling();
+            return [[], state, state.poll_interval_sec];
         }
-        else {
+        const restServiceClient = new RestServiceClient(baseUrl);
+        const formData = new URLSearchParams();
+        formData.append('grant_type', 'urn:ietf:params:oauth:grant-type:jwt-bearer');
+        formData.append('assertion', token);
 
-            let restServiceClient = new RestServiceClient(baseUrl);
-            const formData = new URLSearchParams();
-            formData.append('grant_type', 'urn:ietf:params:oauth:grant-type:jwt-bearer');
-            formData.append('assertion', token);
-            restServiceClient.post(tokenUrl, {
+        let response;
+        try {
+            response = await restServiceClient.post(tokenUrl, {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded'
                 },
                 data: formData
-            }).then(response => {
-                var objectQueryDetails = utils.getObjectQuery(state);
-                if (!objectQueryDetails.query) {
-                    return callback("The object name was not found!");
-                }
-                tsPaths = objectQueryDetails.tsPaths;
-                utils.getObjectLogs(response, objectQueryDetails, [], state, process.env.paws_max_pages_per_invocation)
-                    .then(({ accumulator, nextPage }) => {
-                        let newState;
-                        if (nextPage === undefined) {
-                            newState = this._getNextCollectionState(state);
-                        } else {
-                            newState = this._getNextCollectionStateWithNextPage(state, nextPage);
-                        }
-                        AlLogger.info(`SALE000002 Next collection in ${newState.poll_interval_sec} seconds`);
-                        return callback(null, accumulator, newState, newState.poll_interval_sec);
-                    })
-                    .catch((error) => {
-                        if (error.errorCode && error.errorCode === "REQUEST_LIMIT_EXCEEDED") {
-                            // Api will reset after next 24 hours 
-                            // Added extra 1 hours for buffer
-                            state.apiQuotaResetDate = moment().add(25, "hours").toISOString();
-                            state.poll_interval_sec = 900;
-                            AlLogger.info(`API Request Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
-                            collector.reportApiThrottling(function () {
-                                return callback(null, [], state, state.poll_interval_sec);
-                            });
-                        }
-                        else {
-                            if (error.errorCode && error.errorCode === "INVALID_FIELD") {
-                                AlLogger.info(`API not able to fetch field for object ${state.stream}`);
-                            }
-                            if (error.errorCode && error.errorCode === "INVALID_TYPE") {
-                                AlLogger.info(`API not able to fetch logs for object ${state.stream}`);
-                            }
-                            if (error.errorCode && error.errorCode === "INVALID_SESSION_ID") {
-                                AlLogger.info("User not added 'Access and manage your data (api)' in Oauth scope");
-                            }
-                            return callback(error);
-                        }
-
-                    });
-
-            }).catch(err => {
-                // set errorCode if not available in error object to showcase client error on DDMetrics
-                if (err.response && err.response.data) {
-                    err.response.data.errorCode = err.response.data.error;
-                    return callback(err.response.data);
-                }
-                else {
-                    err.errorCode = err.response.status;
-                    return callback(err);
-                }
             });
-        } 
+        } catch (err) {
+            this._throwNormalizedClientError(err);
+        }
+
+        const objectQueryDetails = utils.getObjectQuery(state);
+        if (!objectQueryDetails.query) {
+            throw new Error("The object name was not found!");
+        }
+        tsPaths = objectQueryDetails.tsPaths;
+
+        try {
+            const { accumulator, nextPage } = await utils.getObjectLogs(response, objectQueryDetails, [], state, process.env.paws_max_pages_per_invocation);
+
+            let newState;
+            if (nextPage === undefined) {
+                newState = this._getNextCollectionState(state);
+            } else {
+                newState = this._getNextCollectionStateWithNextPage(state, nextPage);
+            }
+            AlLogger.info(`SALE000002 Next collection in ${newState.poll_interval_sec} seconds`);
+            return [accumulator, newState, newState.poll_interval_sec];
+        } catch (error) {
+            return this._handleGetLogsError(error, state, collector);
+        }
+    }
+
+    _throwNormalizedClientError(error) {
+        // set errorCode if not available in error object to showcase client error on DDMetrics
+        if (error && error.response && error.response.data && typeof error.response.data === 'object') {
+            if (!error.response.data.errorCode) {
+                error.response.data.errorCode = error.response.data.error || error.response.status || "CLIENT_ERROR";
+            }
+            throw error.response.data;
+        }
+        if (error && error.response) {
+            error.errorCode = error.errorCode || error.response.status || "CLIENT_ERROR";
+        }
+        throw error;
+    }
+
+    async _handleGetLogsError(error, state, collector) {
+        if (error.errorCode && error.errorCode === "REQUEST_LIMIT_EXCEEDED") {
+            // Api will reset after next 24 hours 
+            // Added extra 1 hours for buffer
+            state.apiQuotaResetDate = moment().add(25, "hours").toISOString();
+            state.poll_interval_sec = 900;
+            AlLogger.info(`API Request Limit Exceeded. The quota will be reset at ${state.apiQuotaResetDate}`);
+            await collector.reportApiThrottling();
+            return [[], state, state.poll_interval_sec];
+        }
+
+        if (error.errorCode && error.errorCode === "INVALID_FIELD") {
+            AlLogger.info(`API not able to fetch field for object ${state.stream}`);
+        }
+        if (error.errorCode && error.errorCode === "INVALID_TYPE") {
+            AlLogger.info(`API not able to fetch logs for object ${state.stream}`);
+        }
+        if (error.errorCode && error.errorCode === "INVALID_SESSION_ID") {
+            AlLogger.info("User not added 'Access and manage your data (api)' in Oauth scope");
+        }
+        throw error;
     }
 
     _getNextCollectionState(curState) {

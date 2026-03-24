@@ -26,7 +26,7 @@ class SentineloneCollector extends PawsCollector {
         super(context, creds, packageJson.version);
     }
 
-    pawsInitCollectionState(event, callback) {
+    async pawsInitCollectionState(event) {
         const startTs = process.env.paws_collection_start_ts ?
             process.env.paws_collection_start_ts :
             moment().toISOString();
@@ -37,14 +37,14 @@ class SentineloneCollector extends PawsCollector {
             nextPage: null,
             poll_interval_sec: 1
         };
-        return callback(null, initialState, 1);
+        return { state: initialState, nextInvocationTimeout: 1 };
     }
 
-    pawsGetLogs(state, callback) {
+    async pawsGetLogs(state) {
         let collector = this;
         const clientSecret = collector.secret;
         if (!clientSecret) {
-            return callback("The Client Secret was not found!");
+            throw new Error("The Client Secret was not found!");
         }
 
         const baseUrl = process.env.paws_endpoint.replace(/^https:\/\/|\/$/g, '');
@@ -61,28 +61,38 @@ class SentineloneCollector extends PawsCollector {
             limit: 100
         });
 
-        utils.getAPILogs(baseUrl, clientSecret, params, [], process.env.paws_max_pages_per_invocation)
-            .then(({ accumulator, nextPage }) => {
-                let newState;
-                if (nextPage === undefined) {
-                    newState = this._getNextCollectionState(state);
-                } else {
-                    newState = this._getNextCollectionStateWithNextPage(state, nextPage);
-                }
-                AlLogger.info(`SONE000002 Next collection in ${newState.poll_interval_sec} seconds`);
-                return callback(null, accumulator, newState, newState.poll_interval_sec);
-            }).catch((error) => {
-                // set the errorCode for client DD metrics
-                if (error.response && error.response.data) {
-                    error.response.data.errorCode = error.response.data.errors[0].code;
-                    return callback(error.response.data);
-                }
-                else {
-                    error.errorCode = error.response.status;
-                    return callback(error);
-                }
-            });
+        try {
+            const { accumulator, nextPage } = await utils.getAPILogs(baseUrl, clientSecret, params, [], process.env.paws_max_pages_per_invocation);
+            let newState;
+            if (nextPage === undefined) {
+                newState = this._getNextCollectionState(state);
+            } else {
+                newState = this._getNextCollectionStateWithNextPage(state, nextPage);
+            }
+            AlLogger.info(`SONE000002 Next collection in ${newState.poll_interval_sec} seconds`);
+            return [accumulator, newState, newState.poll_interval_sec];
+        } catch (error) {
+            this._throwNormalizedClientError(error);
+        }
+    }
 
+    _throwNormalizedClientError(error) {
+        // set the errorCode for client DD metrics
+        if (error && error.response && error.response.data && typeof error.response.data === 'object') {
+            const responseErrors = error.response.data.errors;
+            const responseError = Array.isArray(responseErrors) ? responseErrors[0] : undefined;
+            if (!error.response.data.errorCode) {
+                error.response.data.errorCode = responseError && responseError.code ?
+                    responseError.code :
+                    error.response.status ||
+                    'CLIENT_ERROR';
+            }
+            throw error.response.data;
+        }
+        if (error && error.response) {
+            error.errorCode = error.errorCode || error.response.status || 'CLIENT_ERROR';
+        }
+        throw error;
     }
 
     _getNextCollectionState(curState) {

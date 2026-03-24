@@ -269,7 +269,7 @@ stages:
           trigger_phrase: build-collectors
     env:
       ALPS_SERVICE_NAME: "paws-salesforce-collector"
-      ALPS_SERVICE_VERSION: "1.1.63" #set the value from collector package json
+      ALPS_SERVICE_VERSION: "1.2.0" #set the value from collector package json
     commands:
       - source $NVM_DIR/nvm.sh && nvm use 22
       - ./build_collector.sh salesforce
@@ -291,7 +291,7 @@ stages:
       - ./build_collector.sh sentinelone
     env:
       ALPS_SERVICE_NAME: "paws-sentinelone-collector"
-      ALPS_SERVICE_VERSION: "1.0.60" #set the value from collector package json
+      ALPS_SERVICE_VERSION: "1.2.0" #set the value from collector package json
     outputs:
       file: ./sentinelone-collector*
     packagers:
@@ -307,7 +307,7 @@ stages:
           trigger_phrase: build-collectors
     env:
       ALPS_SERVICE_NAME: "paws-sophos-collector"
-      ALPS_SERVICE_VERSION: "1.0.60" #set the value from collector package json
+      ALPS_SERVICE_VERSION: "1.1.0" #set the value from collector package json
     commands:
       - source $NVM_DIR/nvm.sh && nvm use 22
       - ./build_collector.sh sophos
@@ -329,7 +329,7 @@ stages:
       - ./build_collector.sh sophossiem
     env:
       ALPS_SERVICE_NAME: "paws-sophossiem-collector"
-      ALPS_SERVICE_VERSION: "1.2.21" #set the value from collector package json
+      ALPS_SERVICE_VERSION: "1.3.0" #set the value from collector package json
     outputs:
       file: ./sophossiem-collector*
     packagers:

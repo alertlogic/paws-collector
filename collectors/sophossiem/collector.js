@@ -30,7 +30,7 @@ class SophossiemCollector extends PawsCollector {
         super(context, creds, packageJson.version);
     }
 
-    pawsInitCollectionState(event, callback) {
+    async pawsInitCollectionState(event) {
         const startTs = process.env.paws_collection_start_ts ?
             process.env.paws_collection_start_ts :
             moment().toISOString();
@@ -50,20 +50,19 @@ class SophossiemCollector extends PawsCollector {
                 stream,
                 from_date: from_date_unix,
                 poll_interval_sec: 1
-            }
+            };
         });
 
-        return callback(null, initialStates, 1);
+        return { state: initialStates, nextInvocationTimeout: 1 };
     }
 
-    pawsGetRegisterParameters(event, callback) {
-        const regValues = {
+    async pawsGetRegisterParameters(event) {
+        return {
             sophosSiemObjectNames: process.env.collector_streams
         };
-        callback(null, regValues);
     }
 
-    pawsGetLogs(state, callback) {
+    async pawsGetLogs(state) {
         let collector = this;
         // This code can remove once exsisting code set stream and collector_streams env variable
         if (!process.env.collector_streams) {
@@ -92,91 +91,100 @@ class SophossiemCollector extends PawsCollector {
         const isGatewayHost = APIHostName && APIHostName.includes("/gateway");
         const clientSecret = collector.secret;
         if (!clientSecret) {
-            return callback(isGatewayHost ? "The Authorization token was not found!" : "The Client Secret was not found!");
+            throw new Error(isGatewayHost ? "The Authorization token was not found!" : "The Client Secret was not found!");
         }
 
         const clientId = collector.clientId;
         if (!clientId) {
-            return callback(isGatewayHost ? "The x-api-key was not found!" : "The Client ID was not found!");
+            throw new Error(isGatewayHost ? "The x-api-key was not found!" : "The Client ID was not found!");
         }
 
         let messageString = state.nextPage ? collector.decodebase64string(state.nextPage) : `from ${moment.unix(parseInt(state.from_date)).format("YYYY-MM-DDTHH:mm:ssZ")}`;
         AlLogger.info(`SIEM000001 Collecting data for ${state.stream} ${messageString}`);
+
         // TODO: Remove this isGatewayHostccondition once the new collectors are created and stable.
         if (isGatewayHost) {
             const headers = {
                 "x-api-key": clientId,
                 Authorization: clientSecret
             };
-
-            utils.getAPILogs(APIHostName, headers, state, [], process.env.paws_max_pages_per_invocation)
-                .then(({ accumulator, nextPage, has_more }) => {
-                    const newState = collector._getNextCollectionState(state, nextPage, has_more);
-                    AlLogger.info(`SIEM000002 Next collection in ${newState.poll_interval_sec} seconds`);
-                    return callback(null, accumulator, newState, newState.poll_interval_sec);
-                })
-                .catch((error) => collector.handleApiError(error, state, callback));
+            try {
+                const { accumulator, nextPage, has_more } = await utils.getAPILogs(APIHostName, headers, state, [], process.env.paws_max_pages_per_invocation);
+                const newState = collector._getNextCollectionState(state, nextPage, has_more);
+                AlLogger.info(`SIEM000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                return [accumulator, newState, newState.poll_interval_sec];
+            } catch (error) {
+                return this._handleApiError(error, state);
+            }
         } else {
-            utils.authenticate(SOPHOS_AUTH_BASE_URL, clientId, clientSecret).then((token) => {
-                utils.getTenantIdAndDataRegion(SOPHOS_API_BASE_URL, token).then((response) => {
-                    if (!response.id) {
-                        return callback("TenantId not found.");
-                    }
-                    let tenantId = response.id;
-                    if (!response.apiHosts.dataRegion) {
-                        return callback("Please generate credentials for the tenant. Currently, we do not support credentials for Organization and Partner.");
-                    }
-                    const apiHostsURL = response.apiHosts.dataRegion.replace(/^https:\/\/|\/$/g, "");
-                    let headers = { "X-Tenant-ID": tenantId, Authorization: `Bearer ${token}`};
-                    utils.getAPILogs(apiHostsURL, headers, state, [], process.env.paws_max_pages_per_invocation)
-                        .then(({ accumulator, nextPage, has_more }) => {
-                            const newState = collector._getNextCollectionState(state, nextPage, has_more);
-                            AlLogger.info(`SIEM000002 Next collection in ${newState.poll_interval_sec} seconds`);
-                            return callback(null, accumulator, newState, newState.poll_interval_sec);
-                        })
-                        .catch((error) => collector.handleApiError(error, state, callback));
-                }).catch((error) => collector.handleErrors(error, callback));
-            }).catch((error) => collector.handleAuthError(error, callback));
+            let token;
+            try {
+                token = await utils.authenticate(SOPHOS_AUTH_BASE_URL, clientId, clientSecret);
+            } catch (error) {
+                this._throwAuthError(error);
+            }
+
+            let response;
+            try {
+                response = await utils.getTenantIdAndDataRegion(SOPHOS_API_BASE_URL, token);
+            } catch (error) {
+                throw this.createErrorObject(error);
+            }
+
+            if (!response.id) {
+                throw new Error("TenantId not found.");
+            }
+            if (!response.apiHosts.dataRegion) {
+                throw new Error("Please generate credentials for the tenant. Currently, we do not support credentials for Organization and Partner.");
+            }
+
+            const tenantId = response.id;
+            const apiHostsURL = response.apiHosts.dataRegion.replace(/^https:\/\/|\/$/g, "");
+            const headers = { "X-Tenant-ID": tenantId, Authorization: `Bearer ${token}` };
+            try {
+                const { accumulator, nextPage, has_more } = await utils.getAPILogs(apiHostsURL, headers, state, [], process.env.paws_max_pages_per_invocation);
+                const newState = collector._getNextCollectionState(state, nextPage, has_more);
+                AlLogger.info(`SIEM000002 Next collection in ${newState.poll_interval_sec} seconds`);
+                return [accumulator, newState, newState.poll_interval_sec];
+            } catch (error) {
+                return this._handleApiError(error, state);
+            }
         }
     }
 
     createErrorObject(error) {
         const errorObject = {
-            message: error.message || (error.response && error.response.data && error.response.data.message) || (error.response && error.response.message) || "Unknown error",
-            errorCode: error.errorCode || (error.response && error.response.data && error.response.data.errorCode) || (error.response && error.response.status) || error.code,
-            status: error.status || (error.response && error.response.status),
-            statusText: error.statusText || (error.response && error.response.statusText),
-            code: error.code,
-            errno: error.errno
+            message: (error && error.message) || (error && error.response && error.response.data && error.response.data.message) || (error && error.response && error.response.message) || "Unknown error",
+            errorCode: (error && error.errorCode) || (error && error.response && error.response.data && error.response.data.errorCode) || (error && error.response && error.response.status) || (error && error.code),
+            status: (error && error.status) || (error && error.response && error.response.status),
+            statusText: (error && error.statusText) || (error && error.response && error.response.statusText),
+            code: error && error.code,
+            errno: error && error.errno
         };
         return errorObject;
     }
 
-    handleApiError(error, state, callback) {
+    async _handleApiError(error, state) {
         if (error.response) {
             if (error.response.status === 401) {
                 const errorObject = this.createErrorObject(error);
                 errorObject.message = "Invalid Credentials or Token expired or customer not authorized to make API call";
-                return callback(errorObject);
+                throw errorObject;
             }
             if (error.response.status === 429) {
                 state.poll_interval_sec = 900;
                 AlLogger.info("API Request Limit Exceeded.");
-                this.reportApiThrottling(() => callback(null, [], state, state.poll_interval_sec));
-                return;
+                await this.reportApiThrottling();
+                return [[], state, state.poll_interval_sec];
             }
         }
-        return callback(this.createErrorObject(error));
+        throw this.createErrorObject(error);
     }
 
-    handleErrors(error, callback) {
-        return callback(this.createErrorObject(error));
-    }
-
-    handleAuthError(error, callback) {
+    _throwAuthError(error) {
         const errorObject = this.createErrorObject(error);
-        
-        if (error.response && error.response.data) {
+
+        if (error && error.response && error.response.data) {
             const errorCode = error.response.data.errorCode;
             if (errorCode === "oauth.invalid_client_secret" || errorCode === "customer.validation") {
                 errorObject.message = `Error code [${error.response.status}]. Invalid client secret is provided.`;
@@ -187,8 +195,8 @@ class SophossiemCollector extends PawsCollector {
         } else if (!errorObject.message || errorObject.message === "Unknown error") {
             errorObject.message = "Unknown authentication error";
         }
-        
-        return callback(errorObject);
+
+        throw errorObject;
     }
 
     _getNextCollectionState(curState, nextPage, has_more) {
