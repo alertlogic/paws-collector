@@ -12,11 +12,16 @@ const debug = require('debug') ('index');
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
 const CrowdstrikeCollector = require('./collector').CrowdstrikeCollector;
 
-exports.handler = CrowdstrikeCollector.makeHandler(function(event, context) {
+exports.handler = CrowdstrikeCollector.makeHandler(async function(event, context) {
     debug('input event: ', event);
     AlLogger.defaultMeta = { requestId: context.awsRequestId };
-    CrowdstrikeCollector.load().then(function(creds) {
+    try {
+        const creds = await CrowdstrikeCollector.load();
         var crowdstrikec = new CrowdstrikeCollector(context, creds);
-        crowdstrikec.handleEvent(event);
-    });
+        await crowdstrikec.handleEvent(event);
+
+    } catch (error) {
+        AlLogger.error(`Unhandled error in handler: ${error.message}`);
+        throw error;
+    }
 });
