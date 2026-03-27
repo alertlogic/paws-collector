@@ -1,0 +1,268 @@
+version: 2
+
+# PRIORITY POLICY for Dependabot PRs:
+#
+#  Security updates (GitHub Security Advisories / Dependabot alerts):
+#    Raised immediately by GitHub's security alert system regardless of schedule.
+#    These are separate from version-update PRs below.
+#    → critical/high: fix within 7 days. → moderate: fix within 30 days. → low: fix within 90 days.
+#    GitHub/Dependabot will not create a second OPEN PR for the exact same
+#    dependency update in the same directory/target branch.
+#    If a vulnerability PR is closed without merging and the alert remains active,
+#    GitHub may raise it again later.
+#    To intentionally suppress re-raising, dismiss the Dependabot alert in GitHub
+#    Security with a reason, or add an explicit ignore rule for that dependency.
+#
+#  Routine version-update PRs (this file):
+#    Batched weekly into one PR per collector directory using "groups".
+#    Minor/patch bumps are grouped together to reduce PR noise.
+#    Major version bumps always get their own PR (potential breaking changes).
+#    open-pull-requests-limit: 5 prevents queue flooding.
+#
+#  When a Dependabot PR is raised:
+#    1. dependency-pr-gate.yml runs npm audit (informational, non-blocking).
+#    2. ALPS PR Test stage runs make test + audit-with-ignore.sh (non-blocking).
+#    3. Reviewer checks .audit-ignore.json if audit was skipped for that CVE.
+#    4. Merge is MANUAL — no auto-merge until validation is confirmed.
+
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
+    groups:
+      production-deps:
+        dependency-type: production
+        update-types: ["minor", "patch"]
+      dev-deps:
+        dependency-type: development
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: "/collectors/auth0"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
+      - collector:auth0
+    groups:
+      auth0-deps:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: "/collectors/carbonblack"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
+      - collector:carbonblack
+    groups:
+      carbonblack-deps:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: "/collectors/ciscoamp"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
+      - collector:ciscoamp
+    groups:
+      ciscoamp-deps:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: "/collectors/ciscoduo"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
+      - collector:ciscoduo
+    groups:
+      ciscoduo-deps:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: "/collectors/ciscomeraki"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
+      - collector:ciscomeraki
+    groups:
+      ciscomeraki-deps:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: "/collectors/crowdstrike"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
+      - collector:crowdstrike
+    groups:
+      crowdstrike-deps:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: "/collectors/googlestackdriver"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
+      - collector:googlestackdriver
+    groups:
+      googlestackdriver-deps:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: "/collectors/gsuite"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
+      - collector:gsuite
+    groups:
+      gsuite-deps:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: "/collectors/mimecast"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
+      - collector:mimecast
+    groups:
+      mimecast-deps:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: "/collectors/o365"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
+      - collector:o365
+    groups:
+      o365-deps:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: "/collectors/o365/lib/o365_mgmnt"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
+      - collector:o365
+    groups:
+      o365-mgmnt-deps:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: "/collectors/okta"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
+      - collector:okta
+    groups:
+      okta-deps:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: "/collectors/salesforce"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
+      - collector:salesforce
+    groups:
+      salesforce-deps:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: "/collectors/sentinelone"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
+      - collector:sentinelone
+    groups:
+      sentinelone-deps:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: "/collectors/sophos"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
+      - collector:sophos
+    groups:
+      sophos-deps:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: "/collectors/sophossiem"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
+      - collector:sophossiem
+    groups:
+      sophossiem-deps:
+        update-types: ["minor", "patch"]

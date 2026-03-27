@@ -1,0 +1,149 @@
+name: Dependency PR Gate
+
+# NOTE: This workflow runs only the vulnerability audit (npm audit) for any
+# package.json that changed in a PR. It does NOT run unit tests — those are
+# already handled by the ALPS pipeline (ps_spec.yml "PR Test" stage) which
+# uses the pre-configured compute size and correct Node image.
+#
+# "runs-on: ubuntu-latest" is required here because this is a GitHub Actions
+# workflow. ALPS (ps_spec.yml) does not support PR-level path-filtered matrix
+# triggers per collector directory, so the per-directory audit stays here.
+
+on:
+  pull_request:
+    paths:
+      - "**/package.json"
+      - "**/package-lock.json"
+      - ".github/workflows/dependency-pr-gate.yml"
+      - "scripts/changed-package-dirs.sh"
+      - "scripts/dependency-change-report.js"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      dirs: ${{ steps.detect.outputs.dirs }}
+      has_changes: ${{ steps.detect.outputs.has_changes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Detect changed package directories
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_ref="origin/${{ github.base_ref || 'master' }}"
+          git fetch origin "${{ github.base_ref || 'master' }}" --depth=1 || true
+          dirs=$(bash scripts/changed-package-dirs.sh "$base_ref" HEAD)
+          echo "dirs=$dirs" >> "$GITHUB_OUTPUT"
+          if [[ "$dirs" == "[]" ]]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  report:
+    needs: detect
+    if: needs.detect.outputs.has_changes == 'true' && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Generate dependency change report
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_ref="origin/${{ github.base_ref || 'master' }}"
+          git fetch origin "${{ github.base_ref || 'master' }}" --depth=1 || true
+          node scripts/dependency-change-report.js "$base_ref" HEAD > dependency-change-report.md
+          cat dependency-change-report.md
+
+      - name: Publish PR dependency report comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('dependency-change-report.md', 'utf8');
+            const marker = '<!-- dependency-change-report -->';
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100
+            });
+            const existing = comments.find(comment => comment.body && comment.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body
+              });
+            }
+
+  audit:
+    # Unit tests are intentionally NOT run here.
+    # ALPS (ps_spec.yml "PR Test" stage) already runs "make test" on every PR
+    # using the pre-configured node:22 image and compute size.
+    # This job reports vulnerabilities introduced by dependency changes.
+    # It is intentionally non-blocking to avoid stopping PR merge.
+    needs: detect
+    if: needs.detect.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dir: ${{ fromJson(needs.detect.outputs.dirs) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Install dependencies and run vulnerability audit (non-blocking)
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PR gate is informational only (non-blocking) and includes dev dependencies
+          # to report vulnerabilities in any package used in this repo.
+          # Known acceptable CVEs with no available fix are tracked in
+          # .audit-ignore.json and skipped by scripts/audit-with-ignore.sh.
+          if [[ "${{ matrix.dir }}" == "." ]]; then
+            npm install --no-audit --no-fund
+            bash scripts/audit-with-ignore.sh . high include-dev
+          else
+            npm install --prefix "${{ matrix.dir }}" --no-audit --no-fund
+            bash scripts/audit-with-ignore.sh "${{ matrix.dir }}" high include-dev
+          fi
