@@ -1,0 +1,22 @@
+{
+  "_comment": "Known CVEs that are intentionally accepted pending an upstream fix.",
+  "_policy": {
+    "critical": "NEVER ignore. Fix immediately or pin to safe version.",
+    "high": "May be ignored temporarily with a written reason and expiry date. Max 30 days.",
+    "moderate": "May be ignored with a reason and expiry date. Max 90 days.",
+    "low": "May be ignored with a reason. Expiry encouraged but not enforced in CI."
+  },
+  "ignore": [
+    {
+      "_example_DO_NOT_USE": true,
+      "cve": "CVE-0000-00000",
+      "ghsa": "GHSA-xxxx-xxxx-xxxx",
+      "package": "example-package",
+      "severity": "moderate",
+      "reason": "No upstream fix available as of added_on date. The vulnerable code path is not reachable in this collector. Re-evaluate when upstream releases a fix.",
+      "expires": "2026-06-01",
+      "added_by": "github-handle",
+      "added_on": "2026-03-24"
+    }
+  ]
+}
