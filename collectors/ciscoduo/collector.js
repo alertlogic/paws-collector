@@ -61,7 +61,7 @@ class CiscoduoCollector extends PawsCollector {
         return { state: initialStates, nextInvocationTimeout: pollInterval };
     }
 
-    pawsGetRegisterParameters(event) {
+    async pawsGetRegisterParameters(event) {
         const regValues = {
             ciscoduoObjectNames: process.env.collector_streams
         };
@@ -126,8 +126,13 @@ class CiscoduoCollector extends PawsCollector {
                 return [[], state, state.poll_interval_sec];
             }
             else {
-                // set errorCode if not available in error object to showcase client error on DDMetrics
-                error.errorCode = error.code;
+                // set errorCode only for object errors to avoid type errors with string/primitive throws
+                if (error && (typeof error === 'object')) {
+                    if (error.errorCode === undefined) {
+                        error.errorCode = error.code || error.status;
+                    }
+
+                }
                 throw error;
             }
         }

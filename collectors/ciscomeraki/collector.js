@@ -86,12 +86,12 @@ class CiscomerakiCollector extends PawsCollector {
                     case 'SelfUpdate':
                         await collector.handleUpdateStreamsFromNetworks();
                         await collector.handleUpdate();
-                        break;
+                        return;
                     default:
-                        await super.handleEvent(event);
+                        return await super.handleEvent(event);
                 }
             default:
-                await super.handleEvent(event);
+                return await super.handleEvent(event);
         }
     }
 
@@ -187,9 +187,12 @@ class CiscomerakiCollector extends PawsCollector {
                 throw error;
             }
         } else if (error && error.response && error.response.data) {
-            AlLogger.debug(`CMRI0000022 error ${error.response.data.errors} - status: ${error.response.status}`);
-            error.response.data.errorCode = error.response.status;
-            throw error.response.data;
+            const data = (typeof error.response.data === 'object' && error.response.data !== null)
+                ? error.response.data
+                : { message: error.response.data };
+            AlLogger.debug(`CMRI0000022 error ${data.errors} - status: ${error.response.status}`);
+            data.errorCode = error.response.status;
+            throw data;
         } else {
             throw error;
         }
