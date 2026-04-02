@@ -375,11 +375,16 @@ class PawsCollector extends AlAwsCollectorV2 {
                         Status: { S: STATE_RECORD_INCOMPLETE },
                         ExpireDate: { N: moment().add(DDB_TTL_DAYS, 'days').unix().toString() }
                     },
-                    TableName: this._pawsDdbTableName
+                    TableName: this._pawsDdbTableName,
+                    ConditionExpression: 'attribute_not_exists(CollectorId) AND attribute_not_exists(MessageId)'
                 }
                 return await DDB.putItem(newRecord);
             }
         } catch (error) {
+            if (error && error.name === 'ConditionalCheckFailedException') {
+                AlLogger.info(`PAWS000400 Duplicate state: ${stateSqsMsg.messageId}, already in progress. skipping`);
+                throw { errorCode: ERROR_CODE_DUPLICATE_STATE };
+            }
             AlLogger.error(`PAWS000402 ${this._pawsDdbTableName} table not found`);
             throw error;
         }
@@ -419,9 +424,11 @@ class PawsCollector extends AlAwsCollectorV2 {
 
     async handlePollRequest(stateSqsMsg) {
         let collector = this;
+        let retryPrivCollectorState;
 
         try {
             let pawsState = JSON.parse(stateSqsMsg.body);
+            retryPrivCollectorState = pawsState.priv_collector_state;
 
             if (!collector.registered) {
                 throw new Error('PAWS000103 Collection attempt for unregistrered collector');
@@ -432,6 +439,7 @@ class PawsCollector extends AlAwsCollectorV2 {
             let logs, privCollectorState, nextInvocationTimeout;
             try {
                 [logs, privCollectorState, nextInvocationTimeout] = await collector.pawsGetLogs(pawsState.priv_collector_state);
+                retryPrivCollectorState = privCollectorState;
             } catch (err) {
                 await collector.reportClientError(err);
                 throw err;
@@ -449,7 +457,11 @@ class PawsCollector extends AlAwsCollectorV2 {
                             null;
 
             if (lastCollectedTs) {
-                await collector.reportCollectionDelay(lastCollectedTs);
+                try {
+                    await collector.reportCollectionDelay(lastCollectedTs);
+                } catch (metricError) {
+                    AlLogger.warn(`PAWS000407 Unable to report collection delay metric: ${collector.stringifyError(metricError)}`);
+                }
             }
 
             // Reset the retry count to 0 on successful log processing
@@ -476,16 +488,22 @@ class PawsCollector extends AlAwsCollectorV2 {
                     // The invocation is marked as succeed in order to clean up current state message in SQS.
                     // Increment/reset the retry count if error occured.
                     pawsState.retry_count = (!pawsState.retry_count || pawsState.retry_count >= MAX_ERROR_RETRIES) ? 1 : pawsState.retry_count + 1;
+                    const stateForRetry = retryPrivCollectorState ? retryPrivCollectorState : pawsState.priv_collector_state;
 
                     try {
-                        await collector._storeCollectionState(pawsState, pawsState.priv_collector_state, 300);
+                        await collector._storeCollectionState(pawsState, stateForRetry, 300);
 
                         // if sqs message added successfully and lambda time is less than 10 seconds so return the context succeed; so it will delete the old sqs message.
                         if (collector.context.getRemainingTimeInMillis() < REMAINING_CONTEXT_TIME_IN_MS) {
                             AlLogger.error(`PAWS000303 Error handling poll request: ${collector.stringifyError(handleError)}`);
                             await collector.done(null, pawsState);
                         } else {
-                            const handleErrorString = await collector.reportErrorStatus(handleError, pawsState);
+                            let handleErrorString = collector.stringifyError(handleError);
+                            try {
+                                handleErrorString = await collector.reportErrorStatus(handleError, pawsState);
+                            } catch (reportError) {
+                                AlLogger.warn(`PAWS000408 Unable to report collector error status: ${collector.stringifyError(reportError)}`);
+                            }
                             AlLogger.error(`PAWS000304 Error handling poll request: ${handleErrorString}`);
                             await collector.done(null, pawsState);
                         }

@@ -420,7 +420,41 @@ describe('Unit Tests', function() {
             assert.equal(putItemStub.called, true, 'should put a new item in');
             assert.equal(updateItemStub.called, true, 'should update the item to complete');
             assert.equal(putItemArgs.Item.MessageId.S, "5fea7756-0ea4-451a-a703-a558b933e274");
+            assert.equal(putItemArgs.ConditionExpression, 'attribute_not_exists(CollectorId) AND attribute_not_exists(MessageId)');
             assert.equal(updateItemArgs.Key.MessageId.S, "5fea7756-0ea4-451a-a703-a558b933e274");
+        });
+        it('handles conditional put race by treating it as duplicate state', async function() {
+            const mockRecord = {
+                "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
+                "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
+                "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
+                "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
+            };
+            const getItemStub = sinon.stub().callsFake(() => Promise.resolve({}));
+            const putItemStub = sinon.stub().callsFake(() => Promise.reject({ name: 'ConditionalCheckFailedException' }));
+            const updateItemStub = sinon.stub().callsFake(() => Promise.resolve({ data: null }));
+
+            mockDDB(getItemStub, putItemStub, updateItemStub);
+
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: sinon.spy(),
+                succeed: sinon.spy()
+            };
+
+            const testEvent = {
+                Records: [
+                    mockRecord
+                ]
+            };
+
+            const creds = await TestCollector.load();
+            var collector = new TestCollector(ctx, creds);
+            await collector.handleEvent(testEvent).catch(() => null);
+
+            assert.equal(getItemStub.called, true, 'should read current state record');
+            assert.equal(putItemStub.called, true, 'should attempt conditional insert');
+            assert.equal(updateItemStub.notCalled, true, 'should not mark duplicate state as complete/failed');
         });
         it('skips the state if it is already completed', async function() {
             const mockRecord = {
@@ -615,6 +649,54 @@ describe('Unit Tests', function() {
             collector.mockGetLogsError = 'Error getting logs';
             await collector.handleEvent(testEvent);
             sinon.assert.calledOnce(updateItemStub);
+        });
+
+        it('requeues progressed state when a post-ingest step fails', async function() {
+            const getRemainingTimeInMillis = sinon.spy(() => 5000);
+            const updateStateStub = sinon.stub(TestCollector.prototype, 'updateStateDBEntry').callsFake(() => Promise.resolve({ data: null }));
+            const getLogsStub = sinon.stub(TestCollector.prototype, 'pawsGetLogs').callsFake(() => {
+                return Promise.resolve([['log1', 'log2'], { since: '2021-07-01T02:37:37.617Z', until: '2021-07-01T03:37:37.617Z' }, 900]);
+            });
+
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function(error) {
+                    assert.fail('Invocation should succeed.');
+                },
+                succeed: function() {},
+                getRemainingTimeInMillis
+            };
+
+            const testEvent = {
+                Records: [
+                    {
+                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
+                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
+                    }
+                ]
+            };
+
+            const creds = await TestCollector.load();
+            const collector = new TestCollector(ctx, creds);
+            const reportCollectionDelayStub = sinon.stub(collector, 'reportCollectionDelay').resolves();
+            const storeCollectionStateStub = sinon.stub(collector, '_storeCollectionState');
+            storeCollectionStateStub.onFirstCall().rejects(new Error('SQS store failed after ingest'));
+            storeCollectionStateStub.onSecondCall().resolves();
+
+            try {
+                await collector.handleEvent(testEvent);
+                assert.equal(storeCollectionStateStub.callCount >= 2, true, 'should store success-path state then requeue on failure');
+                const retryStoreCallArgs = storeCollectionStateStub.args[1];
+                assert.equal(retryStoreCallArgs[1].since, '2021-07-01T02:37:37.617Z', 'should retry using progressed state returned by pawsGetLogs');
+                assert.equal(retryStoreCallArgs[0].retry_count, 1, 'should increment retry_count while re-queuing');
+                assert.equal(updateStateStub.callCount, 1, 'should mark state as FAILED on post-ingest failure');
+                assert.equal(updateStateStub.args[0][1], 'FAILED', 'should update DDB status to FAILED before re-queue');
+            } finally {
+                reportCollectionDelayStub.restore();
+                storeCollectionStateStub.restore();
+                getLogsStub.restore();
+                updateStateStub.restore();
+            }
         });
 
         it('poll request success, multiple state', async function() {
