@@ -482,6 +482,18 @@ class PawsCollector extends AlAwsCollectorV2 {
                     const pawsState = JSON.parse(stateSqsMsg.body);
                     await collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_FAILED);
 
+                    const remainingTimeInMillis = collector.context && collector.context.getRemainingTimeInMillis ?
+                        collector.context.getRemainingTimeInMillis() :
+                        0;
+
+                    // If remaining execution time is low, do not enqueue a new state message.
+                    // Failing this invocation keeps the original SQS message for retry and prevents duplicate messages.
+                    if (remainingTimeInMillis < REMAINING_CONTEXT_TIME_IN_MS) {
+                        AlLogger.error(`PAWS000303 Error handling poll request with low remaining time. Keeping original SQS message for retry: ${collector.stringifyError(handleError)}`);
+                        await collector.done(handleError, pawsState, false);
+                        return;
+                    }
+
                     // If collector failed to handle poll state we'd like to refresh the state message in SQS
                     // in order to avoid expiration of that message due to retention period.
                     // Here we just upload same state messaged into SQS and send error status to the backend.
@@ -493,20 +505,14 @@ class PawsCollector extends AlAwsCollectorV2 {
                     try {
                         await collector._storeCollectionState(pawsState, stateForRetry, 300);
 
-                        // if sqs message added successfully and lambda time is less than 10 seconds so return the context succeed; so it will delete the old sqs message.
-                        if (collector.context.getRemainingTimeInMillis() < REMAINING_CONTEXT_TIME_IN_MS) {
-                            AlLogger.error(`PAWS000303 Error handling poll request: ${collector.stringifyError(handleError)}`);
-                            await collector.done(null, pawsState);
-                        } else {
-                            let handleErrorString = collector.stringifyError(handleError);
-                            try {
-                                handleErrorString = await collector.reportErrorStatus(handleError, pawsState);
-                            } catch (reportError) {
-                                AlLogger.warn(`PAWS000408 Unable to report collector error status: ${collector.stringifyError(reportError)}`);
-                            }
-                            AlLogger.error(`PAWS000304 Error handling poll request: ${handleErrorString}`);
-                            await collector.done(null, pawsState);
+                        let handleErrorString = collector.stringifyError(handleError);
+                        try {
+                            handleErrorString = await collector.reportErrorStatus(handleError, pawsState);
+                        } catch (reportError) {
+                            AlLogger.warn(`PAWS000408 Unable to report collector error status: ${collector.stringifyError(reportError)}`);
                         }
+                        AlLogger.error(`PAWS000304 Error handling poll request: ${handleErrorString}`);
+                        await collector.done(null, pawsState);
                     } catch (storeError) {
                         await collector.done(storeError);
                     }

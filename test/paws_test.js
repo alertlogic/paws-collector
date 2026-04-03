@@ -651,8 +651,120 @@ describe('Unit Tests', function() {
             sinon.assert.calledOnce(updateItemStub);
         });
 
+        it('does not enqueue new SQS state when remaining time is low', async function() {
+            const getRemainingTimeInMillis = sinon.spy(() => 1000);
+            const updateStateStub = sinon.stub(TestCollector.prototype, 'updateStateDBEntry').callsFake(() => Promise.resolve({ data: null }));
+            const getLogsStub = sinon.stub(TestCollector.prototype, 'pawsGetLogs').callsFake(() => Promise.reject(new Error('third party API failed')));
+
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function() {},
+                succeed: function() {},
+                getRemainingTimeInMillis
+            };
+
+            const testEvent = {
+                Records: [
+                    {
+                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
+                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
+                    }
+                ]
+            };
+
+            const creds = await TestCollector.load();
+            const collector = new TestCollector(ctx, creds);
+            const storeCollectionStateStub = sinon.stub(collector, '_storeCollectionState').resolves();
+
+            try {
+                await collector.handleEvent(testEvent).catch(() => null);
+                assert.equal(storeCollectionStateStub.notCalled, true, 'should not enqueue a new state when lambda is near timeout');
+                assert.equal(updateStateStub.called, true, 'should update state status before exiting');
+                assert.equal(updateStateStub.args[0][1], 'FAILED', 'should mark DDB state as FAILED');
+            } finally {
+                storeCollectionStateStub.restore();
+                getLogsStub.restore();
+                updateStateStub.restore();
+            }
+        });
+
+        it('enqueues exactly one retry state when third-party API call fails and time is sufficient', async function() {
+            mockCloudWatch();
+            const getRemainingTimeInMillis = sinon.spy(() => 20000);
+            const getLogsStub = sinon.stub(TestCollector.prototype, 'pawsGetLogs').callsFake(() => Promise.reject(new Error('third party API failed')));
+
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function(error) {
+                    assert.fail('Invocation should succeed after requeue.');
+                },
+                succeed: function() {},
+                getRemainingTimeInMillis
+            };
+
+            const testEvent = {
+                Records: [
+                    {
+                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
+                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
+                    }
+                ]
+            };
+
+            const creds = await TestCollector.load();
+            const collector = new TestCollector(ctx, creds);
+            const storeCollectionStateStub = sinon.stub(collector, '_storeCollectionState').resolves();
+
+            try {
+                await collector.handleEvent(testEvent);
+                sinon.assert.calledOnce(storeCollectionStateStub);
+            } finally {
+                storeCollectionStateStub.restore();
+                getLogsStub.restore();
+                pawsStub.restore(CloudWatch, 'putMetricData');
+            }
+        });
+
+        it('enqueues exactly one retry state when ingest fails and time is sufficient', async function() {
+            mockCloudWatch();
+            const getRemainingTimeInMillis = sinon.spy(() => 20000);
+            const batchLogProcessStub = sinon.stub(TestCollector.prototype, 'batchLogProcess').callsFake(() => Promise.reject(new Error('ingest failed')));
+
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function(error) {
+                    assert.fail('Invocation should succeed after requeue.');
+                },
+                succeed: function() {},
+                getRemainingTimeInMillis
+            };
+
+            const testEvent = {
+                Records: [
+                    {
+                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
+                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
+                    }
+                ]
+            };
+
+            const creds = await TestCollector.load();
+            const collector = new TestCollector(ctx, creds);
+            const storeCollectionStateStub = sinon.stub(collector, '_storeCollectionState').resolves();
+
+            try {
+                await collector.handleEvent(testEvent);
+                sinon.assert.calledOnce(storeCollectionStateStub);
+            } finally {
+                storeCollectionStateStub.restore();
+                batchLogProcessStub.restore();
+                pawsStub.restore(CloudWatch, 'putMetricData');
+            }
+        });
+
         it('requeues progressed state when a post-ingest step fails', async function() {
-            const getRemainingTimeInMillis = sinon.spy(() => 5000);
+            mockCloudWatch();
+            const getRemainingTimeInMillis = sinon.spy(() => 20000);
             const updateStateStub = sinon.stub(TestCollector.prototype, 'updateStateDBEntry').callsFake(() => Promise.resolve({ data: null }));
             const getLogsStub = sinon.stub(TestCollector.prototype, 'pawsGetLogs').callsFake(() => {
                 return Promise.resolve([['log1', 'log2'], { since: '2021-07-01T02:37:37.617Z', until: '2021-07-01T03:37:37.617Z' }, 900]);
@@ -696,6 +808,7 @@ describe('Unit Tests', function() {
                 storeCollectionStateStub.restore();
                 getLogsStub.restore();
                 updateStateStub.restore();
+                pawsStub.restore(CloudWatch, 'putMetricData');
             }
         });
 
