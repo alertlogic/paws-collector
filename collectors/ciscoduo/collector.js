@@ -61,7 +61,7 @@ class CiscoduoCollector extends PawsCollector {
         return { state: initialStates, nextInvocationTimeout: pollInterval };
     }
 
-    pawsGetRegisterParameters(event) {
+    async pawsGetRegisterParameters(event) {
         const regValues = {
             ciscoduoObjectNames: process.env.collector_streams
         };
@@ -115,22 +115,41 @@ class CiscoduoCollector extends PawsCollector {
             AlLogger.info(`CDUO000002 Next collection in ${newState.poll_interval_sec} seconds`);
             return [accumulator, newState, newState.poll_interval_sec];
         } catch (error) {
-            // Cisco duo api has some rate limits that we might run into.
-            // If we run into a rate limit error, instead of returning the error,
-            // We return the state back to the queue with an additional 60 secs.
-            if (error.code && error.code === API_THROTTLING_ERROR) {
-                state.poll_interval_sec = state.poll_interval_sec < MAX_POLL_INTERVAL ?
-                    state.poll_interval_sec + POLL_INTERVAL_SECS : MAX_POLL_INTERVAL;
-                AlLogger.warn(`CDUO000003 API Request Limit Exceeded ${JSON.stringify(error)}`);
-                await collector.reportApiThrottling();
-                return [[], state, state.poll_interval_sec];
+            if (this._isThrottlingError(error)) {
+                return await this.handleThrottlingError(error, state);
             }
-            else {
-                // set errorCode if not available in error object to showcase client error on DDMetrics
-                error.errorCode = error.code;
-                throw error;
-            }
+            throw this.handleOtherErrors(error);
         }
+    }
+
+    _isThrottlingError(error) {
+        return !!(error && typeof error === 'object' &&
+            (error.code === API_THROTTLING_ERROR || error.errorCode === API_THROTTLING_ERROR));
+    }
+
+    async handleThrottlingError(error, state) {
+        // Cisco duo api has some rate limits that we might run into.
+        // If we run into a rate limit error, instead of returning the error,
+        // We return the state back to the queue with an additional 60 secs.
+        state.poll_interval_sec = state.poll_interval_sec < MAX_POLL_INTERVAL ?
+            state.poll_interval_sec + POLL_INTERVAL_SECS : MAX_POLL_INTERVAL;
+        AlLogger.warn(`CDUO000003 API Request Limit Exceeded ${JSON.stringify(error)}`);
+        await this.reportApiThrottling();
+        return [[], state, state.poll_interval_sec];
+    }
+
+    handleOtherErrors(error) {
+        if (error && typeof error === 'object') {
+            if (error.errorCode === undefined) {
+                error.errorCode = error.code || error.status;
+            }
+            return error;
+        }
+
+        return {
+            errorCode: null,
+            message: typeof error === 'string' ? error : String(error)
+        };
     }
 
     _getNextCollectionState(curState) {

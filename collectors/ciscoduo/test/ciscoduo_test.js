@@ -78,7 +78,7 @@ describe('Unit Tests', function () {
             const creds = await CiscoduoCollector.load();
             var collector = new CiscoduoCollector(ctx, creds, 'ciscoduo');
             const sampleEvent = { ResourceProperties: { StackName: 'a-stack-name' } };
-            const regValues = collector.pawsGetRegisterParameters(sampleEvent);
+            const regValues = await collector.pawsGetRegisterParameters(sampleEvent);
             const expectedRegValues = {
                 ciscoduoObjectNames: '[\"Authentication\", \"Administrator\",\"Telephony\", \"OfflineEnrollment\"]',
             };
