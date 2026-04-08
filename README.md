@@ -115,3 +115,30 @@ make sam-local
       
       2. After pr is merge to master branch ,create the tag, which will build the single artifact for all collectors.
 
+
+  ## Dependency Security Automation
+
+  The repository uses automated dependency and vulnerability controls:
+
+  1. `Dependabot` checks npm packages at root and per-collector and opens update PRs automatically.
+  2. `Dependency PR Gate` runs on dependency-change PRs and:
+    - posts a dependency-change report comment (old → new version + package links),
+    - runs vulnerability scan using `scripts/audit-with-ignore.sh`,
+    - includes dev dependencies (`include-dev`) so vulnerabilities in any package are reported.
+  3. ALPS PR test stage also runs `scripts/audit-with-ignore.sh` across root and collector packages.
+  4. Vulnerability scanning in PR flow is informational (non-blocking) for now; merge remains manual after review.
+  5. Weekly scheduled scan (`.github/workflows/security-audit-scan.yml`) provides broad visibility for moderate/high/critical vulnerabilities.
+
+  ### Local validation commands
+
+  Run from repository root (`paws-collector`):
+
+  - High severity, include dev dependencies:
+    - `./scripts/audit-with-ignore.sh collectors/okta high include-dev`
+  - High severity, production-only:
+    - `./scripts/audit-with-ignore.sh collectors/okta high omit-dev`
+
+  Notes:
+  - Use plain shell paths (do not paste markdown links like `[script](url)` into terminal).
+  - `npm audit --audit-level=high --omit=dev` and `./scripts/audit-with-ignore.sh <dir> high omit-dev` should align.
+

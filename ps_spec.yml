@@ -11,6 +11,17 @@ stages:
     compute_size: small
     commands:
       - make test
+      # Vulnerability audit: informational only (non-blocking) for PR flow.
+      # Includes dev dependencies to report vulnerabilities in any package.
+      # Known acceptable CVEs with no fix are tracked in .audit-ignore.json.
+      - |
+        bash scripts/audit-with-ignore.sh . high include-dev || true
+        for dir in collectors/*/; do
+          if [ -f "${dir}package.json" ]; then
+            echo "--- Auditing ${dir} ---"
+            bash scripts/audit-with-ignore.sh "${dir}" high include-dev || true
+          fi
+        done
 
   - name: Master Push - Publish
     when:
