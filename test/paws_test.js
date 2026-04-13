@@ -1225,6 +1225,90 @@ describe('Unit Tests', function() {
             });
         });
 
+        it('reportDuplicateLogCount skips cloudwatch publish on low remaining lambda time', function() {
+            const putMetricDataStub = pawsStub.mock(CloudWatch, 'putMetricData', (params) => Promise.resolve(null));
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function(error) {
+                    assert.fail(error);
+                },
+                succeed: function() {
+                },
+                getRemainingTimeInMillis: function() {
+                    return 1000;
+                }
+            };
+
+            TestCollector.load().then(async function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                await collector.reportDuplicateLogCount(6);
+                assert.equal(putMetricDataStub.notCalled, true, 'should skip optional cloudwatch metric publish on low time');
+                pawsStub.restore(CloudWatch, 'putMetricData');
+            });
+        });
+
+        it('reportDuplicateLogCount swallows cloudwatch throttling error', function() {
+            const throttlingError = {
+                message: 'Rate exceeded, Throttling',
+                name: 'ThrottlingException',
+                $fault: 'client',
+                $metadata: {
+                    httpStatusCode: 400
+                }
+            };
+            pawsStub.mock(CloudWatch, 'putMetricData', (_params) => Promise.reject(throttlingError));
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function(error) {
+                    assert.fail(error);
+                },
+                succeed: function() {
+                },
+                getRemainingTimeInMillis: function() {
+                    return 20000;
+                }
+            };
+
+            TestCollector.load().then(async function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                await collector.reportDuplicateLogCount(6);
+                pawsStub.restore(CloudWatch, 'putMetricData');
+            });
+        });
+
+        it('reportDuplicateLogCount detects throttling from structured fields without relying on message', function() {
+            const throttlingError = {
+                name: 'AccessDeniedException',
+                code: 'SomeOtherError',
+                message: 'request failed',
+                $fault: 'client',
+                $retryable: {
+                    throttling: true
+                },
+                $metadata: {
+                    httpStatusCode: 400
+                }
+            };
+            pawsStub.mock(CloudWatch, 'putMetricData', (_params) => Promise.reject(throttlingError));
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function(error) {
+                    assert.fail(error);
+                },
+                succeed: function() {
+                },
+                getRemainingTimeInMillis: function() {
+                    return 20000;
+                }
+            };
+
+            TestCollector.load().then(async function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                await collector.reportDuplicateLogCount(6);
+                pawsStub.restore(CloudWatch, 'putMetricData');
+            });
+        });
+
         it('reportCollectorStatus', function() {
             mockCloudWatch();
             let ctx = {

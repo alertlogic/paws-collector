@@ -235,6 +235,28 @@ class PawsCollector extends AlAwsCollectorV2 {
         );
     }
 
+    hasSufficientRemainingTime(minRemainingTimeInMs = REMAINING_CONTEXT_TIME_IN_MS) {
+        if (!this.context || typeof this.context.getRemainingTimeInMillis !== 'function') {
+            return true;
+        }
+
+        return this.context.getRemainingTimeInMillis() > minRemainingTimeInMs;
+    }
+
+    isThrottlingError(error) {
+        if (!error) {
+            return false;
+        }
+
+        const code = `${error.name || ''} ${error.Code || ''} ${error.code || ''} ${error.__type || ''}`.toLowerCase();
+        const message = typeof error.message === 'string' ? error.message.toLowerCase() : '';
+        const httpStatusCode = error.$metadata && error.$metadata.httpStatusCode;
+
+        return code.includes('throttl') ||
+            message.includes('rate exceeded') ||
+            httpStatusCode === 429;
+    }
+
     getProperties() {
         const baseProps = super.getProperties();
         let pawsProps = {
@@ -488,7 +510,7 @@ class PawsCollector extends AlAwsCollectorV2 {
 
                     // If remaining execution time is low, do not enqueue a new state message.
                     // Failing this invocation keeps the original SQS message for retry and prevents duplicate messages.
-                    if (remainingTimeInMillis < REMAINING_CONTEXT_TIME_IN_MS) {
+                    if (remainingTimeInMillis <= REMAINING_CONTEXT_TIME_IN_MS) {
                         AlLogger.error(`PAWS000303 Error handling poll request with low remaining time. Keeping original SQS message for retry: ${collector.stringifyError(handleError)}`);
                         await collector.done(handleError, pawsState, false);
                         return;
@@ -726,6 +748,13 @@ class PawsCollector extends AlAwsCollectorV2 {
     };
 
     async reportDuplicateLogCount(duplicateCount) {
+        this.reportDDMetric("duplicate_messages", duplicateCount);
+
+        if (!this.hasSufficientRemainingTime()) {
+            AlLogger.debug(`PAWS000409 Skipping CloudWatch duplicate metric due to low remaining lambda time`);
+            return null;
+        }
+
         var cloudwatch = new CloudWatch({ apiVersion: '2010-08-01' });
         const params = {
             MetricData: [
@@ -748,8 +777,15 @@ class PawsCollector extends AlAwsCollectorV2 {
             ],
             Namespace: 'PawsCollectors'
         };
-        this.reportDDMetric("duplicate_messages", duplicateCount);
-        return await cloudwatch.putMetricData(params);
+        try {
+            return await cloudwatch.putMetricData(params);
+        } catch (error) {
+            if (this.isThrottlingError(error)) {
+                AlLogger.debug(`PAWS000410 CloudWatch duplicate metric throttled; skipping metric publish`);
+                return null;
+            }
+            throw error;
+        }
     };
     /**
      * Report the collector status(ok/error)to dd metrics
@@ -916,7 +952,7 @@ class PawsCollector extends AlAwsCollectorV2 {
                 try {
                     await collector.reportDuplicateLogCount(duplicateCount);
                 } catch (err) {
-                    AlLogger.warn(`PAWS000405 error from custom cloud watch metrics ${JSON.stringify(err)}`);
+                    AlLogger.warn(`PAWS000405 Error publishing duplicate count metrics ${JSON.stringify(err)}`);
                 }
             }
             return uniqueLogs;
