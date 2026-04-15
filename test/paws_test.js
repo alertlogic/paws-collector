@@ -171,6 +171,9 @@ class TestCollector extends PawsCollector {
     }
 
     pawsGetLogs(state) {
+        if (this._mockGetLogsError) {
+            return Promise.reject(new Error(this._mockGetLogsError));
+        }
         return Promise.resolve([['log1', 'log2'], { state: 'new-state' }, 900]);
     }
 
@@ -401,14 +404,7 @@ describe('Unit Tests', function() {
             };
 
             const testEvent = {
-                Records: [
-                    {
-                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
-                        "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
-                        "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
-                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-                    }
-                ]
+                Records: [pawsMock.MOCK_SQS_RECORD]
             };
 
             const creds = await TestCollector.load();
@@ -419,17 +415,12 @@ describe('Unit Tests', function() {
             const updateItemArgs = updateItemStub.args[0][0];
             assert.equal(putItemStub.called, true, 'should put a new item in');
             assert.equal(updateItemStub.called, true, 'should update the item to complete');
-            assert.equal(putItemArgs.Item.MessageId.S, "5fea7756-0ea4-451a-a703-a558b933e274");
+            assert.equal(putItemArgs.Item.MessageId.S, pawsMock.MOCK_SQS_RECORD.messageId);
             assert.equal(putItemArgs.ConditionExpression, 'attribute_not_exists(CollectorId) AND attribute_not_exists(MessageId)');
-            assert.equal(updateItemArgs.Key.MessageId.S, "5fea7756-0ea4-451a-a703-a558b933e274");
+            assert.equal(updateItemArgs.Key.MessageId.S, pawsMock.MOCK_SQS_RECORD.messageId);
         });
         it('handles conditional put race by treating it as duplicate state', async function() {
-            const mockRecord = {
-                "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
-                "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
-                "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
-                "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-            };
+            const mockRecord = pawsMock.MOCK_SQS_RECORD;
             const getItemStub = sinon.stub().callsFake(() => Promise.resolve({}));
             const putItemStub = sinon.stub().callsFake(() => Promise.reject({ name: 'ConditionalCheckFailedException' }));
             const updateItemStub = sinon.stub().callsFake(() => Promise.resolve({ data: null }));
@@ -457,12 +448,7 @@ describe('Unit Tests', function() {
             assert.equal(updateItemStub.notCalled, true, 'should not mark duplicate state as complete/failed');
         });
         it('skips the state if it is already completed', async function() {
-            const mockRecord = {
-                "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
-                "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
-                "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
-                "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-            };
+            const mockRecord = pawsMock.MOCK_SQS_RECORD;
             const fakeGetFun = function(_params) {
                 return new Promise((resolve, reject) => {
                     const mockItem = {
@@ -503,12 +489,7 @@ describe('Unit Tests', function() {
             assert.equal(updateItemStub.notCalled, true, 'should not update the item to complete');
         });
         it('throws an error if the state is bing processed by another invocation', async function() {
-            const mockRecord = {
-                "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
-                "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
-                "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
-                "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-            };
+            const mockRecord = pawsMock.MOCK_SQS_RECORD;
             const fakeGetFun = function(param) {
                 const mockItem = {
                     Item: {
@@ -563,14 +544,7 @@ describe('Unit Tests', function() {
             };
 
             const testEvent = {
-                Records: [
-                    {
-                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
-                        "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
-                        "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
-                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-                    }
-                ]
+                Records: [pawsMock.MOCK_SQS_RECORD]
             };
 
             const creds = await TestCollector.load();
@@ -579,7 +553,7 @@ describe('Unit Tests', function() {
 
             const updateItemArgs = updateItemStub.args[0][0];
             assert.equal(updateItemStub.called, true, 'should update the item to complete');
-            assert.equal(updateItemArgs.Key.MessageId.S, "5fea7756-0ea4-451a-a703-a558b933e274");
+            assert.equal(updateItemArgs.Key.MessageId.S, pawsMock.MOCK_SQS_RECORD.messageId);
         });
     });
     describe('Poll Request Tests', function() {
@@ -610,12 +584,7 @@ describe('Unit Tests', function() {
             };
 
             const testEvent = {
-                Records: [
-                    {
-                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
-                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-                    }
-                ]
+                Records: [pawsMock.createMockSQSRecord()]
             };
 
             const creds = await TestCollector.load();
@@ -624,7 +593,8 @@ describe('Unit Tests', function() {
         });
 
         it('poll request error, single state', async function() {
-            const getRemainingTimeInMillis = sinon.spy(() => 5000);
+            mockCloudWatch();
+            const getRemainingTimeInMillis = sinon.spy(() => 20000);
             let ctx = {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
                 fail: function(error) {
@@ -637,10 +607,7 @@ describe('Unit Tests', function() {
 
             const testEvent = {
                 Records: [
-                    {
-                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
-                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-                    }
+                    pawsMock.createMockSQSRecord()
                 ]
             };
 
@@ -664,12 +631,7 @@ describe('Unit Tests', function() {
             };
 
             const testEvent = {
-                Records: [
-                    {
-                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
-                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-                    }
-                ]
+                Records: [pawsMock.createMockSQSRecord()]
             };
 
             const creds = await TestCollector.load();
@@ -704,10 +666,7 @@ describe('Unit Tests', function() {
 
             const testEvent = {
                 Records: [
-                    {
-                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
-                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-                    }
+                    pawsMock.createMockSQSRecord()
                 ]
             };
 
@@ -741,10 +700,7 @@ describe('Unit Tests', function() {
 
             const testEvent = {
                 Records: [
-                    {
-                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
-                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-                    }
+                    pawsMock.createMockSQSRecord()
                 ]
             };
 
@@ -781,10 +737,7 @@ describe('Unit Tests', function() {
 
             const testEvent = {
                 Records: [
-                    {
-                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
-                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-                    }
+                    pawsMock.createMockSQSRecord()
                 ]
             };
 
@@ -825,10 +778,7 @@ describe('Unit Tests', function() {
 
             const testEvent = {
                 Records: [
-                    {
-                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
-                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-                    }
+                    pawsMock.createMockSQSRecord()
                 ]
             };
 
@@ -892,12 +842,7 @@ describe('Unit Tests', function() {
 
             const testEvent = {
                 Records: [
-                    {
-                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"2021-07-01T02:37:37.617Z\",\n    \"until\": \"2021-07-01T03:37:37.617Z\"\n  }\n}",
-                        "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
-                        "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
-                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-                    }
+                    pawsMock.createMockSQSRecord()
                 ]
             };
             const creds = await TestMaxLogSizeCollector.load();
@@ -935,14 +880,7 @@ describe('Unit Tests', function() {
             };
 
             const testEvent = {
-                Records: [
-                    {
-                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"2021-07-01T02:37:37.617Z\",\n    \"until\": \"2021-07-01T03:37:37.617Z\"\n  }\n, \"retry_count\":4}",
-                        "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
-                        "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
-                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-                    }
-                ]
+                Records: [pawsMock.createMockSQSRecordWithRetry(4)]
             };
             const creds = await TestCollector.load();
             try {
@@ -984,14 +922,7 @@ describe('Unit Tests', function() {
             };
 
             const testEvent = {
-                Records: [
-                    {
-                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"2021-07-01T02:37:37.617Z\",\n    \"until\": \"2021-07-01T03:37:37.617Z\"\n  }\n, \"retry_count\":3}",
-                        "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
-                        "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
-                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-                    }
-                ]
+                Records: [pawsMock.createMockSQSRecordWithRetry(3)]
             };
             const creds = await TestCollector.load();
             try {
