@@ -72,12 +72,22 @@ const DDB_OPTIONS = {
 
 const DDB = new DynamoDB(DDB_OPTIONS);
 
+const CW_OPTIONS = {
+    requestHandler: nodeHttpHandler
+};
+const CW = new CloudWatch(CW_OPTIONS);
+
+const SQS_OPTIONS = {
+    requestHandler: nodeHttpHandler
+};
+const SQS_CLIENT = new SQS(SQS_OPTIONS);
+
 const DDB_DELETE_BATCH_OPTIONS = {
     maxBatchSize: 25,
     maxBatchSizeBytes: 16 * 1024 * 1024
 };
 const MAX_ERROR_RETRIES = 5;
-let MAX_LOG_BATCH_SIZE = 10000;
+const MAX_LOG_BATCH_SIZE = 10000;
 const REMAINING_CONTEXT_TIME_IN_MS = 10 * 1000;
 
 async function getPawsParamStoreParam() {
@@ -235,6 +245,28 @@ class PawsCollector extends AlAwsCollectorV2 {
         );
     }
 
+    hasSufficientRemainingTime(minRemainingTimeInMs = REMAINING_CONTEXT_TIME_IN_MS) {
+        if (!this.context || typeof this.context.getRemainingTimeInMillis !== 'function') {
+            return true;
+        }
+
+        return this.context.getRemainingTimeInMillis() > minRemainingTimeInMs;
+    }
+
+    isThrottlingError(error) {
+        if (!error) {
+            return false;
+        }
+
+        const code = `${error.name || ''} ${error.Code || ''} ${error.code || ''} ${error.__type || ''}`.toLowerCase();
+        const message = typeof error.message === 'string' ? error.message.toLowerCase() : '';
+        const httpStatusCode = error.$metadata && error.$metadata.httpStatusCode;
+
+        return code.includes('throttl') ||
+            message.includes('rate exceeded') ||
+            httpStatusCode === 429;
+    }
+
     getProperties() {
         const baseProps = super.getProperties();
         let pawsProps = {
@@ -375,12 +407,17 @@ class PawsCollector extends AlAwsCollectorV2 {
                         Status: { S: STATE_RECORD_INCOMPLETE },
                         ExpireDate: { N: moment().add(DDB_TTL_DAYS, 'days').unix().toString() }
                     },
-                    TableName: this._pawsDdbTableName
+                    TableName: this._pawsDdbTableName,
+                    ConditionExpression: 'attribute_not_exists(CollectorId) AND attribute_not_exists(MessageId)'
                 }
                 return await DDB.putItem(newRecord);
             }
         } catch (error) {
-            AlLogger.error(`PAWS000402 ${this._pawsDdbTableName} table not found`);
+            if (error && error.name === 'ConditionalCheckFailedException') {
+                AlLogger.info(`PAWS000400 Duplicate state: ${stateSqsMsg.messageId}, already in progress. skipping`);
+                throw { errorCode: ERROR_CODE_DUPLICATE_STATE };
+            }
+            AlLogger.error(`PAWS000402 DDB operation failed for table ${this._pawsDdbTableName}: ${this.stringifyError(error)}`);
             throw error;
         }
     }
@@ -409,19 +446,17 @@ class PawsCollector extends AlAwsCollectorV2 {
             TableName: this._pawsDdbTableName
         };
 
-        try {
-            return await DDB.updateItem(updateParams);
-        } catch (err) {
-            throw err;
-        }
+        return await DDB.updateItem(updateParams);
     }
 
 
     async handlePollRequest(stateSqsMsg) {
         let collector = this;
+        let retryPrivCollectorState;
 
         try {
             let pawsState = JSON.parse(stateSqsMsg.body);
+            retryPrivCollectorState = pawsState.priv_collector_state;
 
             if (!collector.registered) {
                 throw new Error('PAWS000103 Collection attempt for unregistrered collector');
@@ -432,6 +467,7 @@ class PawsCollector extends AlAwsCollectorV2 {
             let logs, privCollectorState, nextInvocationTimeout;
             try {
                 [logs, privCollectorState, nextInvocationTimeout] = await collector.pawsGetLogs(pawsState.priv_collector_state);
+                retryPrivCollectorState = privCollectorState;
             } catch (err) {
                 await collector.reportClientError(err);
                 throw err;
@@ -449,7 +485,11 @@ class PawsCollector extends AlAwsCollectorV2 {
                             null;
 
             if (lastCollectedTs) {
-                await collector.reportCollectionDelay(lastCollectedTs);
+                try {
+                    await collector.reportCollectionDelay(lastCollectedTs);
+                } catch (metricError) {
+                    AlLogger.warn(`PAWS000407 Unable to report collection delay metric: ${collector.stringifyError(metricError)}`);
+                }
             }
 
             // Reset the retry count to 0 on successful log processing
@@ -470,25 +510,37 @@ class PawsCollector extends AlAwsCollectorV2 {
                     const pawsState = JSON.parse(stateSqsMsg.body);
                     await collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_FAILED);
 
+                    const remainingTimeInMillis = collector.context && collector.context.getRemainingTimeInMillis ?
+                        collector.context.getRemainingTimeInMillis() :
+                        0;
+
+                    // If remaining execution time is low, do not enqueue a new state message.
+                    // Failing this invocation keeps the original SQS message for retry and prevents duplicate messages.
+                    if (remainingTimeInMillis <= REMAINING_CONTEXT_TIME_IN_MS) {
+                        AlLogger.error(`PAWS000303 Error handling poll request with low remaining time. Keeping original SQS message for retry: ${collector.stringifyError(handleError)}`);
+                        await collector.done(handleError, pawsState, false);
+                        return;
+                    }
+
                     // If collector failed to handle poll state we'd like to refresh the state message in SQS
                     // in order to avoid expiration of that message due to retention period.
                     // Here we just upload same state messaged into SQS and send error status to the backend.
                     // The invocation is marked as succeed in order to clean up current state message in SQS.
                     // Increment/reset the retry count if error occured.
                     pawsState.retry_count = (!pawsState.retry_count || pawsState.retry_count >= MAX_ERROR_RETRIES) ? 1 : pawsState.retry_count + 1;
+                    const stateForRetry = retryPrivCollectorState ? retryPrivCollectorState : pawsState.priv_collector_state;
 
                     try {
-                        await collector._storeCollectionState(pawsState, pawsState.priv_collector_state, 300);
+                        await collector._storeCollectionState(pawsState, stateForRetry, 300);
 
-                        // if sqs message added successfully and lambda time is less than 10 seconds so return the context succeed; so it will delete the old sqs message.
-                        if (collector.context.getRemainingTimeInMillis() < REMAINING_CONTEXT_TIME_IN_MS) {
-                            AlLogger.error(`PAWS000303 Error handling poll request: ${collector.stringifyError(handleError)}`);
-                            await collector.done(null, pawsState);
-                        } else {
-                            const handleErrorString = await collector.reportErrorStatus(handleError, pawsState);
-                            AlLogger.error(`PAWS000304 Error handling poll request: ${handleErrorString}`);
-                            await collector.done(null, pawsState);
+                        let handleErrorString = collector.stringifyError(handleError);
+                        try {
+                            handleErrorString = await collector.reportErrorStatus(handleError, pawsState);
+                        } catch (reportError) {
+                            AlLogger.warn(`PAWS000408 Unable to report collector error status: ${collector.stringifyError(reportError)}`);
                         }
+                        AlLogger.error(`PAWS000304 Error handling poll request: ${handleErrorString}`);
+                        await collector.done(null, pawsState);
                     } catch (storeError) {
                         await collector.done(storeError);
                     }
@@ -523,12 +575,13 @@ class PawsCollector extends AlAwsCollectorV2 {
      */
     async batchLogProcess(logs, privCollectorState, nextInvocationTimeout) {
         let collector = this;
+        let currentBatchSize = MAX_LOG_BATCH_SIZE;
 
         async function processBatch(logs) {
             let indexArray = [];
-            const batches = Math.ceil(logs.length / MAX_LOG_BATCH_SIZE);
+            const batches = Math.ceil(logs.length / currentBatchSize);
             for (let i = 0; i < batches; i++) {
-                indexArray.push({ start: MAX_LOG_BATCH_SIZE * i, stop: MAX_LOG_BATCH_SIZE * (i + 1) });
+                indexArray.push({ start: currentBatchSize * i, stop: currentBatchSize * (i + 1) });
             }
             let promises = indexArray.map(async (logpart) => {
                 try {
@@ -536,7 +589,7 @@ class PawsCollector extends AlAwsCollectorV2 {
                 } catch (err) {
                     if (typeof err === 'string' && err.includes("Maximum payload size exceeded")) {
                         let logsSlice = logs.slice(logpart.start, logpart.stop);
-                        MAX_LOG_BATCH_SIZE = Math.ceil(logsSlice.length / 2);
+                        currentBatchSize = Math.ceil(logsSlice.length / 2);
                         return await processBatch(logsSlice);
                     } else {
                         await collector.handleDeDupIngestError(err, logs.slice(logpart.start, logpart.stop));
@@ -574,7 +627,6 @@ class PawsCollector extends AlAwsCollectorV2 {
         return params;
     }
     async reportApiThrottling() {
-        var cloudwatch = new CloudWatch({ apiVersion: '2010-08-01' });
         const params = {
             MetricData: [
                 {
@@ -596,15 +648,14 @@ class PawsCollector extends AlAwsCollectorV2 {
             ],
             Namespace: 'PawsCollectors'
         };
-        this.reportDDMetric('api_throttling', 1)
-        return await cloudwatch.putMetricData(params);
+        this.reportDDMetric('api_throttling', 1);
+        return await CW.putMetricData(params);
     };
     /**
      * Report the error to Ingest api service and show case on DDMetrics
      * @param error 
      */
     async reportErrorToIngestApi(error) {
-        var cloudwatch = new CloudWatch({ apiVersion: '2010-08-01' });
         const params = {
             MetricData: [
                 {
@@ -633,7 +684,7 @@ class PawsCollector extends AlAwsCollectorV2 {
             errorCode = error.errorCode;
         }
         this.reportDDMetric("ingest_api", 1, [`result:error`, `error_code:${errorCode}`]);
-        return await cloudwatch.putMetricData(params);
+        return await CW.putMetricData(params);
     };
 
     /**
@@ -641,7 +692,6 @@ class PawsCollector extends AlAwsCollectorV2 {
      * @param error 
      */
     async reportClientError(error) {
-        var cloudwatch = new CloudWatch({ apiVersion: '2010-08-01' });
         const params = {
             MetricData: [
                 {
@@ -665,7 +715,7 @@ class PawsCollector extends AlAwsCollectorV2 {
         };
         let errorCode = typeof (error) === 'object' && error.errorCode ? error.errorCode : 'unknown';
         this.reportDDMetric("client", 1, [`result:error`, `error_code:${errorCode}`]);
-        return await cloudwatch.putMetricData(params);
+        return await CW.putMetricData(params);
     };
 
     async reportCollectionDelay(lastCollectedTs) {
@@ -675,7 +725,6 @@ class PawsCollector extends AlAwsCollectorV2 {
         const delayDuration = moment.duration(nowMoment.diff(lastCollectedMoment));
         const collectionDelaySec = Math.floor(delayDuration.asSeconds());
 
-        var cloudwatch = new CloudWatch({ apiVersion: '2010-08-01' });
         const params = {
             MetricData: [
                 {
@@ -698,11 +747,17 @@ class PawsCollector extends AlAwsCollectorV2 {
             Namespace: 'PawsCollectors'
         };
         this.reportDDMetric('collection_delay', collectionDelaySec);
-        return await cloudwatch.putMetricData(params);
+        return await CW.putMetricData(params);
     };
 
     async reportDuplicateLogCount(duplicateCount) {
-        var cloudwatch = new CloudWatch({ apiVersion: '2010-08-01' });
+        this.reportDDMetric("duplicate_messages", duplicateCount);
+
+        if (!this.hasSufficientRemainingTime()) {
+            AlLogger.debug(`PAWS000409 Skipping CloudWatch duplicate metric due to low remaining lambda time`);
+            return null;
+        }
+
         const params = {
             MetricData: [
                 {
@@ -724,8 +779,15 @@ class PawsCollector extends AlAwsCollectorV2 {
             ],
             Namespace: 'PawsCollectors'
         };
-        this.reportDDMetric("duplicate_messages", duplicateCount);
-        return await cloudwatch.putMetricData(params);
+        try {
+            return await CW.putMetricData(params);
+        } catch (error) {
+            if (this.isThrottlingError(error)) {
+                AlLogger.debug(`PAWS000410 CloudWatch duplicate metric throttled; skipping metric publish`);
+                return null;
+            }
+            throw error;
+        }
     };
     /**
      * Report the collector status(ok/error)to dd metrics
@@ -733,7 +795,6 @@ class PawsCollector extends AlAwsCollectorV2 {
      * @returns 
      */
     async reportCollectorStatus(status) {
-        var cloudwatch = new CloudWatch({ apiVersion: '2010-08-01' });
         const params = {
             MetricData: [
                 {
@@ -757,7 +818,7 @@ class PawsCollector extends AlAwsCollectorV2 {
         };
 
         this.reportDDMetric("collector_status", 1, [`status:${status}`]);
-        return await cloudwatch.putMetricData(params);
+        return await CW.putMetricData(params);
     };
 
     async _storeCollectionState(pawsState, privCollectorState, invocationTimeout) {
@@ -769,7 +830,6 @@ class PawsCollector extends AlAwsCollectorV2 {
     }
 
     async _storeCollectionStateArray(pawsState, privCollectorStates, invocationTimeout) {
-        const sqs = new SQS({ apiVersion: '2012-11-05' });
         const nextInvocationTimeout = invocationTimeout ? invocationTimeout : this.pollInterval;
 
         const SQSMsgs = privCollectorStates.map((privState, index) => {
@@ -790,7 +850,7 @@ class PawsCollector extends AlAwsCollectorV2 {
                 Entries: SQSMsgs.slice(i, i + SQS_BATCH_LIMIT),
                 QueueUrl: process.env.paws_state_queue_url
             };
-            promises.push(sqs.sendMessageBatch(params));
+            promises.push(SQS_CLIENT.sendMessageBatch(params));
         }
 
         // Current state message will be removed by Lambda trigger upon successful completion
@@ -799,7 +859,6 @@ class PawsCollector extends AlAwsCollectorV2 {
 
     async _storeCollectionStateSingle(pawsState, privCollectorState, invocationTimeout) {
         let collector = this;
-        var sqs = new SQS({ apiVersion: '2012-11-05' });
         const nextInvocationTimeout = invocationTimeout ? invocationTimeout : collector.pollInterval;
         pawsState.priv_collector_state = privCollectorState;
 
@@ -809,7 +868,7 @@ class PawsCollector extends AlAwsCollectorV2 {
             DelaySeconds: nextInvocationTimeout
         };
         // Current state message will be removed by Lambda trigger upon successful completion
-        await sqs.sendMessage(params);
+        await SQS_CLIENT.sendMessage(params);
     };
 
     /**
@@ -892,7 +951,7 @@ class PawsCollector extends AlAwsCollectorV2 {
                 try {
                     await collector.reportDuplicateLogCount(duplicateCount);
                 } catch (err) {
-                    AlLogger.warn(`PAWS000405 error from custom cloud watch metrics ${JSON.stringify(err)}`);
+                    AlLogger.warn(`PAWS000405 Error publishing duplicate count metrics ${JSON.stringify(err)}`);
                 }
             }
             return uniqueLogs;
@@ -910,10 +969,10 @@ class PawsCollector extends AlAwsCollectorV2 {
         let collector = this;
         if (collector.pawsCollectorType === 'o365') {
             try {
-                await collector.deleteDedupLogItemEntry(logs)
-            } catch (error) {
-                AlLogger.warn(`PAWS000406 Error while delete item in DynamoDB ${err}`);
-                throw error;
+                await collector.deleteDedupLogItemEntry(logs);
+            } catch (deleteError) {
+                AlLogger.warn(`PAWS000406 Error while delete item in DynamoDB ${collector.stringifyError(deleteError)}`);
+                throw deleteError;
             }
         } else {
             throw error;
@@ -946,11 +1005,7 @@ class PawsCollector extends AlAwsCollectorV2 {
             promises.push(collector.dDBBatchWriteItem(tableName, currentBatch));
         }
 
-        try {
-            return await Promise.all(promises);
-        } catch (error) {
-            throw error;
-        }
+        return await Promise.all(promises);
     }
     /**
      * Form the unique item id which used as primary key

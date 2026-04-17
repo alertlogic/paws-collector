@@ -171,6 +171,9 @@ class TestCollector extends PawsCollector {
     }
 
     pawsGetLogs(state) {
+        if (this._mockGetLogsError) {
+            return Promise.reject(new Error(this._mockGetLogsError));
+        }
         return Promise.resolve([['log1', 'log2'], { state: 'new-state' }, 900]);
     }
 
@@ -401,14 +404,7 @@ describe('Unit Tests', function() {
             };
 
             const testEvent = {
-                Records: [
-                    {
-                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
-                        "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
-                        "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
-                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-                    }
-                ]
+                Records: [pawsMock.MOCK_SQS_RECORD]
             };
 
             const creds = await TestCollector.load();
@@ -419,16 +415,40 @@ describe('Unit Tests', function() {
             const updateItemArgs = updateItemStub.args[0][0];
             assert.equal(putItemStub.called, true, 'should put a new item in');
             assert.equal(updateItemStub.called, true, 'should update the item to complete');
-            assert.equal(putItemArgs.Item.MessageId.S, "5fea7756-0ea4-451a-a703-a558b933e274");
-            assert.equal(updateItemArgs.Key.MessageId.S, "5fea7756-0ea4-451a-a703-a558b933e274");
+            assert.equal(putItemArgs.Item.MessageId.S, pawsMock.MOCK_SQS_RECORD.messageId);
+            assert.equal(putItemArgs.ConditionExpression, 'attribute_not_exists(CollectorId) AND attribute_not_exists(MessageId)');
+            assert.equal(updateItemArgs.Key.MessageId.S, pawsMock.MOCK_SQS_RECORD.messageId);
+        });
+        it('handles conditional put race by treating it as duplicate state', async function() {
+            const mockRecord = pawsMock.MOCK_SQS_RECORD;
+            const getItemStub = sinon.stub().callsFake(() => Promise.resolve({}));
+            const putItemStub = sinon.stub().callsFake(() => Promise.reject({ name: 'ConditionalCheckFailedException' }));
+            const updateItemStub = sinon.stub().callsFake(() => Promise.resolve({ data: null }));
+
+            mockDDB(getItemStub, putItemStub, updateItemStub);
+
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: sinon.spy(),
+                succeed: sinon.spy()
+            };
+
+            const testEvent = {
+                Records: [
+                    mockRecord
+                ]
+            };
+
+            const creds = await TestCollector.load();
+            var collector = new TestCollector(ctx, creds);
+            await collector.handleEvent(testEvent).catch(() => null);
+
+            assert.equal(getItemStub.called, true, 'should read current state record');
+            assert.equal(putItemStub.called, true, 'should attempt conditional insert');
+            assert.equal(updateItemStub.notCalled, true, 'should not mark duplicate state as complete/failed');
         });
         it('skips the state if it is already completed', async function() {
-            const mockRecord = {
-                "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
-                "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
-                "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
-                "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-            };
+            const mockRecord = pawsMock.MOCK_SQS_RECORD;
             const fakeGetFun = function(_params) {
                 return new Promise((resolve, reject) => {
                     const mockItem = {
@@ -469,12 +489,7 @@ describe('Unit Tests', function() {
             assert.equal(updateItemStub.notCalled, true, 'should not update the item to complete');
         });
         it('throws an error if the state is bing processed by another invocation', async function() {
-            const mockRecord = {
-                "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
-                "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
-                "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
-                "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-            };
+            const mockRecord = pawsMock.MOCK_SQS_RECORD;
             const fakeGetFun = function(param) {
                 const mockItem = {
                     Item: {
@@ -529,14 +544,7 @@ describe('Unit Tests', function() {
             };
 
             const testEvent = {
-                Records: [
-                    {
-                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
-                        "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
-                        "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
-                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-                    }
-                ]
+                Records: [pawsMock.MOCK_SQS_RECORD]
             };
 
             const creds = await TestCollector.load();
@@ -545,7 +553,7 @@ describe('Unit Tests', function() {
 
             const updateItemArgs = updateItemStub.args[0][0];
             assert.equal(updateItemStub.called, true, 'should update the item to complete');
-            assert.equal(updateItemArgs.Key.MessageId.S, "5fea7756-0ea4-451a-a703-a558b933e274");
+            assert.equal(updateItemArgs.Key.MessageId.S, pawsMock.MOCK_SQS_RECORD.messageId);
         });
     });
     describe('Poll Request Tests', function() {
@@ -576,12 +584,7 @@ describe('Unit Tests', function() {
             };
 
             const testEvent = {
-                Records: [
-                    {
-                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
-                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-                    }
-                ]
+                Records: [pawsMock.createMockSQSRecord()]
             };
 
             const creds = await TestCollector.load();
@@ -590,7 +593,8 @@ describe('Unit Tests', function() {
         });
 
         it('poll request error, single state', async function() {
-            const getRemainingTimeInMillis = sinon.spy(() => 5000);
+            mockCloudWatch();
+            const getRemainingTimeInMillis = sinon.spy(() => 20000);
             let ctx = {
                 invokedFunctionArn: pawsMock.FUNCTION_ARN,
                 fail: function(error) {
@@ -603,10 +607,7 @@ describe('Unit Tests', function() {
 
             const testEvent = {
                 Records: [
-                    {
-                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
-                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-                    }
+                    pawsMock.createMockSQSRecord()
                 ]
             };
 
@@ -615,6 +616,153 @@ describe('Unit Tests', function() {
             collector.mockGetLogsError = 'Error getting logs';
             await collector.handleEvent(testEvent);
             sinon.assert.calledOnce(updateItemStub);
+        });
+
+        it('does not enqueue new SQS state when remaining time is low', async function() {
+            const getRemainingTimeInMillis = sinon.spy(() => 1000);
+            const updateStateStub = sinon.stub(TestCollector.prototype, 'updateStateDBEntry').callsFake(() => Promise.resolve({ data: null }));
+            const getLogsStub = sinon.stub(TestCollector.prototype, 'pawsGetLogs').callsFake(() => Promise.reject(new Error('third party API failed')));
+
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function() {},
+                succeed: function() {},
+                getRemainingTimeInMillis
+            };
+
+            const testEvent = {
+                Records: [pawsMock.createMockSQSRecord()]
+            };
+
+            const creds = await TestCollector.load();
+            const collector = new TestCollector(ctx, creds);
+            const storeCollectionStateStub = sinon.stub(collector, '_storeCollectionState').resolves();
+
+            try {
+                await collector.handleEvent(testEvent).catch(() => null);
+                assert.equal(storeCollectionStateStub.notCalled, true, 'should not enqueue a new state when lambda is near timeout');
+                assert.equal(updateStateStub.called, true, 'should update state status before exiting');
+                assert.equal(updateStateStub.args[0][1], 'FAILED', 'should mark DDB state as FAILED');
+            } finally {
+                storeCollectionStateStub.restore();
+                getLogsStub.restore();
+                updateStateStub.restore();
+            }
+        });
+
+        it('enqueues exactly one retry state when third-party API call fails and time is sufficient', async function() {
+            mockCloudWatch();
+            const getRemainingTimeInMillis = sinon.spy(() => 20000);
+            const getLogsStub = sinon.stub(TestCollector.prototype, 'pawsGetLogs').callsFake(() => Promise.reject(new Error('third party API failed')));
+
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function(error) {
+                    assert.fail('Invocation should succeed after requeue.');
+                },
+                succeed: function() {},
+                getRemainingTimeInMillis
+            };
+
+            const testEvent = {
+                Records: [
+                    pawsMock.createMockSQSRecord()
+                ]
+            };
+
+            const creds = await TestCollector.load();
+            const collector = new TestCollector(ctx, creds);
+            const storeCollectionStateStub = sinon.stub(collector, '_storeCollectionState').resolves();
+
+            try {
+                await collector.handleEvent(testEvent);
+                sinon.assert.calledOnce(storeCollectionStateStub);
+            } finally {
+                storeCollectionStateStub.restore();
+                getLogsStub.restore();
+                pawsStub.restore(CloudWatch, 'putMetricData');
+            }
+        });
+
+        it('enqueues exactly one retry state when ingest fails and time is sufficient', async function() {
+            mockCloudWatch();
+            const getRemainingTimeInMillis = sinon.spy(() => 20000);
+            const batchLogProcessStub = sinon.stub(TestCollector.prototype, 'batchLogProcess').callsFake(() => Promise.reject(new Error('ingest failed')));
+
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function(error) {
+                    assert.fail('Invocation should succeed after requeue.');
+                },
+                succeed: function() {},
+                getRemainingTimeInMillis
+            };
+
+            const testEvent = {
+                Records: [
+                    pawsMock.createMockSQSRecord()
+                ]
+            };
+
+            const creds = await TestCollector.load();
+            const collector = new TestCollector(ctx, creds);
+            const storeCollectionStateStub = sinon.stub(collector, '_storeCollectionState').resolves();
+
+            try {
+                await collector.handleEvent(testEvent);
+                sinon.assert.calledOnce(storeCollectionStateStub);
+            } finally {
+                storeCollectionStateStub.restore();
+                batchLogProcessStub.restore();
+                pawsStub.restore(CloudWatch, 'putMetricData');
+            }
+        });
+
+        it('requeues progressed state when a post-ingest step fails', async function() {
+            mockCloudWatch();
+            const getRemainingTimeInMillis = sinon.spy(() => 20000);
+            const updateStateStub = sinon.stub(TestCollector.prototype, 'updateStateDBEntry').callsFake(() => Promise.resolve({ data: null }));
+            const getLogsStub = sinon.stub(TestCollector.prototype, 'pawsGetLogs').callsFake(() => {
+                return Promise.resolve([['log1', 'log2'], { since: '2021-07-01T02:37:37.617Z', until: '2021-07-01T03:37:37.617Z' }, 900]);
+            });
+
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function(error) {
+                    assert.fail('Invocation should succeed.');
+                },
+                succeed: function() {},
+                getRemainingTimeInMillis
+            };
+
+            const testEvent = {
+                Records: [
+                    pawsMock.createMockSQSRecord()
+                ]
+            };
+
+            const creds = await TestCollector.load();
+            const collector = new TestCollector(ctx, creds);
+            const reportCollectionDelayStub = sinon.stub(collector, 'reportCollectionDelay').resolves();
+            const storeCollectionStateStub = sinon.stub(collector, '_storeCollectionState');
+            storeCollectionStateStub.onFirstCall().rejects(new Error('SQS store failed after ingest'));
+            storeCollectionStateStub.onSecondCall().resolves();
+
+            try {
+                await collector.handleEvent(testEvent);
+                assert.equal(storeCollectionStateStub.callCount >= 2, true, 'should store success-path state then requeue on failure');
+                const retryStoreCallArgs = storeCollectionStateStub.args[1];
+                assert.equal(retryStoreCallArgs[1].since, '2021-07-01T02:37:37.617Z', 'should retry using progressed state returned by pawsGetLogs');
+                assert.equal(retryStoreCallArgs[0].retry_count, 1, 'should increment retry_count while re-queuing');
+                assert.equal(updateStateStub.callCount, 1, 'should mark state as FAILED on post-ingest failure');
+                assert.equal(updateStateStub.args[0][1], 'FAILED', 'should update DDB status to FAILED before re-queue');
+            } finally {
+                reportCollectionDelayStub.restore();
+                storeCollectionStateStub.restore();
+                getLogsStub.restore();
+                updateStateStub.restore();
+                pawsStub.restore(CloudWatch, 'putMetricData');
+            }
         });
 
         it('poll request success, multiple state', async function() {
@@ -630,10 +778,7 @@ describe('Unit Tests', function() {
 
             const testEvent = {
                 Records: [
-                    {
-                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"123\",\n    \"until\": \"321\"\n  }\n}",
-                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-                    }
+                    pawsMock.createMockSQSRecord()
                 ]
             };
 
@@ -697,12 +842,7 @@ describe('Unit Tests', function() {
 
             const testEvent = {
                 Records: [
-                    {
-                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"2021-07-01T02:37:37.617Z\",\n    \"until\": \"2021-07-01T03:37:37.617Z\"\n  }\n}",
-                        "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
-                        "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
-                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-                    }
+                    pawsMock.createMockSQSRecord()
                 ]
             };
             const creds = await TestMaxLogSizeCollector.load();
@@ -740,14 +880,7 @@ describe('Unit Tests', function() {
             };
 
             const testEvent = {
-                Records: [
-                    {
-                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"2021-07-01T02:37:37.617Z\",\n    \"until\": \"2021-07-01T03:37:37.617Z\"\n  }\n, \"retry_count\":4}",
-                        "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
-                        "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
-                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-                    }
-                ]
+                Records: [pawsMock.createMockSQSRecordWithRetry(4)]
             };
             const creds = await TestCollector.load();
             try {
@@ -789,14 +922,7 @@ describe('Unit Tests', function() {
             };
 
             const testEvent = {
-                Records: [
-                    {
-                        "body": "{\n  \"priv_collector_state\": {\n    \"since\": \"2021-07-01T02:37:37.617Z\",\n    \"until\": \"2021-07-01T03:37:37.617Z\"\n  }\n, \"retry_count\":3}",
-                        "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
-                        "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
-                        "eventSourceARN": "arn:aws:sqs:us-east-1:352283894008:test-queue",
-                    }
-                ]
+                Records: [pawsMock.createMockSQSRecordWithRetry(3)]
             };
             const creds = await TestCollector.load();
             try {
@@ -1020,6 +1146,90 @@ describe('Unit Tests', function() {
                     assert.fail(error);
                 },
                 succeed: function() {
+                }
+            };
+
+            TestCollector.load().then(async function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                await collector.reportDuplicateLogCount(6);
+                pawsStub.restore(CloudWatch, 'putMetricData');
+            });
+        });
+
+        it('reportDuplicateLogCount skips cloudwatch publish on low remaining lambda time', function() {
+            const putMetricDataStub = pawsStub.mock(CloudWatch, 'putMetricData', (params) => Promise.resolve(null));
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function(error) {
+                    assert.fail(error);
+                },
+                succeed: function() {
+                },
+                getRemainingTimeInMillis: function() {
+                    return 1000;
+                }
+            };
+
+            TestCollector.load().then(async function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                await collector.reportDuplicateLogCount(6);
+                assert.equal(putMetricDataStub.notCalled, true, 'should skip optional cloudwatch metric publish on low time');
+                pawsStub.restore(CloudWatch, 'putMetricData');
+            });
+        });
+
+        it('reportDuplicateLogCount swallows cloudwatch throttling error', function() {
+            const throttlingError = {
+                message: 'Rate exceeded, Throttling',
+                name: 'ThrottlingException',
+                $fault: 'client',
+                $metadata: {
+                    httpStatusCode: 400
+                }
+            };
+            pawsStub.mock(CloudWatch, 'putMetricData', (_params) => Promise.reject(throttlingError));
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function(error) {
+                    assert.fail(error);
+                },
+                succeed: function() {
+                },
+                getRemainingTimeInMillis: function() {
+                    return 20000;
+                }
+            };
+
+            TestCollector.load().then(async function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                await collector.reportDuplicateLogCount(6);
+                pawsStub.restore(CloudWatch, 'putMetricData');
+            });
+        });
+
+        it('reportDuplicateLogCount detects throttling from structured fields without relying on message', function() {
+            const throttlingError = {
+                name: 'AccessDeniedException',
+                code: 'SomeOtherError',
+                message: 'request failed',
+                $fault: 'client',
+                $retryable: {
+                    throttling: true
+                },
+                $metadata: {
+                    httpStatusCode: 400
+                }
+            };
+            pawsStub.mock(CloudWatch, 'putMetricData', (_params) => Promise.reject(throttlingError));
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function(error) {
+                    assert.fail(error);
+                },
+                succeed: function() {
+                },
+                getRemainingTimeInMillis: function() {
+                    return 20000;
                 }
             };
 

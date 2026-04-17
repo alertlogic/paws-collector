@@ -7,10 +7,10 @@ process.env.azollect_api = 'azcollect.global-services.global.alertlogic.com';
 process.env.aims_access_key_id = 'aims-key-id';
 process.env.aims_secret_key = 'aims-secret-key-encrypted';
 process.env.log_group = 'logGroupName';
-process.env.paws_state_queue_arn = 'arn:aws:sqs:us-east-1:352283894008:test-queue';
-process.env.paws_state_queue_url = 'https://sqs.us-east-1.amazonaws.com/352283894008/test-queue';
+process.env.paws_state_queue_arn = 'arn:aws:sqs:us-east-1:352212345008:test-queue';
+process.env.paws_state_queue_url = 'https://sqs.us-east-1.amazonaws.com/352212345008/test-queue';
 process.env.paws_s3_object_path = "s3://joe-creds-test/paws_creds.json";
-process.env.paws_kms_key_arn = "arn:aws:kms:us-east-1:352283894008:key/cdda86d5-615b-4dcc-9319-77ab34510473";
+process.env.paws_kms_key_arn = "arn:aws:kms:us-east-1:352212345008:key/cdda86d5-615b-4dcc-9319-77ab34510473";
 process.env.paws_type_name = 'okta';
 process.env.paws_auth_type = 'auth';
 process.env.paws_poll_interval = 900;
@@ -42,10 +42,14 @@ const CWL_TEST_EVENT = {
     }
 };
 
-const STACK_ID = 'arn:aws:cloudformation:us-east-1:352283894008:stack/test/87b3dc90-bd7e-11e7-9e43-503abe701cfd';
-const FUNCTION_ARN = 'arn:aws:lambda:us-east-1:352283894008:function:test-01-CollectLambdaFunction-2CWNLPPW5XO8';
+const AWS_ACCOUNT_ID = '352212345008';
+const AWS_REGION = 'us-east-1';
+const TEST_QUEUE_NAME = 'test-queue';
+
+const STACK_ID = `arn:aws:cloudformation:${AWS_REGION}:${AWS_ACCOUNT_ID}:stack/test/87b3dc90-bd7e-11e7-9e43-503abe701cfd`;
+const FUNCTION_ARN = `arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:test-01-CollectLambdaFunction-2CWNLPPW5XO8`;
 const FUNCTION_NAME = 'test-TestCollectLambdaFunction-1JNNKQIPOTEST';
-const REGISTRATION_TEST_URL = '/aws/test/353333894008/us-east-1/' + encodeURIComponent(FUNCTION_NAME);
+const REGISTRATION_TEST_URL = `/aws/test/${AWS_ACCOUNT_ID}/us-east-1/` + encodeURIComponent(FUNCTION_NAME);
 const STACK_NAME = 'test-stack-01';
 const LOG_GROUP = 'username-logs-group';
 
@@ -53,7 +57,7 @@ const REGISTRATION_TEST_EVENT = {
     'RequestType': 'Create',
     'ServiceToken': FUNCTION_ARN,
     'ResponseURL': 'https://cloudformation-custom-resource-response-useast1.s3.amazonaws.com/resp',
-    'StackId': 'arn:aws:cloudformation:us-east-1:352283894008:stack/test-stack-01/92605900',
+    'StackId': `arn:aws:cloudformation:${AWS_REGION}:${AWS_ACCOUNT_ID}:stack/test-stack-01/92605900`,
     'RequestId': '255fe44d-af80-4c42-bf30-6a78aa244aad',
     'LogicalResourceId': 'RegistrationResource',
     'ResourceType': 'Custom::RegistrationResource',
@@ -61,7 +65,7 @@ const REGISTRATION_TEST_EVENT = {
     {
         'ServiceToken': FUNCTION_ARN,
         'StackName': STACK_NAME,
-        'AwsAccountId': '353333894008',
+        'AwsAccountId': AWS_ACCOUNT_ID,
         'LogGroup': LOG_GROUP
     }
 };
@@ -77,7 +81,7 @@ const DEREGISTRATION_TEST_EVENT = {
     'RequestType': 'Delete',
     'ServiceToken': FUNCTION_ARN,
     'ResponseURL': 'https://cloudformation-custom-resource-response-useast1.s3.amazonaws.com/resp',
-    'StackId': 'arn:aws:cloudformation:us-east-1:352283894008:stack/test-stack-01/92605900',
+    'StackId': `arn:aws:cloudformation:${AWS_REGION}:${AWS_ACCOUNT_ID}:stack/test-stack-01/92605900`,
     'RequestId': '255fe44d-af80-4c42-bf30-6a78aa244aad',
     'LogicalResourceId': 'RegistrationResource',
     'ResourceType': 'Custom::RegistrationResource',
@@ -85,7 +89,7 @@ const DEREGISTRATION_TEST_EVENT = {
     {
         'ServiceToken': FUNCTION_ARN,
         'StackName': STACK_NAME,
-        'AwsAccountId': '353333894008',
+        'AwsAccountId': AWS_ACCOUNT_ID,
         'LogGroup': LOG_GROUP
     }
 };
@@ -95,9 +99,9 @@ const DEREGISTRATION_PARAMS = REGISTRATION_PARAMS;
 const CHECKIN_TEST_EVENT = {
     'RequestType': 'ScheduledEvent',
     'Type': 'Checkin',
-    'AwsAccountId': '353333894008',
+    'AwsAccountId': AWS_ACCOUNT_ID,
     'StackName' : STACK_NAME,
-    'Region' : 'us-east-1'
+    'Region' : AWS_REGION
 };
 
 
@@ -137,6 +141,38 @@ const MOCK_LOGS = [
     },
 ];
 
+// Standard SQS record for state polling - used across multiple test scenarios
+const MOCK_SQS_RECORD = {
+    "body": '{\n  "priv_collector_state": {\n    "since": "123",\n    "until": "321"\n  }\n}',
+    "md5OfBody": "5d172f741470c05e3d2a45c8ffcd9ab3",
+    "messageId": "5fea7756-0ea4-451a-a703-a558b933e274",
+    "eventSourceARN": `arn:aws:sqs:${AWS_REGION}:${AWS_ACCOUNT_ID}:${TEST_QUEUE_NAME}`,
+};
+
+// Helper function to create custom SQS records with overrides
+const createMockSQSRecord = (overrides = {}) => {
+    return {
+        ...MOCK_SQS_RECORD,
+        ...overrides
+    };
+};
+
+// Helper function to create SQS record with retry count
+const createMockSQSRecordWithRetry = (retryCount = 0, overrides = {}) => {
+    const body = JSON.stringify({
+        priv_collector_state: {
+            since: "2021-07-01T02:37:37.617Z",
+            until: "2021-07-01T03:37:37.617Z"
+        },
+        retry_count: retryCount
+    });
+    return {
+        ...MOCK_SQS_RECORD,
+        body: body,
+        ...overrides
+    };
+};
+
 module.exports = {
     AIMS_TEST_CREDS : AIMS_TEST_CREDS,
     PAWS_TEST_CREDS : PAWS_TEST_CREDS,
@@ -152,5 +188,11 @@ module.exports = {
     HEALTCHECK_SUBSCRIPTION_FILTERS : HEALTCHECK_SUBSCRIPTION_FILTERS,
     STACK_ID : STACK_ID,
     REGISTRATION_TEST_URL : REGISTRATION_TEST_URL,
-    MOCK_LOGS : MOCK_LOGS
+    MOCK_LOGS : MOCK_LOGS,
+    AWS_ACCOUNT_ID : AWS_ACCOUNT_ID,
+    AWS_REGION : AWS_REGION,
+    TEST_QUEUE_NAME : TEST_QUEUE_NAME,
+    MOCK_SQS_RECORD : MOCK_SQS_RECORD,
+    createMockSQSRecord : createMockSQSRecord,
+    createMockSQSRecordWithRetry : createMockSQSRecordWithRetry
 };
