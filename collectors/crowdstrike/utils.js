@@ -1,8 +1,5 @@
 const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClient;
 const AlLogger = require('@alertlogic/al-aws-collector-js').Logger;
-
-const INCIDENT = 'Incident';
-const DETECTION = 'Detection';
 const ALERTS = 'Alerts';
 const USERAGENT = 'alertlogic_security_1.0';
 
@@ -28,79 +25,28 @@ function authenticate(baseUrl, clientId, clientSecret) {
 
 function getList(apiDetails, accumulator, apiEndpoint, token) {
     let restServiceClient = new RestServiceClient(apiEndpoint);
-    if (apiDetails.method === "GET") {
-        return new Promise(function (resolve, reject) {
-            restServiceClient.get(apiDetails.url, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'User-Agent': USERAGENT
-                }
-            }).then(response => {
-                const total = response.meta.pagination.total;
-                if (response.resources.length === 0) {
-                    return resolve({ accumulator, total });
-                }
-                accumulator = response.resources;
-                return resolve({accumulator, total});
 
-            }).catch(err => {
-                return reject(err);
-            });
-        });
-    }
-}
-
-function getIncidents(ids, apiHostName, token) {
-    let restServiceClient = new RestServiceClient(`${apiHostName}/incidents/entities/incidents/GET/v1`);
-    if (!ids || !ids.length) {
-        return new Promise((resolve, reject) => {
-            resolve({
-                resources: []
-            });
-        });
-    }
     return new Promise(function (resolve, reject) {
-        return restServiceClient.post('', {
+        restServiceClient.get(apiDetails.url, {
             headers: {
-                'Authorization': 'Bearer ' + token,
+                'Authorization': `Bearer ${token}`,
                 'User-Agent': USERAGENT
-            },
-            data: {
-                ids: ids
             }
         }).then(response => {
-            resolve(response);
-        }).catch(err => {
-            reject(err);
-        });
-    });
-}
-// @deprecated: The Detection API endpoints are deprecated and will be decommissioned on September 30th, 2025. Please remove or refactor this code if it begins to fail.
-function getDetections(ids, APIHostName, token) {
-    let restServiceClient = new RestServiceClient(`${APIHostName}/detects/entities/summaries/GET/v1`);
-    if (!ids || !ids.length) {
-        return new Promise((resolve, reject) => {
-            resolve({
-                resources: []
-            });
-        });
-    }
-    return new Promise(function (resolve, reject) {
-        return restServiceClient.post('', {
-            headers: {
-                'Authorization': 'Bearer ' + token,
-                'User-Agent': USERAGENT
-            },
-            data: {
-                ids: ids
+            const total = response.meta.pagination.total;
+            if (response.resources.length === 0) {
+                return resolve({ accumulator, total });
             }
-        }).then(response => {
-            resolve(response);
+            accumulator = response.resources;
+            return resolve({ accumulator, total });
+
         }).catch(err => {
-            reject(err);
+            return reject(err);
         });
     });
+
 }
+
 /**
  * 
  * @param {*} ids - The ids of the alerts to retrieve.
@@ -147,20 +93,8 @@ function getAPIDetails(state) {
     let tsPaths = [];
     let filter = '';
     switch (state.stream) {
-        case INCIDENT:
-            filter = `end:>"${state.since}"+end:<"${state.until}"`;
-            url = `/incidents/queries/incidents/v1?limit=500&offset=${state.offset}&filter=${encodeURIComponent(filter)}`;
-            typeIdPaths = [{ path: ["incident_type"] }];
-            tsPaths = [{ path: ["created"] }];
-            break;
-        case DETECTION:
-            filter = `last_behavior:>"${state.since}"+last_behavior:<"${state.until}"`;
-            url = `/detects/queries/detects/v1?limit=1000&offset=${state.offset}&filter=${encodeURIComponent(filter)}`;
-            typeIdPaths = [];
-            tsPaths = [{ path: ["created_timestamp"] }];
-            break;
         case ALERTS:
-            filter = `product:'epp'+created_timestamp:>"${state.since}"+created_timestamp:<"${state.until}"`;
+            filter = `product:['epp','automated-lead','thirdparty']+created_timestamp:>"${state.since}"+created_timestamp:<"${state.until}"`;
             url = `/alerts/queries/alerts/v2?limit=100&offset=${state.offset}&filter=${encodeURIComponent(filter)}`;
             typeIdPaths = [{ path: ["composite_id"] }];
             tsPaths = [{ path: ["created_timestamp"] }];
@@ -180,8 +114,6 @@ function getAPIDetails(state) {
 
 module.exports = {
     authenticate: authenticate,
-    getIncidents: getIncidents,
-    getDetections: getDetections,
     getAPIDetails: getAPIDetails,
     getList: getList,
     getAlerts: getAlerts

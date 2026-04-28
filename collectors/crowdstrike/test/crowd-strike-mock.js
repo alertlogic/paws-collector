@@ -17,7 +17,7 @@ process.env.paws_poll_interval = 60;
 process.env.paws_type_name = "crowdstrike";
 process.env.paws_api_client_id = "client-id";
 process.env.paws_api_secret = "client-secret";
-process.env.collector_streams = "[\"Incident\", \"Detection\", \"Alerts\"]";
+process.env.collector_streams = "[\"Alerts\"]";
 process.env.paws_endpoint = "https://api.crowdstrike.com";
 
 const AIMS_TEST_CREDS = {
@@ -46,48 +46,6 @@ const LIST = {
     "errors" : []
 };
 
-const DETECTION_LOG_EVENT = {
-    "meta" : {
-        "query_time" : 0.01414002,
-        "powered_by" : "msa-api",
-        "trace_id" : "d4d3158c-731c-4cb6-97ed-8b999f65fedf"
-    },
-    "resources" : [
-        {
-            "detection_id":"ldt:4c3db6145a704a179a6dacd924f6e8cc:73087931424",
-            "created_timestamp":"2021-08-13T07:20:20.77857433Z",
-            "first_behavior":"2021-08-13T07:20:08Z",
-            "last_behavior":"2021-08-13T07:20:16Z",
-            "max_confidence":100,
-            "max_severity":70,
-            "max_severity_displayname":"High",
-            "show_in_ui":true,
-            "status":"new"
-        }
-    ],
-    "errors" : []
-};
-
-const INCIDENT_LOG_EVENT = {
-    "meta" : {
-        "query_time" : 0.01414002,
-        "powered_by" : "msa-api",
-        "trace_id" : "d4d3158c-731c-4cb6-97ed-8b999f65fedf"
-    },
-    "resources" : [
-        {
-            "incident_id":"inc:3fd9b8a8a7ba426a9bf3aaa2ddfc5b02:36f66221fa044c74a9e3ffa5ba8ab2d3",
-            "incident_type":1,
-            "created":"2021-06-09T14:53:05Z",
-            "start":"2021-06-09T14:53:05Z",
-            "end":"2021-06-09T14:53:05Z",
-            "state":"closed",
-            "status":20
-        }
-    ],
-    "errors" : []
-};
-
 const ALERTS_LOG_EVENT = {
     "meta": {
         "query_time": 0.01414002,
@@ -107,7 +65,35 @@ const ALERTS_LOG_EVENT = {
             "severity": 70,
             "severity_name": "High",
             "status": "new",
-            "product": "epp",
+            "product": "epp"
+        },
+        {
+            "agent_id": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+            "aggregate_id": "9c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f",
+            "composite_id": "ab12cd34ef56ab78cd90ef12:ind:a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6:5480897322003-20446-22311383",
+            "context_timestamp": "2025-08-17T16:15:00.000Z",
+            "crawled_timestamp": "2025-08-17T17:15:03.456789012Z",
+            "created_timestamp": "2025-08-17T16:16:00.000000000Z",
+            "show_in_ui": true,
+            "confidence": 90,
+            "severity": 80,
+            "severity_name": "Critical",
+            "status": "new",
+            "product": "automated-lead"
+        },
+        {
+            "agent_id": "f1e2d3c4b5a6f7e8d9c0b1a2f3e4d5c6",
+            "aggregate_id": "3f4e5d6c7b8a9f0e1d2c3b4a5f6e7d8c9b0a1f2e",
+            "composite_id": "cd34ef56ab78cd90ef12ab34:ind:f1e2d3c4b5a6f7e8d9c0b1a2f3e4d5c6:6591908433114-31557-33422494",
+            "context_timestamp": "2025-08-17T17:00:00.000Z",
+            "crawled_timestamp": "2025-08-17T18:00:05.789012345Z",
+            "created_timestamp": "2025-08-17T17:01:00.000000000Z",
+            "show_in_ui": true,
+            "confidence": 70,
+            "severity": 60,
+            "severity_name": "Medium",
+            "status": "in_progress",
+            "product": "thirdparty"
         }
     ],
     "errors": []
@@ -121,8 +107,6 @@ module.exports = {
     AIMS_TEST_CREDS: AIMS_TEST_CREDS,
     FUNCTION_ARN: FUNCTION_ARN,
     FUNCTION_NAME: FUNCTION_NAME,
-    DETECTION_LOG_EVENT: DETECTION_LOG_EVENT,
-    INCIDENT_LOG_EVENT: INCIDENT_LOG_EVENT,
     ALERTS_LOG_EVENT: ALERTS_LOG_EVENT,
     LIST: LIST,
     AUTHENTICATE: AUTHENTICATE

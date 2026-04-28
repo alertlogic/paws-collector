@@ -36,8 +36,8 @@ describe('Unit Tests', function () {
                 url: "url",
                 method: "GET",
                 requestBody:"",
-                typeIdPaths: [{ path: ["incident_type"] }],
-                tsPaths: [{ path: ["created"] }]
+                typeIdPaths: [{ path: ["composite_id"] }],
+                tsPaths: [{ path: ["created_timestamp"] }]
             };
             let accumulator = [];
             const apiEndpoint = process.env.paws_endpoint;
@@ -45,82 +45,6 @@ describe('Unit Tests', function () {
 
             utils.getList(apiDetails, accumulator, apiEndpoint, token).then(data => {
                 assert(data.accumulator.length == 2, "accumulator length is wrong");
-                done();
-            });
-        });
-    });
-
-    describe('POST Detections Request', function () {
-        it('POST Detection Request', function (done) {
-            exeStub();
-            let apiDetails = {
-                url: "url",
-                method: "GET",
-                requestBody:"",
-                typeIdPaths: [{ path: ["detection_id"] }],
-                tsPaths: [{ path: ["created_timestamp"] }]
-            };
-            const token = crowdstrikeMock.AUTHENTICATE.access_token;
-
-            utils.getDetections(crowdstrikeMock.LIST.resources, apiDetails, token).then(data => {
-                assert(data.resources.length == 2, "accumulator length is wrong");
-                done();
-            });
-        });
-    });
-
-    describe('POST Detections Request with empty IDs array', function () {
-        it('POST Detection Request', function (done) {
-            exeStub();
-            let apiDetails = {
-                url: "url",
-                method: "GET",
-                requestBody:"",
-                typeIdPaths: [{ path: ["detection_id"] }],
-                tsPaths: [{ path: ["created_timestamp"] }]
-            };
-            const token = crowdstrikeMock.AUTHENTICATE.access_token;
-
-            utils.getDetections([], apiDetails, token).then(data => {
-                assert(data.resources.length == 0, "accumulator length is wrong");
-                done();
-            });
-        });
-    });
-
-    describe('POST Incident Request', function () {
-        it('POST Incident Request', function (done) {
-            exeStub();
-            let apiDetails = {
-                url: "url",
-                method: "GET",
-                requestBody:"",
-                typeIdPaths: [{ path: ["incident_type"] }],
-                tsPaths: [{ path: ["created"] }]
-            };
-            const token = crowdstrikeMock.AUTHENTICATE.access_token;
-
-            utils.getIncidents(crowdstrikeMock.LIST.resources, apiDetails, token).then(data => {
-                assert(data.resources.length == 2, "accumulator length is wrong");
-                done();
-            });
-        });
-    });
-
-    describe('POST Incident Request with empty IDs array', function () {
-        it('POST Incident Request', function (done) {
-            exeStub();
-            let apiDetails = {
-                url: "url",
-                method: "GET",
-                requestBody:"",
-                typeIdPaths: [{ path: ["incident_type"] }],
-                tsPaths: [{ path: ["created"] }]
-            };
-            const token = crowdstrikeMock.AUTHENTICATE.access_token;
-
-            utils.getIncidents([], apiDetails, token).then(data => {
-                assert(data.resources.length == 0, "accumulator length is wrong");
                 done();
             });
         });
