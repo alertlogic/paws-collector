@@ -116,6 +116,23 @@ describe('Unit Tests', function () {
             assert(apiDetails.length == apiNames.length, "apiDetails length is wrong");
             done();
         });
+
+        it('Get API Details with custom product types', function (done) {
+            exeStub();
+            process.env.product_types = "[\"epp\",\"automated-lead\"]";
+            const startDate = moment().subtract(5, 'minutes');
+            const state = {
+                stream: 'Alerts',
+                since: startDate.toISOString(),
+                until: startDate.add(5, 'minutes').toISOString(),
+                offset: 0,
+                poll_interval_sec: 1
+            };
+            const apiDetails = utils.getAPIDetails(state);
+            assert(apiDetails.url.includes(encodeURIComponent("product:['epp','automated-lead']")), "custom product filter applied");
+            process.env.product_types = undefined;
+            done();
+        });
     });
 });
 

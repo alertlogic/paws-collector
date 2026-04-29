@@ -94,7 +94,9 @@ function getAPIDetails(state) {
     let filter = '';
     switch (state.stream) {
         case ALERTS:
-            filter = `product:['epp','automated-lead','thirdparty']+created_timestamp:>"${state.since}"+created_timestamp:<"${state.until}"`;
+            const productTypes = process.env.product_types ? JSON.parse(process.env.product_types) : ['epp', 'automated-lead', 'thirdparty'];
+            const productFilter = productTypes.map(p => `'${p}'`).join(',');
+            filter = `product:[${productFilter}]+created_timestamp:>"${state.since}"+created_timestamp:<"${state.until}"`;
             url = `/alerts/queries/alerts/v2?limit=100&offset=${state.offset}&filter=${encodeURIComponent(filter)}`;
             typeIdPaths = [{ path: ["composite_id"] }];
             tsPaths = [{ path: ["created_timestamp"] }];

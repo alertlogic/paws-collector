@@ -155,7 +155,7 @@ stages:
           trigger_phrase: build-collectors
     env:
       ALPS_SERVICE_NAME: "paws-crowdstrike-collector"
-      ALPS_SERVICE_VERSION: "1.2.1" #set the value from collector package json
+      ALPS_SERVICE_VERSION: "1.2.2" #set the value from collector package json
     commands:
       - source $NVM_DIR/nvm.sh && nvm use 22
       - ./build_collector.sh crowdstrike
