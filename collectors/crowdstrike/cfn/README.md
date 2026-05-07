@@ -27,7 +27,8 @@ Currently, we support US regions only: `us-east-1`, `us-east-2`, `us-west-1`,
    - `AlertlogicAccessKeyId` - `access_key_id` returned from AIMS
    - `AlertlogicCustomerId` - Optional. Alert Logic customer ID which collected data should be reported for. If not set customer ID is derived from AIMs tokens
    - `AlertlogicSecretKey` - `secret_key` returned from AIMS
-   - `CrowdstrikeAPINames` - Define API names. Please pass JSON formatted list. Possible values are ["Incident", "Detection"]
+   - `CrowdstrikeAPINames` - Define API names. Please pass JSON formatted list. Possible values are ["Alerts"]
+   - `ProductTypes` - Optional. Define product types to filter alerts for. Please pass JSON formatted list. Default: `["epp", "automated-lead", "thirdparty"]`
    - `CrowdstrikeClientId` - Crowdstrike Client ID 
    - `CrowdstrikeEndpoint` - Crowdstrike Endpoint
    - `CrowdstrikeSecret` - Crowdstrike Secret 

@@ -95,15 +95,7 @@ class CrowdstrikeCollector extends PawsCollector {
         const newState = collector._getNextCollectionStateWithOffset(state, offset, receivedAll);
 
         try {
-            if (state.stream === 'Incident') {
-                const data = await utils.getIncidents(accumulator, APIHostName, token);
-                AlLogger.info(`CROW000004 Next collection in ${newState.poll_interval_sec} seconds for ${state.stream}`);
-                return [data.resources, newState, newState.poll_interval_sec];
-            } else if (state.stream === 'Detection') {
-                const data = await utils.getDetections(accumulator, APIHostName, token);
-                AlLogger.info(`CROW000004 Next collection in ${newState.poll_interval_sec} seconds for ${state.stream}`);
-                return [data.resources, newState, newState.poll_interval_sec];
-            } else if (state.stream === 'Alerts') {
+            if (state.stream === 'Alerts') {
                 const data = await utils.getAlerts(accumulator, APIHostName, token);
                 AlLogger.info(`CROW000004 Next collection in ${newState.poll_interval_sec} seconds for ${state.stream}`);
                 return [data.resources, newState, newState.poll_interval_sec];

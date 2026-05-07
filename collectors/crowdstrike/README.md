@@ -3,7 +3,7 @@ Alert Logic Crowdstrike AWS Based API Poll (PAWS) Log Collector Library.
 
 # Overview
 This repository contains the AWS JavaScript Lambda function and CloudFormation 
-Template (CFT) for deploying a log collector in AWS which will poll Crowdstrike(Incident, Detection) service API to collect and 
+Template (CFT) for deploying a log collector in AWS which will poll Crowdstrike Alerts API to collect and 
 forward logs to the Alert Logic CloudInsight backend services.
 
 # Installation
@@ -24,14 +24,13 @@ Role required: CrowdStrike Falcon administrator
 | ------------- |:-------------|
 | Client Name     | Enter the client name. This is a required field. |
 | Description     | Enter the description for the client name.      |
-| API Scopes |<ul>Defining the scopes is required. Enable the following API scopes:<li>Enable Read scope for Incident API</li><li>Enable Read scope for Detection API</li></ul>|
+| API Scopes |<ul>Defining the scopes is required. Enable the following API scopes:<li>Enable Read scope for Alerts API</li></ul>|
 
 4. Click Add to save the API client and generate the client ID and secret key.
 
 ### 2. API Docs
-1. [Authentication](https://developer.crowdstrike.com/crowdstrike/reference/oauth2-1#oauth2accesstoken-1)
-2. [Incident](https://developer.crowdstrike.com/crowdstrike/reference/incidents-1#queryincidents-1)
-3. [Detection](https://developer.crowdstrike.com/crowdstrike/reference/detects-1#querydetects-1)
+
+1. [General crowdstrike api document](https://developer.crowdstrike.com/docs/sdks/)
 
 API URL required for Crowdstrike collector
 https://api.crowdstrike.com/
