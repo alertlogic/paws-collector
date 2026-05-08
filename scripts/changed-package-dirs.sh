@@ -8,8 +8,9 @@ set -euo pipefail
 BASE_REF="${1:-.}"
 HEAD_REF="${2:-HEAD}"
 
-# Array to collect changed dirs
-declare -a changed_dirs
+# Array to collect changed dirs — initialize explicitly so set -u does not
+# flag it as unbound when no matching files are found (empty loop body).
+changed_dirs=()
 
 # Get all changed package.json files relative to repo root
 while IFS= read -r file; do
