@@ -74,6 +74,10 @@ console) for a collector AWS Lambda function, with value "index" or "\*".
 
 See [debug](https://www.npmjs.com/package/debug) for further details.
 
+## Vulnerability Automation
+
+For vulnerability scan triggers, PR comment behavior, Dependabot schedule, and required developer actions, see [VULNERABILITY_AUTOMATION_GUIDE.md](./VULNERABILITY_AUTOMATION_GUIDE.md).
+
 ## Invoking locally
 
 In order to invoke lambda locally please follow the [instructions](https://docs.aws.amazon.com/lambda/latest/dg/sam-cli-requirements.html) to install AWS SAM.
