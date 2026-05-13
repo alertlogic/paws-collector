@@ -142,9 +142,7 @@ function normalizeFixVersion(fixAvailable) {
 
   if (typeof fixAvailable === 'object') {
     const target = `${fixAvailable.name || 'package'}@${fixAvailable.version || 'latest'}`;
-    return fixAvailable.isSemVerMajor
-      ? `${target} (major upgrade)`
-      : target;
+    return fixAvailable.isSemVerMajor ? `${target} (major upgrade)` : target;
   }
 
   return 'Manual review required';
