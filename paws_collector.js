@@ -73,6 +73,7 @@ const DDB_OPTIONS = {
 const DDB = new DynamoDB(DDB_OPTIONS);
 
 const CW_OPTIONS = {
+    maxAttempts: 5,
     requestHandler: nodeHttpHandler
 };
 const CW = new CloudWatch(CW_OPTIONS);
@@ -253,6 +254,10 @@ class PawsCollector extends AlAwsCollectorV2 {
         return this.context.getRemainingTimeInMillis() > minRemainingTimeInMs;
     }
 
+    /**
+     * Detect service throttling responses from SDK error shape and message text.
+     * Used to keep optional metric publishing non-fatal during rate limiting.
+     */
     isThrottlingError(error) {
         if (!error) {
             return false;
@@ -265,6 +270,49 @@ class PawsCollector extends AlAwsCollectorV2 {
         return code.includes('throttl') ||
             message.includes('rate exceeded') ||
             httpStatusCode === 429;
+    }
+
+    /**
+     * Detect IAM/authorization failures for CloudWatch PutMetricData.
+     * Metric publishing is best-effort, so these are treated as non-fatal.
+     */
+    isMetricPermissionError(error) {
+        if (!error) {
+            return false;
+        }
+
+        const code = `${error.name || ''} ${error.Code || ''} ${error.code || ''} ${error.__type || ''}`.toLowerCase();
+        const message = typeof error.message === 'string' ? error.message.toLowerCase() : '';
+        const httpStatusCode = error.$metadata && error.$metadata.httpStatusCode;
+
+        return code.includes('accessdenied') ||
+            message.includes('not authorized') ||
+            httpStatusCode === 403;
+    }
+
+    /**
+     * Centralized CloudWatch metric publisher.
+     * Handles low-time guard and soft-fails for throttling/permission issues so
+     * ingestion flow is not interrupted by optional metric emission failures.
+     */
+    async publishCloudWatchMetric(metricName, params, { skipOnLowTime = false } = {}) {
+        if (skipOnLowTime && !this.hasSufficientRemainingTime()) {
+            AlLogger.debug(`PAWS000409 Skipping CloudWatch ${metricName} metric due to low remaining lambda time`);
+            return null;
+        }
+
+        try {
+            return await CW.putMetricData(params);
+        } catch (error) {
+            if (this.isThrottlingError(error) || this.isMetricPermissionError(error)) {
+                AlLogger.debug(`PAWS000414 CloudWatch ${metricName} metric publish skipped (non-fatal): ${this.stringifyError(error)}`);
+                return null;
+            }
+
+            // Metric publishing is best-effort and should not fail collection flow.
+            AlLogger.warn(`PAWS000415 Unexpected CloudWatch ${metricName} metric error (non-fatal): ${this.stringifyError(error)}`);
+            return null;
+        }
     }
 
     getProperties() {
@@ -485,11 +533,7 @@ class PawsCollector extends AlAwsCollectorV2 {
                             null;
 
             if (lastCollectedTs) {
-                try {
-                    await collector.reportCollectionDelay(lastCollectedTs);
-                } catch (metricError) {
-                    AlLogger.warn(`PAWS000407 Unable to report collection delay metric: ${collector.stringifyError(metricError)}`);
-                }
+                await collector.reportCollectionDelay(lastCollectedTs);
             }
 
             // Reset the retry count to 0 on successful log processing
@@ -649,7 +693,7 @@ class PawsCollector extends AlAwsCollectorV2 {
             Namespace: 'PawsCollectors'
         };
         this.reportDDMetric('api_throttling', 1);
-        return await CW.putMetricData(params);
+        return await this.publishCloudWatchMetric('api_throttling', params);
     };
     /**
      * Report the error to Ingest api service and show case on DDMetrics
@@ -684,7 +728,7 @@ class PawsCollector extends AlAwsCollectorV2 {
             errorCode = error.errorCode;
         }
         this.reportDDMetric("ingest_api", 1, [`result:error`, `error_code:${errorCode}`]);
-        return await CW.putMetricData(params);
+        return await this.publishCloudWatchMetric('ingest_api', params);
     };
 
     /**
@@ -715,7 +759,7 @@ class PawsCollector extends AlAwsCollectorV2 {
         };
         let errorCode = typeof (error) === 'object' && error.errorCode ? error.errorCode : 'unknown';
         this.reportDDMetric("client", 1, [`result:error`, `error_code:${errorCode}`]);
-        return await CW.putMetricData(params);
+        return await this.publishCloudWatchMetric('client', params);
     };
 
     async reportCollectionDelay(lastCollectedTs) {
@@ -747,16 +791,11 @@ class PawsCollector extends AlAwsCollectorV2 {
             Namespace: 'PawsCollectors'
         };
         this.reportDDMetric('collection_delay', collectionDelaySec);
-        return await CW.putMetricData(params);
+        return await this.publishCloudWatchMetric('collection_delay', params);
     };
 
     async reportDuplicateLogCount(duplicateCount) {
         this.reportDDMetric("duplicate_messages", duplicateCount);
-
-        if (!this.hasSufficientRemainingTime()) {
-            AlLogger.debug(`PAWS000409 Skipping CloudWatch duplicate metric due to low remaining lambda time`);
-            return null;
-        }
 
         const params = {
             MetricData: [
@@ -779,15 +818,7 @@ class PawsCollector extends AlAwsCollectorV2 {
             ],
             Namespace: 'PawsCollectors'
         };
-        try {
-            return await CW.putMetricData(params);
-        } catch (error) {
-            if (this.isThrottlingError(error)) {
-                AlLogger.debug(`PAWS000410 CloudWatch duplicate metric throttled; skipping metric publish`);
-                return null;
-            }
-            throw error;
-        }
+        return await this.publishCloudWatchMetric('duplicate_messages', params, { skipOnLowTime: true });
     };
     /**
      * Report the collector status(ok/error)to dd metrics
@@ -818,7 +849,7 @@ class PawsCollector extends AlAwsCollectorV2 {
         };
 
         this.reportDDMetric("collector_status", 1, [`status:${status}`]);
-        return await CW.putMetricData(params);
+        return await this.publishCloudWatchMetric('collector_status', params);
     };
 
     async _storeCollectionState(pawsState, privCollectorState, invocationTimeout) {

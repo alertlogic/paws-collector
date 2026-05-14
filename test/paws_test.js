@@ -636,14 +636,17 @@ describe('Unit Tests', function() {
 
             const creds = await TestCollector.load();
             const collector = new TestCollector(ctx, creds);
+            const doneStub = sinon.stub(collector, 'done').resolves();
             const storeCollectionStateStub = sinon.stub(collector, '_storeCollectionState').resolves();
 
             try {
-                await collector.handleEvent(testEvent).catch(() => null);
+                await collector.handleEvent(testEvent);
                 assert.equal(storeCollectionStateStub.notCalled, true, 'should not enqueue a new state when lambda is near timeout');
                 assert.equal(updateStateStub.called, true, 'should update state status before exiting');
                 assert.equal(updateStateStub.args[0][1], 'FAILED', 'should mark DDB state as FAILED');
+                assert.equal(doneStub.called, true, 'should finish invocation through collector.done');
             } finally {
+                doneStub.restore();
                 storeCollectionStateStub.restore();
                 getLogsStub.restore();
                 updateStateStub.restore();
@@ -743,6 +746,7 @@ describe('Unit Tests', function() {
 
             const creds = await TestCollector.load();
             const collector = new TestCollector(ctx, creds);
+            const doneStub = sinon.stub(collector, 'done').resolves();
             const reportCollectionDelayStub = sinon.stub(collector, 'reportCollectionDelay').resolves();
             const storeCollectionStateStub = sinon.stub(collector, '_storeCollectionState');
             storeCollectionStateStub.onFirstCall().rejects(new Error('SQS store failed after ingest'));
@@ -757,6 +761,7 @@ describe('Unit Tests', function() {
                 assert.equal(updateStateStub.callCount, 1, 'should mark state as FAILED on post-ingest failure');
                 assert.equal(updateStateStub.args[0][1], 'FAILED', 'should update DDB status to FAILED before re-queue');
             } finally {
+                doneStub.restore();
                 reportCollectionDelayStub.restore();
                 storeCollectionStateStub.restore();
                 getLogsStub.restore();
@@ -1098,6 +1103,35 @@ describe('Unit Tests', function() {
             });
         });
 
+        it('reportCollectionDelay swallows cloudwatch throttling error', function() {
+            const throttlingError = {
+                message: 'Rate exceeded, Throttling',
+                name: 'ThrottlingException',
+                $fault: 'client',
+                $metadata: {
+                    httpStatusCode: 400
+                }
+            };
+            pawsStub.mock(CloudWatch, 'putMetricData', (_params) => Promise.reject(throttlingError));
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function(error) {
+                    assert.fail(error);
+                },
+                succeed: function() {
+                },
+                getRemainingTimeInMillis: function() {
+                    return 20000;
+                }
+            };
+
+            TestCollector.load().then(async function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                await collector.reportCollectionDelay('2020-01-26T12:08:31.316Z');
+                pawsStub.restore(CloudWatch, 'putMetricData');
+            });
+        });
+
         it('reportClientError', function() {
 
             mockCloudWatch();
@@ -1256,6 +1290,32 @@ describe('Unit Tests', function() {
                 await collector.reportCollectorStatus(status).then(() => {
                     pawsStub.restore(CloudWatch, 'putMetricData');
                 });
+            });
+        });
+
+        it('reportCollectorStatus swallows cloudwatch throttling error', function() {
+            const throttlingError = {
+                message: 'Rate exceeded, Throttling',
+                name: 'ThrottlingException',
+                $fault: 'client',
+                $metadata: {
+                    httpStatusCode: 400
+                }
+            };
+            pawsStub.mock(CloudWatch, 'putMetricData', (_params) => Promise.reject(throttlingError));
+            let ctx = {
+                invokedFunctionArn: pawsMock.FUNCTION_ARN,
+                fail: function(error) {
+                    assert.fail(error);
+                },
+                succeed: function() {
+                }
+            };
+
+            TestCollector.load().then(async function(creds) {
+                var collector = new TestCollector(ctx, creds);
+                await collector.reportCollectorStatus('ok');
+                pawsStub.restore(CloudWatch, 'putMetricData');
             });
         });
     });
