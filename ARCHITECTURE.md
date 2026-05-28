@@ -12,7 +12,8 @@
 3. [Checkin Event](#3-checkin-event-every-15-minutes)
 4. [Self-Update Event](#4-self-update-event-every-12-hours)
 5. [Deregistration Flow](#5-deregistration-flow)
-6. [Full Architecture Overview](#6-full-architecture-overview)
+6. [Full Architecture Overview — Part A: Collector Creation](#6-full-architecture-overview--part-a-collector-creation)
+7. [Full Architecture Overview — Part B: Runtime Events & Deregistration](#7-full-architecture-overview--part-b-runtime-events--deregistration)
 
 ---
 
@@ -200,9 +201,11 @@ sequenceDiagram
 
 ---
 
-## 6. Full Architecture Overview
+## 6. Full Architecture Overview — Part A: Collector Creation
 
-**All 4 Lambda event types in one view:**
+> Shows the complete Registration path: UI → Themis validation → Azcollect → CFN stack deployment → all AWS resources created → Lambda `onCreate` event → Asset registration → SQS seeding.
+
+**All Lambda event triggers at a glance:**
 
 | Event | Trigger | Handled By |
 |---|---|---|
@@ -214,81 +217,97 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    subgraph REG["REGISTRATION"]
-        direction TB
-        User([User]) -->|Create Collector| UI[Application Registry UI]
-        UI --> AppSvc[Application Service]
-        AppSvc -->|Validate Credentials| Themis[Themis Service\nValidation Only]
-        Themis -->|Pass or Fail| AppSvc
-        AppSvc -->|Fail - Show Error| UI
-        AppSvc -->|Pass - API Call| Azcollect[Azcollect Service]
-        Azcollect -->|Deploy| CFN[CloudFormation Stack]
-        CFN -->|Creates| SQS[SQS Queue]
-        CFN -->|Creates| Lambda[Collector Lambda\nEnv Variables = all config]
-        CFN -->|Stores Creds| SM[System Manager]
-        CFN -->|Creates| SchedCI[Checkin Scheduler\nevery 15 min]
-        CFN -->|Creates| SchedSU[Self-Update Scheduler\nevery 12 hrs]
-        CFN -->|onCreate Event| Lambda
-        Lambda -->|Register API Call| Azcollect
-        Azcollect -->|Create Entry| Asset[Asset Service]
-        Asset -->|Collector ID| Azcollect
-        Azcollect -->|Return ID| Lambda
-        Lambda -->|State Messages per stream| SQS
-        Lambda -->|Success| CFN
-        CFN -->|Stack Created| Azcollect
-        Azcollect -->|Success| AppSvc
-        AppSvc -->|Update| UI
+    User([User]) -->|Create Collector| UI[Application Registry UI]
+    UI -->|Submit Request| AppSvc[Application Service]
+    AppSvc -->|Validate Credentials| Themis["🔒 Themis Service\nValidation Only"]
+    Themis -->|Pass or Fail| AppSvc
+    AppSvc -->|Fail: Show Error| UI
+
+    AppSvc -->|Pass: API Call| Azcollect["⚙️ Azcollect Service"]
+    Azcollect -->|Deploy CFN Stack| CFN["☁️ CloudFormation Stack"]
+
+    CFN -->|Creates| SQS["📬 SQS Queue"]
+    CFN -->|Creates| Lambda["λ Collector Lambda\nAll config in Env Variables"]
+    CFN -->|Stores Credentials| SM["🔑 System Manager\nCredential Store"]
+    CFN -->|Creates| SchedCI["⏱ Checkin Scheduler\nevery 15 min"]
+    CFN -->|Creates| SchedSU["⏱ Self-Update Scheduler\nevery 12 hrs"]
+
+    CFN -->|"onCreate Event"| Lambda
+    Lambda -->|Register API Call| Azcollect
+    Azcollect -->|Create Entry| Asset["🗂 Asset Service"]
+    Asset -->|Collector ID| Azcollect
+    Azcollect -->|Return Collector ID| Lambda
+    Lambda -->|Add State Messages per stream| SQS
+    Lambda -->|Registration Success| CFN
+    CFN -->|Stack Created| Azcollect
+    Azcollect -->|Success Response| AppSvc
+    AppSvc -->|Update Registry| UI
+
+    style Themis fill:#fff4e1,stroke:#e6a817,color:#333
+    style CFN fill:#f0e1ff,stroke:#9b59b6,color:#333
+    style Asset fill:#e1ffe1,stroke:#27ae60,color:#333
+    style Azcollect fill:#e1f0ff,stroke:#2980b9,color:#333
+    style Lambda fill:#ffe1e1,stroke:#e74c3c,color:#333
+    style SchedCI fill:#e8f5e9,stroke:#27ae60,color:#333
+    style SchedSU fill:#e8f5e9,stroke:#27ae60,color:#333
+    style SQS fill:#fef9e7,stroke:#f39c12,color:#333
+    style SM fill:#fadbd8,stroke:#e74c3c,color:#333
+```
+
+---
+
+## 7. Full Architecture Overview — Part B: Runtime Events & Deregistration
+
+> Shows all 4 recurring Lambda events (Poll, Checkin, Self-Update) and the complete Deregistration path.
+
+```mermaid
+flowchart TD
+    subgraph POLL["🔄  POLL EVENT — triggered by SQS"]
+        direction LR
+        SQS2["📬 SQS Queue"] -->|"Trigger: state message"| Lambda2["λ Collector Lambda"]
+        Lambda2 -->|Poll Log Data| API["🌐 3rd Party API"]
+        API -->|Return Logs| Lambda2
+        Lambda2 -->|Send Logs| Ingest["📥 Ingest Service"]
+        Lambda2 -->|Push next state message| SQS2
     end
 
-    subgraph POLL["POLL EVENT"]
-        direction TB
-        SQS2[SQS Queue] -->|Trigger| Lambda2[Collector Lambda]
-        Lambda2 -->|Poll Data| API[3rd Party API]
-        API -->|Logs| Lambda2
-        Lambda2 -->|Send Logs| Ingest[Ingest Service]
-        Lambda2 -->|Next State Message| SQS2
-    end
-
-    subgraph CHECKIN["CHECKIN EVENT - every 15 min"]
-        direction TB
-        SchedCI2[Checkin Scheduler] -->|Trigger| Lambda3[Collector Lambda]
-        Lambda3 -->|Fetch Metrics| CW[CloudWatch]
-        CW -->|Metrics| Lambda3
-        Lambda3 -->|Check Health| CFN2[CloudFormation]
+    subgraph CHECKIN["🩺  CHECKIN EVENT — every 15 min"]
+        direction LR
+        SchedCI2["⏱ Checkin Scheduler"] -->|Trigger| Lambda3["λ Collector Lambda"]
+        Lambda3 -->|Fetch Invocations and Errors| CW["📊 CloudWatch Metrics"]
+        CW -->|Metrics Data| Lambda3
+        Lambda3 -->|Check Stack Health| CFN2["☁️ CloudFormation"]
         CFN2 -->|Health Status| Lambda3
-        Lambda3 -->|Send Status| StatusSvc[Collector Status Service]
+        Lambda3 -->|Send Status| StatusSvc["📡 Collector Status Service"]
     end
 
-    subgraph UPDATE["SELF-UPDATE EVENT - every 12 hrs"]
-        direction TB
-        SchedSU2[Self-Update Scheduler] -->|Trigger| Lambda4[Collector Lambda]
-        Lambda4 -->|Check Zip| S3[S3 Lambda Code]
-        S3 -->|New Version| Lambda4
-        Lambda4 -->|Update Code| Lambda4
+    subgraph UPDATE["🔁  SELF-UPDATE EVENT — every 12 hrs"]
+        direction LR
+        SchedSU2["⏱ Self-Update Scheduler"] -->|Trigger| Lambda4["λ Collector Lambda"]
+        Lambda4 -->|Check for new zip| S3["🪣 S3 Lambda Code"]
+        S3 -->|New version found| Lambda4
+        Lambda4 -->|Update all collectors| Lambda4
     end
 
-    subgraph DEREG["DEREGISTRATION"]
-        direction TB
-        User2([User]) -->|Delete| UI2[Application Registry UI]
-        UI2 --> AppSvc2[Application Service]
-        AppSvc2 -->|API Call| Azcollect2[Azcollect Service]
-        Azcollect2 -->|Delete Stack| CFN3[CloudFormation Stack]
-        CFN3 -->|onDelete Event| Lambda5[Collector Lambda]
+    subgraph DEREG["🗑️  DEREGISTRATION"]
+        direction LR
+        User2([User]) -->|Delete Collector| UI2["Application Registry UI"]
+        UI2 --> AppSvc2["Application Service"]
+        AppSvc2 -->|Deregister API Call| Azcollect2["⚙️ Azcollect Service"]
+        Azcollect2 -->|Trigger Delete Stack| CFN3["☁️ CloudFormation Stack"]
+        CFN3 -->|"onDelete Event"| Lambda5["λ Collector Lambda"]
         Lambda5 -->|Deregister API Call| Azcollect2
-        Azcollect2 -->|Delete Entry| Asset2[Asset Service]
-        Azcollect2 -->|Notify| AppSvc2
-        AppSvc2 -->|Update| UI2
-        Lambda5 -->|Complete| CFN3
-        CFN3 -->|Delete All Resources| AWS[AWS Resources\nSQS, Lambda, SM, Schedulers]
+        Azcollect2 -->|Delete Asset Entry| Asset2["🗂 Asset Service"]
+        Azcollect2 -->|Notify Success| AppSvc2
+        AppSvc2 -->|Remove from Registry| UI2
+        Lambda5 -->|Deregister Complete| CFN3
+        CFN3 -->|Delete All Resources| AWS["☁️ AWS Resources\nSQS · Lambda · SM · Schedulers"]
     end
 
-    style Themis fill:#fff4e1,stroke:#e6a817
-    style CFN fill:#f0e1ff,stroke:#9b59b6
-    style Asset fill:#e1ffe1,stroke:#27ae60
-    style Azcollect fill:#e1f0ff,stroke:#2980b9
-    style Lambda fill:#ffe1e1,stroke:#e74c3c
-    style SchedCI fill:#e8f5e9,stroke:#27ae60
-    style SchedSU fill:#e8f5e9,stroke:#27ae60
+    style POLL fill:#f9fff9,stroke:#27ae60
+    style CHECKIN fill:#fffff0,stroke:#f39c12
+    style UPDATE fill:#fff5f5,stroke:#e74c3c
+    style DEREG fill:#f5f0ff,stroke:#9b59b6
 ```
 
 ---
