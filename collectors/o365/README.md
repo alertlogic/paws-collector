@@ -8,6 +8,18 @@ This repository contains the AWS JavaScript Lambda function and CloudFormation
 Template (CFT) for deploying a log collector in AWS which will poll Office 365 Management service API to collect and 
 forward logs to the Alert Logic CloudInsight backend services.
 
+# Third-party API Inventory
+
+The full list of third-party REST endpoints and SDK calls used by this collector
+(route patterns, sample resolved URLs, authentication model, and links to the
+vendor's API documentation) is maintained in the central catalog:
+
+- [PAWS Collector API Inventory – Office 365](../../docs/collector-api-inventory.md#office-365-microsoft-365)
+
+Endpoints documented there use sanitized placeholders (e.g. `{baseUrl}`,
+`{orgKey}`, `{tenantId}`); never publish real tenant/customer values in this
+repository.
+
 # Installation
 
 The instructions in this document are for a new setup of the Microsoft Office 365 log collector.

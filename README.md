@@ -9,6 +9,19 @@ This repository contains the AWS  JavaScript Lambda function and CloudFormation
 Template (CFT) for deploying a log collector in AWS which will poll a 3rd party service API to collect and 
 forward logs to the Alert Logic CloudInsight backend services.
 
+# Documentation
+
+- [Architecture](./docs/ARCHITECTURE.md) – high-level design of the PAWS
+  collector framework (triggers, state, lifecycle).
+- [Third-party API Inventory](./docs/collector-api-inventory.md) – canonical,
+  source-of-truth list of every third-party REST endpoint and SDK call made
+  by each collector. Use it instead of vendor links scattered across individual
+  collector READMEs.
+
+All examples in the API inventory are sanitized (placeholders only). Do not
+commit real tenant identifiers, org keys, hostnames tied to a customer, or any
+authentication artifacts.
+
 # Installation
 
 Refer to the [CF template readme](./cfn/README.md) for installation instructions.
