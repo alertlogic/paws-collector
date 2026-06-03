@@ -1,7 +1,6 @@
 # PAWS Collector — Architecture Document
 
 > This document describes the complete lifecycle of a PAWS Collector — from creation through runtime operation to deletion.
-> All diagrams are rendered using Mermaid. View in VS Code with the **Markdown Preview Mermaid Support** extension, or on GitHub natively.
 
 ---
 
