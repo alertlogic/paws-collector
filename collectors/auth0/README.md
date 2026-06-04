@@ -5,6 +5,18 @@ Alert Logic Auth0 AWS Based API Poll (PAWS) Log Collector Library.
 This repository contains the AWS JavaScript Lambda function and CloudFormation 
 Template (CFT) for deploying a log collector in AWS which will poll Auth0 Logs service API to collect and forward logs to the Alert Logic CloudInsight backend services.
 
+# Third-party API Inventory
+
+The full list of third-party REST endpoints and SDK calls used by this collector
+(route patterns, sample resolved URLs, authentication model, and links to the
+vendor's API documentation) is maintained in the central catalog:
+
+- [PAWS Collector API Inventory – Auth0](../../docs/collector-api-inventory.md#auth0)
+
+Endpoints documented there use sanitized placeholders (e.g. `{baseUrl}`,
+`{orgKey}`, `{tenantId}`); never publish real tenant/customer values in this
+repository.
+
 # Installation
 
 ### 1. How to obtain an API Secret Key and API ID

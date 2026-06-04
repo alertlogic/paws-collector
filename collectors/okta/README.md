@@ -6,6 +6,15 @@ This repository contains the AWS JavaScript Lambda function and CloudFormation
 Template (CFT) for deploying a log collector in AWS which will poll OKTA (System Log) service API to collect and 
 forward logs to the Alert Logic CloudInsight backend services.
 
+# Third-party API Inventory
+
+The full list of third-party REST endpoints and SDK calls used by this collector
+(route patterns, sample resolved URLs, authentication model, and links to the
+vendor's API documentation) is maintained in the central catalog:
+
+- [PAWS Collector API Inventory – Okta](../../docs/collector-api-inventory.md#okta)
+
+
 # Installation
 
 ### 1. How to obtain token(secret key).

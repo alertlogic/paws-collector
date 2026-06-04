@@ -14,6 +14,18 @@ forward logs to the Alert Logic CloudInsight backend services.
 3.	Cloud Identity Premium
 
 
+# Third-party API Inventory
+
+The full list of third-party REST endpoints and SDK calls used by this collector
+(route patterns, sample resolved URLs, authentication model, and links to the
+vendor's API documentation) is maintained in the central catalog:
+
+- [PAWS Collector API Inventory – G Suite](../../docs/collector-api-inventory.md#g-suite-google-workspace)
+
+Endpoints documented there use sanitized placeholders (e.g. `{baseUrl}`,
+`{orgKey}`, `{tenantId}`); never publish real tenant/customer values in this
+repository.
+
 # Installation
 
 ### 1. G Suite Setup
