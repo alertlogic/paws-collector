@@ -127,8 +127,14 @@ describe('Unit Tests', function () {
 
     describe('Get API Logs (Administrator) with nextPage', function () {
         it('Get API Logs (Administrator) with nextPage success', function (done) {
+            // v2 format: response.items + metadata.next_offset string
             getLogsStub = sinon.stub(client, 'jsonApiCall').yields({
-                response: [ciscoduoMock.LOG_EVENT],
+                response: {
+                    items: [ciscoduoMock.LOG_EVENT],
+                    metadata: {
+                        next_offset: '1591261271641,qqwwwwwwwwwww'
+                    }
+                },
                 stat: 'OK'
             });
             let maxPagesPerInvocation = 5;
@@ -136,15 +142,19 @@ describe('Unit Tests', function () {
             const startDate = moment().subtract(5, 'days');
             let state = {
                 stream: "Administrator",
-                since: startDate.unix(),
+                since: startDate.valueOf(),
+                until: startDate.add(2, 'days').valueOf(),
+                nextPage: null,
                 poll_interval_sec: 1
             };
             let objectDetails = {
                 url: "api_url",
-                typeIdPaths: [{ path: ["action"] }],
-                tsPaths: [{ path: ["timestamp"] }],
+                typeIdPaths: [{ path: ["activity_id"] }],
+                tsPaths: [{ path: ["ts"] }],
                 query: {
-                    mintime: state.since
+                    mintime: state.since,
+                    maxtime: state.until,
+                    limit: 1000
                 },
                 method: "GET"
             };
@@ -154,26 +164,33 @@ describe('Unit Tests', function () {
                 done();
             });
         });
-        it('Pull Only one page data if since stamp is less than one hour ', function (done) {
-            ciscoduoMock.LOG_EVENT.timestamp = moment().subtract(30, 'minutes').unix();
+        it('Pull only one page when no next_offset is returned in response', function (done) {
+            // v2 format: no next_offset in metadata → single page only
             getLogsStub = sinon.stub(client, 'jsonApiCall').yields({
-                response: [ciscoduoMock.LOG_EVENT],
+                response: {
+                    items: [ciscoduoMock.LOG_EVENT],
+                    metadata: {}
+                },
                 stat: 'OK'
             });
             let maxPagesPerInvocation = 5;
             let accumulator = [];
-            const startDate = moment().subtract(30, 'minutes');
+            const startDate = moment().subtract(5, 'days');
             let state = {
                 stream: "Administrator",
-                since: startDate.unix(),
+                since: startDate.valueOf(),
+                until: startDate.add(2, 'days').valueOf(),
+                nextPage: null,
                 poll_interval_sec: 1
             };
             let objectDetails = {
                 url: "api_url",
-                typeIdPaths: [{ path: ["action"] }],
-                tsPaths: [{ path: ["timestamp"] }],
+                typeIdPaths: [{ path: ["activity_id"] }],
+                tsPaths: [{ path: ["ts"] }],
                 query: {
-                    mintime: state.since
+                    mintime: state.since,
+                    maxtime: state.until,
+                    limit: 1000
                 },
                 method: "GET"
             };

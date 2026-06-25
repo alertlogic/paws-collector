@@ -4,6 +4,27 @@ const Authentication = 'Authentication';
 const Administrator = 'Administrator';
 const Telephony = 'Telephony';
 const OfflineEnrollment = 'OfflineEnrollment';
+const MIN_13_DIGIT_TIMESTAMP = 1e12
+
+// All v2 log endpoints share the same next_offset + mintime/maxtime/limit query shape.
+// The < 1e12 guard handles any old 10-digit SQS messages still in-flight during rollout.
+function buildOffsetQuery(state) {
+    const query = state.nextPage ? { next_offset: state.nextPage } : {};
+    const sinceMs = state.since < MIN_13_DIGIT_TIMESTAMP ? state.since * 1000 : state.since;
+    const untilMs = state.until != null
+        ? (state.until < MIN_13_DIGIT_TIMESTAMP ? state.until * 1000 : state.until)
+        : sinceMs + 60000;  // fallback: +1 min for any in-flight state missing `until`
+    Object.assign(query, {
+        mintime: sinceMs,
+        maxtime: untilMs,
+        limit: 1000
+    });
+    return query;
+}
+
+function isOfflineAction(item) {
+    return item.action && item.action.name && item.action.name.startsWith('o2fa_');
+}
 
 function getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvocation) {
     let pageCount = 0;
@@ -17,40 +38,55 @@ function getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvoca
                 return client.jsonApiCall(objectDetails.method, objectDetails.url, objectDetails.query, function (res) {
                     if (res.stat !== 'OK') {
                         return reject(res);
-                    } else {
-                        if (Authentication === state.stream) {
-                            if (res.response.authlogs.length > 0) {
-                                accumulator.push(...res.response.authlogs);
-                            }
-                            if (res.response.metadata.next_offset) {
-                                Object.assign(objectDetails.query, {
-                                    next_offset: res.response.metadata.next_offset.join()
-                                });
-                                getData();
-                            }
-                            else return resolve({ accumulator, nextPage });
+                    }
+                    if (Authentication === state.stream) {
+                        // Auth v2: response body uses `authlogs` array;
+                        if (res.response.authlogs.length > 0) {
+                            accumulator.push(...res.response.authlogs);
+                        }
+                        if (res.response.metadata.next_offset) {
+                            Object.assign(objectDetails.query, {
+                                next_offset: res.response.metadata.next_offset.join()
+                            });
+                            getData();
                         } else {
-                            if (res.response.length > 0) {
-                                accumulator.push(...res.response);
-                                objectDetails.query.mintime = accumulator[accumulator.length - 1].timestamp + 1;
-                                let nowMoment = moment();
-                                if (moment(nowMoment.unix()).diff(objectDetails.query.mintime, 'minutes') < 60) {
-                                    return resolve({ accumulator, nextPage });
-                                }
-                                else {
-                                    getData();
-                                }
-                            }
-                            else {
-                                // Here next page is undefined;
-                                return resolve({ accumulator, nextPage });
-                            }
+                            return resolve({ accumulator, nextPage });
+                        }
+                    } else {
+                        // Activity (Administrator/OfflineEnrollment) and Telephony v2:
+                        // response body uses `items` array; next_offset is a plain string.
+                        const items = (res.response && res.response.items) ? res.response.items : [];
+
+                        let filteredItems;
+                        if (OfflineEnrollment === state.stream) {
+                            // Keep only offline enrollment actions (o2fa_*) to avoid
+                            // duplicating records already collected by the Administrator stream.
+                            filteredItems = items.filter(isOfflineAction);
+                        } else if (Administrator === state.stream) {
+                            // Exclude offline enrollment actions to avoid duplicating
+                            // records already collected by the OfflineEnrollment stream.
+                            filteredItems = items.filter(item => !isOfflineAction(item));
+                        } else {
+                            // Telephony uses a dedicated endpoint — no cross-stream overlap.
+                            filteredItems = items;
+                        }
+
+                        if (filteredItems.length > 0) {
+                            accumulator.push(...filteredItems);
+                        }
+                        if (res.response.metadata && res.response.metadata.next_offset) {
+                            Object.assign(objectDetails.query, {
+                                next_offset: res.response.metadata.next_offset
+                            });
+                            getData();
+                        } else {
+                            return resolve({ accumulator, nextPage });
                         }
                     }
                 });
-            }
-            else {
-                nextPage = (Authentication === state.stream) ? objectDetails.query.next_offset : parseInt(objectDetails.query.mintime) + 1;
+            } else {
+                // Preserve next_offset for all streams so callers can resume pagination.
+                nextPage = objectDetails.query.next_offset || null;
                 return resolve({ accumulator, nextPage });
             }
         }
@@ -58,56 +94,40 @@ function getAPILogs(client, objectDetails, state, accumulator, maxPagesPerInvoca
 }
 
 function getAPIDetails(state) {
-    let url = "";
+    let url = null;
     let typeIdPaths = [];
-    let tsPaths = [{ path: ["timestamp"] }];
-    let method = "GET";
-    let query = {
-        mintime: state.since
-    };
+    let tsPaths = [{ path: ['timestamp'] }];
+    const method = 'GET';
 
     switch (state.stream) {
         case Authentication:
-            url = `/admin/v2/logs/authentication`;
+            url = '/admin/v2/logs/authentication';
             typeIdPaths = [{ path: ['txid'] }];
-
-            query = state.nextPage ? {
-                next_offset: state.nextPage
-            } : {};
-
-            Object.assign(query, {
-                mintime: state.since,
-                maxtime: state.until,
-                limit: 1000
-            });
-
             break;
         case Administrator:
-            url = `/admin/v1/logs/administrator`;
-            typeIdPaths = [{ path: ['action'] }];
+            url = '/admin/v2/logs/activity';
+            typeIdPaths = [{ path: ['activity_id'] }];
+            tsPaths = [{ path: ['ts'] }];
             break;
         case Telephony:
-            url = `/admin/v1/logs/telephony`;
-            typeIdPaths = [{ path: ['context'] }];
+            url = '/admin/v2/logs/telephony';
+            typeIdPaths = [{ path: ['telephony_id'] }];
+            tsPaths = [{ path: ['ts'] }];
             break;
         case OfflineEnrollment:
-            url = `/admin/v1/logs/offline_enrollment`;
-            typeIdPaths = [{ path: ['action'] }];
+            url = '/admin/v2/logs/activity';
+            typeIdPaths = [{ path: ['activity_id'] }];
+            tsPaths = [{ path: ['ts'] }];
             break;
-        default:
-            url = null;
     }
 
-    return {
-        url,
-        typeIdPaths,
-        tsPaths,
-        query,
-        method
-    };
+    const query = buildOffsetQuery(state);
+
+    return { url, typeIdPaths, tsPaths, query, method };
 }
 
 module.exports = {
     getAPIDetails: getAPIDetails,
-    getAPILogs: getAPILogs
+    getAPILogs: getAPILogs,
+    MIN_13_DIGIT_TIMESTAMP: MIN_13_DIGIT_TIMESTAMP
 };

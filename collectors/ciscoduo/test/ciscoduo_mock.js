@@ -57,9 +57,39 @@ const LOG_EVENT = {
 const FUNCTION_ARN = 'arn:aws:lambda:us-east-1:352283894008:function:test-01-CollectLambdaFunction-2CWNLPPW5XO8';
 const FUNCTION_NAME = 'test-TestCollectLambdaFunction-1JNNKQIPOTEST';
 
+// Activity log event for Administrator stream (non-offline action)
+const ACTIVITY_LOG_ADMIN = {
+    action: { details: null, name: 'admin_update' },
+    activity_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+    actor: { key: 'DUABC123', name: 'admin', type: 'admin' },
+    ts: '2024-01-01T12:00:00.000000+00:00'
+};
+
+// Activity log event for OfflineEnrollment stream (o2fa_ action)
+const ACTIVITY_LOG_OFFLINE = {
+    action: { details: null, name: 'o2fa_user_provisioned' },
+    activity_id: 'ffffffff-gggg-hhhh-iiii-jjjjjjjjjjjj',
+    actor: { key: 'DUBCD456', name: 'user1', type: 'user' },
+    ts: '2024-01-01T12:01:00.000000+00:00'
+};
+
+// Telephony log event (v2 /admin/v2/logs/telephony)
+const TELEPHONY_LOG = {
+    context: 'authentication',
+    credits: 1,
+    phone: '+12125556707',
+    telephony_id: '220f89ff-bff8-4466-b6cb-b7787940ce68',
+    ts: '2024-01-01T12:02:00.000000+00:00',
+    txid: '2f5d34d3-053f-422c-9dd4-77a5d58706b1',
+    type: 'sms'
+};
+
 module.exports = {
     AIMS_TEST_CREDS: AIMS_TEST_CREDS,
     FUNCTION_ARN: FUNCTION_ARN,
     FUNCTION_NAME: FUNCTION_NAME,
-    LOG_EVENT: LOG_EVENT
+    LOG_EVENT: LOG_EVENT,
+    ACTIVITY_LOG_ADMIN: ACTIVITY_LOG_ADMIN,
+    ACTIVITY_LOG_OFFLINE: ACTIVITY_LOG_OFFLINE,
+    TELEPHONY_LOG: TELEPHONY_LOG
 };

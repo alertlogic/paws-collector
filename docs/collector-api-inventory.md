@@ -134,18 +134,46 @@ from `{since}/{until}` and `rows`/`start` for paging.
   `api-XXXXXXXX.duosecurity.com`)
 - **Source:** [collectors/ciscoduo/collector.js](../collectors/ciscoduo/collector.js),
   [collectors/ciscoduo/utils.js](../collectors/ciscoduo/utils.js)
+- **Time format:** All four streams now use **13-character Unix-ms timestamps**
+  for `mintime`/`maxtime`. The `< 1e12` guard in `buildOffsetQuery` normalizes
+  any in-flight 10-digit second timestamps left over from older state messages.
+- **Pagination:** All four streams page via `metadata.next_offset`.
+  - `Authentication` returns `next_offset` as a `[ms, txid]` **array**; the
+    collector joins it (`array.join(',')`) before sending it back as a query
+    parameter on the next call.
+  - `Administrator` / `OfflineEnrollment` / `Telephony` (all v2 endpoints)
+    return `next_offset` as a single string `"ms,txid"` that is passed through
+    as-is.
+  When pagination is in progress the collector sets `poll_interval_sec = 60`
+  via [`_getNextCollectionStateWithNextPage`](../collectors/ciscoduo/collector.js)
+  so subsequent invocations drain the cursor while staying within Duo's
+  ~1 request-per-minute-per-endpoint guidance.
+- **Shared endpoint note:** `Administrator` and `OfflineEnrollment` share the
+  same `/admin/v2/logs/activity` endpoint. To avoid double-collecting events,
+  `OfflineEnrollment` keeps only items whose `action.name` starts with `o2fa_`
+  and `Administrator` excludes those items.
+- **Rate-limit / freshness constraints (vendor-documented):**
+  - Each v2 log endpoint allows roughly 1 request per minute.
+  - There is a 2-minute server-side delay before new events are queryable;
+    requests with `maxtime` inside the last 2 minutes will return empty.
+  - Maximum retention: 180 days.
 
 | Group | Stream | Method | Route Pattern | Sample Resolved URL | Certainty |
 |---|---|---|---|---|---|
-| List authentication logs | `Authentication` | GET | `{baseUrl}/admin/v2/logs/authentication?mintime={since}&maxtime={until}&limit=1000` | `https://api-XXXXXXXX.duosecurity.com/admin/v2/logs/authentication?mintime=1717200000000&maxtime=1717203600000&limit=1000` | Confirmed |
-| List admin logs | `Administrator` | GET | `{baseUrl}/admin/v1/logs/administrator?mintime={since}` | `https://api-XXXXXXXX.duosecurity.com/admin/v1/logs/administrator?mintime=1717200000` | Confirmed |
-| List telephony logs | `Telephony` | GET | `{baseUrl}/admin/v1/logs/telephony?mintime={since}` | `https://api-XXXXXXXX.duosecurity.com/admin/v1/logs/telephony?mintime=1717200000` | Confirmed |
-| List offline-enrollment logs | `OfflineEnrollment` | GET | `{baseUrl}/admin/v1/logs/offline_enrollment?mintime={since}` | `https://api-XXXXXXXX.duosecurity.com/admin/v1/logs/offline_enrollment?mintime=1717200000` | Confirmed |
+| List authentication logs | `Authentication` | GET | `{baseUrl}/admin/v2/logs/authentication?mintime={sinceMs}&maxtime={untilMs}&limit=1000[&next_offset={ms},{txid}]` | `https://api-XXXXXXXX.duosecurity.com/admin/v2/logs/authentication?mintime=1717200000000&maxtime=1717203600000&limit=1000` | Confirmed |
+| List admin (activity) logs | `Administrator` | GET | `{baseUrl}/admin/v2/logs/activity?mintime={sinceMs}&maxtime={untilMs}&limit=1000[&next_offset={ms},{txid}]` (client-side filter: drop items where `action.name` starts with `o2fa_`) | `https://api-XXXXXXXX.duosecurity.com/admin/v2/logs/activity?mintime=1717200000000&maxtime=1717203600000&limit=1000` | Confirmed |
+| List telephony logs | `Telephony` | GET | `{baseUrl}/admin/v2/logs/telephony?mintime={sinceMs}&maxtime={untilMs}&limit=1000[&next_offset={ms},{txid}]` | `https://api-XXXXXXXX.duosecurity.com/admin/v2/logs/telephony?mintime=1717200000000&maxtime=1717203600000&limit=1000` | Confirmed |
+| List offline-enrollment logs (derived from activity) | `OfflineEnrollment` | GET | `{baseUrl}/admin/v2/logs/activity?mintime={sinceMs}&maxtime={untilMs}&limit=1000[&next_offset={ms},{txid}]` (client-side filter: keep only items where `action.name` starts with `o2fa_`) | `https://api-XXXXXXXX.duosecurity.com/admin/v2/logs/activity?mintime=1717200000000&maxtime=1717203600000&limit=1000` | Confirmed |
 
 **Vendor docs**
 - [Duo Admin API overview](https://duo.com/docs/adminapi)
-- [Authentication logs (v2)](https://duo.com/docs/adminapi#authentication-logs)
-- [Administrator / Telephony / Offline-enrollment logs](https://duo.com/docs/adminapi#logs)
+- [Authentication Logs (v2)](https://duo.com/docs/adminapi#authentication-logs)
+- [Activity Logs (v2)](https://duo.com/docs/adminapi#activity-logs) — used
+  for both `Administrator` and `OfflineEnrollment` streams
+- [Telephony Logs (v2)](https://duo.com/docs/adminapi#telephony-logs)
+- Legacy reference only: [Offline Enrollment Logs (v1)](https://duo.com/docs/adminapi#offline-enrollment-logs)
+  (Duo's v1 endpoint is slated for deprecation; the collector now reads the
+  same events from the v2 Activity endpoint.)
 
 ---
 
