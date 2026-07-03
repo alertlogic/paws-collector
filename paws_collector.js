@@ -182,7 +182,7 @@ class PawsCollector extends AlAwsCollectorV2 {
         AlLogger.info(`PAWS000100 Loading collector ${process.env.paws_type_name}`);
         this._pawsCreds = pawsCreds;
         this._pawsCollectorType = process.env.paws_type_name;
-        this.pollInterval = process.env.paws_poll_interval;
+        this.pollInterval = parseInt(process.env.paws_poll_interval, 10);
         this._pawsEndpoint = process.env.paws_endpoint
         this._pawsDomainEndpoint = endpointDomain;
         this._pawsHttpsEndpoint = 'https://' + endpointDomain;
@@ -501,6 +501,10 @@ class PawsCollector extends AlAwsCollectorV2 {
     async handlePollRequest(stateSqsMsg) {
         let collector = this;
         let retryPrivCollectorState;
+        // True once the success-path has enqueued the next-state SQS message.
+        // Guards the catch-path so we never enqueue a retry copy on top of the
+        // already-enqueued next-state message (root cause of SQS duplication).
+        let nextStateEnqueued = false;
 
         try {
             let pawsState = JSON.parse(stateSqsMsg.body);
@@ -539,6 +543,7 @@ class PawsCollector extends AlAwsCollectorV2 {
             // Reset the retry count to 0 on successful log processing
             pawsState.retry_count = 0;
             await collector._storeCollectionState(pawsState, finalPrivCollectorState, finalNextInvocationTimeout);
+            nextStateEnqueued = true;
             await collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_COMPLETE);
             await collector.done(null, pawsState);
         } catch (handleError) {
@@ -547,48 +552,63 @@ class PawsCollector extends AlAwsCollectorV2 {
                     // We need to fail invocation for duplicate state handling
                     // because we don't want delete SQS message which is being handled by another invocation
                     await collector.done(handleError, JSON.parse(stateSqsMsg.body), false);
-                } else if (handleError && handleError.errorCode === ERROR_CODE_COMPLETED_STATE) {
+                    return;
+                }
+                if (handleError && handleError.errorCode === ERROR_CODE_COMPLETED_STATE) {
                     // For already completed states we need to just remove the state message from SQS
                     await collector.done(null, JSON.parse(stateSqsMsg.body), false);
-                } else {
-                    const pawsState = JSON.parse(stateSqsMsg.body);
+                    return;
+                }
+
+                const pawsState = JSON.parse(stateSqsMsg.body);
+
+                // Only flip the DDB record to FAILED if the next-state msg was NOT enqueued.
+                // If it was, the work is effectively complete and overwriting to FAILED
+                // would misrepresent the state to checkStateSqsMessage on redelivery.
+                if (!nextStateEnqueued) {
                     await collector.updateStateDBEntry(stateSqsMsg, STATE_RECORD_FAILED);
+                }
 
-                    const remainingTimeInMillis = collector.context && collector.context.getRemainingTimeInMillis ?
-                        collector.context.getRemainingTimeInMillis() :
-                        0;
+                const remainingTimeInMillis = collector.context && collector.context.getRemainingTimeInMillis ?
+                    collector.context.getRemainingTimeInMillis() :
+                    0;
 
-                    // If remaining execution time is low, do not enqueue a new state message.
-                    // Failing this invocation keeps the original SQS message for retry and prevents duplicate messages.
-                    if (remainingTimeInMillis <= REMAINING_CONTEXT_TIME_IN_MS) {
-                        AlLogger.error(`PAWS000303 Error handling poll request with low remaining time. Keeping original SQS message for retry: ${collector.stringifyError(handleError)}`);
-                        await collector.done(handleError, pawsState, false);
-                        return;
-                    }
+                // If remaining execution time is low, do not enqueue a new state message.
+                // Failing this invocation keeps the original SQS message for retry and prevents duplicate messages.
+                // BUT if the next-state msg was already enqueued, we must succeed the invocation
+                // so SQS deletes the original — otherwise redelivery would enqueue the next-state msg again.
+                if (remainingTimeInMillis <= REMAINING_CONTEXT_TIME_IN_MS) {
+                    AlLogger.error(`PAWS000303 Error handling poll request with low remaining time. Keeping original SQS message for retry: ${collector.stringifyError(handleError)}`);
+                    await collector.done(nextStateEnqueued ? null : handleError, pawsState, false);
+                    return;
+                }
 
-                    // If collector failed to handle poll state we'd like to refresh the state message in SQS
-                    // in order to avoid expiration of that message due to retention period.
-                    // Here we just upload same state messaged into SQS and send error status to the backend.
-                    // The invocation is marked as succeed in order to clean up current state message in SQS.
-                    // Increment/reset the retry count if error occured.
+                // If collector failed to handle poll state we'd like to refresh the state message in SQS
+                // in order to avoid expiration of that message due to retention period.
+                // Here we just upload same state messaged into SQS and send error status to the backend.
+                // The invocation is marked as succeed in order to clean up current state message in SQS.
+                // Increment/reset the retry count if error occured.
+                // Skip the retry enqueue entirely if the next-state msg was already enqueued
+                // on the success path — re-enqueuing would create a duplicate SQS message.
+                if (!nextStateEnqueued) {
                     pawsState.retry_count = (!pawsState.retry_count || pawsState.retry_count >= MAX_ERROR_RETRIES) ? 1 : pawsState.retry_count + 1;
                     const stateForRetry = retryPrivCollectorState ? retryPrivCollectorState : pawsState.priv_collector_state;
-
                     try {
                         await collector._storeCollectionState(pawsState, stateForRetry, 300);
-
-                        let handleErrorString = collector.stringifyError(handleError);
-                        try {
-                            handleErrorString = await collector.reportErrorStatus(handleError, pawsState);
-                        } catch (reportError) {
-                            AlLogger.warn(`PAWS000408 Unable to report collector error status: ${collector.stringifyError(reportError)}`);
-                        }
-                        AlLogger.error(`PAWS000304 Error handling poll request: ${handleErrorString}`);
-                        await collector.done(null, pawsState);
                     } catch (storeError) {
                         await collector.done(storeError);
+                        return;
                     }
                 }
+
+                let handleErrorString = collector.stringifyError(handleError);
+                try {
+                    handleErrorString = await collector.reportErrorStatus(handleError, pawsState);
+                } catch (reportError) {
+                    AlLogger.warn(`PAWS000408 Unable to report collector error status: ${collector.stringifyError(reportError)}`);
+                }
+                AlLogger.error(`PAWS000304 Error handling poll request: ${handleErrorString}`);
+                return await collector.done(null, pawsState);
             } catch (exception) {
                 AlLogger.error(`PAWS000201 Exception handling poll request: ${collector.stringifyError(exception)}`);
                 return collector.done(exception, null, false);
@@ -861,7 +881,7 @@ class PawsCollector extends AlAwsCollectorV2 {
     }
 
     async _storeCollectionStateArray(pawsState, privCollectorStates, invocationTimeout) {
-        const nextInvocationTimeout = invocationTimeout ? invocationTimeout : this.pollInterval;
+        const nextInvocationTimeout = this._normalizeDelaySeconds(invocationTimeout ? invocationTimeout : this.pollInterval);
 
         const SQSMsgs = privCollectorStates.map((privState, index) => {
             const pState = { ...pawsState };
@@ -890,7 +910,9 @@ class PawsCollector extends AlAwsCollectorV2 {
 
     async _storeCollectionStateSingle(pawsState, privCollectorState, invocationTimeout) {
         let collector = this;
-        const nextInvocationTimeout = invocationTimeout ? invocationTimeout : collector.pollInterval;
+        const nextInvocationTimeout = collector._normalizeDelaySeconds(
+            invocationTimeout ? invocationTimeout : collector.pollInterval
+        );
         pawsState.priv_collector_state = privCollectorState;
 
         const params = {
@@ -901,6 +923,20 @@ class PawsCollector extends AlAwsCollectorV2 {
         // Current state message will be removed by Lambda trigger upon successful completion
         await SQS_CLIENT.sendMessage(params);
     };
+
+    /**
+     * Coerce DelaySeconds to a valid SQS integer in the range [0, 900].
+     * AWS SDK v3 requires DelaySeconds to be a number; SQS rejects strings
+     * with MalformedInput / SerializationException.
+     */
+    _normalizeDelaySeconds(value) {
+        const SQS_MAX_DELAY_SECONDS = 900;
+        const parsed = parseInt(value, 10);
+        if (!Number.isFinite(parsed) || parsed < 0) {
+            return 0;
+        }
+        return Math.min(parsed, SQS_MAX_DELAY_SECONDS);
+    }
 
     /**
      * This function to set collector_streams in environment variable for existing collectors.

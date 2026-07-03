@@ -490,7 +490,7 @@
                                 "exports.handler = async(event, context, callback) => {\n",
                                 "    if (event.ResourceType == 'AWS::CloudFormation::CustomResource' &&\n",
                                 "        (event.RequestType == 'Create' || event.RequestType == 'Update')) {\n",
-                                "        await encrypt(event, context);\n",
+                                "        return await encrypt(event, context);\n",
                                 "    } else {\n",
                                 "    return response.send(event, context, response.SUCCESS);\n",
                                 "     }\n",
@@ -500,7 +500,7 @@
                     }
                 },
                 "Handler":"index.handler",
-                "Runtime":"nodejs22.x",
+                "Runtime":"nodejs24.x",
                 "MemorySize":128,
                 "Timeout": 5,
                 "Tags": [
@@ -594,13 +594,13 @@
                                 "exports.handler = async (event, context, callback) => {\n",
                                 "    if (event.ResourceType == 'AWS::CloudFormation::CustomResource' &&\n",
                                 "        event.RequestType == 'Create') {\n",
-                                "        await createSSMParam(event, context);\n",
+                                "        return await createSSMParam(event, context);\n",
                                 "    } else if (event.ResourceType == 'AWS::CloudFormation::CustomResource' &&\n",
                                 "        event.RequestType == 'Update') {\n",
-                                "        await updateSSMParam(event, context);\n",
+                                "        return await updateSSMParam(event, context);\n",
                                 "     } else if (event.ResourceType == 'AWS::CloudFormation::CustomResource' &&\n",
                                 "        (event.RequestType == 'Delete')) {\n",
-                                "        await deleteSSMParam(event, context);\n",
+                                "        return await deleteSSMParam(event, context);\n",
                                 "    }\n",
                                 "    return response.send(event, context, response.SUCCESS);\n",
                                 "}"
@@ -609,7 +609,7 @@
                     }
                 },
                 "Handler":"index.handler",
-                "Runtime":"nodejs22.x",
+                "Runtime":"nodejs24.x",
                 "MemorySize":128,
                 "Timeout": 5,
                 "Tags": [
@@ -748,7 +748,7 @@
             },
             "Architectures": ["arm64"],
             "Handler":"index.handler",
-            "Runtime":"nodejs22.x",
+            "Runtime":"nodejs24.x",
             "MemorySize": { "Ref" : "CollectorFunctionMemorySize" },
             "Timeout": { "Ref" : "CollectorFunctionTimeout" },
             "Environment":{

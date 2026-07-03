@@ -13,7 +13,11 @@ const moment = require('moment');
 
 function calcNextCollectionInterval(strategy, curUntilMoment, pollInterval) {
     const DELAY_IN_MINUTES = 15;
-    const pollIntervalDelay = process.env.paws_poll_interval_delay && process.env.paws_poll_interval_delay <= 900 ? process.env.paws_poll_interval_delay : 300;
+    const parsedPollIntervalDelay = parseInt(process.env.paws_poll_interval_delay, 10);
+    const pollIntervalDelay = Number.isFinite(parsedPollIntervalDelay) && parsedPollIntervalDelay <= 900
+        ? parsedPollIntervalDelay
+        : 300;
+    pollInterval = Number(pollInterval);
     const nowMoment = moment();
     // If collection start date gt than 30 days, ingest will not accept data, so adjust the date to last 30 days.
     const nextSinceMoment = curUntilMoment.isAfter(nowMoment) ?
