@@ -40,7 +40,7 @@ Resources:
           secret:
           dl_s3_bucket_name:
       CodeUri: 
-      Runtime: nodejs22.x
+      Runtime: nodejs24.x
       Handler: index.handler
       Timeout: 300 
       MemorySize: 1024
