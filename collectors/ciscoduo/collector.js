@@ -171,14 +171,21 @@ class CiscoduoCollector extends PawsCollector {
         // would return paws_poll_interval_delay (default 300 s) and we'd poll a window
         // whose `until` is still in the future. We only override when the next window is
         // not in backfill territory (nextPollInterval > 1 means we are not far behind).
+        let until = nextUntilMoment.valueOf();
         if (!isHighTrafficStream && nextPollInterval > 1) {
             nextPollIntervalSec = MAX_POLL_INTERVAL;
+            // Only subtract 2 min if `until` extends into the future (real-time window) to avoid loss of data.
+            // If already in the past (collector is lagging), collect the full 15-min window as-is.
+            const TWO_MIN_DELAY_SEC = 120;
+            if (nextUntilMoment.isAfter(moment())) {
+                until = moment(nextUntilMoment).subtract(TWO_MIN_DELAY_SEC, 'seconds').valueOf();
+            }
         }
 
         return {
             stream: curState.stream,
             since: nextSinceMoment.valueOf(),
-            until: nextUntilMoment.valueOf(),
+            until: until,
             nextPage: null,
             poll_interval_sec: nextPollIntervalSec
         };

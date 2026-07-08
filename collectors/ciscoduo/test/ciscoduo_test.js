@@ -215,7 +215,6 @@ describe('Unit Tests', function () {
             try {
                 await collector.pawsGetLogs(curState);
             } catch (error) {
-                console.log("Error: ", error);
                 assert.equal(error.errorCode, 40103);
                 getAPILogs.restore();
                 getAPIDetails.restore();
@@ -378,7 +377,7 @@ describe('Unit Tests', function () {
             assert.equal(nextState.since, curState.until, 'continuity required');
             assert.equal(
                 moment(nextState.until).diff(moment(nextState.since), 'minutes'),
-                15,
+                13,
                 'low-traffic streams use a 15 min window per call'
             );
             assert.equal(nextState.poll_interval_sec, 900,
