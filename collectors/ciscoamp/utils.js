@@ -1,5 +1,4 @@
 const RestServiceClient = require('@alertlogic/al-collector-js').RestServiceClient;
-var url = require("url");
 
 const Audit_Logs = 'AuditLogs';
 const Events = 'Events';
@@ -34,7 +33,8 @@ function getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPages
                         }
                     }
                     if (body.metadata.links.next) {
-                        apiUrl = url.parse(body.metadata.links.next).path;
+                        const _next = new URL(body.metadata.links.next);
+                        apiUrl = _next.pathname + _next.search;
                         getData();
                     }
                     else {

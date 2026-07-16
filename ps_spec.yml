@@ -98,7 +98,7 @@ stages:
           trigger_phrase: build-collectors
     env:
       ALPS_SERVICE_NAME: "paws-ciscoamp-collector"
-      ALPS_SERVICE_VERSION: "1.2.3" #set the value from collector package json
+      ALPS_SERVICE_VERSION: "1.2.4" #set the value from collector package json
     commands:
       - source $NVM_DIR/nvm.sh && nvm use 24
       - ./build_collector.sh ciscoamp
@@ -231,7 +231,7 @@ stages:
           trigger_phrase: build-collectors
     env:
       ALPS_SERVICE_NAME: "paws-o365-collector"
-      ALPS_SERVICE_VERSION: "1.3.4" #set the value from collector package json
+      ALPS_SERVICE_VERSION: "1.3.5" #set the value from collector package json
     commands:
       - source $NVM_DIR/nvm.sh && nvm use 24
       - ./build_collector.sh o365

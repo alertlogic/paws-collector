@@ -73,7 +73,7 @@ describe('Unit Tests', function () {
             alserviceStub.get = sinon.stub(RestServiceClient.prototype, 'get').callsFake(
                 function fakeFn() {
                     return new Promise(function (resolve, reject) {
-                        return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { next: "nextPageUrl" }, results: { total: 100 } } });
+                        return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { next: "https://api.amp.cisco.com/v1/events?start_date=2026-01-01&offset=500" }, results: { total: 100 } } });
                     });
                 });
             let maxPagesPerInvocation = 5;
@@ -91,7 +91,7 @@ describe('Unit Tests', function () {
             const baseUrl = process.env.paws_endpoint;
             utils.getAPILogs(baseUrl, authorization, apiUrl, state, accumulator, maxPagesPerInvocation).then(data => {
                 assert(accumulator.length == 5, "accumulator length is wrong");  
-                assert.equal(data.nextPage, 'nextPageUrl');
+                assert.equal(data.nextPage, '/v1/events?start_date=2026-01-01&offset=500');
                 assert.notEqual(data.newSince, null);
                 alserviceStub.get.restore();
                 done();
@@ -105,7 +105,7 @@ describe('Unit Tests', function () {
                     if (count < 3) {
                         count++;
                         return new Promise(function (resolve, reject) {
-                            return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: "nextPageUrl" }, results: { total: 100 } } });
+                            return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: "https://api.amp.cisco.com/v1/events?start_date=2026-01-01&offset=500" }, results: { total: 100 } } });
                         });
                     } else {
                         return new Promise(function (resolve, reject) {

@@ -1,6 +1,5 @@
 const assert = require('assert');
 const sinon = require('sinon');
-const url = require('url');
 const {O365Management} = require('../lib/o365_mgmnt/o365management');
 const msRest = require('@azure/ms-rest-js');
 const {ApplicationTokenCredentials} = require('@azure/ms-rest-nodeauth');
@@ -301,10 +300,10 @@ describe('O365 managment tests', function() {
                             status: 200
                         };
 
-                        const query = url.parse(request.url,true).query;
-                        const queryKeys = Object.keys(query);
+                        const query = new URL(request.url).searchParams;
+                        const queryKeys = Array.from(query.keys());
                         assert.equal(queryKeys.length, 1);
-                        assert.equal(query.PublisherIdentifier, '79ca7c9d-83ce-498f-952f-4c03b56ab573');
+                        assert.equal(query.get('PublisherIdentifier'), '79ca7c9d-83ce-498f-952f-4c03b56ab573');
                         return resolve(mockRes);
                     });
                 });
@@ -331,12 +330,12 @@ describe('O365 managment tests', function() {
                             status: 200
                         };
 
-                        const query = url.parse(request.url,true).query;
-                        const queryKeys = Object.keys(query);
+                        const query = new URL(request.url).searchParams;
+                        const queryKeys = Array.from(query.keys());
                         assert.equal(queryKeys.length, 3);
-                        assert.equal(query.PublisherIdentifier, '79ca7c9d-83ce-498f-952f-4c03b56ab573');
-                        assert.equal(query.foo, 'bar');
-                        assert.equal(query.stuff, 'junk');
+                        assert.equal(query.get('PublisherIdentifier'), '79ca7c9d-83ce-498f-952f-4c03b56ab573');
+                        assert.equal(query.get('foo'), 'bar');
+                        assert.equal(query.get('stuff'), 'junk');
                         return resolve(mockRes);
                     });
                 });

@@ -180,7 +180,7 @@ describe('Unit Tests', function () {
                         count++;
                         ciscoampMock.LOG_EVENT.date = lastOneHrTimeStamp;
                         return new Promise(function (resolve, reject) {
-                            return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: "nextPageUrl" }, results: { total: 100 } } });
+                            return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: "https://api.amp.cisco.com/v1/events?start_date=2026-01-01&offset=500" }, results: { total: 100 } } });
                         });
                     } else {
                         ciscoampMock.LOG_EVENT.date = moment().subtract(2, 'days').toISOString();
@@ -227,7 +227,7 @@ describe('Unit Tests', function () {
                     count++;
                     ciscoampMock.LOG_EVENT.date = count === 1 ? lastOneHrTimeStamp : moment().subtract(count, 'hours').toISOString();
                     return new Promise(function (resolve, reject) {
-                        return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: `nextPageUrl${count}` }, results: { total: 100 } } });
+                        return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: `https://api.amp.cisco.com/v1/events?page=${count}` }, results: { total: 100 } } });
                     });
                 });
             getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
@@ -253,7 +253,7 @@ describe('Unit Tests', function () {
             const [logs, newState, newPollInterval] = await collector.pawsGetLogs(curState);
             assert.equal(logs.length, 10);
             assert.equal(newState.poll_interval_sec, newPollInterval);
-            assert.equal(newState.nextPage, 'nextPageUrl10');
+            assert.equal(newState.nextPage, '/v1/events?page=10');
             // checked date from first page will be store in state.until
             assert.equal(newState.until, moment(lastOneHrTimeStamp).add(1, 'seconds').toISOString());
             alserviceStub.get.restore();
@@ -267,7 +267,7 @@ describe('Unit Tests', function () {
                     count++;
                     ciscoampMock.LOG_EVENT.date = moment().subtract(count, 'hours').toISOString();
                     return new Promise(function (resolve, reject) {
-                        return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: `nextPageUrl${10 + count}` }, results: { total: 100 } } });
+                        return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: `https://api.amp.cisco.com/v1/events?page=${10 + count}` }, results: { total: 100 } } });
                     });
                 });
             getAPIDetails = sinon.stub(utils, 'getAPIDetails').callsFake(
@@ -293,7 +293,7 @@ describe('Unit Tests', function () {
             const [logs, newState, newPollInterval] = await collector.pawsGetLogs(curState);
             assert.equal(logs.length, 10);
             assert.equal(newState.poll_interval_sec, newPollInterval);
-            assert.equal(newState.nextPage, 'nextPageUrl20');
+            assert.equal(newState.nextPage, '/v1/events?page=20');
             // checked date from first page will be store in state.until
             assert.equal(newState.until, curState.until);
             alserviceStub.get.restore();
@@ -308,7 +308,7 @@ describe('Unit Tests', function () {
                     if (count < 5) {
                         ciscoampMock.LOG_EVENT.date = moment().subtract(count, 'hours').toISOString();
                         return new Promise(function (resolve, reject) {
-                            return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: `nextPageUrl${20 + count}` }, results: { total: 100 } } });
+                            return resolve({ data: [ciscoampMock.LOG_EVENT], metadata: { links: { self: "selfPageUrl", next: `https://api.amp.cisco.com/v1/events?page=${20 + count}` }, results: { total: 100 } } });
                         });
                     } else {
                         ciscoampMock.LOG_EVENT.date = ciscoampMock.LOG_EVENT.date = moment().subtract(count, 'hours').toISOString();
