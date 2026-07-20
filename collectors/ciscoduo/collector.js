@@ -40,23 +40,15 @@ class CiscoduoCollector extends PawsCollector {
         const endTs = moment(startTs).add(this.pollInterval, 'seconds').toISOString();
         const objectNames = JSON.parse(process.env.collector_streams);
         const pollInterval = objectNames.length * POLL_INTERVAL_SECS;
+        // All streams now use 13-digit millisecond timestamps to match v2 API requirements.
         const initialStates = objectNames.map(stream => {
-            if (stream === Authentication) {
-                return {
-                    stream,
-                    since: moment(startTs).valueOf(),
-                    until: moment(endTs).valueOf(),
-                    nextPage: null,
-                    poll_interval_sec: pollInterval
-                }
-            }
-            else {
-                return {
-                    stream,
-                    since: moment(startTs).unix(),
-                    poll_interval_sec: pollInterval
-                }
-            }
+            return {
+                stream,
+                since: moment(startTs).valueOf(),
+                until: moment(endTs).valueOf(),
+                nextPage: null,
+                poll_interval_sec: pollInterval
+            };
         });
         return { state: initialStates, nextInvocationTimeout: pollInterval };
     }
@@ -100,8 +92,9 @@ class CiscoduoCollector extends PawsCollector {
 
         typeIdPaths = objectDetails.typeIdPaths;
         tsPaths = objectDetails.tsPaths;
+        // All streams now store since/until as milliseconds — no stream-specific conversion needed.
         const stateUntil = state.until ? `till ${moment(parseInt(state.until)).toISOString()}` : ``;
-        const stateSince = state.stream === Authentication ? moment(parseInt(state.since)).toISOString() : moment(parseInt(state.since * 1000)).toISOString(); // Convert Epoch timestamp to milliseconds to get date in correct format
+        const stateSince = moment(parseInt(state.since)).toISOString();
 
         AlLogger.info(`CDUO000001 Collecting data for ${state.stream} from ${stateSince} ${stateUntil}`);
         try {
@@ -153,65 +146,61 @@ class CiscoduoCollector extends PawsCollector {
     }
 
     _getNextCollectionState(curState) {
+        // All streams use millisecond timestamps and hour-cap interval logic.
+        // Fall back to now if `until` is absent (old in-flight SQS message without `until`).
+        const untilRaw = curState.until != null ? parseInt(curState.until) : moment().valueOf();
+        const untilMs = untilRaw < utils.MIN_13_DIGIT_TIMESTAMP ? untilRaw * 1000 : untilRaw;
+        const untilMoment = moment(untilMs);
 
-        if (curState.stream === Authentication) {
+        
+        // Authentication is the high-traffic stream and uses the 60 s baseline so a single
+        // window stays small. Administrator, OfflineEnrollment and Telephony are low-traffic
+        // (and Administrator + OfflineEnrollment share /admin/v2/logs/activity), so we widen
+        // their window to 15 min per call to halve the request rate on that shared endpoint.
+        const isHighTrafficStream = curState.stream === Authentication;
+        const streamPollInterval = isHighTrafficStream ? this.pollInterval : MAX_POLL_INTERVAL;
 
-            const untilMoment = moment(parseInt(curState.until));
-            // As Cisco duo api allows one call per minute, we used an hour cap instead of making API calls for 1-minute intervals. This will help reduce collection delay and throttling.
-            const { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('hour-cap', untilMoment, this.pollInterval);
-            const nextPollIntervalSec = nextPollInterval >= POLL_INTERVAL_SECS ? nextPollInterval : POLL_INTERVAL_SECS;
-            return {
-                stream: curState.stream,
-                since: nextSinceMoment.valueOf(),
-                until: nextUntilMoment.valueOf(),
-                nextPage: null,
-                poll_interval_sec: nextPollIntervalSec
-            };
-        }
-        else {
-            // This condition works if next page getting null or undefined
-            const untilMoment = moment();
-            if (curState.since) {
-                // New since is either last hour or current.since if it is less than one hr.
-                // Set nextPoll interval to 15 min as it collecting data for last one hr
-                const nextUntilMoment = moment().subtract(1, 'hours').unix();
-                const newSince = Math.max(parseInt(curState.since) + 1, nextUntilMoment);
-                return {
-                    stream: curState.stream,
-                    since: newSince,
-                    poll_interval_sec: MAX_POLL_INTERVAL
-                };
-            }
-            else {
-                let { nextUntilMoment, nextSinceMoment, nextPollInterval } = calcNextCollectionInterval('no-cap', untilMoment, this.pollInterval);
-                return {
-                    stream: curState.stream,
-                    since: nextSinceMoment.unix(),
-                    poll_interval_sec: nextPollInterval
-                };
+        const { nextUntilMoment, nextSinceMoment, nextPollInterval } =
+            calcNextCollectionInterval('hour-cap', untilMoment, streamPollInterval);
+
+        // Per-stream cadence to respect Duo's per-endpoint ~1 call/min throttling limit.
+        let nextPollIntervalSec = nextPollInterval >= POLL_INTERVAL_SECS ? nextPollInterval : POLL_INTERVAL_SECS;
+
+        // For low-traffic streams that are caught up to real-time, force the next
+        // invocation to wait the full 15 min window — otherwise calcNextCollectionInterval
+        // would return paws_poll_interval_delay (default 300 s) and we'd poll a window
+        // whose `until` is still in the future. We only override when the next window is
+        // not in backfill territory (nextPollInterval > 1 means we are not far behind).
+        let until = nextUntilMoment.valueOf();
+        if (!isHighTrafficStream && nextPollInterval > 1) {
+            nextPollIntervalSec = MAX_POLL_INTERVAL;
+            // Only subtract 2 min if `until` extends into the future (real-time window) to avoid loss of data.
+            // If already in the past (collector is lagging), collect the full 15-min window as-is.
+            const TWO_MIN_DELAY_SEC = 120;
+            if (nextUntilMoment.isAfter(moment())) {
+                until = moment(nextUntilMoment).subtract(TWO_MIN_DELAY_SEC, 'seconds').valueOf();
             }
         }
+
+        return {
+            stream: curState.stream,
+            since: nextSinceMoment.valueOf(),
+            until: until,
+            nextPage: null,
+            poll_interval_sec: nextPollIntervalSec
+        };
     }
 
     _getNextCollectionStateWithNextPage(curState, nextPage) {
-
-        if (curState.stream === Authentication) {
-            return {
-                stream: curState.stream,
-                since: curState.since,
-                until: curState.until,
-                nextPage: nextPage,
-                poll_interval_sec: 60
-            };
-        } else {
-            //There is no next page concept for this API, So Setting up the next state since using the last log (Unix timestamp + 1).
-            // call after 60 sec to avoid multiple api call
-            return {
-                stream: curState.stream,
-                since: nextPage,
-                poll_interval_sec: 60
-            };
-        }
+        // All streams: preserve the same time window and store the cursor for the next invocation.
+        // nextPage is a next_offset cursor string, not a timestamp — never use it as `since`.
+        return {
+            stream: curState.stream,
+            since: curState.since,
+            until: curState.until,
+            nextPage: nextPage,
+            poll_interval_sec: POLL_INTERVAL_SECS
+        };
     }
 
     pawsFormatLog(msg) {

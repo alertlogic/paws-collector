@@ -34,10 +34,14 @@ repository.
 ### 2. API Docs
 
 1. [Ciscoduo_Node_Library](https://www.npmjs.com/package/@duosecurity/duo_api)
-2. [Authentication_Logs](https://duo.com/docs/adminapi#authentication-logs)
-3. [Administrator_Logs](https://duo.com/docs/adminapi#administrator-logs)
-4. [Telephony_Logs](https://duo.com/docs/adminapi#telephony-logs)
-5. [OfflineEnrollment_Logs](https://duo.com/docs/adminapi#offline-enrollment-logs)
+2. [Authentication Logs (v2)](https://duo.com/docs/adminapi#authentication-logs)
+3. [Activity Logs (v2)](https://duo.com/docs/adminapi#activity-logs) — used for both the `Administrator` and `OfflineEnrollment` streams; `OfflineEnrollment` keeps only items whose `action.name` starts with `o2fa_` and `Administrator` excludes those items to avoid duplicates.
+4. [Telephony Logs (v2)](https://duo.com/docs/adminapi#telephony-logs)
+5. Legacy reference: [Offline Enrollment Logs (v1)](https://duo.com/docs/adminapi#offline-enrollment-logs) (Duo's v1 endpoint is scheduled for deprecation; this collector now reads the same events from the v2 Activity endpoint above.)
+
+> All four streams use 13-character Unix-ms `mintime`/`maxtime` and page via
+> `metadata.next_offset`. Duo applies a 2-minute server-side delay to log
+> availability and recommends no more than ~1 request per minute per endpoint.
 
 ### 3. CloudFormation Template (CFT)
 
