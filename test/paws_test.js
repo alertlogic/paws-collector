@@ -328,38 +328,39 @@ describe('Unit Tests', function() {
 
     describe('Credential file caching tests', function() {
         const TMP_CREDS_PATH = '/tmp/paws_creds';
-        it('Gets a creds and set into file', function(done) {
-            TestCollector.load().then(function(creds) {
-                const testCred = Buffer.from(creds.pawsCreds.secret).toString('base64');
-                assert.equal(fs.existsSync(TMP_CREDS_PATH), true);
-                assert.equal(fs.readFileSync(TMP_CREDS_PATH, 'base64'), testCred);
-                done();
-            });
+        const EXPECTED_SECRET = 'decrypted-aims-sercret-key';
+
+        beforeEach(function() {
+            process.env.ssm_direct = 'false';
+            if (fs.existsSync(TMP_CREDS_PATH)) {
+                fs.unlinkSync(TMP_CREDS_PATH);
+            }
         });
 
-        it('Caches the file correctly if ssm-direct true', function(done){
-            TestCollector.load().then(function(creds) {   
-                process.env.ssm_direct = 'true';
-                assert.equal(fs.existsSync(TMP_CREDS_PATH), true);
-                assert.equal(fs.readFileSync(TMP_CREDS_PATH, 'utf-8'), creds.pawsCreds.secret);
-                process.env.ssm_direct = 'false';
-                done();
-            });
+        it('Gets a creds and set into file', async function() {
+            await TestCollector.load();
+            const testCred = Buffer.from(EXPECTED_SECRET).toString('base64');
+            assert.equal(fs.existsSync(TMP_CREDS_PATH), true);
+            assert.equal(fs.readFileSync(TMP_CREDS_PATH, 'base64'), testCred);
         });
-        it('Gets a cached file correctly and ssm getParameter not called if file exist ', function(done){
+
+        it('Caches the file correctly if ssm-direct true', async function(){
+            await TestCollector.load();
+            process.env.ssm_direct = 'true';
+            assert.equal(fs.existsSync(TMP_CREDS_PATH), true);
+            assert.equal(fs.readFileSync(TMP_CREDS_PATH, 'utf-8'), EXPECTED_SECRET);
+            process.env.ssm_direct = 'false';
+        });
+        it('Gets a cached file correctly and ssm getParameter not called if file exist ', async function(){
             fs.writeFileSync(TMP_CREDS_PATH, 'alwaysdrinkyourovaltine', 'base64');
-            TestCollector.load().then(function(creds) {
-                assert.notEqual(fs.readFileSync(TMP_CREDS_PATH, 'base64').length, 0);
-                done();
-            });
+            await TestCollector.load();
+            assert.notEqual(fs.readFileSync(TMP_CREDS_PATH, 'base64').length, 0);
         });
-        it('Caches the file correctly', function(done){
-            TestCollector.load().then(function(creds) {
-                const testCred = Buffer.from(creds.pawsCreds.secret).toString('base64');
-                assert.equal(fs.existsSync(TMP_CREDS_PATH), true);
-                assert.equal(fs.readFileSync(TMP_CREDS_PATH, 'base64'), testCred);
-                done();
-            });
+        it('Caches the file correctly', async function(){
+            await TestCollector.load();
+            const testCred = Buffer.from(EXPECTED_SECRET).toString('base64');
+            assert.equal(fs.existsSync(TMP_CREDS_PATH), true);
+            assert.equal(fs.readFileSync(TMP_CREDS_PATH, 'base64'), testCred);
         });
     });
     describe('Send DD metric Tests', function() {

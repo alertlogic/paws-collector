@@ -1,0 +1,118 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "02:00"
+    allow:
+      - dependency-type: "production"
+      - dependency-type: "development"
+    reviewers:
+      - "rakhimundhada15"
+
+  - package-ecosystem: "npm"
+    directory: "/collectors/auth0"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "02:15"
+
+  - package-ecosystem: "npm"
+    directory: "/collectors/carbonblack"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "02:30"
+
+  - package-ecosystem: "npm"
+    directory: "/collectors/ciscoamp"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "02:45"
+
+  - package-ecosystem: "npm"
+    directory: "/collectors/ciscoduo"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+
+  - package-ecosystem: "npm"
+    directory: "/collectors/ciscomeraki"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:15"
+
+  - package-ecosystem: "npm"
+    directory: "/collectors/crowdstrike"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:30"
+
+  - package-ecosystem: "npm"
+    directory: "/collectors/googlestackdriver"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:45"
+
+  - package-ecosystem: "npm"
+    directory: "/collectors/gsuite"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+
+  - package-ecosystem: "npm"
+    directory: "/collectors/mimecast"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:15"
+
+  - package-ecosystem: "npm"
+    directory: "/collectors/o365"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:30"
+
+  - package-ecosystem: "npm"
+    directory: "/collectors/okta"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:45"
+
+  - package-ecosystem: "npm"
+    directory: "/collectors/salesforce"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "05:00"
+
+  - package-ecosystem: "npm"
+    directory: "/collectors/sentinelone"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "05:15"
+
+  - package-ecosystem: "npm"
+    directory: "/collectors/sophos"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "05:30"
+
+  - package-ecosystem: "npm"
+    directory: "/collectors/sophossiem"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "05:45"
