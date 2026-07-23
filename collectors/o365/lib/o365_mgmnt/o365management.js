@@ -228,7 +228,7 @@ class O365Management extends msRestAzure.AzureServiceClient {
         queryParameters.push('PublisherIdentifier=' + encodeURIComponent(publisherId));
         if (queryParameters.length > 0) {
             // check if pre formed url already has a query string
-            const queryKeys = Object.keys(url.parse(requestUrl, true).query);
+            const queryKeys = [...new URL(requestUrl).searchParams.keys()];
             const joinChar = queryKeys.length > 0 ? '&' : '?';
             requestUrl += joinChar + queryParameters.join('&');
         }
