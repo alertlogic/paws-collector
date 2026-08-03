@@ -1,0 +1,4 @@
+{
+  "description": "Known CVEs with acceptable risk or no available fix. Tracked for manual review.",
+  "vulnerabilities": []
+}

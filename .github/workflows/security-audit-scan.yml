@@ -1,0 +1,65 @@
+name: Security Audit Scan
+
+# NOTE: This workflow intentionally stays in GitHub Actions (not ps_spec.yml / ALPS)
+# because ALPS does not support cron/scheduled triggers. This is the only home
+# for a weekly automated vulnerability sweep across all collector packages.
+# "runs-on: ubuntu-latest" is required — there is no pre-configured ALPS environment
+# for scheduled jobs.
+#
+# The PR Test stage in ps_spec.yml also runs npm audit on every pull request, so
+# this scheduled scan acts as an additional safety net for CVEs discovered between PRs.
+on:
+  schedule:
+    - cron: "30 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dir:
+          - .
+          - collectors/auth0
+          - collectors/carbonblack
+          - collectors/ciscoamp
+          - collectors/ciscoduo
+          - collectors/ciscomeraki
+          - collectors/crowdstrike
+          - collectors/googlestackdriver
+          - collectors/gsuite
+          - collectors/mimecast
+          - collectors/o365
+          - collectors/o365/lib/o365_mgmnt
+          - collectors/okta
+          - collectors/salesforce
+          - collectors/sentinelone
+          - collectors/sophos
+          - collectors/sophossiem
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Install and audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Scheduled scan uses --audit-level=moderate for wider visibility
+          # and includes dev dependencies to report vulnerabilities in any package.
+          # Known acceptable CVEs with no available fix are tracked in
+          # .audit-ignore.json and skipped by scripts/audit-with-ignore.sh.
+          if [[ "${{ matrix.dir }}" == "." ]]; then
+            npm install --no-audit --no-fund
+            bash scripts/audit-with-ignore.sh . moderate include-dev
+          else
+            npm install --prefix "${{ matrix.dir }}" --no-audit --no-fund
+            bash scripts/audit-with-ignore.sh "${{ matrix.dir }}" moderate include-dev
+          fi
