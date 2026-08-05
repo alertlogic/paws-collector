@@ -1,0 +1,159 @@
+name: Collector Dependency Sync
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  detect-root-bump:
+    name: Detect Root Version Bump
+    runs-on: ubuntu-latest
+
+    outputs:
+      should_sync: ${{ steps.detect.outputs.should_sync }}
+      paws_version: ${{ steps.detect.outputs.paws_version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check if root package.json version was bumped
+        id: detect
+        run: |
+          # On workflow_dispatch, always sync
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            PAWS_VERSION=$(node -p "require('./package.json').version")
+            echo "should_sync=true" >> "$GITHUB_OUTPUT"
+            echo "paws_version=$PAWS_VERSION" >> "$GITHUB_OUTPUT"
+            echo "workflow_dispatch: will sync collectors to paws-collector@$PAWS_VERSION"
+            exit 0
+          fi
+
+          # On push, only sync if the version field changed in this commit
+          PREV=$(git show HEAD~1:package.json 2>/dev/null | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).version" 2>/dev/null || echo "none")
+          CURR=$(node -p "require('./package.json').version")
+
+          echo "Previous root version: $PREV"
+          echo "Current root version:  $CURR"
+
+          if [ "$PREV" != "$CURR" ]; then
+            echo "should_sync=true" >> "$GITHUB_OUTPUT"
+            echo "paws_version=$CURR" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_sync=false" >> "$GITHUB_OUTPUT"
+            echo "paws_version=$CURR" >> "$GITHUB_OUTPUT"
+            echo "Root version unchanged — skipping collector sync."
+          fi
+
+  sync-collectors:
+    name: Sync All Collectors
+    needs: detect-root-bump
+    if: needs.detect-root-bump.outputs.should_sync == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['24.x']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Sync each collector
+        env:
+          PAWS_VERSION: ${{ needs.detect-root-bump.outputs.paws_version }}
+        run: |
+          for dir in collectors/*/; do
+            # Skip the template scaffold
+            name=$(basename "$dir")
+            if [ "$name" = "template" ]; then
+              echo "Skipping scaffold: $dir"
+              continue
+            fi
+
+            pkg="${dir}package.json"
+            if [ ! -f "$pkg" ]; then
+              echo "No package.json found in $dir — skipping"
+              continue
+            fi
+
+            echo "--- Processing $name ---"
+
+            # 1. Update @alertlogic/paws-collector version
+            node -e "
+              const fs = require('fs');
+              const p = JSON.parse(fs.readFileSync('$pkg', 'utf8'));
+              const key = '@alertlogic/paws-collector';
+              if (p.dependencies && p.dependencies[key]) {
+                const prev = p.dependencies[key];
+                p.dependencies[key] = process.env.PAWS_VERSION;
+                console.log(key + ': ' + prev + ' -> ' + process.env.PAWS_VERSION);
+                fs.writeFileSync('$pkg', JSON.stringify(p, null, 2) + '\n', 'utf8');
+              } else {
+                console.log(key + ' not found in dependencies — skipping version pin');
+              }
+            "
+
+            # 2. Install and run safe audit fix
+            (cd "$dir" && npm ci && npm audit fix) || true
+
+            # 3. Update overrides for transitive vulnerabilities
+            node .github/scripts/update-overrides.js --cwd "$dir"
+
+            # 4. Bump patch version for this collector
+            node .github/scripts/bump-version.js "$pkg"
+          done
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+          git checkout -B fix/collector-deps-sync
+          git add -A
+          git commit -m "fix(deps): sync all collector dependencies after paws-collector@${{ needs.detect-root-bump.outputs.paws_version }}" || true
+          git push origin fix/collector-deps-sync --force
+
+      - name: Create or update pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BODY="## Collector Dependency Sync
+
+          This PR syncs all collectors after root \`@alertlogic/paws-collector\`
+          was updated to **v${{ needs.detect-root-bump.outputs.paws_version }}**.
+
+          ### What was done for each collector
+          1. \`@alertlogic/paws-collector\` version pinned to \`${{ needs.detect-root-bump.outputs.paws_version }}\`
+          2. \`npm audit fix\` run to apply safe direct-dependency fixes
+          3. \`update-overrides.js\` run to address transitive vulnerabilities
+          4. Patch version incremented in each collector \`package.json\`
+
+          ### Collectors included
+          All directories under \`collectors/\` (excluding \`template/\` scaffold)
+
+          ---
+          *Opened automatically by [collector-deps-sync](.github/workflows/collector-deps-sync.yml). Review and merge when ready — no auto-merge.*"
+
+          gh pr create \
+            --title "fix(deps): sync all collector dependencies after paws-collector@${{ needs.detect-root-bump.outputs.paws_version }}" \
+            --body "$BODY" \
+            --base master \
+            --head fix/collector-deps-sync \
+            --label deps-collectors \
+          || gh pr edit fix/collector-deps-sync \
+            --title "fix(deps): sync all collector dependencies after paws-collector@${{ needs.detect-root-bump.outputs.paws_version }}" \
+            --body "$BODY"

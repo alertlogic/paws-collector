@@ -1,0 +1,127 @@
+name: Lambda Runtime Sync
+
+on:
+  push:
+    branches: [master]
+  schedule:
+    # Twice weekly: Monday and Thursday at 09:00 UTC
+    - cron: '0 9 * * 1,4'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-runtime:
+    name: Check AWS Lambda Node.js Runtime
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['24.x']
+
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
+      target_major: ${{ steps.check.outputs.target_major }}
+      target_runtime: ${{ steps.check.outputs.target_runtime }}
+      changed_files: ${{ steps.check.outputs.changed_files }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Check AWS Lambda Node.js runtime version
+        id: check
+        run: node .github/scripts/check-node-version.js
+
+  bump-and-pr:
+    name: Bump Versions and Open PR
+    needs: check-runtime
+    if: needs.check-runtime.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['24.x']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      # Re-run the script so the file changes are present in this job's workspace
+      - name: Apply runtime file updates
+        run: node .github/scripts/check-node-version.js
+
+      - name: Bump patch version in root package.json
+        run: node .github/scripts/bump-version.js package.json
+
+      - name: Bump patch version in each collector package.json
+        run: |
+          for dir in collectors/*/; do
+            pkg="${dir}package.json"
+            if [ -f "$pkg" ]; then
+              node .github/scripts/bump-version.js "$pkg"
+            fi
+          done
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+          git checkout -B chore/node-runtime-update
+          git add -A
+          git commit -m "chore: update Node.js runtime to ${{ needs.check-runtime.outputs.target_runtime }}" || true
+          git push origin chore/node-runtime-update --force
+
+      - name: Create or update pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BODY="## Node.js Runtime Update
+
+          The AWS Lambda supported runtime has changed.
+
+          | | Value |
+          |---|---|
+          | New runtime | \`${{ needs.check-runtime.outputs.target_runtime }}\` |
+          | Changed files | \`${{ needs.check-runtime.outputs.changed_files }}\` |
+
+          ### Files updated
+          - \`local/sam-template.yaml\`
+          - \`cfn/paws-collector.template\`
+          - \`cfn/paws-collector-shared.template\`
+          - \`ps_spec.yml\`
+          - \`.github/workflows/code-coverage.yml\`
+          - All \`collectors/*/local/sam-template.yaml\`
+          - \`.github/lambda-runtime.json\` (state file)
+          - Patch version bumped in root and all collector \`package.json\` files
+
+          ### Reference
+          [AWS Lambda runtimes documentation](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html)
+
+          ---
+          *Opened automatically by [lambda-runtime-sync](.github/workflows/lambda-runtime-sync.yml). Review and merge when ready — no auto-merge.*"
+
+          # Create PR; if it already exists for this branch, update the title/body instead
+          gh pr create \
+            --title "chore: update Node.js runtime to ${{ needs.check-runtime.outputs.target_runtime }}" \
+            --body "$BODY" \
+            --base master \
+            --head chore/node-runtime-update \
+            --label runtime-update \
+          || gh pr edit chore/node-runtime-update \
+            --title "chore: update Node.js runtime to ${{ needs.check-runtime.outputs.target_runtime }}" \
+            --body "$BODY"
