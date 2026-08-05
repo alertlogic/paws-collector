@@ -1,27 +1,10 @@
 'use strict';
 
-/**
- * check-node-version.js
- *
- * Adapted from @alertlogic/al-aws-collector-js/scripts/check-lambda-node-runtime.js
- *
- * Fetches the AWS Lambda runtimes documentation, determines the highest
- * supported nodejs<N>.x runtime, compares it against .github/lambda-runtime.json,
- * and updates all Node.js version references in this repository when a change
- * is detected.
- *
- * Files updated:
- *   - local/sam-template.yaml
- *   - cfn/paws-collector.template
- *   - cfn/paws-collector-shared.template
- *   - ps_spec.yml
- *   - .github/workflows/code-coverage.yml
- *   - collectors/<*>/local/sam-template.yaml  (all collector SAM templates)
- *   - collectors/template/local/sam-template.yaml
- *   - .github/lambda-runtime.json  (state file)
- *
- * Emits GitHub Actions outputs: changed, target_major, target_runtime, changed_files
- */
+// Fetches AWS Lambda docs, detects Node.js runtime changes, updates all version
+// references in the repo, and emits GitHub Actions outputs: changed, target_major,
+// target_runtime, changed_files.
+//
+// Usage: node check-node-version.js
 
 const fs = require('fs');
 const path = require('path');
@@ -30,10 +13,6 @@ const https = require('https');
 const RUNTIME_DOCS_URL = 'https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html';
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const STATE_FILE = path.join(REPO_ROOT, '.github', 'lambda-runtime.json');
-
-// ---------------------------------------------------------------------------
-// Build the full list of files and their replacer patterns
-// ---------------------------------------------------------------------------
 
 function collectorsLocalSamTemplates() {
     const collectorsDir = path.join(REPO_ROOT, 'collectors');
@@ -49,7 +28,6 @@ function collectorsLocalSamTemplates() {
             file: path.join(collectorsDir, name, 'local', 'sam-template.yaml'),
             replacers: [
                 {
-                    // YAML: Runtime: nodejs<N>.x
                     pattern: /Runtime:\s*nodejs\d+\.x/g,
                     replacement: (major) => `Runtime: nodejs${major}.x`
                 }
@@ -59,13 +37,11 @@ function collectorsLocalSamTemplates() {
 
 function buildTargetFiles() {
     const cfnJsonPattern = {
-        // JSON inside CFN template: "Runtime":"nodejs<N>.x" (with or without space)
         pattern: /"Runtime"\s*:\s*"nodejs\d+\.x"/g,
         replacement: (major) => `"Runtime": "nodejs${major}.x"`
     };
 
     return [
-        // Root local SAM template
         {
             file: path.join(REPO_ROOT, 'local', 'sam-template.yaml'),
             replacers: [
@@ -75,7 +51,6 @@ function buildTargetFiles() {
                 }
             ]
         },
-        // CFN templates (JSON format)
         {
             file: path.join(REPO_ROOT, 'cfn', 'paws-collector.template'),
             replacers: [cfnJsonPattern]
@@ -84,7 +59,6 @@ function buildTargetFiles() {
             file: path.join(REPO_ROOT, 'cfn', 'paws-collector-shared.template'),
             replacers: [cfnJsonPattern]
         },
-        // ps_spec.yml: nvm use <N>
         {
             file: path.join(REPO_ROOT, 'ps_spec.yml'),
             replacers: [
@@ -94,25 +68,18 @@ function buildTargetFiles() {
                 }
             ]
         },
-        // Existing code-coverage workflow
         {
             file: path.join(REPO_ROOT, '.github', 'workflows', 'code-coverage.yml'),
             replacers: [
                 {
-                    // node-version: <N>.x
                     pattern: /node-version:\s*\d+\.x/g,
                     replacement: (major) => `node-version: ${major}.x`
                 }
             ]
         },
-        // All collectors' local SAM templates (dynamically resolved)
         ...collectorsLocalSamTemplates()
     ];
 }
-
-// ---------------------------------------------------------------------------
-// GitHub Actions output helper
-// ---------------------------------------------------------------------------
 
 function writeGitHubOutput(key, value) {
     if (!process.env.GITHUB_OUTPUT) {
@@ -120,10 +87,6 @@ function writeGitHubOutput(key, value) {
     }
     fs.appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
 }
-
-// ---------------------------------------------------------------------------
-// HTTP fetch with redirect following and retry
-// ---------------------------------------------------------------------------
 
 function requestWithRedirects(url, maxRedirects = 5) {
     return new Promise((resolve, reject) => {
@@ -179,10 +142,6 @@ async function fetchHtmlWithRetry(url, attempts = 3) {
     throw lastError;
 }
 
-// ---------------------------------------------------------------------------
-// Runtime parsing
-// ---------------------------------------------------------------------------
-
 function parseHighestNodeRuntimeMajor(html) {
     const regex = /\bnodejs(\d+)\.x\b/gi;
     const majors = new Set();
@@ -203,16 +162,16 @@ function parseHighestNodeRuntimeMajor(html) {
     return Math.max(...majors);
 }
 
-// ---------------------------------------------------------------------------
-// State file
-// ---------------------------------------------------------------------------
-
 function readStateMajor() {
     if (!fs.existsSync(STATE_FILE)) {
         return null;
     }
-    const state = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
-    return Number(state.major);
+    try {
+        const state = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+        return Number(state.major);
+    } catch {
+        return null;
+    }
 }
 
 function writeStateMajor(major) {
@@ -223,10 +182,6 @@ function writeStateMajor(major) {
     };
     fs.writeFileSync(STATE_FILE, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 }
-
-// ---------------------------------------------------------------------------
-// File updater
-// ---------------------------------------------------------------------------
 
 function updateTargetFiles(targetMajor) {
     const changed = [];
@@ -256,10 +211,6 @@ function updateTargetFiles(targetMajor) {
 
     return changed;
 }
-
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
 
 async function main() {
     try {

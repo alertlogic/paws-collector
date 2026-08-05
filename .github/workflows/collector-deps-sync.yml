@@ -5,13 +5,11 @@ on:
     branches: [master]
   workflow_dispatch:
 
-permissions:
-  contents: write
-  pull-requests: write
-
 jobs:
   detect-root-bump:
     name: Detect Root Version Bump
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
 
     outputs:
@@ -20,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 2
 
@@ -56,6 +54,9 @@ jobs:
     name: Sync All Collectors
     needs: detect-root-bump
     if: needs.detect-root-bump.outputs.should_sync == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -63,12 +64,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
       - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
@@ -113,6 +114,10 @@ jobs:
 
             # 3. Update overrides for transitive vulnerabilities
             node .github/scripts/update-overrides.js --cwd "$dir"
+
+            # 3b. Sync lock file — update-overrides.js writes package.json only;
+            # this regenerates package-lock.json to prevent duplicate PRs on re-run
+            (cd "$dir" && npm install --package-lock-only) || true
 
             # 4. Bump patch version for this collector
             node .github/scripts/bump-version.js "$pkg"

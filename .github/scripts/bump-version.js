@@ -1,17 +1,6 @@
 'use strict';
 
-/**
- * bump-version.js
- *
- * Increments the patch component of the `version` field in a package.json file.
- *
- * Usage:
- *   node .github/scripts/bump-version.js <path/to/package.json>
- *
- * Example:
- *   node .github/scripts/bump-version.js package.json
- *   node .github/scripts/bump-version.js collectors/auth0/package.json
- */
+// Usage: node bump-version.js <path/to/package.json>
 
 const fs = require('fs');
 const path = require('path');
