@@ -70,6 +70,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Ensure label exists in the repo (idempotent — safe to run every time)
+          gh label create "deps-paws-lib" \
+            --color "0075ca" \
+            --description "Dependency updates for paws-collector root library" \
+            --force
+
+          TITLE="fix(deps): update @alertlogic/paws-collector dependencies"
           BODY="## Dependency Update — @alertlogic/paws-collector
 
           This PR was raised automatically after \`npm audit fix\` and
@@ -90,12 +97,14 @@ jobs:
           ---
           *Opened automatically by [deps-paws-update](.github/workflows/deps-paws-update.yml). Review and merge when ready — no auto-merge.*"
 
-          gh pr create \
-            --title "fix(deps): update @alertlogic/paws-collector dependencies" \
-            --body "$BODY" \
-            --base master \
-            --head fix/paws-deps-update \
-            --label deps-paws-lib \
-          || gh pr edit fix/paws-deps-update \
-            --title "fix(deps): update @alertlogic/paws-collector dependencies" \
-            --body "$BODY"
+          # Create the PR if none exists for this branch; otherwise update it
+          if gh pr view fix/paws-deps-update --json number > /dev/null 2>&1; then
+            gh pr edit fix/paws-deps-update --title "$TITLE" --body "$BODY"
+          else
+            gh pr create \
+              --title "$TITLE" \
+              --body "$BODY" \
+              --base master \
+              --head fix/paws-deps-update \
+              --label "deps-paws-lib"
+          fi

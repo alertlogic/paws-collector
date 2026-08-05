@@ -131,6 +131,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Ensure label exists in the repo (idempotent — safe to run every time)
+          gh label create "deps-collectors" \
+            --color "e4e669" \
+            --description "Dependency sync for individual collector packages" \
+            --force
+
+          TITLE="fix(deps): sync all collector dependencies after paws-collector@${{ needs.detect-root-bump.outputs.paws_version }}"
           BODY="## Collector Dependency Sync
 
           This PR syncs all collectors after root \`@alertlogic/paws-collector\`
@@ -148,12 +155,14 @@ jobs:
           ---
           *Opened automatically by [collector-deps-sync](.github/workflows/collector-deps-sync.yml). Review and merge when ready — no auto-merge.*"
 
-          gh pr create \
-            --title "fix(deps): sync all collector dependencies after paws-collector@${{ needs.detect-root-bump.outputs.paws_version }}" \
-            --body "$BODY" \
-            --base master \
-            --head fix/collector-deps-sync \
-            --label deps-collectors \
-          || gh pr edit fix/collector-deps-sync \
-            --title "fix(deps): sync all collector dependencies after paws-collector@${{ needs.detect-root-bump.outputs.paws_version }}" \
-            --body "$BODY"
+          # Create the PR if none exists for this branch; otherwise update it
+          if gh pr view fix/collector-deps-sync --json number > /dev/null 2>&1; then
+            gh pr edit fix/collector-deps-sync --title "$TITLE" --body "$BODY"
+          else
+            gh pr create \
+              --title "$TITLE" \
+              --body "$BODY" \
+              --base master \
+              --head fix/collector-deps-sync \
+              --label "deps-collectors"
+          fi

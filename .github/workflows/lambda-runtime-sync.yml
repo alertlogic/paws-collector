@@ -115,13 +115,21 @@ jobs:
           ---
           *Opened automatically by [lambda-runtime-sync](.github/workflows/lambda-runtime-sync.yml). Review and merge when ready — no auto-merge.*"
 
-          # Create PR; if it already exists for this branch, update the title/body instead
-          gh pr create \
-            --title "chore: update Node.js runtime to ${{ needs.check-runtime.outputs.target_runtime }}" \
-            --body "$BODY" \
-            --base master \
-            --head chore/node-runtime-update \
-            --label runtime-update \
-          || gh pr edit chore/node-runtime-update \
-            --title "chore: update Node.js runtime to ${{ needs.check-runtime.outputs.target_runtime }}" \
-            --body "$BODY"
+          # Ensure label exists in the repo (idempotent — safe to run every time)
+          gh label create "runtime-update" \
+            --color "bfd4f2" \
+            --description "Node.js Lambda runtime version updates" \
+            --force
+
+          # Create the PR if none exists for this branch; otherwise update it
+          TITLE="chore: update Node.js runtime to ${{ needs.check-runtime.outputs.target_runtime }}"
+          if gh pr view chore/node-runtime-update --json number > /dev/null 2>&1; then
+            gh pr edit chore/node-runtime-update --title "$TITLE" --body "$BODY"
+          else
+            gh pr create \
+              --title "$TITLE" \
+              --body "$BODY" \
+              --base master \
+              --head chore/node-runtime-update \
+              --label "runtime-update"
+          fi
