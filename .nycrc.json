@@ -1,0 +1,29 @@
+{
+  "all": true,
+  "include": [
+    "**/*.js"
+  ],
+  "exclude": [
+    "node_modules/**",
+    "proto/**",
+    "coverage/**",
+    "test/**",
+    "scripts/**",
+    ".github/**"
+  ],
+  "reporter": [
+    "cobertura",
+    "text",
+    "html",
+    "lcov"
+  ],
+  "report-dir": "./coverage",
+  "temp-dir": "./.nyc_output",
+  "check-coverage": true,
+  "branches": 75,
+  "lines": 90,
+  "functions": 90,
+  "statements": 90,
+  "per-file": false,
+  "skip-full": false
+}
