@@ -75,26 +75,23 @@ jobs:
           cache: npm
 
       - name: Sync each collector
+        id: sync
         env:
           PAWS_VERSION: ${{ needs.detect-root-bump.outputs.paws_version }}
         run: |
+          AUDIT_ROWS=""
+          HAS_REMAINING_VULNS=false
+          HAS_TEST_FAILURES=false
+
           for dir in collectors/*/; do
-            # Skip the template scaffold
             name=$(basename "$dir")
-            if [ "$name" = "template" ]; then
-              echo "Skipping scaffold: $dir"
-              continue
-            fi
-
+            if [ "$name" = "template" ]; then continue; fi
             pkg="${dir}package.json"
-            if [ ! -f "$pkg" ]; then
-              echo "No package.json found in $dir — skipping"
-              continue
-            fi
+            if [ ! -f "$pkg" ]; then continue; fi
 
-            echo "--- Processing $name ---"
+            echo "========== Processing $name =========="
 
-            # 1. Update @alertlogic/paws-collector version
+            # 1. Pin @alertlogic/paws-collector version
             node -e "
               const fs = require('fs');
               const p = JSON.parse(fs.readFileSync('$pkg', 'utf8'));
@@ -109,19 +106,67 @@ jobs:
               }
             "
 
-            # 2. Install and run safe audit fix
-            (cd "$dir" && npm ci && npm audit fix) || true
+            # 2. Install (collectors have no package-lock.json by design —
+            #    collector.mk uses npm install and its clean target deletes the lock file)
+            (cd "$dir" && npm install) || true
 
-            # 3. Update overrides for transitive vulnerabilities
+            # 3. Safe audit fix — minor/patch direct deps
+            (cd "$dir" && npm audit fix) || true
+
+            # 4. Transitive vulnerability overrides
             node .github/scripts/update-overrides.js --cwd "$dir"
 
-            # 3b. Sync lock file — update-overrides.js writes package.json only;
-            # this regenerates package-lock.json to prevent duplicate PRs on re-run
+            # 5. Force-fix any remaining vulns with major version bumps.
+            #    Unlike root (where Dependabot handles majors), collectors have no
+            #    Dependabot coverage so we must apply major fixes here.
+            #    Changes are never reverted — tests below validate whether safe.
+            (cd "$dir" && npm audit fix --force) || true
+
+            # 6. Sync package-lock.json after all fixes
             (cd "$dir" && npm install --package-lock-only) || true
 
-            # 4. Bump patch version for this collector
-            node .github/scripts/bump-version.js "$pkg"
+            # 7. Count remaining vulnerabilities after all fixes
+            VULN_COUNT=0
+            VULN_COUNT=$(cd "$dir" && npm audit --json 2>/dev/null | node -e "
+              try {
+                const d = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf8'));
+                process.stdout.write(String(d.metadata?.vulnerabilities?.total || 0));
+              } catch { process.stdout.write('0'); }
+            " 2>/dev/null) || VULN_COUNT=0
+
+            if [ "$VULN_COUNT" = "0" ]; then
+              VULN_STATUS="**0 (clean)**"
+            else
+              VULN_STATUS="**$VULN_COUNT remaining**"
+              HAS_REMAINING_VULNS=true
+            fi
+
+            # 8. Run tests — capture result, never abort the loop
+            TEST_STATUS="**passed**"
+            if ! (cd "$dir" && npm test > /tmp/test_${name}.txt 2>&1); then
+              TEST_STATUS="**failed**"
+              HAS_TEST_FAILURES=true
+              echo "--- Test failure output for $name ---"
+              tail -30 /tmp/test_${name}.txt
+            fi
+
+            # 9. Bump patch version only if files actually changed
+            if ! git diff --quiet "$pkg" 2>/dev/null || \
+               ! git diff --quiet "${dir}package-lock.json" 2>/dev/null; then
+              node .github/scripts/bump-version.js "$pkg"
+            fi
+
+            AUDIT_ROWS="${AUDIT_ROWS}| \`${name}\` | ${VULN_STATUS} | ${TEST_STATUS} |"$'\n'
           done
+
+          # Write multiline outputs safely using heredoc delimiters
+          {
+            echo "audit_rows<<GHADELIM_AUDIT"
+            printf '%s' "$AUDIT_ROWS"
+            echo "GHADELIM_AUDIT"
+            echo "has_remaining_vulns=$HAS_REMAINING_VULNS"
+            echo "has_test_failures=$HAS_TEST_FAILURES"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Commit and push changes
         run: |
@@ -135,32 +180,53 @@ jobs:
       - name: Create or update pull request
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AUDIT_ROWS: ${{ steps.sync.outputs.audit_rows }}
+          HAS_REMAINING_VULNS: ${{ steps.sync.outputs.has_remaining_vulns }}
+          HAS_TEST_FAILURES: ${{ steps.sync.outputs.has_test_failures }}
+          PAWS_VERSION: ${{ needs.detect-root-bump.outputs.paws_version }}
         run: |
-          # Ensure label exists in the repo (idempotent — safe to run every time)
           gh label create "deps-collectors" \
             --color "e4e669" \
             --description "Dependency sync for individual collector packages" \
             --force
 
-          TITLE="fix(deps): sync all collector dependencies after paws-collector@${{ needs.detect-root-bump.outputs.paws_version }}"
+          # Build status notice based on outcome
+          if [ "$HAS_TEST_FAILURES" = "true" ] && [ "$HAS_REMAINING_VULNS" = "true" ]; then
+            STATUS_NOTICE="> **Failed — some tests failed and vulnerabilities remain.** Review the table below and the [workflow log]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID) before merging."
+          elif [ "$HAS_TEST_FAILURES" = "true" ]; then
+            STATUS_NOTICE="> **Failed — some tests failed after dependency fixes.** The fixes are included in this PR — check the [workflow log]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID) for failure details."
+          elif [ "$HAS_REMAINING_VULNS" = "true" ]; then
+            STATUS_NOTICE="> **Warning — some vulnerabilities could not be auto-fixed** (likely need a manual breaking-change upgrade). See table below."
+          else
+            STATUS_NOTICE="> **All collectors: 0 vulnerabilities and tests passing.**"
+          fi
+
+          TITLE="fix(deps): sync all collector dependencies after paws-collector@$PAWS_VERSION"
           BODY="## Collector Dependency Sync
 
-          This PR syncs all collectors after root \`@alertlogic/paws-collector\`
-          was updated to **v${{ needs.detect-root-bump.outputs.paws_version }}**.
+          Syncs all collectors after root \`@alertlogic/paws-collector\` was updated to **v${PAWS_VERSION}**.
 
-          ### What was done for each collector
-          1. \`@alertlogic/paws-collector\` version pinned to \`${{ needs.detect-root-bump.outputs.paws_version }}\`
-          2. \`npm audit fix\` run to apply safe direct-dependency fixes
-          3. \`update-overrides.js\` run to address transitive vulnerabilities
-          4. Patch version incremented in each collector \`package.json\`
+          $STATUS_NOTICE
 
-          ### Collectors included
-          All directories under \`collectors/\` (excluding \`template/\` scaffold)
+          ### Per-collector status
+
+          | Collector | Vulnerabilities | Tests |
+          |---|---|---|
+          $AUDIT_ROWS
+          > **Vulnerabilities**: counts remaining after safe fix + overrides + forced major fix.
+          > **Tests**: run immediately after all fixes — failure means the forced major bump broke something.
+          > Check the [workflow run log]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID) for full test output per collector.
+
+          ### What was applied per collector
+          1. \`@alertlogic/paws-collector\` pinned to \`$PAWS_VERSION\`
+          2. \`npm audit fix\` — safe minor/patch fixes
+          3. \`update-overrides.js\` — transitive vulnerability overrides
+          4. \`npm audit fix --force\` — major version fixes for remaining vulns
+          5. Tests run to validate — results shown above
 
           ---
           *Opened automatically by [collector-deps-sync](.github/workflows/collector-deps-sync.yml). Review and merge when ready — no auto-merge.*"
 
-          # Create the PR if none exists for this branch; otherwise update it
           if gh pr view fix/collector-deps-sync --json number > /dev/null 2>&1; then
             gh pr edit fix/collector-deps-sync --title "$TITLE" --body "$BODY"
           else

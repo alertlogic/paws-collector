@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # Root paws-collector npm dependencies — Monday
+  # Root paws-collector — version bumps (minor+major) in one PR, security in another
   - package-ecosystem: npm
     directory: /
     target-branch: master
@@ -24,31 +24,7 @@ updates:
         patterns:
           - "*"
 
-  # Root paws-collector npm dependencies — Thursday
-  - package-ecosystem: npm
-    directory: /
-    target-branch: master
-    schedule:
-      interval: weekly
-      day: thursday
-      time: "09:00"
-      timezone: UTC
-    open-pull-requests-limit: 10
-    labels:
-      - deps-paws-lib
-    commit-message:
-      prefix: "fix(deps)"
-    groups:
-      npm-version-updates:
-        applies-to: version-updates
-        patterns:
-          - "*"
-      npm-security-updates:
-        applies-to: security-updates
-        patterns:
-          - "*"
-
-  # GitHub Actions workflow dependencies
+  # GitHub Actions — all updates grouped into one PR
   - package-ecosystem: github-actions
     directory: /
     target-branch: master
@@ -62,11 +38,6 @@ updates:
     commit-message:
       prefix: "chore(ci)"
     groups:
-      actions-version-updates:
-        applies-to: version-updates
-        patterns:
-          - "*"
-      actions-security-updates:
-        applies-to: security-updates
+      actions-updates:
         patterns:
           - "*"
