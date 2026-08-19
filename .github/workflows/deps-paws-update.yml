@@ -1,0 +1,134 @@
+name: Paws Collector Dependency Update
+
+on:
+  push:
+    branches: [master]
+  schedule:
+    # Twice weekly: Monday and Thursday at 09:00 UTC
+    - cron: '0 9 * * 1,4'
+  workflow_dispatch:
+
+jobs:
+  update-deps:
+    name: Audit and Update Root Dependencies
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['24.x']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit fix (safe fixes only)
+        run: npm audit fix || true
+
+      - name: Update npm overrides for transitive vulnerabilities
+        run: node .github/scripts/update-overrides.js
+
+      - name: Sync package-lock.json with updated overrides
+        # update-overrides.js writes package.json only; this regenerates
+        # package-lock.json so the next npm ci doesn't re-detect stale changes
+        # and raise a duplicate PR
+        run: npm install --package-lock-only
+
+      - name: Detect changes
+        id: detect
+        run: |
+          if git diff --name-only | grep -qE 'package(-lock)?\.json'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Bump patch version in root package.json
+        if: steps.detect.outputs.changed == 'true'
+        run: node .github/scripts/bump-version.js package.json
+
+      # Run after bump-version.js so new_version reflects the bumped value.
+      # git diff is still available here because git add hasn't run yet.
+      - name: Capture audit and dependency change summary
+        id: audit
+        if: steps.detect.outputs.changed == 'true'
+        run: node .github/scripts/audit-summary.js
+
+      - name: Commit and push changes
+        if: steps.detect.outputs.changed == 'true'
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+          git checkout -B fix/paws-deps-update
+          git add -A
+          git commit -m "fix(deps): update @alertlogic/paws-collector dependencies" || true
+          git push origin fix/paws-deps-update --force
+
+      - name: Create or update pull request
+        if: steps.detect.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Passed as env vars to avoid script injection — values come from npm
+          # registry data and may contain shell metacharacters
+          DEP_CHANGES_TABLE: ${{ steps.audit.outputs.dep_changes_table }}
+          VULN_TABLE: ${{ steps.audit.outputs.vuln_table }}
+          VULN_COUNT: ${{ steps.audit.outputs.vuln_count }}
+          NEW_VERSION: ${{ steps.audit.outputs.new_version }}
+        run: |
+          # Ensure label exists in the repo (idempotent — safe to run every time)
+          gh label create "deps-paws-lib" \
+            --color "0075ca" \
+            --description "Dependency updates for paws-collector root library" \
+            --force
+
+          TITLE="fix(deps): update @alertlogic/paws-collector dependencies"
+          BODY="## Dependency Update — @alertlogic/paws-collector
+
+          ### What changed
+          $DEP_CHANGES_TABLE
+
+          > Package names linked to their security advisory where applicable.
+          > Versions shown are from \`package.json\` (direct deps and overrides).
+          > Package version bumped to \`$NEW_VERSION\`.
+
+          ### Vulnerabilities addressed ($VULN_COUNT found)
+          $VULN_TABLE
+
+          > Advisory links open the npm/GitHub Security Advisory page where you can
+          > verify the CVE, affected versions, and the exact patch applied.
+
+          ### Next step
+          After this PR is reviewed and **merged to master**, the
+          [collector-deps-sync](.github/workflows/collector-deps-sync.yml)
+          workflow will automatically raise a second PR to sync all collector
+          \`package.json\` files to the new \`@alertlogic/paws-collector\` version.
+
+          ### Workflow run
+          [View full step-by-step log]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)
+
+          ---
+          *Opened automatically by [deps-paws-update](.github/workflows/deps-paws-update.yml). Review and merge when ready — no auto-merge.*"
+
+          # Create the PR if none exists for this branch; otherwise update it
+          if gh pr view fix/paws-deps-update --json number > /dev/null 2>&1; then
+            gh pr edit fix/paws-deps-update --title "$TITLE" --body "$BODY"
+          else
+            gh pr create \
+              --title "$TITLE" \
+              --body "$BODY" \
+              --base master \
+              --head fix/paws-deps-update \
+              --label "deps-paws-lib"
+          fi

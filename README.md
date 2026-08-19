@@ -128,3 +128,60 @@ make sam-local
       
       2. After pr is merge to master branch ,create the tag, which will build the single artifact for all collectors.
 
+## Dependency & Runtime Automation
+
+Dependency updates and Node.js runtime checks are automated via GitHub Actions
+and Dependabot. All PRs require manual review — **no auto-merge**.
+
+### Workflow Dependency Diagram
+
+```
+Dependabot (Mon & Thu, 09:00 UTC)
+  └─► Raises npm PR for root package.json (label: deps-paws-lib)
+  └─► Raises PR for GitHub Actions version updates (label: deps-actions)
+
+Scheduled cron Mon   |  push: master  |  workflow_dispatch
+        │
+        ├──► lambda-runtime-sync.yml
+        │       1. Fetches AWS Lambda runtimes docs
+        │       2. Detects new nodejs<N>.x supported runtime
+        │       3. Updates: local/sam-template.yaml, cfn templates,
+        │                   ps_spec.yml, code-coverage.yml,
+        │                   all collectors/*/local/sam-template.yaml
+        │       4. Bumps patch version in root + all collector package.json files
+        │       └─► Opens PR for review  (label: runtime-update)
+        │
+        └──► deps-paws-update.yml
+                1. npm ci + npm audit fix (safe fixes only, no --force)
+                2. update-overrides.js — fixes transitive vulnerabilities
+                3. Bumps patch version in root package.json
+                └─► Opens PR for review  (label: deps-paws-lib)
+                             │
+                             │  (PR reviewed & merged → push to master triggers)
+                             ▼
+                    collector-deps-sync.yml
+                      For each collector in collectors/ (except template/):
+                        1. Pins @alertlogic/paws-collector to new root version
+                        2. npm audit fix + update-overrides.js
+                        3. Bumps patch version in each collector package.json
+                      └─► Opens one consolidated PR for review  (label: deps-collectors)
+```
+
+### Workflow Files
+
+| File | Purpose | Trigger |
+|---|---|---|
+| [.github/workflows/lambda-runtime-sync.yml](.github/workflows/lambda-runtime-sync.yml) | Detects AWS Lambda Node.js runtime upgrades and updates all version references | push:master, cron Mon+Thu, dispatch |
+| [.github/workflows/deps-paws-update.yml](.github/workflows/deps-paws-update.yml) | Audits and fixes root `@alertlogic/paws-collector` dependencies | push:master, cron Mon+Thu, dispatch |
+| [.github/workflows/collector-deps-sync.yml](.github/workflows/collector-deps-sync.yml) | Syncs all collector dependencies after root version bumps | push:master (detects version change), dispatch |
+| [.github/dependabot.yml](.github/dependabot.yml) | Dependabot config for root npm + GitHub Actions | Mon & Thu schedule |
+
+### Scripts
+
+| File | Purpose |
+|---|---|
+| [.github/scripts/check-node-version.js](.github/scripts/check-node-version.js) | Fetches AWS docs, detects new Lambda runtime, patches all node version references |
+| [.github/scripts/update-overrides.js](.github/scripts/update-overrides.js) | Runs `npm audit` and updates the `overrides` section in any package.json (supports `--cwd`) |
+| [.github/scripts/bump-version.js](.github/scripts/bump-version.js) | Increments the patch semver in a package.json file |
+
+

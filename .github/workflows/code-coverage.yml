@@ -1,5 +1,8 @@
 on: ["push", "pull_request"]
 
+permissions:
+  contents: read
+
 name: Test Coverage
 
 jobs:
@@ -7,15 +10,40 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['24.x']
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-    - name: Use Node.js 24.x
-      uses: actions/setup-node@v4
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
       with:
-        node-version: 24.x
+        node-version: ${{ matrix.node-version }}
+        cache: npm
 
-    - name: make test-all
+    # npm ci is the correct choice for CI: uses package-lock.json exactly,
+    # fails fast if lock file is out of sync, never modifies it.
+    - name: Install root dependencies
+      run: npm ci
+
+    - name: Lint
+      run: npm run lint
+
+    - name: Run root tests
+      run: npm run test
+
+    # Run each collector's own test suite.
+    # Each collector Makefile handles its own npm ci + lint + test.
+    # 'template' is a scaffold directory, not a real collector — skip it.
+    - name: Run collector tests
       run: |
-        make test-all
+        for d in collectors/*/; do
+          name=$(basename "$d")
+          if [ "$name" = "template" ]; then
+            continue
+          fi
+          echo "========== Testing $name =========="
+          make -C "collectors/$name" test || exit 1
+        done
