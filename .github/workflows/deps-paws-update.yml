@@ -1,12 +1,19 @@
 name: Paws Collector Dependency Update
 
+# Audits and fixes the root @alertlogic/paws-collector library.
+# - No PR is raised unless the fixes actually change files.
+# - Draft PR when tests fail or high/critical vulnerabilities remain.
+# - Ready PR only when audit is clean and tests pass.
+
 on:
   push:
     branches: [master]
   schedule:
-    # Twice weekly: Monday and Thursday at 09:00 UTC
     - cron: '0 9 * * 1,4'
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   update-deps:
@@ -15,9 +22,6 @@ jobs:
       contents: write
       pull-requests: write
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: ['24.x']
 
     steps:
       - name: Checkout repository
@@ -25,110 +29,192 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js ${{ matrix.node-version }}
+      - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version-file: .nvmrc
           cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run npm audit fix (safe fixes only)
-        run: npm audit fix || true
+      - name: Safe audit fix
+        run: npm audit fix --audit-level=low || true
 
       - name: Update npm overrides for transitive vulnerabilities
         run: node .github/scripts/update-overrides.js
 
       - name: Sync package-lock.json with updated overrides
-        # update-overrides.js writes package.json only; this regenerates
-        # package-lock.json so the next npm ci doesn't re-detect stale changes
-        # and raise a duplicate PR
         run: npm install --package-lock-only
 
-      - name: Detect changes
-        id: detect
+      - name: Check remaining high/critical
+        id: pre_force
         run: |
-          if git diff --name-only | grep -qE 'package(-lock)?\.json'; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
+          count=$(npm audit --json 2>/dev/null | node -e "
+            let d={};try{d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))}catch{};
+            const v=d.metadata&&d.metadata.vulnerabilities||{};
+            process.stdout.write(String((v.high||0)+(v.critical||0)));
+          " 2>/dev/null || echo 0)
+          echo "high_critical=$count" >> "$GITHUB_OUTPUT"
+
+      - name: Snapshot pre-force state
+        if: steps.pre_force.outputs.high_critical != '0'
+        run: |
+          cp package.json /tmp/pre_force_package.json
+          cp package-lock.json /tmp/pre_force_lock.json
+
+      - name: Force major fix for high/critical
+        if: steps.pre_force.outputs.high_critical != '0'
+        run: npm audit fix --force --audit-level=high || true
+
+      - name: Run tests
+        id: tests
+        continue-on-error: true
+        run: npm test
+
+      - name: Revert force-fix if tests broke
+        id: revert
+        if: steps.pre_force.outputs.high_critical != '0' && steps.tests.outcome == 'failure'
+        run: |
+          echo "::warning::--force broke root tests — reverting."
+          cp /tmp/pre_force_package.json package.json
+          cp /tmp/pre_force_lock.json package-lock.json
+          echo "reverted=true" >> "$GITHUB_OUTPUT"
+
+      - name: Re-run tests after revert
+        id: tests_after_revert
+        if: steps.revert.outputs.reverted == 'true'
+        continue-on-error: true
+        run: npm ci && npm test
+
+      - name: Compute effective tests-passed
+        id: tests_final
+        run: |
+          if [ "${{ steps.revert.outputs.reverted }}" = "true" ]; then
+            outcome="${{ steps.tests_after_revert.outcome }}"
           else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
+            outcome="${{ steps.tests.outcome }}"
+          fi
+          if [ "$outcome" = "success" ]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Bump patch version in root package.json
-        if: steps.detect.outputs.changed == 'true'
-        run: node .github/scripts/bump-version.js package.json
+      - name: Bump patch version if package.json changed
+        id: bump
+        run: |
+          if ! git diff --quiet package.json 2>/dev/null; then
+            node .github/scripts/bump-version.js package.json
+          fi
 
-      # Run after bump-version.js so new_version reflects the bumped value.
-      # git diff is still available here because git add hasn't run yet.
-      - name: Capture audit and dependency change summary
+      - name: Verify fix (gate PR opening)
+        id: verify
+        run: node .github/scripts/verify-fix.js --cwd . --tests-passed ${{ steps.tests_final.outputs.passed }}
+
+      - name: Capture audit summary
         id: audit
-        if: steps.detect.outputs.changed == 'true'
+        if: steps.verify.outputs.should_open_pr == 'true'
         run: node .github/scripts/audit-summary.js
 
-      - name: Commit and push changes
-        if: steps.detect.outputs.changed == 'true'
+      - name: Commit and push
+        if: steps.verify.outputs.should_open_pr == 'true'
         run: |
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
           git checkout -B fix/paws-deps-update
           git add -A
           git commit -m "fix(deps): update @alertlogic/paws-collector dependencies" || true
-          git push origin fix/paws-deps-update --force
+          git push origin fix/paws-deps-update --force-with-lease
 
       - name: Create or update pull request
-        if: steps.detect.outputs.changed == 'true'
+        if: steps.verify.outputs.should_open_pr == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Passed as env vars to avoid script injection — values come from npm
-          # registry data and may contain shell metacharacters
           DEP_CHANGES_TABLE: ${{ steps.audit.outputs.dep_changes_table }}
           VULN_TABLE: ${{ steps.audit.outputs.vuln_table }}
           VULN_COUNT: ${{ steps.audit.outputs.vuln_count }}
           NEW_VERSION: ${{ steps.audit.outputs.new_version }}
+          PR_STATE: ${{ steps.verify.outputs.pr_state }}
+          RESIDUAL_HIGH: ${{ steps.verify.outputs.residual_high }}
+          RESIDUAL_CRITICAL: ${{ steps.verify.outputs.residual_critical }}
+          RESIDUAL_ADVISORIES: ${{ steps.verify.outputs.residual_advisories }}
+          TESTS_PASSED: ${{ steps.tests_final.outputs.passed }}
+          REVERTED: ${{ steps.revert.outputs.reverted }}
+          SUMMARY: ${{ steps.verify.outputs.summary_md }}
         run: |
-          # Ensure label exists in the repo (idempotent — safe to run every time)
-          gh label create "deps-paws-lib" \
-            --color "0075ca" \
-            --description "Dependency updates for paws-collector root library" \
-            --force
+          gh label create "deps-paws-lib" --color "0075ca" \
+            --description "Dependency updates for paws-collector root library" --force
+          gh label create "tests-failing" --color "b60205" \
+            --description "PR has failing tests — do not merge" --force
+          gh label create "partial-fix" --color "fbca04" \
+            --description "Some high/critical vulnerabilities remain unresolved" --force
 
-          TITLE="fix(deps): update @alertlogic/paws-collector dependencies"
-          BODY="## Dependency Update — @alertlogic/paws-collector
+          extra_notes=""
+          if [ "$REVERTED" = "true" ]; then
+            extra_notes="${extra_notes}
+          > **Note:** \`npm audit fix --force\` broke tests and was reverted."
+          fi
+          if [ "$TESTS_PASSED" != "true" ]; then
+            extra_notes="${extra_notes}
+          > **Warning:** Tests are failing — diagnose before merging."
+          fi
+          if [ "$RESIDUAL_HIGH" != "0" ] || [ "$RESIDUAL_CRITICAL" != "0" ]; then
+            extra_notes="${extra_notes}
+          > **Residual advisories:** \`${RESIDUAL_ADVISORIES}\`"
+          fi
 
-          ### What changed
-          $DEP_CHANGES_TABLE
+          title="fix(deps): update @alertlogic/paws-collector dependencies"
+          body="## Dependency Update — @alertlogic/paws-collector
 
-          > Package names linked to their security advisory where applicable.
-          > Versions shown are from \`package.json\` (direct deps and overrides).
-          > Package version bumped to \`$NEW_VERSION\`.
+          ${SUMMARY}
 
-          ### Vulnerabilities addressed ($VULN_COUNT found)
-          $VULN_TABLE
+          | | |
+          |---|---|
+          | Tests | **$( [ \"$TESTS_PASSED\" = \"true\" ] && echo passed || echo failed )** |
+          | High vulns remaining | **${RESIDUAL_HIGH}** |
+          | Critical vulns remaining | **${RESIDUAL_CRITICAL}** |
+          | New version | \`${NEW_VERSION}\` |
+          ${extra_notes}
 
-          > Advisory links open the npm/GitHub Security Advisory page where you can
-          > verify the CVE, affected versions, and the exact patch applied.
+          ### Dependency changes
+          ${DEP_CHANGES_TABLE}
+
+          ### Vulnerabilities addressed (${VULN_COUNT} found in this run)
+          ${VULN_TABLE}
 
           ### Next step
-          After this PR is reviewed and **merged to master**, the
-          [collector-deps-sync](.github/workflows/collector-deps-sync.yml)
-          workflow will automatically raise a second PR to sync all collector
-          \`package.json\` files to the new \`@alertlogic/paws-collector\` version.
+          After this PR is reviewed and merged, [collector-paws-pin](.github/workflows/collector-paws-pin.yml)
+          will pin the new version across every collector.
 
           ### Workflow run
-          [View full step-by-step log]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)
+          [View log]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)
 
           ---
           *Opened automatically by [deps-paws-update](.github/workflows/deps-paws-update.yml). Review and merge when ready — no auto-merge.*"
 
-          # Create the PR if none exists for this branch; otherwise update it
+          labels="deps-paws-lib"
+          if [ "$TESTS_PASSED" != "true" ]; then labels="${labels},tests-failing"; fi
+          if [ "$RESIDUAL_HIGH" != "0" ] || [ "$RESIDUAL_CRITICAL" != "0" ]; then labels="${labels},partial-fix"; fi
+
           if gh pr view fix/paws-deps-update --json number > /dev/null 2>&1; then
-            gh pr edit fix/paws-deps-update --title "$TITLE" --body "$BODY"
+            gh pr edit fix/paws-deps-update --title "$title" --body "$body"
+            if [ "$PR_STATE" = "draft" ]; then
+              gh pr ready fix/paws-deps-update --undo || true
+            else
+              gh pr ready fix/paws-deps-update || true
+            fi
           else
-            gh pr create \
-              --title "$TITLE" \
-              --body "$BODY" \
+            draft_flag=""
+            if [ "$PR_STATE" = "draft" ]; then draft_flag="--draft"; fi
+            gh pr create $draft_flag \
+              --title "$title" \
+              --body "$body" \
               --base master \
               --head fix/paws-deps-update \
-              --label "deps-paws-lib"
+              --label "$labels"
           fi
+
+      - name: Report no PR
+        if: steps.verify.outputs.should_open_pr != 'true'
+        run: echo "::notice::No dependency changes to raise — skipping PR."
