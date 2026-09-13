@@ -1,0 +1,30 @@
+name: Dependency Review
+
+# Blocks pull requests that introduce vulnerable dependencies at moderate+ severity.
+# Runs only on pull_request so it never spends CI time on scheduled/push events.
+
+on:
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    name: Review Dependencies
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@da24556b548a50705dd671f47852072ea4c105d9 # v4.7.1
+        with:
+          fail-on-severity: moderate
+          comment-summary-in-pr: on-failure
+          # SPDX identifiers only. Extend list once legal has signed off on more.
+          allow-licenses: MIT, Apache-2.0, ISC, BSD-2-Clause, BSD-3-Clause, 0BSD, CC0-1.0, Unlicense, Python-2.0
