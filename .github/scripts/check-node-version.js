@@ -69,11 +69,11 @@ function buildTargetFiles() {
             ]
         },
         {
-            file: path.join(REPO_ROOT, '.github', 'workflows', 'code-coverage.yml'),
+            file: path.join(REPO_ROOT, '.nvmrc'),
             replacers: [
                 {
-                    pattern: /node-version:\s*\d+\.x/g,
-                    replacement: (major) => `node-version: ${major}.x`
+                    pattern: /^\d+\s*$/,
+                    replacement: (major) => `${major}\n`
                 }
             ]
         },

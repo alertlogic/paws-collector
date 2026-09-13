@@ -14,9 +14,6 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: ['24.x']
 
     outputs:
       changed: ${{ steps.check.outputs.changed }}
@@ -30,10 +27,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js ${{ matrix.node-version }}
+      - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version-file: .nvmrc
 
       - name: Check AWS Lambda Node.js runtime version
         id: check
@@ -47,9 +44,6 @@ jobs:
       contents: write
       pull-requests: write
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: ['24.x']
 
     steps:
       - name: Checkout repository
@@ -57,10 +51,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js ${{ matrix.node-version }}
+      - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version-file: .nvmrc
 
       # Re-run the script so the file changes are present in this job's workspace
       - name: Apply runtime file updates
@@ -85,7 +79,7 @@ jobs:
           git checkout -B chore/node-runtime-update
           git add -A
           git commit -m "chore: update Node.js runtime to ${{ needs.check-runtime.outputs.target_runtime }}" || true
-          git push origin chore/node-runtime-update --force
+          git push origin chore/node-runtime-update --force-with-lease
 
       - name: Create or update pull request
         env:
@@ -105,7 +99,7 @@ jobs:
           - \`cfn/paws-collector.template\`
           - \`cfn/paws-collector-shared.template\`
           - \`ps_spec.yml\`
-          - \`.github/workflows/code-coverage.yml\`
+          - \`.nvmrc\`
           - All \`collectors/*/local/sam-template.yaml\`
           - \`.github/lambda-runtime.json\` (state file)
           - Patch version bumped in root and all collector \`package.json\` files
