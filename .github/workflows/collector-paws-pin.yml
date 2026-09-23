@@ -1,0 +1,156 @@
+name: Collector Paws-Lib Pin
+
+# Mechanical propagation of the root @alertlogic/paws-collector version to
+# every collector's package.json after a root release.
+#
+# Scope: pin dep version + bump collector patch. No audit, no test-force,
+# no override manipulation. Vulnerability fixing is handled independently by
+# collector-deps-audit.yml.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - package.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    name: Detect Root Version Bump
+    runs-on: ubuntu-latest
+    outputs:
+      should_sync: ${{ steps.detect.outputs.should_sync }}
+      paws_version: ${{ steps.detect.outputs.paws_version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 2
+
+      - name: Detect
+        id: detect
+        run: |
+          curr=$(node -p "require('./package.json').version")
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_sync=true" >> "$GITHUB_OUTPUT"
+            echo "paws_version=$curr" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          prev=$(git show HEAD~1:package.json 2>/dev/null \
+            | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).version" 2>/dev/null || echo "none")
+          echo "Previous: $prev"
+          echo "Current:  $curr"
+          if [ "$prev" != "$curr" ]; then
+            echo "should_sync=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_sync=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "paws_version=$curr" >> "$GITHUB_OUTPUT"
+
+  pin:
+    name: Pin @alertlogic/paws-collector Across Collectors
+    needs: detect
+    if: needs.detect.outputs.should_sync == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Pin version + bump patch per collector
+        env:
+          PAWS_VERSION: ${{ needs.detect.outputs.paws_version }}
+        run: |
+          for dir in collectors/*/; do
+            name=$(basename "$dir")
+            if [ "$name" = "template" ]; then continue; fi
+            pkg="${dir}package.json"
+            [ -f "$pkg" ] || continue
+
+            echo "----- $name -----"
+            node -e "
+              const fs=require('fs');
+              const p=JSON.parse(fs.readFileSync('$pkg','utf8'));
+              const key='@alertlogic/paws-collector';
+              if (p.dependencies && p.dependencies[key]) {
+                const prev=p.dependencies[key];
+                if (prev !== process.env.PAWS_VERSION) {
+                  p.dependencies[key]=process.env.PAWS_VERSION;
+                  fs.writeFileSync('$pkg', JSON.stringify(p,null,2)+'\n');
+                  console.log(key+': '+prev+' -> '+process.env.PAWS_VERSION);
+                } else {
+                  console.log(key+': already at '+prev);
+                }
+              }
+            "
+            if ! git diff --quiet "$pkg" 2>/dev/null; then
+              node .github/scripts/bump-version.js "$pkg"
+            fi
+          done
+
+      - name: Detect any changes
+        id: detect_changes
+        run: |
+          if git diff --name-only | grep -q .; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push
+        if: steps.detect_changes.outputs.changed == 'true'
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+          git checkout -B chore/collector-paws-pin
+          git add -A
+          git commit -m "chore(deps): pin @alertlogic/paws-collector@${{ needs.detect.outputs.paws_version }} across collectors"
+          git push origin chore/collector-paws-pin --force-with-lease
+
+      - name: Create or update pull request
+        if: steps.detect_changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PAWS_VERSION: ${{ needs.detect.outputs.paws_version }}
+        run: |
+          gh label create "paws-pin" --color "5319e7" \
+            --description "Mechanical paws-collector version pin across collectors" --force
+
+          title="chore(deps): pin @alertlogic/paws-collector@${PAWS_VERSION} across collectors"
+          body="## Paws-Lib Version Pin
+
+          Root \`@alertlogic/paws-collector\` was released as **v${PAWS_VERSION}**.
+          This PR pins every collector's \`package.json\` to that version and
+          bumps each collector's patch version. No audit or override changes.
+
+          Vulnerability fixes for individual collectors are handled independently
+          by [collector-deps-audit](.github/workflows/collector-deps-audit.yml).
+
+          ### Workflow run
+          [View log]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)
+
+          ---
+          *Opened automatically by [collector-paws-pin](.github/workflows/collector-paws-pin.yml). Review and merge when ready — no auto-merge.*"
+
+          if gh pr view chore/collector-paws-pin --json number > /dev/null 2>&1; then
+            gh pr edit chore/collector-paws-pin --title "$title" --body "$body"
+          else
+            gh pr create \
+              --title "$title" \
+              --body "$body" \
+              --base master \
+              --head chore/collector-paws-pin \
+              --label "paws-pin"
+          fi

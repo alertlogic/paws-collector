@@ -130,58 +130,138 @@ make sam-local
 
 ## Dependency & Runtime Automation
 
-Dependency updates and Node.js runtime checks are automated via GitHub Actions
-and Dependabot. All PRs require manual review — **no auto-merge**.
+Dependency updates, vulnerability fixes, and Node.js runtime checks are
+automated via GitHub Actions and Dependabot. All PRs require manual review —
+**no auto-merge**.
+
+### What is automated
+
+- **Root library dependency audit + fix** — [.github/workflows/deps-paws-update.yml](.github/workflows/deps-paws-update.yml)
+- **Per-collector dependency audit + fix** — [.github/workflows/collector-deps-audit.yml](.github/workflows/collector-deps-audit.yml)
+- **Mechanical pin of `@alertlogic/paws-collector` across collectors after a root release** — [.github/workflows/collector-paws-pin.yml](.github/workflows/collector-paws-pin.yml)
+- **AWS Lambda Node.js runtime bump** — [.github/workflows/lambda-runtime-sync.yml](.github/workflows/lambda-runtime-sync.yml)
+- **Dependabot** — weekly version + security updates for root npm and GitHub Actions ([.github/dependabot.yml](.github/dependabot.yml))
+- **CodeQL, dependency review, code coverage** — [.github/workflows/codeql.yml](.github/workflows/codeql.yml), [.github/workflows/dependency-review.yml](.github/workflows/dependency-review.yml), [.github/workflows/code-coverage.yml](.github/workflows/code-coverage.yml)
 
 ### Workflow Dependency Diagram
 
 ```
-Dependabot (Mon & Thu, 09:00 UTC)
-  └─► Raises npm PR for root package.json (label: deps-paws-lib)
-  └─► Raises PR for GitHub Actions version updates (label: deps-actions)
+Dependabot (weekly, Mon 09:00 UTC)
+  ├─► npm PR for root package.json           (label: deps-paws-lib)
+  └─► PR for GitHub Actions version updates  (label: deps-actions)
 
-Scheduled cron Mon   |  push: master  |  workflow_dispatch
+Scheduled cron Mon+Thu 09:00 UTC | push: master | workflow_dispatch
         │
         ├──► lambda-runtime-sync.yml
         │       1. Fetches AWS Lambda runtimes docs
         │       2. Detects new nodejs<N>.x supported runtime
-        │       3. Updates: local/sam-template.yaml, cfn templates,
-        │                   ps_spec.yml, code-coverage.yml,
-        │                   all collectors/*/local/sam-template.yaml
-        │       4. Bumps patch version in root + all collector package.json files
-        │       └─► Opens PR for review  (label: runtime-update)
+        │       3. Updates local/sam-template.yaml, cfn templates, ps_spec.yml,
+        │          .nvmrc, all collectors/*/local/sam-template.yaml
+        │       4. Bumps patch version in root + all collector package.json
+        │       └─► Opens/updates PR on branch chore/node-runtime-update
+        │           (label: runtime-update)
         │
         └──► deps-paws-update.yml
-                1. npm ci + npm audit fix (safe fixes only, no --force)
-                2. update-overrides.js — fixes transitive vulnerabilities
-                3. Bumps patch version in root package.json
-                └─► Opens PR for review  (label: deps-paws-lib)
+                1. npm ci + npm audit fix        (safe: patch/minor only)
+                2. update-overrides.js           (transitive vulns)
+                3. If high/critical remain → snapshot, then npm audit fix --force
+                4. npm test; if tests break after --force → revert snapshot & retest
+                5. If package.json changed → bump patch version
+                6. verify-fix.js gate: open PR only if files changed;
+                   draft if tests failed or high/critical remain, else ready
+                └─► Opens/updates PR on branch fix/paws-deps-update
+                    (labels: deps-paws-lib [+tests-failing] [+partial-fix])
                              │
-                             │  (PR reviewed & merged → push to master triggers)
+                             │ (PR reviewed & merged → push:master triggers ↓)
                              ▼
-                    collector-deps-sync.yml
-                      For each collector in collectors/ (except template/):
+                    collector-paws-pin.yml
+                      For each collectors/<name>/ (except template/):
                         1. Pins @alertlogic/paws-collector to new root version
-                        2. npm audit fix + update-overrides.js
-                        3. Bumps patch version in each collector package.json
-                      └─► Opens one consolidated PR for review  (label: deps-collectors)
+                        2. Bumps patch version
+                      └─► Opens/updates PR on branch chore/collector-paws-pin
+                          (label: paws-pin)
+
+Daily cron 08:00 UTC | workflow_dispatch (optional single collector)
+        │
+        └──► collector-deps-audit.yml  (matrix, per collector)
+                1. npm install
+                2. npm audit fix                 (safe: patch/minor only)
+                3. update-overrides.js
+                4. If high/critical remain → snapshot, then npm audit fix --force
+                5. Remove ephemeral package-lock.json (never committed)
+                6. npm test; if --force broke tests → revert snapshot & retest
+                7. If package.json changed → bump patch version
+                8. verify-fix.js gate
+                └─► Opens/updates one PR per collector on branch
+                    fix/deps-collector-<name>
+                    (labels: deps-collectors [+tests-failing] [+partial-fix])
 ```
+
+### How to use
+
+- **Automatic runs** — nothing to do; the workflows run on their schedules and
+  open (or refresh) PRs. Review, approve, and merge manually.
+- **Trigger on demand** — from the **Actions** tab pick the workflow and click
+  **Run workflow**. `collector-deps-audit` accepts an optional `collector`
+  input to audit a single collector (leave blank for all).
+- **Reading the PR body** — each PR includes a summary table with tests
+  passed/failed, high/critical counts remaining, the new version, dependency
+  changes, and vulnerabilities addressed.
+- **Labels to watch**
+    - `deps-paws-lib` — root library audit fix
+    - `deps-collectors` — per-collector audit fix
+    - `paws-pin` — mechanical version pin across collectors
+    - `runtime-update` — Node.js Lambda runtime bump
+    - `deps-actions` — Dependabot GitHub Actions updates
+    - `tests-failing` — tests broke on the branch; **do not merge** until fixed
+    - `partial-fix` — some high/critical vulns are unresolved (usually needs a
+      manual breaking-change upgrade)
+
+### Behavior worth knowing
+
+- **Version bumps are always patch.** [.github/scripts/bump-version.js](.github/scripts/bump-version.js)
+  increments only the third semver segment, regardless of whether the
+  underlying dependency change was a patch, minor, or a `--force` major bump.
+  Minor/major bumps of the collector version itself are done manually.
+- **`--force` is used only when high/critical remain** after safe fixes; it is
+  never used to resolve moderate/low advisories. If `--force` breaks tests,
+  the workflow restores the pre-force `package.json` (and lockfile for the
+  root repo) and re-runs tests so the PR reflects a known-good state.
+- **PRs are updated in place, not duplicated.** Each workflow uses a
+  deterministic branch (e.g. `fix/deps-collector-<name>`, `fix/paws-deps-update`,
+  `chore/node-runtime-update`, `chore/collector-paws-pin`) and does
+  `gh pr view "$branch"` first. If a PR exists it is edited (title, body,
+  draft/ready state) via `--force-with-lease`; only otherwise is a new PR
+  opened.
+- **PRs open only when meaningful.** [.github/scripts/verify-fix.js](.github/scripts/verify-fix.js)
+  skips opening a PR when nothing changed, marks it **draft** when tests fail
+  or high/critical vulnerabilities remain, and **ready-for-review** only when
+  the audit is clean and tests pass.
+- **Collector lockfiles are ephemeral.** Collectors intentionally don't commit
+  `package-lock.json` (see `collectors/collector.mk clean`); the audit
+  workflow removes it before staging so a lockfile is never leaked into a PR.
 
 ### Workflow Files
 
 | File | Purpose | Trigger |
 |---|---|---|
-| [.github/workflows/lambda-runtime-sync.yml](.github/workflows/lambda-runtime-sync.yml) | Detects AWS Lambda Node.js runtime upgrades and updates all version references | push:master, cron Mon+Thu, dispatch |
-| [.github/workflows/deps-paws-update.yml](.github/workflows/deps-paws-update.yml) | Audits and fixes root `@alertlogic/paws-collector` dependencies | push:master, cron Mon+Thu, dispatch |
-| [.github/workflows/collector-deps-sync.yml](.github/workflows/collector-deps-sync.yml) | Syncs all collector dependencies after root version bumps | push:master (detects version change), dispatch |
-| [.github/dependabot.yml](.github/dependabot.yml) | Dependabot config for root npm + GitHub Actions | Mon & Thu schedule |
+| [.github/workflows/lambda-runtime-sync.yml](.github/workflows/lambda-runtime-sync.yml) | Detects AWS Lambda Node.js runtime upgrades and updates all version references | push:master, cron Mon+Thu 09:00, dispatch |
+| [.github/workflows/deps-paws-update.yml](.github/workflows/deps-paws-update.yml) | Audits and fixes root `@alertlogic/paws-collector` dependencies | push:master, cron Mon+Thu 09:00, dispatch |
+| [.github/workflows/collector-paws-pin.yml](.github/workflows/collector-paws-pin.yml) | Pins `@alertlogic/paws-collector` across all collectors after a root release | push:master (root `package.json` change), dispatch |
+| [.github/workflows/collector-deps-audit.yml](.github/workflows/collector-deps-audit.yml) | Per-collector daily dependency audit + fix (one PR per collector) | cron daily 08:00, dispatch (optional `collector` input) |
+| [.github/workflows/codeql.yml](.github/workflows/codeql.yml) | CodeQL static analysis | push, PR, schedule |
+| [.github/workflows/dependency-review.yml](.github/workflows/dependency-review.yml) | Blocks PRs that introduce vulnerable or disallowed dependencies | pull_request |
+| [.github/workflows/code-coverage.yml](.github/workflows/code-coverage.yml) | Publishes root test coverage | push, PR |
+| [.github/dependabot.yml](.github/dependabot.yml) | Dependabot config for root npm + GitHub Actions | Weekly, Mon 09:00 UTC |
 
 ### Scripts
 
 | File | Purpose |
 |---|---|
-| [.github/scripts/check-node-version.js](.github/scripts/check-node-version.js) | Fetches AWS docs, detects new Lambda runtime, patches all node version references |
+| [.github/scripts/check-node-version.js](.github/scripts/check-node-version.js) | Fetches AWS docs, detects new Lambda runtime, patches all Node.js version references |
 | [.github/scripts/update-overrides.js](.github/scripts/update-overrides.js) | Runs `npm audit` and updates the `overrides` section in any package.json (supports `--cwd`) |
-| [.github/scripts/bump-version.js](.github/scripts/bump-version.js) | Increments the patch semver in a package.json file |
+| [.github/scripts/bump-version.js](.github/scripts/bump-version.js) | Increments the patch semver in a `package.json` file (patch only — never minor/major) |
+| [.github/scripts/verify-fix.js](.github/scripts/verify-fix.js) | Post-fix gate: decides whether a PR should be opened and whether it's ready or draft, based on file changes, residual high/critical vulns, and test outcome |
+| [.github/scripts/audit-summary.js](.github/scripts/audit-summary.js) | Produces the dependency-change and vulnerability tables that go into the PR body |
 
 
