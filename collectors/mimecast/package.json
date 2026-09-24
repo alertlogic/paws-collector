@@ -1,6 +1,6 @@
 {
   "name": "mimecast-collector",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "Alert Logic AWS based Mimecast Log Collector",
   "repository": {},
   "private": true,
@@ -35,7 +35,7 @@
   "overrides": {
     "diff": "^8.0.3",
     "minimatch": "^3.1.5",
-    "serialize-javascript":"^7.0.5",
+    "serialize-javascript": "^7.0.5",
     "lodash": "^4.18.0"
   },
   "author": "Alert Logic Inc."
