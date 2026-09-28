@@ -141,7 +141,7 @@ automated via GitHub Actions and Dependabot. All PRs require manual review —
 - **Mechanical pin of `@alertlogic/paws-collector` across collectors after a root release** — [.github/workflows/collector-paws-pin.yml](.github/workflows/collector-paws-pin.yml)
 - **AWS Lambda Node.js runtime bump** — [.github/workflows/lambda-runtime-sync.yml](.github/workflows/lambda-runtime-sync.yml)
 - **Dependabot** — weekly version + security updates for root npm and GitHub Actions ([.github/dependabot.yml](.github/dependabot.yml))
-- **CodeQL, dependency review, code coverage** — [.github/workflows/codeql.yml](.github/workflows/codeql.yml), [.github/workflows/dependency-review.yml](.github/workflows/dependency-review.yml), [.github/workflows/code-coverage.yml](.github/workflows/code-coverage.yml)
+- **Dependency review and code coverage** — [.github/workflows/dependency-review.yml](.github/workflows/dependency-review.yml), [.github/workflows/code-coverage.yml](.github/workflows/code-coverage.yml)
 
 ### Workflow Dependency Diagram
 
@@ -249,7 +249,6 @@ Daily cron 08:00 UTC | workflow_dispatch (optional single collector)
 | [.github/workflows/deps-paws-update.yml](.github/workflows/deps-paws-update.yml) | Audits and fixes root `@alertlogic/paws-collector` dependencies | push:master, cron Mon+Thu 09:00, dispatch |
 | [.github/workflows/collector-paws-pin.yml](.github/workflows/collector-paws-pin.yml) | Pins `@alertlogic/paws-collector` across all collectors after a root release | push:master (root `package.json` change), dispatch |
 | [.github/workflows/collector-deps-audit.yml](.github/workflows/collector-deps-audit.yml) | Per-collector daily dependency audit + fix (one PR per collector) | cron daily 08:00, dispatch (optional `collector` input) |
-| [.github/workflows/codeql.yml](.github/workflows/codeql.yml) | CodeQL static analysis | push, PR, schedule |
 | [.github/workflows/dependency-review.yml](.github/workflows/dependency-review.yml) | Blocks PRs that introduce vulnerable or disallowed dependencies | pull_request |
 | [.github/workflows/code-coverage.yml](.github/workflows/code-coverage.yml) | Publishes root test coverage | push, PR |
 | [.github/dependabot.yml](.github/dependabot.yml) | Dependabot config for root npm + GitHub Actions | Weekly, Mon 09:00 UTC |

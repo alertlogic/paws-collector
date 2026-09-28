@@ -4,7 +4,6 @@ on:
   push:
     branches: [master]
   schedule:
-    # Twice weekly: Monday and Thursday
     - cron: '0 9 * * 1,4'
   workflow_dispatch:
 
@@ -17,7 +16,6 @@ jobs:
 
     outputs:
       changed: ${{ steps.check.outputs.changed }}
-      target_major: ${{ steps.check.outputs.target_major }}
       target_runtime: ${{ steps.check.outputs.target_runtime }}
       changed_files: ${{ steps.check.outputs.changed_files }}
 

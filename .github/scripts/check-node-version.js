@@ -1,7 +1,7 @@
 'use strict';
 
 // Fetches AWS Lambda docs, detects Node.js runtime changes, updates all version
-// references in the repo, and emits GitHub Actions outputs: changed, target_major,
+// references in the repo, and emits GitHub Actions outputs: changed,
 // target_runtime, changed_files.
 //
 // Usage: node check-node-version.js
@@ -245,7 +245,6 @@ async function main() {
         console.log(JSON.stringify(summary, null, 2));
 
         writeGitHubOutput('changed', shouldUpdate ? 'true' : 'false');
-        writeGitHubOutput('target_major', String(targetMajor));
         writeGitHubOutput('target_runtime', targetRuntime);
         writeGitHubOutput('changed_files', changedFiles.join(','));
     } catch (error) {

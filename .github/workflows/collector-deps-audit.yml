@@ -8,7 +8,6 @@ name: Collector Dependency Audit
 
 on:
   schedule:
-    # Daily at 08:00 UTC
     - cron: '0 8 * * *'
   workflow_dispatch:
     inputs:

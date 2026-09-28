@@ -85,7 +85,6 @@ function main() {
     const { changed: filesChanged, files } = detectFilesChanged(cwd);
     const { high, critical, advisories } = auditResidual(cwd);
     const residualHighOrCritical = high + critical;
-    const testsOk = testsPassed === true;
     const testsFailed = testsPassed === false;
 
     let shouldOpenPr = true;

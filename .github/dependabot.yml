@@ -1,6 +1,5 @@
 version: 2
 updates:
-  # Root paws-collector — version bumps (minor+major) in one PR, security in another
   - package-ecosystem: npm
     directory: /
     target-branch: master
@@ -24,7 +23,6 @@ updates:
         patterns:
           - "*"
 
-  # GitHub Actions — all updates grouped into one PR
   - package-ecosystem: github-actions
     directory: /
     target-branch: master
