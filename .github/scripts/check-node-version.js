@@ -1,7 +1,7 @@
 'use strict';
 
 // Fetches AWS Lambda docs, detects Node.js runtime changes, updates all version
-// references in the repo, and emits GitHub Actions outputs: changed, target_major,
+// references in the repo, and emits GitHub Actions outputs: changed,
 // target_runtime, changed_files.
 //
 // Usage: node check-node-version.js
@@ -69,11 +69,11 @@ function buildTargetFiles() {
             ]
         },
         {
-            file: path.join(REPO_ROOT, '.github', 'workflows', 'code-coverage.yml'),
+            file: path.join(REPO_ROOT, '.nvmrc'),
             replacers: [
                 {
-                    pattern: /node-version:\s*\d+\.x/g,
-                    replacement: (major) => `node-version: ${major}.x`
+                    pattern: /^\d+\s*$/,
+                    replacement: (major) => `${major}\n`
                 }
             ]
         },
@@ -245,7 +245,6 @@ async function main() {
         console.log(JSON.stringify(summary, null, 2));
 
         writeGitHubOutput('changed', shouldUpdate ? 'true' : 'false');
-        writeGitHubOutput('target_major', String(targetMajor));
         writeGitHubOutput('target_runtime', targetRuntime);
         writeGitHubOutput('changed_files', changedFiles.join(','));
     } catch (error) {
