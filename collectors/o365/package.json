@@ -1,6 +1,6 @@
 {
   "name": "o365-collector",
-  "version": "1.3.5",
+  "version": "1.3.6",
   "description": "Alert Logic AWS based O365 Log Collector",
   "repository": {},
   "private": true,
@@ -36,11 +36,14 @@
     "tiny-async-pool": "^2.1.0"
   },
   "overrides": {
-    "axios": "^1.15.0",
-    "diff": "^8.0.3",
+    "axios": "^1.20.0",
+    "diff": "^8.0.4",
     "minimatch": "^3.1.5",
-    "serialize-javascript": "^7.0.5",
-    "lodash": "^4.18.0"
+    "serialize-javascript": "^7.1.2",
+    "lodash": "^4.18.1",
+    "@alertlogic/paws-collector": {
+      "@alertlogic/al-aws-collector-js": "^4.1.18"
+    }
   },
   "author": "Alert Logic Inc."
 }
