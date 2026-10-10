@@ -1,6 +1,6 @@
 {
   "name": "ciscoamp-collector",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Alert Logic AWS based Ciscoamp Log Collector",
   "repository": {},
   "private": true,
@@ -30,10 +30,10 @@
     "moment": "2.30.1"
   },
   "overrides": {
-    "diff": "^8.0.3",
+    "diff": "^8.0.4",
     "minimatch": "^3.1.5",
-    "serialize-javascript": "^7.0.3",
-    "lodash": "^4.18.0"
+    "serialize-javascript": "^7.1.2",
+    "lodash": "^4.18.1"
   },
   "author": "Alert Logic Inc."
 }
