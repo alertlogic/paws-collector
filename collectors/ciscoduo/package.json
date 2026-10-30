@@ -30,10 +30,8 @@
     "debug": "^4.4.3",
     "moment": "2.31.0"
   },
-  "overrides": {
-    "diff": "^8.0.3",
+  "overrides": {   
     "minimatch": "^10.2.6",
-    "serialize-javascript": "^7.0.3",
     "jshint": {
       "lodash": "^4.17.24",
       "minimatch": "^3.1.4"
