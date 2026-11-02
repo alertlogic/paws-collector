@@ -27,4 +27,4 @@ jobs:
           fail-on-severity: moderate
           comment-summary-in-pr: on-failure
           # SPDX identifiers only. Extend list once legal has signed off on more.
-          license-check: false
+          allow-licenses: MIT, Apache-2.0, ISC, BSD-2-Clause, BSD-3-Clause, 0BSD, CC0-1.0, Unlicense, Python-2.0
