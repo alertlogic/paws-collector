@@ -1,7 +1,7 @@
 const assert = require('assert');
 const sinon = require('sinon');
 const moment = require('moment');
-const nock = require('nock');
+const nock = require('nock').default;
 const m_response = require('@alertlogic/al-aws-collector-js').CfnResponse;
 const okta = require('@okta/okta-sdk-nodejs');
 
