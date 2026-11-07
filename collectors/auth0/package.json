@@ -1,6 +1,6 @@
 {
   "name": "auth0-collector",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Alert Logic AWS based Auth0 Log Collector extension",
   "repository": {},
   "private": true,
@@ -32,8 +32,8 @@
   },
   "overrides": {
     "uuid": "^11.1.1",
-    "diff": "^8.0.3",
-    "serialize-javascript": "^7.1.2",
+    "diff": "^8.0.4",
+    "serialize-javascript": "^7.1.4",
     "minimatch": "^10.2.6",
     "jshint": {
       "lodash": "^4.17.24",
