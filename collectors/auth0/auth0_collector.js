@@ -28,6 +28,32 @@ const tsPaths = [
 const HOSTNAME_REGEXP = /^[htps]*:\/\/|\/$/gi;
 const API_THROTTLING_ERROR = 429;
 
+// Module-scoped Lambda invocations reuse one client and its token cache.
+let cachedAuth0Client = null;
+let cachedAuth0ClientKey = null;
+let getAuth0ClientCallCount = 0;
+let auth0ClientCreateCount = 0;
+
+function getAuth0Client(domain, clientId, clientSecret) {
+    getAuth0ClientCallCount += 1;
+    const cacheKey = `${domain}\0${clientId}\0${clientSecret}`;
+    if (cachedAuth0Client && cachedAuth0ClientKey === cacheKey) {
+        AlLogger.debug(`AUTZ000004 getAuth0Client cache hit (calls=${getAuth0ClientCallCount}, creates=${auth0ClientCreateCount})`);
+        return cachedAuth0Client;
+    }
+    auth0ClientCreateCount += 1;
+    AlLogger.debug(`AUTZ000004 getAuth0Client cache miss creating ManagementClient (calls=${getAuth0ClientCallCount}, creates=${auth0ClientCreateCount})`);
+    cachedAuth0Client = new ManagementClient({
+        domain,
+        clientId,
+        clientSecret,
+        scope: 'read:logs',
+        tokenProvider: { enableCache: true }
+    });
+    cachedAuth0ClientKey = cacheKey;
+    return cachedAuth0Client;
+}
+
 class Auth0Collector extends PawsCollector {
 
     constructor(context, creds) {
@@ -45,12 +71,7 @@ class Auth0Collector extends PawsCollector {
     async pawsGetLogs(state) {
         let collector = this;
         const hostname = collector.pawsDomainEndpoint;
-        const auth0Client = new ManagementClient({
-            domain: hostname,
-            clientId: collector.clientId,
-            clientSecret: collector.secret,
-            scope: 'read:logs'
-        });
+        const auth0Client = getAuth0Client(hostname, collector.clientId, collector.secret);
         return utils.getAPILogs(auth0Client, state, [], process.env.paws_max_pages_per_invocation)
             .then(({ accumulator, nextLogId, lastLogTs }) => {
                 const newState = collector._getNextCollectionState(state, nextLogId, lastLogTs);
@@ -139,4 +160,4 @@ class Auth0Collector extends PawsCollector {
 
 module.exports = {
     Auth0Collector: Auth0Collector
-}
+};

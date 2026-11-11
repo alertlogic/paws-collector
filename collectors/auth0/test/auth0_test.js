@@ -1,6 +1,7 @@
 const assert = require('assert');
 const sinon = require('sinon');
 const moment = require('moment');
+const rewire = require('rewire');
 const m_response = require('@alertlogic/al-aws-collector-js').CfnResponse;
 
 const auth0Mock = require('./auth0_mock');
@@ -334,6 +335,46 @@ describe('Unit Tests', function () {
                     assert.equal(newState.poll_interval_sec, 10);
                     putMetricDataStub.restore();
                 });
+            });
+        });
+
+        it('reuses ManagementClient for the same credentials', function () {
+            const auth0CollectorModule = rewire('../auth0_collector');
+            let constructCount = 0;
+            auth0CollectorModule.__set__('ManagementClient', function FakeManagementClient() {
+                constructCount++;
+            });
+            auth0CollectorModule.__set__('cachedAuth0Client', null);
+            auth0CollectorModule.__set__('cachedAuth0ClientKey', null);
+            const RewiredAuth0Collector = auth0CollectorModule.__get__('Auth0Collector');
+            const rewiredUtils = auth0CollectorModule.__get__('utils');
+
+            getAPILogs = sinon.stub(rewiredUtils, 'getAPILogs').callsFake(
+                function fakeFn(auth0Client, state, accumulator, maxPagesPerInvocation) {
+                    return Promise.resolve({
+                        accumulator: [auth0Mock.AUTH0_LOG_EVENT],
+                        nextLogId: 'nextLogId',
+                        lastLogTs: null
+                    });
+                });
+
+            return RewiredAuth0Collector.load().then(function (creds) {
+                var collector = new RewiredAuth0Collector(ctx, creds);
+                const curState = {
+                    since: moment().subtract(3, 'days').toISOString(),
+                    poll_interval_sec: 1
+                };
+
+                return collector.pawsGetLogs(curState)
+                    .then(() => collector.pawsGetLogs(curState))
+                    .then(() => {
+                        assert.equal(constructCount, 1, 'ManagementClient should be constructed once for the same credentials');
+                        collector._pawsCreds.secret = 'rotated-secret';
+                        return collector.pawsGetLogs(curState);
+                    })
+                    .then(() => {
+                        assert.equal(constructCount, 2, 'ManagementClient should be reconstructed after secret rotation');
+                    });
             });
         });
     });
