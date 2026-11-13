@@ -1,6 +1,6 @@
 {
   "name": "ciscomeraki-collector",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "Alert Logic AWS based Cisco Meraki Log Collector",
   "repository": {},
   "private": true,
@@ -29,7 +29,7 @@
     "debug": "^4.4.3",
     "moment": "2.31.0"
   },
-  "overrides": { 
+  "overrides": {
     "minimatch": "^10.2.6",
     "jshint": {
       "lodash": "^4.17.24",
