@@ -1,6 +1,6 @@
 {
   "name": "carbonblack-collector",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Alert Logic AWS based Carbonblack Log Collector",
   "repository": {},
   "private": true,
@@ -31,9 +31,9 @@
     "test": "^3.3.0"
   },
   "overrides": {
-    "diff": "^8.0.3",
+    "diff": "^8.0.4",
     "minimatch": "^10.2.6",
-    "serialize-javascript": "^7.0.3",
+    "serialize-javascript": "^7.1.4",
     "jshint": {
       "lodash": "^4.17.24",
       "minimatch": "^3.1.4"
